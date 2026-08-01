@@ -1,0 +1,146 @@
+[
+  {
+    "timestamp": "2026-07-30T18:45:38.231913",
+    "iteration": 1,
+    "llmCalls": 2,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 2,
+    "patternsCount": 0,
+    "scenarios": [
+      {
+        "name": "A routing rule can be created and offers per-rule controls",
+        "status": "failed",
+        "totalCommands": 1,
+        "successfulCommands": 0,
+        "failedAt": 1
+      },
+      {
+        "name": "A routed lead shows its owner in the Capture Inbox",
+        "status": "failed",
+        "totalCommands": 1,
+        "successfulCommands": 0,
+        "failedAt": 1
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-07-30T19:31:22.271796",
+    "iteration": 2,
+    "llmCalls": 2,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 2,
+    "patternsCount": 1,
+    "scenarios": [
+      {
+        "name": "A routing rule can be created and offers per-rule controls",
+        "status": "failed",
+        "totalCommands": 5,
+        "successfulCommands": 4,
+        "failedAt": 5
+      },
+      {
+        "name": "A routed lead shows its owner in the Capture Inbox",
+        "status": "failed",
+        "totalCommands": 5,
+        "successfulCommands": 4,
+        "failedAt": 5
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-07-30T21:24:57.742178",
+    "iteration": 3,
+    "llmCalls": 2,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 2,
+    "patternsCount": 2,
+    "scenarios": [
+      {
+        "name": "A routing rule can be created and offers per-rule controls",
+        "status": "failed",
+        "totalCommands": 13,
+        "successfulCommands": 11,
+        "failedAt": 12
+      },
+      {
+        "name": "A routed lead shows its owner in the Capture Inbox",
+        "status": "failed",
+        "totalCommands": 14,
+        "successfulCommands": 13,
+        "failedAt": 14
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-07-30T21:43:24.007035",
+    "iteration": 4,
+    "llmCalls": 2,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 2,
+    "patternsCount": 3,
+    "scenarios": [
+      {
+        "name": "A routing rule can be created and offers per-rule controls",
+        "status": "failed",
+        "totalCommands": 13,
+        "successfulCommands": 12,
+        "failedAt": 13
+      },
+      {
+        "name": "A routed lead shows its owner in the Capture Inbox",
+        "status": "failed",
+        "totalCommands": 14,
+        "successfulCommands": 13,
+        "failedAt": 14
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-07-31T05:10:35.754103",
+    "iteration": 5,
+    "llmCalls": 2,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 2,
+    "patternsCount": 2,
+    "scenarios": [
+      {
+        "name": "A routing rule can be created and offers per-rule controls",
+        "status": "failed",
+        "totalCommands": 13,
+        "successfulCommands": 11,
+        "failedAt": 12
+      },
+      {
+        "name": "A routed lead shows its owner in the Capture Inbox",
+        "status": "failed",
+        "totalCommands": 14,
+        "successfulCommands": 13,
+        "failedAt": 14
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-07-31T05:32:17.489532",
+    "iteration": 6,
+    "llmCalls": 1,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 1,
+    "patternsCount": 2,
+    "scenarios": [
+      {
+        "name": "A routing rule can be created and offers per-rule controls",
+        "status": "failed",
+        "totalCommands": 13,
+        "successfulCommands": 12,
+        "failedAt": 13
+      },
+      {
+        "name": "A routed lead shows its owner in the Capture Inbox",
+        "status": "passed",
+        "totalCommands": 14,
+        "successfulCommands": 14,
+        "failedAt": null
+      }
+    ]
+  }
+]

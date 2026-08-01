@@ -1,0 +1,83 @@
+{
+  "name": "GET /api/leads/:id - Read one captured lead",
+  "description": "Returns a single captured lead from the local projection. The id path parameter is the UUID minted by the capture endpoint, so QA must run the capture first and let the runner supply the produced id - a fabricated UUID matches no row and answers NOT_FOUND. Protected by the authenticate guard; the Authorization header is required on this GET. The lead projection returned by this endpoint now also carries ownership and clock state - owner_user_id, owner_name (joined from users so the inbox issues no per-row lookup), assigned_at, sla_due_at, routing_method, sla_breached and first_response_at. All are null until the lead is routed via POST /api/leads/:id/route.",
+  "endpoint": "/api/leads/:id",
+  "method": "GET",
+  "taskId": "8ac5c78e-b994-4513-8da6-2cbd637b287f",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 12,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads"
+  ],
+  "fieldEnums": {
+    "source": [
+      "web_form",
+      "landing_page",
+      "facebook",
+      "instagram",
+      "linkedin",
+      "tiktok",
+      "google_ads",
+      "live_chat",
+      "phone",
+      "email",
+      "referral",
+      "webhook",
+      "api",
+      "csv_import"
+    ],
+    "routing_method": [
+      "sdk_assignment",
+      "rule_match",
+      "round_robin",
+      "manual"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Read the captured lead",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Reject an unauthenticated read",
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no lead exists with the supplied id"
+    }
+  ]
+}

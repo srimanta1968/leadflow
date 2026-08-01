@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InboundCRM — Build Strategy Analysis</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d24; --muted:#5b6472; --line:#e4e7ec;
+    --brand:#2f5bea; --brand-soft:#eaf0ff;
+    --win:#1a7f47; --win-bg:#e3f5ea; --mid:#9a6b00; --mid-bg:#fdf2d8; --bad:#b42318; --bad-bg:#fdeceb;
+    --sdk:#0f766e; --lift:#6941c6; --build:#9a6b00;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0f1218;--panel:#171b22;--ink:#e8eaed;--muted:#9aa4b2;--line:#272d38;--brand:#7d9bff;--brand-soft:#1a2540;
+    --win:#5cd598;--win-bg:#123023;--mid:#f0c24b;--mid-bg:#332a12;--bad:#ff8b80;--bad-bg:#3a1a17;
+    --sdk:#4fd1c5;--lift:#c3a6ff;--build:#f0c24b;--shadow:0 1px 2px rgba(0,0,0,.4);}}
+  :root[data-theme="dark"]{--bg:#0f1218;--panel:#171b22;--ink:#e8eaed;--muted:#9aa4b2;--line:#272d38;--brand:#7d9bff;--brand-soft:#1a2540;--win:#5cd598;--win-bg:#123023;--mid:#f0c24b;--mid-bg:#332a12;--bad:#ff8b80;--bad-bg:#3a1a17;--sdk:#4fd1c5;--lift:#c3a6ff;--build:#f0c24b;}
+  :root[data-theme="light"]{--bg:#f6f7f9;--panel:#fff;--ink:#1a1d24;--muted:#5b6472;--line:#e4e7ec;--brand:#2f5bea;--brand-soft:#eaf0ff;--win:#1a7f47;--win-bg:#e3f5ea;--mid:#9a6b00;--mid-bg:#fdf2d8;--bad:#b42318;--bad-bg:#fdeceb;--sdk:#0f766e;--lift:#6941c6;--build:#9a6b00;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+  a{color:var(--brand)}
+  h1,h2,h3{line-height:1.25;letter-spacing:-.01em}
+  h1{font-size:29px;margin:0 0 6px}
+  h2{font-size:21px;margin:42px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+  h3{font-size:16px;margin:22px 0 8px}
+  p{margin:10px 0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85em;background:var(--brand-soft);padding:1px 6px;border-radius:5px;border:1px solid var(--line);word-break:break-word}
+  .sub{color:var(--muted);font-size:14px}
+  header.doc{border-bottom:1px solid var(--line);padding-bottom:18px}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);background:var(--brand-soft);padding:4px 10px;border-radius:999px;margin-bottom:12px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:12px;color:var(--muted);font-size:13px}
+  .meta b{color:var(--ink);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);margin:16px 0}
+  .rec{border-left:5px solid var(--win)}
+  .rec .big{font-size:19px;font-weight:800;margin:0 0 6px}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .p-win{background:var(--win-bg);color:var(--win)} .p-mid{background:var(--mid-bg);color:var(--mid)} .p-bad{background:var(--bad-bg);color:var(--bad)}
+  .p-sdk{background:var(--brand-soft);color:var(--sdk)} .p-dot::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+  .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:16px 0;box-shadow:var(--shadow)}
+  table{border-collapse:collapse;width:100%;min-width:720px;background:var(--panel);font-size:13px}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--bg);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+  tr:last-child td{border-bottom:none}
+  td.opt{font-weight:600}
+  .score{font-weight:800;font-variant-numeric:tabular-nums}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+  .card{border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);background:var(--panel)}
+  .card.best{border:2px solid var(--win)}
+  .card.super{opacity:.72}
+  .card h3{margin:0 0 4px;font-size:15px}
+  .card .tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .card .verdict{font-size:22px;font-weight:800;margin:8px 0 2px}
+  .card ul{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--muted)}
+  .card li{margin:3px 0}
+  .callout{border-radius:12px;padding:13px 17px;margin:14px 0;border:1px solid var(--line)}
+  .callout.info{background:var(--brand-soft)}
+  .callout.win{background:var(--win-bg);border-color:var(--win)}
+  .callout.warn{background:var(--bad-bg);border-color:var(--bad)}
+  ul.tight{margin:8px 0;padding-left:20px} ul.tight li{margin:5px 0}
+  .phase{display:flex;gap:12px;margin:12px 0;align-items:flex-start}
+  .phase .pn{flex:none;width:30px;height:30px;border-radius:8px;background:var(--brand-soft);color:var(--brand);font-weight:800;display:flex;align-items:center;justify-content:center}
+  .phase .pc{flex:1}
+  .phase h3{margin:2px 0 4px}
+  .done{color:var(--win);font-weight:700;font-size:12px}
+  .bar{display:inline-block;height:9px;border-radius:5px;background:var(--win);vertical-align:middle}
+  .toc{columns:2;column-gap:26px;font-size:14px} .toc a{display:block;padding:3px 0;text-decoration:none;color:var(--ink)} .toc a:hover{color:var(--brand)}
+  @media (max-width:640px){.toc{columns:1}}
+  .stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:16px 0}
+  .stat .b{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+  .stat .n{font-size:24px;font-weight:800;color:var(--brand);font-variant-numeric:tabular-nums}
+  .stat .l{font-size:12px;color:var(--muted);margin-top:2px}
+  del{color:var(--muted);text-decoration-thickness:1px}
+  footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  .themebtn{position:fixed;top:14px;right:14px;background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:6px 10px;font-size:12px;cursor:pointer;box-shadow:var(--shadow);z-index:9}
+  @media print{.themebtn{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<button class="themebtn" onclick="var r=document.documentElement;var d=(r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark';r.setAttribute('data-theme',d?'light':'dark')">◐ Theme</button>
+<div class="wrap">
+
+<header class="doc">
+  <span class="kicker">InboundCRM · Report 2 of 2 · Build Strategy</span>
+  <h1>InboundCRM — Build Strategy Analysis</h1>
+  <p class="sub">What is the fastest, safest way to deliver the Lynked Up Pro inbound-sales SOP? This originally compared four build strategies and recommended a ProjexCRM-lift hybrid. <b>It has since been revised (15 Jul 2026):</b> the decision pivoted to <b>build the missing capabilities as reusable ProjexCloud SDKs</b> rather than lift/copy ProjexCRM — and an authoritative SOP re-validation reduced the ProjexCRM copy-list to <b>zero</b>. Companion to <em>Report 1 — Component Sourcing Matrix</em>.</p>
+  <div class="meta">
+    <span><b>Customer SOP:</b> Lynked Up Pro Prelaunch License Sales v3.0</span>
+    <span><b>Target:</b> C:\projex_verticals\InboundCRM</span>
+    <span><b>Original:</b> 14 Jul 2026</span>
+    <span><b>Revised:</b> 15 Jul 2026</span>
+  </div>
+</header>
+
+<div class="callout win" style="margin-top:18px">
+  <b>Decision update (15 Jul 2026) — supersedes the original recommendation.</b> The team chose <b>not</b> to lift/copy ProjexCRM code into the app. Instead, every capability the SOP needs is being delivered as a <b>reusable ProjexCloud SDK</b> (new or extended), so it benefits every future customer — not just InboundCRM. Two verification passes drove this: (1) an authoritative re-read of the SOP PDF found <b>none</b> of the 7 proposed ProjexCRM copies is a P0 requirement → <b>copy nothing</b>; (2) a code-level audit confirmed the reusable <em>mechanisms</em> already exist in the SDK platform, needing only thin new domain SDKs + one bug fix. The outreach engine (the old “lift” half) is now built as the P14 SDKs <code>sdk-sequence</code> / <code>sdk-scheduling</code> / <code>sdk-deliverability</code>; the remaining SOP objects as the P15 SDKs <code>sdk-offer-catalog</code> / <code>sdk-handoff</code> / <code>sdk-incident</code> / <code>connector-twilio-voice</code>.
+</div>
+
+<div class="panel rec">
+  <p class="big">Revised recommendation: <span class="pill p-win p-dot">SDK-ONLY — build the gaps as reusable SDKs, copy nothing</span></p>
+  <p style="margin:8px 0 0">Deliver InboundCRM as an <b>SDK-only app</b> on the ProjexCloud platform. The reason Strategy B was originally dinged — “it forces you to rebuild the email/sequence/calendar layer the SDKs lack” — is <b>resolved by building those layers as first-class SDKs</b> (P14), so the rebuild happens <em>once</em> and is reusable forever, instead of lifting app-specific ProjexCRM code that helps only this customer and drags coupling. The SOP re-validation confirms the copy-list is empty: every ProjexCRM capability either maps to an existing/new SDK or is dropped (outbound prospecting, LinkedIn, AI-agent mesh). InboundCRM then consumes the SDKs and adds only its <em>customer-specific config/content</em>.</p>
+</div>
+
+<nav class="toc panel">
+  <a href="#options">1 · The four strategies (revised)</a>
+  <a href="#scorecard">2 · Weighted scorecard (re-scored)</a>
+  <a href="#why">3 · Why build-SDKs-not-lift</a>
+  <a href="#status">4 · Execution status — what’s created</a>
+  <a href="#gapmap">5 · SOP P0 gap → SDK source map</a>
+  <a href="#plan">6 · Phased delivery plan</a>
+  <a href="#risks">7 · Risks &amp; mitigations</a>
+</nav>
+
+<!-- ===== 1 OPTIONS ===== -->
+<section id="options">
+<h2>1 · The four strategies (revised)</h2>
+<div class="cards">
+  <div class="card best">
+    <span class="tag" style="color:var(--win)">Chosen (evolved)</span>
+    <h3>B · SDK-only</h3>
+    <p class="sub" style="margin:2px 0">SDKs + build the gaps as SDKs</p>
+    <div class="verdict" style="color:var(--win)">Chosen</div>
+    <ul>
+      <li>Gaps built once, reusable forever</li>
+      <li>Outreach = new P14 SDKs</li>
+      <li>Copy-list empty (SOP-validated)</li>
+      <li>Cleanest architecture; no coupling</li>
+    </ul>
+  </div>
+  <div class="card super">
+    <span class="tag" style="color:var(--muted)">Superseded</span>
+    <h3>A · Hybrid (lift)</h3>
+    <p class="sub" style="margin:2px 0">SDKs + lifted ProjexCRM</p>
+    <div class="verdict" style="color:var(--muted)">Not taken</div>
+    <ul>
+      <li>Was “fastest,” but lifts app-only code</li>
+      <li>SOP re-check: 0 files worth copying</li>
+      <li>Coupling threads + non-reusable</li>
+    </ul>
+  </div>
+  <div class="card">
+    <span class="tag" style="color:var(--bad)">Not advised</span>
+    <h3>C · From scratch</h3>
+    <p class="sub" style="margin:2px 0">No SDK, no ProjexCRM</p>
+    <div class="verdict" style="color:var(--bad)">Slowest</div>
+    <ul>
+      <li>Rebuilds identity/RBAC/SLA/payment</li>
+      <li>Re-solves every SOP gap by hand</li>
+      <li>Max risk, max time</li>
+    </ul>
+  </div>
+  <div class="card">
+    <span class="tag" style="color:var(--brand)">Accelerant</span>
+    <h3>D · Blueprint / AI-planner</h3>
+    <p class="sub" style="margin:2px 0">projex init + /build planner</p>
+    <div class="verdict" style="color:var(--brand)">Use w/ B</div>
+    <ul>
+      <li>revops-crm blueprint = empty stubs</li>
+      <li>AI planner picks SDKs for you</li>
+      <li>Scaffolds the SDK-only app</li>
+    </ul>
+  </div>
+</div>
+</section>
+
+<!-- ===== 2 SCORECARD ===== -->
+<section id="scorecard">
+<h2>2 · Weighted scorecard (re-scored)</h2>
+<p>The original scorecard favoured Hybrid on <em>time-to-value</em>. Once the outreach gap is closed by <b>building reusable SDKs</b> (P14) instead of leaving it to the immature <code>sdk-campaign</code>, SDK-only’s two weak criteria rise — and it keeps its architecture/maintenance edge with <b>no</b> lifted coupling to unwind. Net: SDK-only becomes the chosen path.</p>
+<div class="tblwrap">
+<table>
+<thead><tr>
+  <th>Criterion (weight)</th>
+  <th>B · SDK-only <span class="sub">(chosen)</span></th><th>A · Hybrid <span class="sub">(superseded)</span></th><th>C · Scratch</th></tr></thead>
+<tbody>
+  <tr><td class="opt">Time-to-first-SOP-value <span class="sub">(×3)</span></td><td><span class="score" style="color:var(--win)">4</span> <span class="sub">↑ from 3</span></td><td><span class="score" style="color:var(--muted)">5</span></td><td><span class="score" style="color:var(--bad)">1</span></td></tr>
+  <tr><td class="opt">Retest / new-code burden <span class="sub">(×3)</span></td><td><span class="score" style="color:var(--win)">4</span> <span class="sub">↑ from 3</span></td><td><span class="score" style="color:var(--muted)">5</span></td><td><span class="score" style="color:var(--bad)">1</span></td></tr>
+  <tr><td class="opt">SOP gap coverage out-of-box <span class="sub">(×2)</span></td><td><span class="score" style="color:var(--win)">5</span></td><td><span class="score" style="color:var(--muted)">5</span></td><td><span class="score" style="color:var(--bad)">1</span></td></tr>
+  <tr><td class="opt">Architectural cleanliness <span class="sub">(×1)</span></td><td><span class="score" style="color:var(--win)">5</span></td><td><span class="score" style="color:var(--muted)">3</span></td><td><span class="score" style="color:var(--mid)">3</span></td></tr>
+  <tr><td class="opt">Long-term maintenance / reuse <span class="sub">(×2)</span></td><td><span class="score" style="color:var(--win)">5</span></td><td><span class="score" style="color:var(--muted)">4</span></td><td><span class="score" style="color:var(--bad)">2</span></td></tr>
+  <tr style="background:var(--bg)"><td class="opt"><b>Weighted total (max 55)</b></td>
+    <td><span class="score" style="color:var(--win)">48</span> <span class="bar" style="width:96px"></span></td>
+    <td><span class="score" style="color:var(--muted)">50</span> <span class="bar" style="width:100px;background:var(--muted)"></span></td>
+    <td><span class="score" style="color:var(--bad)">14</span> <span class="bar" style="width:26px;background:var(--bad)"></span></td></tr>
+</tbody>
+</table>
+</div>
+<p class="sub">Hybrid still scores marginally higher on raw speed, but that edge assumes lifting is free. The SOP re-validation showed the copy-list is <b>empty</b>, and building reusable SDKs amortises across every future customer — so the small speed delta is outweighed by reuse + zero coupling. Strategy D remains a scaffolding accelerant used <em>inside</em> B (see §1 card).</p>
+</section>
+
+<!-- ===== 3 WHY ===== -->
+<section id="why">
+<h2>3 · Why build-SDKs-not-lift</h2>
+<div class="callout win">
+  <b>The decisive fact (revised):</b> lifting ProjexCRM code helps only InboundCRM and drags coupling; building the same capability as an SDK helps every customer and drags nothing. And the SOP re-check proved there was nothing worth lifting anyway.
+</div>
+<div class="tblwrap"><table>
+<thead><tr><th>SOP half</th><th>Original plan</th><th>Revised plan &amp; why</th></tr></thead>
+<tbody>
+  <tr><td class="opt">Platform + the SOP’s <b>missing</b> capabilities <span class="sub">(identity, RBAC, SLA, routing+backup, consent, audit, SMS, payment, workflow)</span></td>
+    <td><span class="pill p-sdk">Existing SDKs</span></td>
+    <td><b>Unchanged</b> — these mature SDKs are installed, not written. Confirmed at code level.</td></tr>
+  <tr><td class="opt">The SOP’s <b>outreach engine</b> <span class="sub">(cadence, reply-pause, suppression/bounce, calendar/booking, pipeline)</span></td>
+    <td><del><span class="pill" style="background:var(--brand-soft);color:var(--lift)">Lift ProjexCRM</span></del></td>
+    <td><span class="pill p-sdk">Build as P14 SDKs</span> — <code>sdk-sequence</code>, <code>sdk-scheduling</code>, <code>sdk-deliverability</code> + extensions to <code>sdk-crm</code>/<code>sdk-notification</code>/<code>sdk-assignment</code>. Same proven ProjexCRM logic, re-homed as reusable packages instead of app-lifted code.</td></tr>
+  <tr><td class="opt">SOP <b>data-model objects</b> with no owner <span class="sub">(offer-truth, onboarding handoff, exception/incident, call/voicemail)</span></td>
+    <td><del>Copy / app-build</del></td>
+    <td><span class="pill p-sdk">Build as P15 SDKs</span> — <code>sdk-offer-catalog</code>, <code>sdk-handoff</code>, <code>sdk-incident</code>, <code>connector-twilio-voice</code> + <code>sdk-crm</code>/<code>sdk-connectors</code> extensions. Verified reusable; only thin domain layers + one <code>sdk-connectors</code> DLQ bug fix are net-new.</td></tr>
+</tbody>
+</table></div>
+<div class="callout info"><b>SOP re-validation result (authoritative PDF §27/§28).</b> All 7 originally-proposed ProjexCRM copies were re-checked against the primary source: none is a P0 must-have. Each item’s required substance already belongs to a planned SDK (e.g. notes → <code>sdk-crm</code> Activity timeline; website/UTM → <code>sdk-crm</code> source adapter; sender identity → deliverability/compliance). <b>Copy-list = 0.</b> See <em>ProjexCRM_to_ProjexCloud_CopyList_Audit.md</em>.</div>
+<div class="callout warn"><b>Why not A (lift) after all?</b> Lifted code is app-specific, non-reusable, and imports coupling (billing gate, prospecting refs, agent-mesh registration) you must then sever. Worse, the SOP doesn’t actually require the lifted files. Building the outreach engine as SDKs is marginally slower once, but reusable across every future vertical and coupling-free.</div>
+</section>
+
+<!-- ===== 4 STATUS ===== -->
+<section id="status">
+<h2>4 · Execution status — what’s created in ProjexLight</h2>
+<p>The full pre-coding architecture is already planned and tracked (epics → features → tasks → BDD acceptance scenarios), before any code is written.</p>
+<div class="stat">
+  <div class="b"><div class="n">10</div><div class="l">epics (P14 + P15)</div></div>
+  <div class="b"><div class="n">29</div><div class="l">features</div></div>
+  <div class="b"><div class="n">47</div><div class="l">tasks (w/ acceptance criteria)</div></div>
+  <div class="b"><div class="n">87</div><div class="l">BDD scenarios</div></div>
+  <div class="b"><div class="n">0</div><div class="l">files to copy from ProjexCRM</div></div>
+</div>
+<div class="tblwrap"><table>
+<thead><tr><th>Batch</th><th>SDKs</th><th>Tracker</th></tr></thead>
+<tbody>
+  <tr><td class="opt">P14 · Outreach engine <span class="sub">(EP-331…335)</span></td>
+    <td><code>sdk-sequence</code>, <code>sdk-scheduling</code>, <code>sdk-deliverability</code> (new) + <code>sdk-crm</code>/<code>sdk-notification</code>/<code>sdk-assignment</code> (extended, incl. round-robin rotation)</td>
+    <td>5 epics · 18 features · 26 tasks · ~59 scenarios</td></tr>
+  <tr><td class="opt">P15 · SOP-gap objects <span class="sub">(EP-336…340)</span></td>
+    <td><code>sdk-offer-catalog</code>, <code>sdk-handoff</code>, <code>sdk-incident</code>, <code>connector-twilio-voice</code>/<code>sdk-voice</code> (new) + <code>sdk-crm</code> call-activity &amp; <code>sdk-connectors</code> DLQ (extended)</td>
+    <td>5 epics · 11 features · 21 tasks · 28 scenarios</td></tr>
+</tbody>
+</table></div>
+<div class="callout info"><b>Two-phase model.</b> <b>Phase 1</b> (now): build the P14 + P15 SDKs in ProjexCloud. <b>Phase 2</b>: create the InboundCRM ProjexLight <em>app</em> project whose epics are the SOP’s 12 P0 capabilities — it consumes the SDKs and adds only Lynked-Up-specific config/content (actual offers, promises, disposition codes, role names, the 10 pipeline-stage values).</div>
+</section>
+
+<!-- ===== 5 GAP MAP ===== -->
+<section id="gapmap">
+<h2>5 · SOP P0 gap → SDK source map</h2>
+<p>Every P0 gap from the SOP conformance analysis, with the SDK that now closes it. The former <span class="pill" style="background:var(--brand-soft);color:var(--lift)">LIFT</span> rows are now built as SDKs.</p>
+<div class="tblwrap"><table>
+<thead><tr><th>SOP P0 gap</th><th>Closed by</th><th>Source</th></tr></thead>
+<tbody>
+  <tr><td class="opt">30-min SLA clock + T+15/25/30/45 escalation</td><td><code>sdk-approval</code> per-step SLA + <code>sdk-notification</code> alerts + thin timer glue</td><td><span class="pill p-sdk">SDK</span>+glue</td></tr>
+  <tr><td class="opt">Ownership + backup + capacity + routing</td><td><code>sdk-assignment</code> (+ P14 round-robin rotation, EP-335) + <code>sdk-dispatch</code></td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">NEXT-action enforcement (save-gate)</td><td><code>sdk-crm</code> P14 save-gate (TK-3630)</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">SMS channel + STOP/HELP + delivery receipts</td><td><code>sdk-notification</code> P14 (EP-334) — quiet-hours already recipient-local</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">Sequence stops (reply/booking/optout/payment)</td><td><b>NEW</b> <code>sdk-sequence</code> (P14, EP-331)</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">Real calendar 2-way sync + reminders + no-show</td><td><b>NEW</b> <code>sdk-scheduling</code> (P14, EP-332) + connector-gworkspace/ms365</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">Suppression / bounce / reply intelligence</td><td><b>NEW</b> <code>sdk-deliverability</code> (P14, EP-333)</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">Offer-truth (versioned) + feature-status matrix</td><td><b>NEW</b> <code>sdk-offer-catalog</code> (P15, EP-336) on the taxonomy pattern + <code>sdk-approval</code></td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">Closed-won → onboarding handoff (CS accept/reject)</td><td><b>NEW</b> <code>sdk-handoff</code> (P15, EP-337) on <code>sdk-workflow</code> + <code>sdk-approval</code></td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">Exception/Incident + connector dead-letter queue</td><td><b>NEW</b> <code>sdk-incident</code> (P15, EP-338) + <code>sdk-connectors</code> DLQ (EP-340)</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">Call/voicemail logging + tracking#/recording-consent</td><td><code>sdk-crm</code> call-activity ext + <b>NEW</b> <code>connector-twilio-voice</code> (P15) via <code>sdk-consent</code></td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">Closed-won commerce + license</td><td><code>sdk-payment</code> + <code>sdk-billing</code></td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">Identity + RBAC + consent + immutable audit</td><td><code>sdk-identity</code>/<code>sdk-rebac</code>/<code>sdk-policy</code> + <code>sdk-consent</code> + <code>sdk-audit</code> + <code>sdk-identity-resolver</code> dedupe</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="opt">Leadership operational dashboard</td><td>Query SDK tables → new UI (leads-waiting, SLA at-risk/breached, unowned, missing-NEXT)</td><td><span class="pill" style="background:var(--mid-bg);color:var(--build)">APP-BUILD</span></td></tr>
+</tbody>
+</table></div>
+<p class="sub">App-layer BUILD (InboundCRM, not SDK): leadership dashboard, next-best-action, the onboarding saga <em>content</em>, and the customer’s specific stage values / disposition codes / role names.</p>
+</section>
+
+<!-- ===== 6 PLAN ===== -->
+<section id="plan">
+<h2>6 · Phased delivery plan (SDK-only)</h2>
+<p>Phase 1 builds the reusable SDKs (P14 + P15, already tracked in ProjexLight); Phase 2 assembles the InboundCRM app on top. Sequenced so the SOP’s non-negotiables land first.</p>
+
+<div class="phase"><div class="pn">1</div><div class="pc">
+  <h3>Build the outreach SDKs (P14) <span class="done">· planned + tracked</span></h3>
+  <p class="sub">Ship <code>sdk-sequence</code> (cadence, step-executor, send-window, reactive stops, guardrails), <code>sdk-scheduling</code> (availability, booking, ICS, reminders, no-show, 2-way sync), <code>sdk-deliverability</code> (suppression, bounce webhooks, IMAP reply-sync), plus <code>sdk-crm</code>/<code>sdk-notification</code>/<code>sdk-assignment</code> extensions. Dependency root: <code>sdk-sequence</code> schema (TK-3612).</p>
+</div></div>
+<div class="phase"><div class="pn">2</div><div class="pc">
+  <h3>Build the SOP-gap SDKs (P15) <span class="done">· planned + tracked</span></h3>
+  <p class="sub"><code>sdk-offer-catalog</code> (launch-blocker #1), <code>sdk-handoff</code>, <code>sdk-incident</code>, <code>connector-twilio-voice</code>, plus the <code>sdk-crm</code> call-activity + <code>sdk-connectors</code> DLQ extensions. All thin domain layers on existing patterns.</p>
+</div></div>
+<div class="phase"><div class="pn">3</div><div class="pc">
+  <h3>Scaffold the InboundCRM app (SDK-only)</h3>
+  <p class="sub">AI-planner <code>/build</code> on the InboundCRM intent → <code>projex init inbound-crm</code> → <code>projex install</code> each SDK → compose an <code>api-gateway</code>-style backend (register each SDK’s routes + one <code>runMigrations([...])</code>) → Next.js UI on <code>@projexlight/design-system</code>. Single DB (no <code>db.config.json</code>).</p>
+</div></div>
+<div class="phase"><div class="pn">4</div><div class="pc">
+  <h3>Wire the SOP’s 12 P0 capabilities + app-build items</h3>
+  <p class="sub">Lead intake, identity/dedupe, SLA clock + escalation, routing + backup, NEXT-action gate, two-way comms, consent/suppression, sequence, calendar, payment/onboarding, dashboards, security/audit. Build the app-only pieces: leadership dashboard, next-best-action, onboarding saga content, and customer config (stage values, disposition codes, roles).</p>
+</div></div>
+<div class="phase"><div class="pn">5</div><div class="pc">
+  <h3>Governance, go-live packet &amp; re-audit</h3>
+  <p class="sub">Offer-truth version-stamping in the CRM, operating-rhythm digests, the SOP go-live test packet, and a <b>code-level re-run of the ProjexCRM→ProjexCloud coverage audit</b> to confirm no covered capability regressed to a gap.</p>
+</div></div>
+</section>
+
+<!-- ===== 7 RISKS ===== -->
+<section id="risks">
+<h2>7 · Risks &amp; mitigations</h2>
+<div class="tblwrap"><table>
+<thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+<tbody>
+  <tr><td class="opt">Building the outreach SDKs is more up-front work than lifting</td><td>The logic is proven in ProjexCRM (re-home, don’t re-invent); the cost is paid once and amortised across every future customer. Tracked as 47 tasks with acceptance criteria + 87 BDD scenarios before coding.</td></tr>
+  <tr><td class="opt">Thin SDK test coverage (many SDKs ship 0 test files)</td><td>Every P14/P15 feature already carries BDD acceptance scenarios; add integration tests at the SOP-critical seams (sequence executor, suppression, save-gate, handoff accept/reject, DLQ replay).</td></tr>
+  <tr><td class="opt"><code>sdk-connectors</code> advertises a DLQ it never implemented (latent defect)</td><td>Tracked as P15·E5 (EP-340): implement retry/DLQ/reconciliation on the proven <code>sdk-webhook</code> pattern and wire the <code>/api/connectors/dlq/replay</code> route the manifest already promises.</td></tr>
+  <tr><td class="opt">Workspace-only SDKs aren’t installable off the registry yet</td><td>Add a one-line <code>publishConfig.registry</code> and publish to Verdaccio, or vendor <code>packages/sdk-…/src</code> into InboundCRM. Low effort.</td></tr>
+  <tr><td class="opt">Scope creep from ProjexCRM features the SOP doesn’t need</td><td>The authoritative SOP validation is the gate: copy-list is 0, and ~68 ProjexCRM services are explicitly DROPPED (outbound prospecting, LinkedIn, MCP-fleet, agent-mesh). Build only what a P0 capability maps to.</td></tr>
+  <tr><td class="opt">Semantic mismatch — assignment/lead-scoring are geo/field-service tuned</td><td>Reuse the engine, replace inputs with B2B features (firmographics, account territory, intent). The P14 round-robin rotation makes <code>sdk-assignment</code> fair-share for host/lead routing.</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<footer>
+  <p><b>Bottom line (revised 15 Jul 2026).</b> Build InboundCRM as <b>SDK-only</b>: stand it up with the AI planner + <code>projex init</code>, install ProjexCloud SDKs for the platform and every SOP capability, and — instead of lifting ProjexCRM — <b>build the outreach engine and the SOP’s unowned data objects as reusable SDKs</b> (P14 + P15, already planned and tracked in ProjexLight). The authoritative SOP re-validation reduced the ProjexCRM copy-list to <b>zero</b>. This closes 100% of the SOP P0 gaps with reusable, coupling-free SDKs and the least app-specific code.</p>
+  <p>Companions: <em>InboundCRM_Component_Sourcing_Matrix.html</em> · <em>ProjexCRM_to_ProjexCloud_CopyList_Audit.md</em> · <em>P14_SDK_Task_Acceptance_Criteria.md</em> · Basis: LinkedUp Pro SOP v3.0.</p>
+</footer>
+</div>
+</body>
+</html>

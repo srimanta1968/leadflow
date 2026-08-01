@@ -1,0 +1,66 @@
+{
+  "name": "GET /api/routing-rules - List routing rules in evaluation order",
+  "description": "Returns routing rules ordered by ascending evaluation_order then creation time - the exact order the routing engine evaluates them in, so what QA sees is what the engine does. Pass active=true to omit deactivated rules. Protected by the authenticate guard; the Authorization header is required on this GET. QA: depends on register, login and at least one created rule so the list is non-empty.",
+  "endpoint": "/api/routing-rules",
+  "method": "GET",
+  "taskId": "64b03d32-a0eb-4091-8040-5a5c93de2c18",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 21,
+  "expectedStatus": 200,
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/routing-rules"],
+  "fieldEnums": {
+    "active": ["true", "false"],
+    "source_channel": [
+      "web_form",
+      "landing_page",
+      "facebook",
+      "instagram",
+      "linkedin",
+      "tiktok",
+      "google_ads",
+      "live_chat",
+      "phone",
+      "email",
+      "referral",
+      "webhook",
+      "api",
+      "csv_import"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "List active routing rules",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "active": "true"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Reject an unauthenticated list",
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

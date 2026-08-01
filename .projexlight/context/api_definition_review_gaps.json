@@ -1,0 +1,19 @@
+{
+  "updatedAt": "2026-08-01T04:35:46",
+  "scope": "analytics",
+  "gaps": [
+    {
+      "file": "tests/api_definitions/analytics/overview-get.json",
+      "rules": [
+        "CODE-MATCH"
+      ],
+      "findingsCount": 1
+    }
+  ],
+  "missingDefinitions": [],
+  "captureSyncIssues": 0,
+  "summary": {
+    "withFindings": 1,
+    "findingsCount": 1
+  }
+}

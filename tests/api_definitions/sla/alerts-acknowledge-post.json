@@ -1,0 +1,120 @@
+{
+  "name": "POST /api/sla/alerts/acknowledge - Acknowledge my SLA alerts for a lead",
+  "description": "Acknowledges every SLA alert addressed to the CALLING user for one lead - the manager equivalent of clearing a notification once they have looked at it. A command against existing rows rather than the creation of a resource, so it answers 200 (MUST-54). Scoped to the caller's own alerts BY DESIGN: the recipient comes from the bearer token, never from the body, so one manager cannot silence an escalation addressed to another. That is why the endpoint is keyed on lead_id rather than an alert id - a breach raises one row per manager, and the caller acknowledges their own. Acknowledging sets state to acknowledged and stamps acknowledged_at, which takes the lead off that manager's queue WITHOUT clearing the breach on the lead itself: a missed deadline is a historical fact, and letting an acknowledgement erase it would make the compliance number meaningless. IDEMPOTENT: a second call reports already_acknowledged:true and changes nothing. EXPECT acknowledged:0 IN A CLEAN QA RUN, and that is the CORRECT contract, not a failure - alerts are raised only by the monitoring sweep for a lead that is at_risk or breached, and no API can make a response clock expire (it would require waiting out the whole window), so a freshly captured lead inside its window has nothing to acknowledge. The behaviour with real alerts present is covered by server/tests/integration/slaAlert.test.ts, which places a clock in the past directly - something the application deliberately cannot do. QA: depends on register, login, a captured lead and a sweep; lead_id comes from the capture's captured id.",
+  "endpoint": "/api/sla/alerts/acknowledge",
+  "method": "POST",
+  "taskId": "cfd96335-33da-4964-a463-341c5d773f6e",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 62,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads",
+    "POST /api/sla/evaluate"
+  ],
+  "fieldEnums": {
+    "kind": ["owner_warning", "manager_breach"],
+    "state": ["pending", "delivered", "acknowledged", "failed"]
+  },
+  "statusTransitions": {
+    "entity": "sla_alert",
+    "field": "state",
+    "flow": ["pending", "delivered", "acknowledged"],
+    "transitions": [
+      {
+        "from": "pending",
+        "to": "delivered",
+        "via": "POST /api/sla/evaluate or POST /api/sla/alerts/dispatch",
+        "notes": "The row is written first and the outbound notification attempted second, so an alert is never lost because the gateway was briefly unreachable. A pending alert is already visible in-app."
+      },
+      {
+        "from": "pending",
+        "to": "failed",
+        "via": "POST /api/sla/alerts/dispatch",
+        "notes": "Set once the retry budget is exhausted. The row remains readable in-app - a failed OUTBOUND send must not mean a silent escalation."
+      },
+      {
+        "from": "delivered",
+        "to": "acknowledged",
+        "via": "POST /api/sla/alerts/acknowledge",
+        "notes": "The recipient has seen it. Stamps acknowledged_at and acknowledged_by_user_id. Does NOT clear leads.sla_breached - the breach is a historical fact."
+      },
+      {
+        "from": "pending",
+        "to": "acknowledged",
+        "via": "POST /api/sla/alerts/acknowledge",
+        "notes": "A manager who saw the alert in-app can acknowledge it even though the outbound send never landed."
+      }
+    ]
+  },
+  "captureResponse": {
+    "sla-alerts.acknowledge.response.data.acknowledged": "data.acknowledged"
+  },
+  "testCases": [
+    {
+      "name": "Acknowledge my alerts for the captured lead",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "lead_id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "acknowledged": 0,
+          "already_acknowledged": false
+        }
+      }
+    },
+    {
+      "name": "Reject a lead_id that is not a UUID",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "lead_id": "{{static:not-a-uuid}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated acknowledgement",
+      "payload": {
+        "lead_id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "lead_id is absent or not a well-formed UUID"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no lead exists with the supplied lead_id"
+    }
+  ]
+}

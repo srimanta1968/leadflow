@@ -1,0 +1,53 @@
+{
+  "version": "3.0",
+  "base_url": "http://host.docker.internal:5173",
+  "last_updated": "2026-07-31T05:37:51.238489",
+  "pages": {
+    "http://host.docker.internal:5173/app": {
+      "url": "http://host.docker.internal:5173/app",
+      "last_visited": "2026-07-31T05:36:48.903445",
+      "visit_count": 1,
+      "actions": {
+        "click:I click \"Sign in\"": {
+          "action_type": "click",
+          "action_label": "I click \"Sign in\"",
+          "triggered_at": "2026-07-31T05:36:48.903455",
+          "containers": {
+            "div#root": {
+              "container_selector": "div#root",
+              "container_hash": "PGRpdiBpZD0icm9vdCI+",
+              "metadata": {
+                "id": "root",
+                "classes": null,
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 0,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 1,
+                "total": 0
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:36:48.903460",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            }
+          }
+        }
+      }
+    }
+  },
+  "selector_rankings": {},
+  "statistics": {
+    "total_pages": 1,
+    "total_actions": 1,
+    "total_containers": 1,
+    "total_extracted_containers": 0,
+    "total_elements": 0,
+    "total_buttons": 0,
+    "extraction_rate": 0.0
+  }
+}

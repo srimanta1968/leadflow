@@ -1,0 +1,128 @@
+{
+  "name": "POST /api/leads/:id/route - Assign an owner and start the response clock",
+  "description": "Routes a lead to a named owner and starts its 30-minute response clock. A command against an existing lead rather than the creation of a new resource, so it answers 200 (MUST-54). The handler reads NO request body - the lead comes from the path and the caller's identity from the bearer token - so the payload is genuinely empty. ProjexCloud sdk-assignment decides the owner when the gateway is configured, evaluating the full six-step routing order against live coverage; when it is unconfigured the handler falls back to first-matching-active-rule then round-robin over the least-loaded active user, so no lead is ever left unowned. routing_method records WHICH path decided, so an sdk_assignment owner is never confused with a local fallback owner when auditing a queue. IMPORTANT - EXPECT already_routed:true FOR A CAPTURED LEAD. Since intake auto-routing landed, both capture endpoints route the lead immediately, so by the time QA calls this endpoint the lead already has an owner and this answers 200 with already_routed:true and the decision unchanged. That is the CORRECT contract: the endpoint is idempotent by design so a retry cannot move a lead out from under whoever is working it. It now serves as the manual re-trigger and backstop path rather than the normal one. To see already_routed:false you need a lead that intake routing could not place - no active user available. MUST-36 note: testCases[1] passes not-a-uuid as the id ON PURPOSE - it is the negative case proving the handler validates the path parameter BEFORE querying, so a malformed id answers 400 instead of letting Postgres raise an invalid-input error that would surface as a 500. That deliberate constant is what MUST-33 asks for (a static wrapper makes an intentional literal distinguishable from a placeholder somebody forgot), so it is NOT the MUST-36 var-for-FK antipattern: the happy path resolves the id from its producer via the leads.create captured key. Removing this case would delete the only coverage of that guard. QA: depends on register, login and a captured lead.",
+  "endpoint": "/api/leads/:id/route",
+  "method": "POST",
+  "taskId": "64b03d32-a0eb-4091-8040-5a5c93de2c18",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 30,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads"
+  ],
+  "fieldEnums": {
+    "routing_method": [
+      "sdk_assignment",
+      "rule_match",
+      "round_robin",
+      "manual"
+    ]
+  },
+  "statusTransitions": {
+    "entity": "lead",
+    "field": "ownership",
+    "flow": [
+      "unowned",
+      "assigned",
+      "responded"
+    ],
+    "transitions": [
+      {
+        "from": "unowned",
+        "to": "assigned",
+        "via": "POST /api/leads/:id/route",
+        "notes": "Sets owner_user_id, assigned_at and sla_due_at (assigned_at + 30 minutes), and records routing_method and routing_reason. In normal operation this transition happens at INTAKE inside the capture endpoints, not here - this endpoint only performs it for a lead intake routing could not place."
+      },
+      {
+        "from": "assigned",
+        "to": "assigned",
+        "via": "POST /api/leads/:id/route",
+        "notes": "Idempotent no-op. Returns the existing decision with already_routed:true; the owner and clock are not changed."
+      },
+      {
+        "from": "assigned",
+        "to": "responded",
+        "via": "POST /api/leads/:id/first-response",
+        "notes": "Sets first_response_at, which stops the clock, and writes the measured response time to sla_metrics. Recording a response AFTER sla_due_at stops the clock but does not clear the breach - see that endpoint's own statusTransitions for the full clock state machine."
+      }
+    ]
+  },
+  "captureResponse": {
+    "leads.route.response.data.decision.owner_user_id": "data.decision.owner_user_id"
+  },
+  "testCases": [
+    {
+      "name": "Routing an already-routed lead is an idempotent no-op",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "payload": {},
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "already_routed": true
+        }
+      }
+    },
+    {
+      "name": "Reject a lead id that is not a UUID",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{static:not-a-uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated routing request",
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "the id path parameter is not a well-formed UUID - checked before the query so a malformed id answers 400 rather than causing Postgres to raise an invalid-input error that would surface as a 500"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no lead exists with the supplied id"
+    },
+    {
+      "code": "CONFLICT",
+      "status": 409,
+      "when": "the tenant has no active user and no active routing rule, so there is nobody to own the lead"
+    }
+  ]
+}

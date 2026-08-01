@@ -1,0 +1,79 @@
+{
+  "name": "GET /api/sla/alerts - List SLA escalation alerts",
+  "description": "Returns the SLA alert ledger newest-first: who was notified, about which lead, at which escalation tier, and whether the notification actually landed. A read, so it answers 200. Every alert is a durable ROW, not just an outbound message - a manager escalation that exists only as a fired-and-forgotten notification cannot be audited, retried after a gateway outage, or shown in-app to somebody who missed the email. state tells the two apart: delivered means ProjexCloud sdk-notification accepted it, pending means the row exists and is visible in-app but the outbound send has not succeeded yet, so a gateway outage degrades the channel WITHOUT silencing the escalation. kind is the escalation tier: owner_warning goes to the lead's owner while the clock is still running (at_risk), and manager_breach goes to every active manager once the deadline has passed - notifying managers BEFORE a violation is the point, so the two tiers are separate rows with separate recipients. Filter by state, kind or lead_id; limit is clamped to 1..200 and defaults to 50. Alerts are raised by the monitoring sweep (POST /api/sla/evaluate), which is why this list can legitimately be EMPTY for a freshly captured lead - a lead inside its response window has nothing to escalate. Protected by the authenticate guard - the Authorization header is required on this GET, because an alert names who is late on which prospect. QA: depends on register, login, a captured lead and a sweep.",
+  "endpoint": "/api/sla/alerts",
+  "method": "GET",
+  "taskId": "cfd96335-33da-4964-a463-341c5d773f6e",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 60,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads",
+    "POST /api/sla/evaluate"
+  ],
+  "fieldEnums": {
+    "kind": ["owner_warning", "manager_breach"],
+    "state": ["pending", "delivered", "acknowledged", "failed"],
+    "channel": ["projexcloud", "in_app"]
+  },
+  "testCases": [
+    {
+      "name": "List the SLA alert ledger",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "limit": "50",
+        "offset": "0"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Reject an unknown state filter",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "state": "{{static:not-a-state}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated list",
+      "queryParams": {
+        "limit": "50"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "state is present but not one of pending, delivered, acknowledged or failed; kind is present but not one of owner_warning or manager_breach; lead_id is present but not a well-formed UUID; or limit or offset is not a non-negative integer with limit at most 200"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

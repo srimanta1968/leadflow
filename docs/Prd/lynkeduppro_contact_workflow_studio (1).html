@@ -1,0 +1,1128 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark">
+<title>LynkedUpPro — Complete Contact Workflow Studio</title>
+<style>
+:root{
+ --bg:#070708;--bg2:#0a0a0d;--sidebar:#0b0b0d;--panel:#151519;--panel2:#1b1b20;--panel3:#202027;
+ --line:#303038;--line2:#3a3a44;--text:#f4f4f6;--muted:#9999a4;--soft:#6e6e79;
+ --blue:#3d82ff;--mag:#ff3cab;--green:#00d59a;--gold:#ffae00;--purple:#9364ff;
+ --cyan:#00c7df;--red:#ff4f63;--orange:#ff783d;--white:#fff;
+ --shadow:0 18px 55px rgba(0,0,0,.35);--cond:"Arial Narrow","Roboto Condensed",Impact,sans-serif;
+ --sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
+}
+*{box-sizing:border-box}html{background:var(--bg);scroll-behavior:smooth}body{margin:0;color:var(--text);font:14px/1.45 var(--sans);background:
+radial-gradient(circle at 21% 0%,rgba(61,130,255,.055),transparent 29%),
+radial-gradient(circle at 91% 12%,rgba(255,60,171,.035),transparent 24%),var(--bg);overflow-x:hidden}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#303039;border:3px solid #101013;border-radius:20px}
+svg.icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+svg.icon.sm{width:15px;height:15px}svg.icon.lg{width:22px;height:22px}
+.shell{display:grid;grid-template-columns:276px minmax(0,1fr);min-height:100vh}
+.sidebar{height:100vh;position:sticky;top:0;background:rgba(10,10,12,.98);border-right:1px solid #242429;display:flex;flex-direction:column;z-index:90;overflow:hidden;transition:.22s}
+.brandbar{height:75px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid #232328;gap:11px}
+.brandmark{width:38px;height:38px;position:relative;filter:drop-shadow(0 0 10px rgba(0,199,223,.22))}
+.brandmark:before,.brandmark:after{content:"";position:absolute;inset:3px;border:6px solid #067b9f;transform:rotate(30deg);border-radius:7px}
+.brandmark:after{inset:10px;border-width:4px;border-color:#00a8d1;transform:rotate(-30deg)}
+.brandname{font-size:20px;font-weight:800;white-space:nowrap;letter-spacing:-.035em}.brandname b{color:var(--gold)}
+.ib{width:35px;height:35px;border:1px solid var(--line);border-radius:11px;background:#18181d;display:grid;place-items:center;color:#aaaab5;cursor:pointer}
+.ib:hover{color:#fff;border-color:#50505a}.collapse{margin-left:auto;width:30px;height:30px;border-radius:50%}
+.navscroll{padding:14px 11px 12px;overflow:auto;scrollbar-width:none;flex:1}.navscroll::-webkit-scrollbar{display:none}
+.ng{margin-bottom:10px}.nl{font-size:9px;font-weight:850;letter-spacing:.14em;text-transform:uppercase;color:#555560;padding:8px 15px 7px}
+.nav{position:relative;display:flex;align-items:center;gap:13px;min-height:43px;padding:0 15px;border-radius:11px;color:#a4a4ae;margin:2px 0;border:1px solid transparent;white-space:nowrap}
+.nav:hover{color:#fff;background:#141418}.nav .count{margin-left:auto;font-size:9px;font-weight:850;min-width:20px;height:20px;padding:0 6px;border-radius:7px;display:grid;place-items:center;background:#24242a;color:#aaaab4}
+.nav.active{color:#fff;background:#1a1a1f;box-shadow:0 0 0 1px rgba(61,130,255,.9),0 0 0 2px rgba(255,60,171,.55),-11px 0 22px rgba(61,130,255,.4),10px 0 20px rgba(255,60,171,.14)}
+.nav.active:before{content:"";position:absolute;left:-11px;top:8px;bottom:8px;width:5px;border-radius:0 8px 8px 0;background:var(--blue);box-shadow:0 0 13px var(--blue)}
+.nav.pro b{color:var(--gold)}.sidebottom{padding:12px;border-top:1px solid #242429;background:#111114}
+.home{height:47px;border-radius:11px;background:#08080a;display:flex;align-items:center;gap:13px;padding:0 15px;color:#aaaab4}
+.profile{display:flex;align-items:center;gap:10px;padding:12px 3px 1px}.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#ff9418,#ff652e);font-weight:850}
+.pc{min-width:0;flex:1}.pc strong{display:block;font-size:12px}.pc span{font-size:9px;color:#777781;text-transform:uppercase;letter-spacing:.08em}
+.workspace{min-width:0}.top{height:75px;position:sticky;top:0;z-index:80;background:rgba(8,8,10,.93);backdrop-filter:blur(18px);border-bottom:1px solid #26262c;display:flex;align-items:center;padding:0 24px;gap:12px}
+.mobile{display:none}.searchbox{height:42px;flex:1;max-width:720px;min-width:250px;border:1px solid var(--line);background:#151519;border-radius:13px;display:flex;align-items:center;gap:10px;padding:0 13px;color:#858590}
+.searchbox input{flex:1;border:0;outline:0;background:transparent;color:#ddd}.kbd{font-size:9px;border:1px solid #3a3a43;background:#222228;color:#9999a3;border-radius:6px;padding:3px 6px}
+.spacer{flex:1}.topbtn{height:42px;border:1px solid var(--line);background:#17171b;border-radius:12px;display:flex;align-items:center;gap:8px;padding:0 12px;color:#b8b8c1;white-space:nowrap}
+.topbtn:hover{border-color:#4d4d57;color:#fff}.topbtn strong{font-size:11px}.primary{height:42px;border:0;border-radius:12px;padding:0 17px;display:flex;align-items:center;gap:8px;font-weight:850;background:linear-gradient(100deg,#2874f3,#5d66f3 48%,#d33cab);box-shadow:0 9px 26px rgba(61,130,255,.2)}
+.primary:hover{filter:brightness(1.08)}.page{padding:26px 28px 90px;max-width:1940px;margin:auto}.view{display:none}.view.active{display:block;animation:fade .18s ease}@keyframes fade{from{opacity:.35;transform:translateY(3px)}}
+.hero{display:flex;align-items:flex-start;gap:18px;margin-bottom:20px}.herocopy{flex:1}.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.13em;color:#777782;font-weight:850;margin-bottom:7px}
+.hero h1{font:900 clamp(30px,3.1vw,49px)/.96 var(--cond);letter-spacing:.045em;margin:0;text-transform:uppercase}.hero p{color:#9797a1;margin:10px 0 0;font-size:13px;max-width:1050px}
+.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}.btn{height:39px;border:1px solid var(--line);background:#17171b;color:#c3c3ca;border-radius:11px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:750;font-size:11px}
+.btn:hover{border-color:#51515b;color:#fff}.btn.blue{color:#82adff;border-color:#315da5;background:#111d34}.btn.green{color:#4de4b5;border-color:#175c49;background:#0d251f}.btn.gold{color:#ffc34b;border-color:#6a4b0c;background:#2a200c}.btn.purple{color:#bca3ff;border-color:#503c7b;background:#211934}.btn.red{color:#ff8a98;border-color:#69303a;background:#2b1419}.btn.ghost{border-color:transparent;background:transparent;color:#999}.btn.sm{height:31px;padding:0 9px;font-size:10px;border-radius:9px}.btn.xs{height:27px;padding:0 8px;font-size:9px;border-radius:8px}.btn.disabled{opacity:.4;pointer-events:none}
+.card{background:linear-gradient(180deg,#18181d,#141418);border:1px solid var(--line);border-radius:17px;box-shadow:0 16px 42px rgba(0,0,0,.16);min-width:0}
+.ch{display:flex;align-items:center;gap:9px;padding:14px 16px;border-bottom:1px solid #2b2b32}.ch h3{font-size:13px;margin:0;flex:1}.ch p{margin:0;color:#73737e;font-size:10px}.cb{padding:15px 16px}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:18px}.kpi{position:relative;min-height:120px;padding:15px;overflow:hidden}
+.kt{display:flex;align-items:center;gap:8px}.kl{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#8a8a95;font-weight:850;flex:1}
+.ki{width:34px;height:34px;border-radius:10px;display:grid;place-items:center}.ki.blue{background:#10244a;color:var(--blue)}.ki.green{background:#073429;color:var(--green)}.ki.gold{background:#342300;color:var(--gold)}.ki.purple{background:#26183d;color:var(--purple)}.ki.cyan{background:#07343c;color:var(--cyan)}.ki.red{background:#36131a;color:var(--red)}
+.kv{font-size:27px;font-weight:840;letter-spacing:-.04em;margin-top:7px}.kf{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:9.5px;color:#777782}.delta{font-weight:850}.up{color:#4edfb3}.down{color:#ff7c8a}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.gmain{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(340px,.72fr);gap:13px}.span2{grid-column:span 2}.span3{grid-column:span 3}
+.sectionhead{display:flex;align-items:flex-end;gap:13px;margin:24px 0 12px}.stitle{flex:1}.stitle h2{margin:0;font:900 20px/1 var(--cond);letter-spacing:.075em;text-transform:uppercase}.stitle p{margin:6px 0 0;color:#777783;font-size:11px}.sactions{display:flex;gap:7px;flex-wrap:wrap}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.filter{height:38px;border:1px solid var(--line);background:#151519;border-radius:11px;color:#c1c1c9;padding:0 11px;min-width:130px}.filter:focus{outline:1px solid var(--blue)}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:16px;background:#111114}.table{width:100%;border-collapse:collapse;min-width:960px}.table th{height:45px;padding:0 14px;text-align:left;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#777781;background:#1b1b20;border-bottom:1px solid var(--line);white-space:nowrap}.table td{padding:11px 14px;border-bottom:1px solid #28282e;vertical-align:middle;font-size:11px}.table tr:last-child td{border-bottom:0}.table tbody tr:hover{background:#18181d}.table .name{font-weight:800;color:#68a3ff;font-size:12px}.sub{display:block;color:#777781;font-size:9px;margin-top:2px}.tdactions{display:flex;gap:5px;justify-content:flex-end}
+.badge{display:inline-flex;align-items:center;gap:5px;height:23px;border-radius:8px;padding:0 8px;border:1px solid #383841;background:#202026;color:#aaa;font-size:8.5px;font-weight:850;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}.badge:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}.badge.blue{color:#6fa3ff;border-color:#284a7e;background:#10203b}.badge.green{color:#45ddb0;border-color:#1a5a48;background:#0d2922}.badge.gold{color:#ffc043;border-color:#694a10;background:#2a210e}.badge.purple{color:#b59aff;border-color:#4a376f;background:#21182f}.badge.cyan{color:#54ddec;border-color:#1c5961;background:#0e292d}.badge.red{color:#ff7d8c;border-color:#66313a;background:#2a151a}.badge.gray{color:#92929e}
+.pill{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:999px;font-size:9px;font-weight:800;background:#24242a;color:#aaa;border:1px solid #34343c}.pill + .pill{margin-left:4px}
+.callout{border:1px solid #36435a;border-left:3px solid var(--blue);border-radius:12px;background:#121722;padding:12px 13px;color:#bcbcc6}.callout strong{display:block;font-size:11px;color:#ddd}.callout p{font-size:10px;color:#858590;margin:5px 0 0}.callout.green{border-left-color:var(--green);background:#0d1d19}.callout.gold{border-left-color:var(--gold);background:#201a0d}.callout.red{border-left-color:var(--red);background:#211014}
+.stack{display:grid;gap:9px}.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #28282f}.row:last-child{border-bottom:0}.rowcopy{min-width:0;flex:1}.rowcopy strong{display:block;font-size:11px}.rowcopy span{display:block;color:#777782;font-size:9.5px;margin-top:2px}.rowmeta{color:#92929c;font-size:9px;white-space:nowrap}
+.progress{height:7px;border-radius:99px;background:#26262d;overflow:hidden}.progress i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--blue),var(--cyan))}.progress.green i{background:var(--green)}.progress.gold i{background:var(--gold)}.progress.purple i{background:var(--purple)}.progress.red i{background:var(--red)}
+.empty{min-height:180px;display:grid;place-items:center;text-align:center;padding:30px;color:#858590}.empty .round{width:48px;height:48px;border-radius:15px;background:#202027;display:grid;place-items:center;margin:0 auto 10px;color:#aaa}
+.formgrid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}.field{grid-column:span 6}.field.full{grid-column:1/-1}.field.third{grid-column:span 4}.field.quarter{grid-column:span 3}.field.two{grid-column:span 2}.field.eight{grid-column:span 8}
+.field label{display:flex;align-items:center;gap:6px;font-size:8.5px;font-weight:850;text-transform:uppercase;letter-spacing:.1em;color:#85858f;margin:0 0 6px}.req{color:var(--red)}
+.input,.select,.textarea{width:100%;border:1px solid #3a3a43;background:#202025;border-radius:11px;color:#e8e8eb;padding:0 12px;outline:0}.input,.select{height:43px}.textarea{min-height:92px;padding-top:11px;resize:vertical}.input:focus,.select:focus,.textarea:focus{border-color:#5f85c9;box-shadow:0 0 0 3px rgba(61,130,255,.12)}.hint{font-size:9px;color:#6e6e78;margin-top:5px}.error{color:#ff7d8b}.success{color:#46dbae}
+.choicegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.choice{border:1px solid var(--line);border-radius:13px;background:#1a1a1f;padding:12px;cursor:pointer}.choice:hover,.choice.active{border-color:#547fcc;background:#151f32;box-shadow:0 0 0 2px rgba(61,130,255,.12)}.choice strong{display:block;font-size:11px}.choice span{display:block;font-size:9px;color:#7e7e89;margin-top:4px}
+.segmented{display:flex;border:1px solid var(--line);background:#121216;border-radius:11px;padding:3px;gap:3px}.seg{height:32px;flex:1;border:0;border-radius:8px;background:transparent;color:#777781;font-size:9px;font-weight:850;text-transform:uppercase}.seg.active{background:#45454e;color:#fff}
+.stepper{display:flex;align-items:center;overflow:auto;padding:4px 0 13px;gap:0}.step{min-width:130px;display:flex;align-items:center;color:#666670;position:relative;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.step:not(:last-child):after{content:"";height:1px;flex:1;background:#33333b;margin:0 8px}.step i{width:24px;height:24px;border-radius:50%;border:1px solid #3d3d46;background:#18181d;display:grid;place-items:center;font-style:normal;margin-right:7px}.step.active{color:#fff}.step.active i{border-color:var(--blue);background:#17315d;color:#7da9ff}.step.done{color:#49dbae}.step.done i{border-color:#197057;background:#10362b}
+.wizardbody{min-height:470px}.wizardpage{display:none}.wizardpage.active{display:block}.wizardfooter{display:flex;align-items:center;gap:9px;padding:13px 16px;border-top:1px solid var(--line);background:#121216;position:sticky;bottom:0}.wizardfooter .right{margin-left:auto;display:flex;gap:8px}
+.sourcegrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.source{min-height:120px;border:1px solid var(--line);border-radius:14px;background:#1a1a1f;padding:14px;position:relative;cursor:pointer}.source:hover,.source.active{border-color:#527dca;background:#151e30;box-shadow:0 0 0 2px rgba(61,130,255,.12)}.source .logo{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:#26262d;color:#c4c4ca;margin-bottom:10px}.source strong{font-size:11px;display:block}.source span{font-size:9px;color:#777781;display:block;margin-top:4px}.source .rec{position:absolute;top:9px;right:9px;font-size:7px;color:#4bdcb0;border:1px solid #1e604c;border-radius:6px;padding:3px 5px;background:#0f2b23}
+.dropzone{min-height:190px;border:1px dashed #555561;border-radius:14px;background:#131317;display:grid;place-items:center;text-align:center;padding:24px;color:#898993}.dropzone.drag{border-color:var(--blue);background:#101a2d}.dropzone input{display:none}.dropzone strong{display:block;color:#ddd;margin:9px 0 4px}.dropzone span{font-size:10px}
+.mapgrid{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:12px}.mapping{border:1px solid var(--line);border-radius:14px;overflow:auto;max-height:470px}.maprow{display:grid;grid-template-columns:1.15fr 32px 1.2fr 100px 82px;gap:8px;align-items:center;padding:9px 10px;border-bottom:1px solid #29292f;background:#17171b}.maprow.header{position:sticky;top:0;z-index:2;background:#202026;color:#777782;font-size:8px;text-transform:uppercase;font-weight:850}.maprow:last-child{border-bottom:0}.maprow select{height:34px;border:1px solid #3a3a43;background:#212126;border-radius:8px;padding:0 8px;font-size:10px}.confidence{font-size:9px;font-weight:800}.confidence.high{color:#4ddfb3}.confidence.med{color:#ffc146}.confidence.low{color:#ff7d8c}
+.previewtable{overflow:auto;border:1px solid var(--line);border-radius:12px;max-height:260px}.previewtable table{border-collapse:collapse;width:max-content;min-width:100%;font-size:9px}.previewtable th,.previewtable td{border-right:1px solid #2d2d34;border-bottom:1px solid #2d2d34;padding:7px 9px;white-space:nowrap}.previewtable th{background:#202026;color:#999;position:sticky;top:0}.previewtable td{color:#bbb}
+.timeline{display:grid;gap:0}.timeitem{display:grid;grid-template-columns:18px minmax(0,1fr);gap:11px;position:relative;padding-bottom:16px}.timeitem:not(:last-child):before{content:"";position:absolute;left:8px;top:19px;bottom:0;width:1px;background:#33333b}.timedot{width:17px;height:17px;border-radius:50%;background:#202027;border:4px solid #111114;box-shadow:0 0 0 1px #43434d}.timedot.green{background:var(--green)}.timedot.blue{background:var(--blue)}.timedot.gold{background:var(--gold)}.timeitem strong{font-size:10.5px;display:block}.timeitem span{font-size:9px;color:#777781}
+.meter{display:grid;grid-template-columns:110px 1fr 58px;gap:8px;align-items:center;padding:7px 0;font-size:9.5px;color:#999}.meter b{font-size:9px;text-align:right}.meter .progress{height:6px}
+.coverage{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.coverage .tile{border:1px solid #303039;border-radius:10px;padding:9px;background:#19191e}.coverage strong{font-size:10px;display:block}.coverage span{font-size:8px;color:#777}
+.tabs{display:flex;gap:3px;overflow:auto;border-bottom:1px solid var(--line);padding:0 14px;background:#151519}.tab{height:47px;border:0;background:transparent;color:#777781;font-size:9.5px;font-weight:850;text-transform:uppercase;letter-spacing:.045em;padding:0 12px;border-bottom:2px solid transparent;white-space:nowrap}.tab.active{color:#fff;border-color:var(--blue)}.tabpane{display:none}.tabpane.active{display:block}
+.detailgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.detail{border:1px solid #303038;border-radius:11px;background:#19191e;padding:10px}.detail label{display:block;color:#74747f;font-size:8px;text-transform:uppercase;font-weight:850;letter-spacing:.06em}.detail strong{display:block;font-size:11px;margin-top:4px}.detail small{display:block;color:#777;font-size:8px;margin-top:3px}
+.statusrail{display:flex;gap:8px;overflow:auto}.statusnode{min-width:125px;border:1px solid var(--line);border-radius:12px;background:#18181d;padding:10px}.statusnode i{width:7px;height:7px;border-radius:50%;display:block;margin-bottom:7px;background:#666}.statusnode.done i{background:var(--green)}.statusnode.active i{background:var(--blue);box-shadow:0 0 10px var(--blue)}.statusnode strong{font-size:9px;display:block;text-transform:uppercase}.statusnode span{font-size:8px;color:#74747e}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);z-index:150;display:none;align-items:center;justify-content:center;padding:24px}.overlay.open{display:flex}
+.modal{width:min(1000px,96vw);max-height:92vh;overflow:auto;background:#141418;border:1px solid #3b3b44;border-radius:18px;box-shadow:0 30px 100px rgba(0,0,0,.65)}.modal.small{width:min(620px,95vw)}.modal.xl{width:min(1380px,98vw)}
+.mhead{min-height:68px;display:flex;align-items:center;gap:11px;padding:14px 17px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(20,20,24,.96);backdrop-filter:blur(12px);z-index:6}.mhead h2{margin:0;font:900 22px/1 var(--cond);text-transform:uppercase;letter-spacing:.06em;flex:1}.mhead p{margin:4px 0 0;color:#777;font-size:9px}.close{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:#202026;display:grid;place-items:center}.mbody{padding:16px}.mfoot{display:flex;align-items:center;gap:8px;padding:13px 16px;border-top:1px solid var(--line);background:#121216;position:sticky;bottom:0}.mfoot .right{margin-left:auto;display:flex;gap:8px}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.56);z-index:130;display:none}.scrim.open{display:block}
+.drawer{position:fixed;right:-720px;top:0;height:100vh;width:min(680px,96vw);background:#141418;border-left:1px solid #3a3a43;z-index:140;transition:.25s;display:flex;flex-direction:column;box-shadow:-25px 0 80px rgba(0,0,0,.5)}.drawer.open{right:0}.dhead{height:74px;display:flex;align-items:center;gap:11px;padding:0 17px;border-bottom:1px solid var(--line);background:#17171b}.dhead h2{margin:0;font:900 21px/1 var(--cond);text-transform:uppercase;letter-spacing:.06em;flex:1}.dbody{padding:16px;overflow:auto;flex:1}.dfoot{display:flex;align-items:center;gap:8px;padding:13px 16px;border-top:1px solid var(--line);background:#111114}.dfoot .right{margin-left:auto;display:flex;gap:8px}
+.fullpanel{position:fixed;inset:0;background:#08080a;z-index:120;display:none;overflow:auto}.fullpanel.open{display:block}.fphead{height:76px;position:sticky;top:0;z-index:8;background:rgba(10,10,12,.95);backdrop-filter:blur(16px);border-bottom:1px solid #2b2b32;display:flex;align-items:center;gap:12px;padding:0 22px}.fphead h1{font:900 25px/1 var(--cond);letter-spacing:.065em;text-transform:uppercase;margin:0}.fphead p{margin:5px 0 0;color:#777;font-size:9px}.fpbody{padding:20px 24px 90px;max-width:1800px;margin:auto}
+.command{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:190;display:none;align-items:flex-start;justify-content:center;padding-top:10vh}.command.open{display:flex}.commandbox{width:min(760px,94vw);background:#151519;border:1px solid #45454f;border-radius:17px;box-shadow:0 30px 100px #000;overflow:hidden}.commandbox input{width:100%;height:58px;border:0;border-bottom:1px solid var(--line);background:#1c1c21;color:#fff;padding:0 18px;outline:0;font-size:14px}.cmdresults{padding:8px;max-height:440px;overflow:auto}.cmd{display:flex;align-items:center;gap:10px;padding:11px;border-radius:10px;color:#bbb}.cmd:hover{background:#232329;color:#fff}.cmd span{font-size:10px;color:#74747e;margin-left:auto}
+.toast{position:fixed;right:22px;bottom:22px;z-index:250;background:#202027;border:1px solid #494953;border-radius:12px;box-shadow:var(--shadow);padding:12px 15px;display:flex;align-items:center;gap:9px;transform:translateY(90px);opacity:0;transition:.22s;max-width:420px}.toast.show{transform:translateY(0);opacity:1}.toast i{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}
+.canvasbox{border:1px solid #3a3a43;border-radius:12px;background:#fff;overflow:hidden}.canvasbox canvas{display:block;width:100%;height:150px;touch-action:none}
+.filetag{display:inline-flex;align-items:center;gap:6px;border:1px solid #3a3a43;border-radius:8px;padding:6px 8px;background:#202026;color:#bdbdc5;font-size:9px}
+.check{display:flex;gap:9px;align-items:flex-start;padding:9px;border:1px solid #303039;border-radius:10px;background:#19191e}.check input{margin-top:3px;accent-color:var(--blue)}.check strong{display:block;font-size:10px}.check span{display:block;color:#777;font-size:8.5px;margin-top:2px}
+@media(max-width:1280px){.kpis{grid-template-columns:repeat(3,1fr)}.grid4{grid-template-columns:repeat(2,1fr)}.sourcegrid{grid-template-columns:repeat(3,1fr)}.gmain{grid-template-columns:1fr}.detailgrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.shell{grid-template-columns:1fr}.sidebar{position:fixed;left:-276px;transition:.22s}.sidebar.open{left:0}.mobile{display:grid}.top{padding:0 12px}.topbtn .hide-sm{display:none}.page{padding:20px 14px 80px}.hero{display:block}.actions{justify-content:flex-start;margin-top:14px}.kpis{grid-template-columns:repeat(2,1fr)}.grid2,.grid3,.grid4{grid-template-columns:1fr}.span2,.span3{grid-column:auto}.field,.field.third,.field.quarter,.field.two,.field.eight{grid-column:1/-1}.sourcegrid{grid-template-columns:repeat(2,1fr)}.mapgrid{grid-template-columns:1fr}.coverage{grid-template-columns:repeat(2,1fr)}.detailgrid{grid-template-columns:1fr}.fpbody{padding:14px 12px 80px}.fphead{padding:0 11px}.fphead .actions{margin:0}.choicegrid{grid-template-columns:1fr}}
+@media(max-width:540px){.kpis{grid-template-columns:1fr}.sourcegrid{grid-template-columns:1fr}.searchbox{min-width:0}.topbtn.credits{display:none}.primary .hide-sm{display:none}.page{padding-top:16px}.hero h1{font-size:31px}.modal{max-height:96vh}.overlay{padding:8px}.mhead h2{font-size:19px}}
+</style></head><body>
+
+
+<svg aria-hidden="true" width="0" height="0" style="position:absolute">
+<defs>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21v-2a6.5 6.5 0 0 1 13 0v2"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10"/><path d="M9 21v-7h6v7"/></symbol>
+<symbol id="i-building" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2M10 21v-3h4v3"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3"/><path d="m7 8 5-5 5 5"/><path d="M20 15v5H4v-5"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><path d="M9 3v15M15 6v15"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="m5 5 14 14M19 5 5 19"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+<symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 5h16M7 12h10M10 19h4"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.68 2.8a2 2 0 0 1-.45 2.11L8.07 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.32 1.84.55 2.8.68A2 2 0 0 1 22 16.9z"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+<symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07.07l2-2A5 5 0 0 0 12 4l-1.15 1.15"/><path d="M14 11a5 5 0 0 0-7.07-.07l-2 2A5 5 0 0 0 12 20l1.15-1.15"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8zM5 14l.7 1.8L8 16.5l-2.3.7L5 19l-.7-1.8-2.3-.7 2.3-.7z"/></symbol>
+<symbol id="i-coins" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v5c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 11v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></symbol>
+<symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8a7 7 0 0 1 11.4-2L20 8M4 16l2.5 2a7 7 0 0 0 11.4-2"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v13"/><path d="m7 11 5 5 5-5"/><path d="M4 21h16"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/></symbol>
+<symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M5 7h3l2-3h4l2 3h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><circle cx="12" cy="13" r="4"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="m21 15-5-5L5 20"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/></symbol>
+<symbol id="i-ruler" viewBox="0 0 24 24"><path d="m3 17 14-14 4 4L7 21H3z"/><path d="m14 6 4 4M11 9l2 2M8 12l2 2M5 15l2 2"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H6a4 4 0 1 1 1-7.9A6 6 0 0 1 18.5 9 5 5 0 0 1 17.5 19z"/><path d="M8 15h8M10 12l-2 3 2 3M14 12l2 3-2 3"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-9 12h8l-1 8 9-12h-8z"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 22V3M5 4h12l-2 4 2 4H5"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
+<symbol id="i-tag" viewBox="0 0 24 24"><path d="M20 13 11 22l-9-9V2h11z"/><circle cx="7" cy="7" r="1"/></symbol>
+<symbol id="i-graph" viewBox="0 0 24 24"><circle cx="5" cy="18" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="19" cy="15" r="2"/><path d="m6 16 5-8M14 7l4 6M7 18h10"/></symbol>
+</defs></svg>
+
+<div class="shell">
+<aside class="sidebar" id="sidebar">
+ <div class="brandbar"><div class="brandmark"></div><div class="brandname">LynkedUp<b>Pro</b></div><button class="ib collapse" id="collapseSide"><svg class="icon sm"><use href="#i-chevron"/></svg></button></div>
+ <div class="navscroll"><div class="ng"><div class="nl">CONTACT OPERATIONS</div><a class="nav active" href="#dashboard" data-view="dashboard"><svg class="icon "><use href="#i-grid"/></svg><span>Contact Command</span></a><a class="nav" href="#contacts" data-view="contacts"><svg class="icon "><use href="#i-users"/></svg><span>Contacts</span><span class="count">3,842</span></a><a class="nav" href="#capture" data-view="capture"><svg class="icon "><use href="#i-bolt"/></svg><span>Capture Inbox</span><span class="count">27</span></a><a class="nav" href="#import" data-view="import"><svg class="icon "><use href="#i-upload"/></svg><span>Import Center</span><span class="count">4</span></a></div><div class="ng"><div class="nl">IDENTITY & TRUST</div><a class="nav" href="#identity" data-view="identity"><svg class="icon "><use href="#i-link"/></svg><span>Identity Review</span><span class="count">19</span></a><a class="nav" href="#consent" data-view="consent"><svg class="icon "><use href="#i-shield"/></svg><span>Consent & Preferences</span><span class="count">42</span></a><a class="nav" href="#enrichment" data-view="enrichment"><svg class="icon "><use href="#i-spark"/></svg><span>Enrichment Queue</span><span class="count">13</span></a><a class="nav" href="#review" data-view="review"><svg class="icon "><use href="#i-activity"/></svg><span>Data Review</span><span class="count">31</span></a><a class="nav" href="#audit" data-view="audit"><svg class="icon "><use href="#i-clock"/></svg><span>Audit & History</span></a></div><div class="ng"><div class="nl">RELATED</div><a class="nav" href="#properties" data-view="properties"><svg class="icon "><use href="#i-home"/></svg><span>Associated Properties</span></a><a class="nav" href="#campaigns" data-view="campaigns"><svg class="icon "><use href="#i-flag"/></svg><span>Campaign Enrollment</span></a></div></div>
+ <div class="sidebottom"><div class="home"><svg class="icon "><use href="#i-home"/></svg><span>Home</span></div><div class="profile"><div class="avatar">J</div><div class="pc"><strong>Justin Johnson</strong><span>Owner · LUP-1001</span></div><svg class="icon sm"><use href="#i-more"/></svg></div></div>
+</aside>
+<main class="workspace">
+ <header class="top"><button class="ib mobile" id="mobileMenu"><svg class="icon "><use href="#i-menu"/></svg></button>
+ <div class="searchbox"><svg class="icon "><use href="#i-search"/></svg><input id="globalSearch" placeholder="Search contacts, properties, phone, email, source ID…"><span class="kbd">⌘ K</span></div>
+ <div class="spacer"></div>
+ <button class="topbtn credits" data-open-drawer="creditsDrawer"><span class="creditdot" style="width:8px;height:8px;border-radius:50%;background:var(--gold)"></span><strong>2,480</strong><span class="hide-sm">Data Credits</span></button>
+ <button class="topbtn" data-open-modal="importModal"><svg class="icon "><use href="#i-upload"/></svg><strong class="hide-sm">Import</strong></button>
+ <button class="primary" data-open-modal="quickModal"><svg class="icon "><use href="#i-plus"/></svg><span class="hide-sm">Quick Add</span></button>
+ </header>
+ <div class="page">
+
+
+<section class="view active" id="view-dashboard" data-title="Contact Command">
+ <div class="hero"><div class="herocopy"><div class="eyebrow">Person & Organization Identity Workspace</div><h1>Contact Command</h1>
+ <p>Capture from any source, preserve source truth, resolve identity, establish direct relationships, collect purpose-specific consent, and activate only eligible channels.</p></div>
+ <div class="actions"><button class="btn" data-open-modal="importModal"><svg class="icon "><use href="#i-upload"/></svg>Import contacts</button><button class="btn blue" data-open-modal="quickModal"><svg class="icon "><use href="#i-plus"/></svg>Quick contact</button></div></div>
+ <div class="kpis">
+  <article class="card kpi"><div class="kt"><span class="kl">Canonical Contacts</span><span class="ki blue"><svg class="icon "><use href="#i-users"/></svg></span></div><div class="kv">3,842</div><div class="kf"><span class="delta up">+126</span> this month</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Provisional P0–P2</span><span class="ki gold"><svg class="icon "><use href="#i-bolt"/></svg></span></div><div class="kv">187</div><div class="kf">27 need human review</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Direct Relationships</span><span class="ki green"><svg class="icon "><use href="#i-link"/></svg></span></div><div class="kv">2,194</div><div class="kf"><span class="delta up">57%</span> first-party relationship</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Consent Receipts</span><span class="ki purple"><svg class="icon "><use href="#i-shield"/></svg></span></div><div class="kv">1,426</div><div class="kf">96 expiring in 30 days</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Possible Duplicates</span><span class="ki red"><svg class="icon "><use href="#i-activity"/></svg></span></div><div class="kv">19</div><div class="kf">7 high-risk candidates</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Contactability</span><span class="ki cyan"><svg class="icon "><use href="#i-message"/></svg></span></div><div class="kv">68%</div><div class="kf">At least one eligible channel</div></article>
+ </div>
+ <div class="gmain">
+  <article class="card"><div class="ch"><span class="ki blue"><svg class="icon "><use href="#i-activity"/></svg></span><h3>Identity Lifecycle</h3><p>Source records by progressive trust state</p></div><div class="cb">
+   <div class="statusrail">
+    <div class="statusnode done"><i></i><strong>P0 · Captured</strong><span>Raw source retained</span></div>
+    <div class="statusnode done"><i></i><strong>P1 · Normalized</strong><span>Schema + handles parsed</span></div>
+    <div class="statusnode active"><i></i><strong>P2 · Candidate</strong><span>Possible entity matches</span></div>
+    <div class="statusnode"><i></i><strong>P3 · Linked</strong><span>Canonical link verified</span></div>
+    <div class="statusnode"><i></i><strong>P4 · Direct</strong><span>First-party relationship evidence</span></div>
+    <div class="statusnode"><i></i><strong>Consent</strong><span>Purpose/channel receipt</span></div>
+   </div>
+   <div class="sectionhead"><div class="stitle"><h2>Today's Processing Funnel</h2><p>Source assertions remain immutable even after a direct relationship is established.</p></div></div>
+   <div class="coverage">
+    <div class="tile"><strong>428 captured</strong><span>CSV, Google, quick capture, extension</span></div>
+    <div class="tile"><strong>411 normalized</strong><span>96.0% schema success</span></div>
+    <div class="tile"><strong>379 resolved</strong><span>Exact or candidate match</span></div>
+    <div class="tile"><strong>331 linked</strong><span>Verified canonical relation</span></div>
+    <div class="tile"><strong>84 direct</strong><span>Response, visit, consent or contract</span></div>
+   </div>
+  </div></article>
+  <article class="card"><div class="ch"><span class="ki gold"><svg class="icon "><use href="#i-flag"/></svg></span><h3>Priority Queue</h3><p>Owner and steward work</p></div><div class="cb stack">
+   <div class="row"><span class="badge red">7</span><div class="rowcopy"><strong>High-risk identity candidates</strong><span>Conflicting name + phone + property evidence</span></div><button class="btn xs" data-route="identity">Review</button></div>
+   <div class="row"><span class="badge gold">13</span><div class="rowcopy"><strong>Enrichment approvals</strong><span>Estimated 41 Data Credits</span></div><button class="btn xs" data-route="enrichment">Open</button></div>
+   <div class="row"><span class="badge purple">9</span><div class="rowcopy"><strong>Consent receipts expiring</strong><span>Campaign and appointment purposes</span></div><button class="btn xs" data-route="consent">Renew</button></div>
+   <div class="row"><span class="badge blue">27</span><div class="rowcopy"><strong>Unresolved quick captures</strong><span>Phone-only, signature and browser captures</span></div><button class="btn xs" data-route="capture">Resolve</button></div>
+  </div></article>
+ </div>
+ <div class="sectionhead"><div class="stitle"><h2>Contact Governance Pulse</h2><p>Field-level truth, source rights, channel eligibility, and operational quality.</p></div><div class="sactions"><button class="btn sm" data-route="review">Open Data Review</button></div></div>
+ <div class="grid3">
+  <article class="card"><div class="ch"><h3>Source Mix</h3></div><div class="cb">
+   <div class="meter"><span>Tenant first-party</span><div class="progress green"><i style="width:48%"></i></div><b>1,844</b></div>
+   <div class="meter"><span>Direct capture</span><div class="progress green"><i style="width:22%"></i></div><b>846</b></div>
+   <div class="meter"><span>Licensed third-party</span><div class="progress gold"><i style="width:18%"></i></div><b>692</b></div>
+   <div class="meter"><span>Public record</span><div class="progress purple"><i style="width:8%"></i></div><b>307</b></div>
+   <div class="meter"><span>Unknown / quarantine</span><div class="progress red"><i style="width:4%"></i></div><b>153</b></div>
+  </div></article>
+  <article class="card"><div class="ch"><h3>Channel Eligibility</h3></div><div class="cb">
+   <div class="meter"><span>Email</span><div class="progress"><i style="width:71%"></i></div><b>71%</b></div>
+   <div class="meter"><span>Voice</span><div class="progress cyan"><i style="width:63%"></i></div><b>63%</b></div>
+   <div class="meter"><span>SMS</span><div class="progress purple"><i style="width:29%"></i></div><b>29%</b></div>
+   <div class="meter"><span>Postal</span><div class="progress gold"><i style="width:82%"></i></div><b>82%</b></div>
+   <div class="meter"><span>WhatsApp</span><div class="progress green"><i style="width:17%"></i></div><b>17%</b></div>
+  </div></article>
+  <article class="card"><div class="ch"><h3>Data Quality</h3></div><div class="cb stack">
+   <div class="row"><div class="rowcopy"><strong>Validated phones</strong><span>2,706 of 3,421 contact points</span></div><span class="badge green">79%</span></div>
+   <div class="row"><div class="rowcopy"><strong>Validated email</strong><span>2,189 of 2,964 contact points</span></div><span class="badge green">74%</span></div>
+   <div class="row"><div class="rowcopy"><strong>Property relationships</strong><span>2,641 contacts have at least one property</span></div><span class="badge blue">69%</span></div>
+   <div class="row"><div class="rowcopy"><strong>Source rights complete</strong><span>All active campaign records</span></div><span class="badge gold">92%</span></div>
+  </div></article>
+ </div>
+</section>
+
+<section class="view" id="view-contacts" data-title="Contacts">
+ <div class="hero"><div class="herocopy"><div class="eyebrow">Canonical People & Organizations</div><h1>Contacts</h1><p>Search every source record, identity handle, property relationship, consent state, and contextual role without collapsing them into one wide CRM row.</p></div>
+ <div class="actions"><button class="btn" data-open-modal="importModal"><svg class="icon "><use href="#i-upload"/></svg>Import</button><button class="btn blue" data-open-modal="quickModal"><svg class="icon "><use href="#i-plus"/></svg>Quick Contact</button></div></div>
+ <div class="toolbar">
+  <select class="filter" id="contactType"><option value="">All entity types</option><option>Person</option><option>Organization</option></select>
+  <select class="filter" id="contactStage"><option value="">All trust states</option><option>P0 Captured</option><option>P1 Normalized</option><option>P2 Candidate</option><option>P3 Linked</option><option>P4 Direct</option></select>
+  <select class="filter" id="contactOrigin"><option value="">All origins</option><option>Tenant First-Party</option><option>Direct Capture</option><option>Licensed Third-Party</option><option>Public Record</option><option>Unknown / Quarantine</option></select>
+  <select class="filter" id="contactabilityFilter"><option value="">All channel states</option><option>Eligible</option><option>Restricted</option><option>Opted Out</option><option>Unknown</option></select>
+  <select class="filter" id="contactOwner"><option value="">All record owners</option><option>Justin Johnson</option><option>Cody Tatum</option><option>Hannah Reyes</option><option>Data Steward</option></select>
+  <button class="btn"><svg class="icon "><use href="#i-filter"/></svg>More filters</button>
+  <div class="spacer"></div><button class="btn" id="exportContacts"><svg class="icon "><use href="#i-download"/></svg>Export eligible</button><button class="btn"><svg class="icon "><use href="#i-more"/></svg></button>
+ </div>
+ <div class="tablewrap"><table class="table"><thead><tr><th><input type="checkbox"></th><th>Contact</th><th>Trust / Role</th><th>Contact points</th><th>Properties</th><th>Origin</th><th>Consent / Eligibility</th><th>Owner</th><th>Updated</th><th></th></tr></thead><tbody id="contactRows"></tbody></table></div>
+ <div class="sectionhead"><div class="stitle"><h2>Saved Views</h2><p>Operational shortcuts based on source, trust and actionability.</p></div></div>
+ <div class="grid4">
+  <button class="choice" data-contact-filter="p0"><strong>Unresolved captures</strong><span>Phone-only, email-only and signature captures awaiting resolution.</span></button>
+  <button class="choice" data-contact-filter="dup"><strong>Possible duplicates</strong><span>Candidate links requiring steward review; no destructive merge.</span></button>
+  <button class="choice" data-contact-filter="no-property"><strong>No property relationship</strong><span>Useful for cleanup before property-centered sales workflows.</span></button>
+  <button class="choice" data-contact-filter="eligible"><strong>Campaign eligible</strong><span>At least one policy-approved channel for the selected purpose.</span></button>
+ </div>
+</section>
+
+<section class="view" id="view-capture" data-title="Capture Inbox">
+ <div class="hero"><div class="herocopy"><div class="eyebrow">Universal Quick Capture</div><h1>Capture Inbox</h1><p>Every quick add, smart paste, browser capture, business-card scan, email signature, mobile contact selection, or API event first lands as a source record with immutable evidence.</p></div>
+ <div class="actions"><button class="btn" id="openExtensionDemo"><svg class="icon "><use href="#i-bolt"/></svg>Extension Preview</button><button class="btn blue" data-open-modal="quickModal"><svg class="icon "><use href="#i-plus"/></svg>New Capture</button></div></div>
+ <div class="kpis">
+  <article class="card kpi"><div class="kt"><span class="kl">New P0</span><span class="ki gold"><svg class="icon "><use href="#i-bolt"/></svg></span></div><div class="kv">27</div><div class="kf">Not yet normalized</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Parsed P1</span><span class="ki blue"><svg class="icon "><use href="#i-file"/></svg></span></div><div class="kv">61</div><div class="kf">Ready for candidate search</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Candidate P2</span><span class="ki purple"><svg class="icon "><use href="#i-link"/></svg></span></div><div class="kv">19</div><div class="kf">Need review</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Offline Queue</span><span class="ki cyan"><svg class="icon "><use href="#i-cloud"/></svg></span></div><div class="kv">8</div><div class="kf">Mobile sync pending</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Browser Captures</span><span class="ki green"><svg class="icon "><use href="#i-copy"/></svg></span></div><div class="kv">42</div><div class="kf">This week</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">SLA Risk</span><span class="ki red"><svg class="icon "><use href="#i-clock"/></svg></span></div><div class="kv">5</div><div class="kf">Older than 24 hours</div></article>
+ </div>
+ <div class="gmain">
+  <article class="card"><div class="ch"><span class="ki blue"><svg class="icon "><use href="#i-bolt"/></svg></span><h3>Unresolved Captures</h3><p>Click a record to inspect parsing and match evidence</p></div><div class="cb stack">
+   <div class="row capture-item" data-capture="phone"><span class="badge gold">P0</span><div class="rowcopy"><strong>(972) 555-0188</strong><span>Chrome extension · selected text · property page URL retained by user</span></div><span class="rowmeta">3 min</span><button class="btn xs blue" data-open-modal="captureResolveModal">Resolve</button></div>
+   <div class="row capture-item" data-capture="signature"><span class="badge blue">P1</span><div class="rowcopy"><strong>Jane Porter · Porter Properties</strong><span>Email signature parsed · 2 phones · 1 email · organization candidate</span></div><span class="rowmeta">12 min</span><button class="btn xs blue" data-open-modal="captureResolveModal">Review</button></div>
+   <div class="row capture-item" data-capture="mobile"><span class="badge purple">P2</span><div class="rowcopy"><strong>Michael Torres</strong><span>Apple selected contact · possible match to Michael A. Torres (88%)</span></div><span class="rowmeta">34 min</span><button class="btn xs purple" data-open-modal="identityModal">Compare</button></div>
+   <div class="row capture-item"><span class="badge gold">P0</span><div class="rowcopy"><strong>“Owner at 8912 Coit Rd — interested in inspection”</strong><span>Voice note · field rep · name not captured · property reference found</span></div><span class="rowmeta">1 hr</span><button class="btn xs blue" data-open-modal="captureResolveModal">Resolve</button></div>
+   <div class="row capture-item"><span class="badge blue">P1</span><div class="rowcopy"><strong>linda@example.com</strong><span>Web form · inbound source · first-party direct interaction evidence available</span></div><span class="rowmeta">2 hr</span><button class="btn xs green" data-open-modal="promotionModal">Promote</button></div>
+   <div class="row capture-item"><span class="badge red">P0</span><div class="rowcopy"><strong>Unknown browser capture</strong><span>Source domain restricted · raw personal data not transferred</span></div><span class="rowmeta">Yesterday</span><button class="btn xs">Dismiss</button></div>
+  </div></article>
+  <div class="stack">
+   <article class="card"><div class="ch"><h3>Capture Sources</h3></div><div class="cb">
+    <div class="meter"><span>Quick Add</span><div class="progress"><i style="width:83%"></i></div><b>83</b></div>
+    <div class="meter"><span>Browser extension</span><div class="progress cyan"><i style="width:64%"></i></div><b>64</b></div>
+    <div class="meter"><span>Mobile contacts</span><div class="progress green"><i style="width:48%"></i></div><b>48</b></div>
+    <div class="meter"><span>Email signature</span><div class="progress purple"><i style="width:37%"></i></div><b>37</b></div>
+    <div class="meter"><span>Business card</span><div class="progress gold"><i style="width:21%"></i></div><b>21</b></div>
+   </div></article>
+   <article class="card"><div class="ch"><h3>Capture Rules</h3></div><div class="cb stack">
+    <div class="callout green"><strong>No automatic enrichment</strong><p>Quick capture never consumes Data Credits until an authorized user selects or approves a capability.</p></div>
+    <div class="callout"><strong>Source first, entity later</strong><p>P0 keeps the exact evidence. P1 normalizes it. P2 proposes candidates. Only a governed action establishes P3/P4.</p></div>
+    <div class="callout gold"><strong>Restricted sites</strong><p>Capture mode can be disabled by tenant policy; manual entry remains available where permitted.</p></div>
+   </div></article>
+  </div>
+ </div>
+</section>
+
+<section class="view" id="view-import" data-title="Import Center">
+ <div class="hero"><div class="herocopy"><div class="eyebrow">Source-Specific Ingestion & Reconciliation</div><h1>Import Center</h1><p>Connect a supported source, upload a source-native export, or map any custom CSV. The assistant proposes transformations and identity candidates; the importer confirms every governed decision.</p></div>
+ <div class="actions"><button class="btn"><svg class="icon "><use href="#i-download"/></svg>Templates</button><button class="btn blue" data-open-modal="importModal"><svg class="icon "><use href="#i-upload"/></svg>Start Import</button></div></div>
+ <div class="sourcegrid">
+  <div class="source" data-import-source="google" data-open-modal="importModal"><span class="rec">OAuth / CSV</span><div class="logo"><svg class="icon "><use href="#i-users"/></svg></div><strong>Google Contacts</strong><span>Selected account, incremental sync, or Google CSV export.</span></div>
+  <div class="source" data-import-source="apple" data-open-modal="importModal"><span class="rec">Selected / vCard</span><div class="logo"><svg class="icon "><use href="#i-user"/></svg></div><strong>Apple Contacts</strong><span>Native selected contacts on Apple devices or vCard import.</span></div>
+  <div class="source" data-import-source="acculynx" data-open-modal="importModal"><span class="rec">API / Export</span><div class="logo"><svg class="icon "><use href="#i-building"/></svg></div><strong>AccuLynx</strong><span>Connector credentials or source-specific CSV with preserved IDs.</span></div>
+  <div class="source" data-import-source="jobnimbus" data-open-modal="importModal"><div class="logo"><svg class="icon "><use href="#i-cloud"/></svg></div><strong>JobNimbus</strong><span>Approved connector or source-specific export mapping.</span></div>
+  <div class="source" data-import-source="salesrabbit" data-open-modal="importModal"><span class="rec">API</span><div class="logo"><svg class="icon "><use href="#i-map"/></svg></div><strong>SalesRabbit</strong><span>Lead/contact activity connector with source crosswalks.</span></div>
+  <div class="source" data-import-source="hubspot" data-open-modal="importModal"><div class="logo"><svg class="icon "><use href="#i-graph"/></svg></div><strong>HubSpot</strong><span>Contacts, companies, associations and selected lifecycle facts.</span></div>
+  <div class="source" data-import-source="vcard" data-open-modal="importModal"><div class="logo"><svg class="icon "><use href="#i-file"/></svg></div><strong>vCard</strong><span>One or many .vcf contact cards with labeled values.</span></div>
+  <div class="source" data-import-source="custom" data-open-modal="importModal"><span class="rec">Flexible</span><div class="logo"><svg class="icon "><use href="#i-upload"/></svg></div><strong>Custom CSV</strong><span>AI-assisted mapping, transforms, dry run and reusable templates.</span></div>
+ </div>
+ <div class="sectionhead"><div class="stitle"><h2>Import Runs</h2><p>Every run remains reversible until downstream governed actions occur.</p></div><div class="sactions"><select class="filter"><option>All runs</option><option>In progress</option><option>Needs review</option><option>Completed</option></select></div></div>
+ <div class="tablewrap"><table class="table"><thead><tr><th>Run</th><th>Source</th><th>Records</th><th>Created / Linked</th><th>Review</th><th>Origin Attestation</th><th>Mapping</th><th>Status</th><th>Started by</th><th></th></tr></thead><tbody>
+  <tr><td><span class="name">IMP-2026-0421</span><span class="sub">Jul 26 · 8:41 PM</span></td><td>Google Contacts</td><td>1,248</td><td>942 / 233</td><td>73</td><td><span class="badge green">Tenant First-Party</span></td><td>Google v3</td><td><span class="badge purple">Review</span></td><td>Justin Johnson</td><td class="tdactions"><button class="btn xs" data-open-modal="importModal">Open</button></td></tr>
+  <tr><td><span class="name">IMP-2026-0417</span><span class="sub">Jul 25 · 3:10 PM</span></td><td>AccuLynx Export</td><td>4,886</td><td>3,942 / 801</td><td>143</td><td><span class="badge green">Tenant First-Party</span></td><td>AccuLynx 2026.2</td><td><span class="badge green">Complete</span></td><td>Data Steward</td><td class="tdactions"><button class="btn xs" data-toast="Run report opened">Report</button></td></tr>
+  <tr><td><span class="name">IMP-2026-0412</span><span class="sub">Jul 24 · 11:02 AM</span></td><td>Licensed Data Pack</td><td>2,500</td><td>2,211 / 149</td><td>140</td><td><span class="badge gold">Third-Party</span></td><td>Custom · TX Homeowners</td><td><span class="badge gold">Restricted</span></td><td>Marketing Ops</td><td class="tdactions"><button class="btn xs" data-toast="Source rights evidence opened">Evidence</button></td></tr>
+  <tr><td><span class="name">IMP-2026-0405</span><span class="sub">Jul 22 · 4:19 PM</span></td><td>Custom CSV</td><td>386</td><td>0 / 0</td><td>42 invalid</td><td><span class="badge red">Unknown</span></td><td>Draft</td><td><span class="badge red">Quarantined</span></td><td>Sales Manager</td><td class="tdactions"><button class="btn xs red" data-open-modal="importModal">Fix</button></td></tr>
+ </tbody></table></div>
+ <div class="sectionhead"><div class="stitle"><h2>Reusable Mapping Templates</h2><p>Versioned schemas, transforms and source crosswalk contracts.</p></div></div>
+ <div class="grid3">
+  <article class="card"><div class="ch"><h3>Google Contacts v3</h3><span class="badge green">Certified</span></div><div class="cb"><p class="sub">48 canonical fields · 12 transforms · preserves Google resourceName and etag.</p><button class="btn sm" data-toast="Template duplicated">Duplicate</button></div></article>
+  <article class="card"><div class="ch"><h3>AccuLynx 2026.2</h3><span class="badge green">Certified</span></div><div class="cb"><p class="sub">Contacts, companies, job addresses and source IDs; tenant-configured custom fields.</p><button class="btn sm" data-toast="Template opened">Inspect</button></div></article>
+  <article class="card"><div class="ch"><h3>DFW Referral Sheet</h3><span class="badge gold">Custom</span></div><div class="cb"><p class="sub">16 columns · LLM suggestions reviewed · last used Jul 22.</p><button class="btn sm" data-open-modal="importModal">Use</button></div></article>
+ </div>
+</section>
+
+<section class="view" id="view-identity" data-title="Identity Review">
+ <div class="hero"><div class="herocopy"><div class="eyebrow">Link-Over-Merge Stewardship</div><h1>Identity Review</h1><p>Compare source assertions, identity handles, property relationships, effective dates, and model explanations. Verify or reject a link without destroying either source record.</p></div>
+ <div class="actions"><button class="btn"><svg class="icon "><use href="#i-filter"/></svg>Risk bands</button><button class="btn purple" data-open-modal="identityModal"><svg class="icon "><use href="#i-link"/></svg>Open Review Case</button></div></div>
+ <div class="kpis">
+  <article class="card kpi"><div class="kt"><span class="kl">Review Cases</span><span class="ki purple"><svg class="icon "><use href="#i-link"/></svg></span></div><div class="kv">19</div><div class="kf">7 high-risk</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Exact Auto-Links</span><span class="ki green"><svg class="icon "><use href="#i-check"/></svg></span></div><div class="kv">233</div><div class="kf">Crosswalk or deterministic exact match</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Kept Separate</span><span class="ki gold"><svg class="icon "><use href="#i-users"/></svg></span></div><div class="kv">41</div><div class="kf">This month</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Retracted Links</span><span class="ki red"><svg class="icon "><use href="#i-refresh"/></svg></span></div><div class="kv">3</div><div class="kf">Replayed downstream projections</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Median Review</span><span class="ki blue"><svg class="icon "><use href="#i-clock"/></svg></span></div><div class="kv">2m 18s</div><div class="kf">Within 15-minute SLA</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Resolver Calibration</span><span class="ki cyan"><svg class="icon "><use href="#i-activity"/></svg></span></div><div class="kv">0.94</div><div class="kf">High-risk precision benchmark</div></article>
+ </div>
+ <div class="tablewrap"><table class="table"><thead><tr><th>Risk</th><th>Source record</th><th>Candidate canonical contact</th><th>Key evidence</th><th>Conflicts</th><th>Model</th><th>Age</th><th></th></tr></thead><tbody>
+  <tr><td><span class="badge red">High</span></td><td><span class="name">Michael Torres</span><span class="sub">Apple selection · P2</span></td><td>Michael A. Torres · C-10982</td><td>Same mobile · same property</td><td>Different middle name</td><td>88% · not auto-linkable</td><td>34 min</td><td class="tdactions"><button class="btn xs purple" data-open-modal="identityModal">Compare</button></td></tr>
+  <tr><td><span class="badge red">High</span></td><td><span class="name">J. Smith</span><span class="sub">Licensed list · P2</span></td><td>John Smith · C-10442</td><td>Same email hash</td><td>Different mailing address</td><td>76%</td><td>1 hr</td><td class="tdactions"><button class="btn xs purple" data-open-modal="identityModal">Compare</button></td></tr>
+  <tr><td><span class="badge gold">Medium</span></td><td><span class="name">Porter Properties</span><span class="sub">Signature parse · Organization</span></td><td>Porter Property Group LLC</td><td>Domain and phone</td><td>Legal name variant</td><td>84%</td><td>2 hr</td><td class="tdactions"><button class="btn xs purple" data-open-modal="identityModal">Compare</button></td></tr>
+  <tr><td><span class="badge gold">Medium</span></td><td><span class="name">Sandra N.</span><span class="sub">SalesRabbit · Person</span></td><td>Sandra Nguyen · C-10211</td><td>Phone + address</td><td>Email unavailable</td><td>92%</td><td>5 hr</td><td class="tdactions"><button class="btn xs purple" data-open-modal="identityModal">Compare</button></td></tr>
+  <tr><td><span class="badge blue">Low</span></td><td><span class="name">Kevin Hartley</span><span class="sub">Google · source update</span></td><td>Kevin Hartley · C-10042</td><td>Source crosswalk</td><td>None</td><td>Exact</td><td>6 hr</td><td class="tdactions"><button class="btn xs green" data-toast="Exact link verified">Verify</button></td></tr>
+ </tbody></table></div>
+ <div class="sectionhead"><div class="stitle"><h2>Decision Principles</h2><p>Identity AI proposes; deterministic rules and humans govern high-risk truth.</p></div></div>
+ <div class="grid3">
+  <div class="callout green"><strong>Link, do not overwrite</strong><p>Both source records survive with provenance, effective dates and crosswalks. The display projection applies survivorship rules.</p></div>
+  <div class="callout"><strong>Risk-tiered automation</strong><p>Exact source crosswalks and safe deterministic matches may auto-link. Ambiguous names, phones or properties become cases.</p></div>
+  <div class="callout gold"><strong>Reversible by design</strong><p>A verified link can be retracted, projections replayed, and the affected audit trail reconstructed.</p></div>
+ </div>
+</section>
+
+<section class="view" id="view-consent" data-title="Consent & Preferences">
+ <div class="hero"><div class="herocopy"><div class="eyebrow">Purpose-Specific Permission & Suppression</div><h1>Consent & Preferences</h1><p>Consent is evidence linked to a canonical subject, notice version, purpose, channel, jurisdiction, validity, and revocation—not a universal authorization switch.</p></div>
+ <div class="actions"><button class="btn"><svg class="icon "><use href="#i-download"/></svg>Receipt report</button><button class="btn purple" data-open-modal="consentModal"><svg class="icon "><use href="#i-shield"/></svg>Capture Consent</button></div></div>
+ <div class="kpis">
+  <article class="card kpi"><div class="kt"><span class="kl">Active Receipts</span><span class="ki purple"><svg class="icon "><use href="#i-shield"/></svg></span></div><div class="kv">1,426</div><div class="kf">Across 2,194 direct relationships</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Expiring Soon</span><span class="ki gold"><svg class="icon "><use href="#i-clock"/></svg></span></div><div class="kv">96</div><div class="kf">Within 30 days</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Revoked</span><span class="ki red"><svg class="icon "><use href="#i-x"/></svg></span></div><div class="kv">184</div><div class="kf">Suppression propagated</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">SMS Permitted</span><span class="ki cyan"><svg class="icon "><use href="#i-message"/></svg></span></div><div class="kv">1,104</div><div class="kf">Campaign-specific eligibility varies</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Email Permitted</span><span class="ki blue"><svg class="icon "><use href="#i-mail"/></svg></span></div><div class="kv">2,731</div><div class="kf">Includes non-consent lawful basis decisions</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">DNC / Suppressed</span><span class="ki red"><svg class="icon "><use href="#i-phone"/></svg></span></div><div class="kv">318</div><div class="kf">Tenant and purpose specific</div></article>
+ </div>
+ <div class="gmain">
+  <article class="card"><div class="ch"><span class="ki purple"><svg class="icon "><use href="#i-shield"/></svg></span><h3>Consent Receipt Register</h3><p>Latest evidence and operational status</p></div><div class="cb">
+   <div class="tablewrap"><table class="table" style="min-width:820px"><thead><tr><th>Subject</th><th>Purpose</th><th>Channels</th><th>Notice</th><th>Captured</th><th>Valid Until</th><th>Status</th><th></th></tr></thead><tbody>
+    <tr><td><span class="name">Kevin Hartley</span><span class="sub">C-10042</span></td><td>Inspection & estimate</td><td><span class="pill">SMS</span><span class="pill">Email</span><span class="pill">Phone</span></td><td>Field Notice v3.2</td><td>In-person signature</td><td>Jul 26, 2027</td><td><span class="badge green">Active</span></td><td><button class="btn xs" data-open-modal="consentModal">View</button></td></tr>
+    <tr><td><span class="name">Sandra Nguyen</span><span class="sub">C-10211</span></td><td>Appointment updates</td><td><span class="pill">SMS</span></td><td>Web Opt-In v2.6</td><td>Web form</td><td>May 17, 2027</td><td><span class="badge green">Active</span></td><td><button class="btn xs" data-open-modal="consentModal">View</button></td></tr>
+    <tr><td><span class="name">Marcus Trevino</span><span class="sub">C-10720</span></td><td>Seasonal promotions</td><td><span class="pill">Email</span></td><td>Marketing v4.1</td><td>Email preference center</td><td>Aug 11, 2026</td><td><span class="badge gold">Expiring</span></td><td><button class="btn xs purple" data-open-modal="consentModal">Renew</button></td></tr>
+    <tr><td><span class="name">Brenda Kowalski</span><span class="sub">C-10944</span></td><td>All marketing</td><td><span class="pill">SMS</span><span class="pill">Email</span></td><td>Marketing v4.0</td><td>SMS STOP</td><td>—</td><td><span class="badge red">Revoked</span></td><td><button class="btn xs">History</button></td></tr>
+   </tbody></table></div>
+  </div></article>
+  <div class="stack">
+   <article class="card"><div class="ch"><h3>Suppression Controls</h3></div><div class="cb stack">
+    <div class="row"><div class="rowcopy"><strong>SMS STOP / unsubscribe</strong><span>Immediate tenant-wide operational suppression</span></div><span class="badge red">184</span></div>
+    <div class="row"><div class="rowcopy"><strong>Do Not Call</strong><span>National, state, tenant and subject requests</span></div><span class="badge red">318</span></div>
+    <div class="row"><div class="rowcopy"><strong>Email complaints / hard bounce</strong><span>Sender and tenant suppression combined</span></div><span class="badge gold">67</span></div>
+    <div class="row"><div class="rowcopy"><strong>Do Not Mail</strong><span>Tenant preference and deletion-safe hash</span></div><span class="badge gray">41</span></div>
+   </div></article>
+   <article class="card"><div class="ch"><h3>Purpose Taxonomy</h3></div><div class="cb">
+    <span class="pill">Inspection & Estimate</span><span class="pill">Appointment Updates</span><span class="pill">Project Operations</span><span class="pill">Claim Assistance</span><span class="pill">Seasonal Promotions</span><span class="pill">Referral Program</span>
+    <div class="callout gold" style="margin-top:12px"><strong>Policy makes the final decision</strong><p>An active receipt is one input. Relationship, jurisdiction, channel, purpose, device, source rights and suppression are evaluated at execution time.</p></div>
+   </div></article>
+  </div>
+ </div>
+</section>
+
+<section class="view" id="view-enrichment" data-title="Enrichment Queue">
+ <div class="hero"><div class="herocopy"><div class="eyebrow">Permissioned Data Capabilities</div><h1>Enrichment Queue</h1><p>Users request outcomes such as phone validation, email validation, possible profiles, or contact append. Provider choice, fallback, cost and health remain hidden behind the capability broker.</p></div>
+ <div class="actions"><button class="btn" data-open-drawer="creditsDrawer"><svg class="icon "><use href="#i-coins"/></svg>Credits & Budgets</button><button class="btn blue" data-open-drawer="enrichDrawer"><svg class="icon "><use href="#i-spark"/></svg>New Request</button></div></div>
+ <div class="kpis">
+  <article class="card kpi"><div class="kt"><span class="kl">Awaiting Approval</span><span class="ki gold"><svg class="icon "><use href="#i-clock"/></svg></span></div><div class="kv">13</div><div class="kf">Estimated 41 credits</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Processing</span><span class="ki blue"><svg class="icon "><use href="#i-refresh"/></svg></span></div><div class="kv">8</div><div class="kf">3 provider fallbacks</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Completed Today</span><span class="ki green"><svg class="icon "><use href="#i-check"/></svg></span></div><div class="kv">126</div><div class="kf">82 successful matches</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">No Match</span><span class="ki purple"><svg class="icon "><use href="#i-search"/></svg></span></div><div class="kv">31</div><div class="kf">No-charge policy applied</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Cache Reuse</span><span class="ki cyan"><svg class="icon "><use href="#i-copy"/></svg></span></div><div class="kv">44%</div><div class="kf">Saved 93 credits</div></article>
+  <article class="card kpi"><div class="kt"><span class="kl">Budget Remaining</span><span class="ki gold"><svg class="icon "><use href="#i-coins"/></svg></span></div><div class="kv">2,480</div><div class="kf">620 reserved</div></article>
+ </div>
+ <div class="tablewrap"><table class="table"><thead><tr><th>Request</th><th>Contact</th><th>Capabilities</th><th>Reason / Purpose</th><th>Requested by</th><th>Estimate</th><th>Policy</th><th>Status</th><th></th></tr></thead><tbody>
+  <tr><td><span class="name">ENR-02418</span><span class="sub">Jul 26 · 8:44 PM</span></td><td>John Smith · C-10442</td><td><span class="pill">Phone append</span><span class="pill">Email validation</span></td><td>Property observation follow-up</td><td>Justin Johnson</td><td>3 credits</td><td><span class="badge gold">Approval</span></td><td><span class="badge gold">Awaiting</span></td><td><button class="btn xs gold" data-open-drawer="enrichDrawer">Review</button></td></tr>
+  <tr><td><span class="name">ENR-02417</span><span class="sub">Jul 26 · 8:31 PM</span></td><td>Porter Properties</td><td><span class="pill">Business profile</span><span class="pill">Email validation</span></td><td>Commercial account qualification</td><td>Sales Manager</td><td>2 credits</td><td><span class="badge green">Eligible</span></td><td><span class="badge blue">Processing</span></td><td><button class="btn xs">Open</button></td></tr>
+  <tr><td><span class="name">ENR-02415</span><span class="sub">Jul 26 · 7:55 PM</span></td><td>Sandra Nguyen</td><td><span class="pill">Phone validation</span></td><td>Appointment delivery assurance</td><td>System workflow</td><td>1 credit</td><td><span class="badge green">Eligible</span></td><td><span class="badge green">Complete</span></td><td><button class="btn xs">Result</button></td></tr>
+  <tr><td><span class="name">ENR-02410</span><span class="sub">Jul 26 · 5:12 PM</span></td><td>Unknown property owner</td><td><span class="pill">Contact append</span></td><td>Storm prospect campaign</td><td>Marketing Ops</td><td>2 credits</td><td><span class="badge red">Denied</span></td><td><span class="badge red">Blocked</span></td><td><button class="btn xs">Explain</button></td></tr>
+ </tbody></table></div>
+ <div class="sectionhead"><div class="stitle"><h2>Capability Catalog</h2><p>Ordinary users see data outcomes and credit cost—not vendor implementation.</p></div></div>
+ <div class="grid4">
+  <article class="card"><div class="ch"><span class="ki blue"><svg class="icon "><use href="#i-phone"/></svg></span><h3>Validate Phone</h3><span class="badge green">1 credit</span></div><div class="cb"><p class="sub">Normalize, line type, reachability and risk flags. Does not create marketing consent.</p><button class="btn sm blue" data-open-drawer="enrichDrawer">Request</button></div></article>
+  <article class="card"><div class="ch"><span class="ki blue"><svg class="icon "><use href="#i-mail"/></svg></span><h3>Validate Email</h3><span class="badge green">1 credit</span></div><div class="cb"><p class="sub">Syntax, domain, deliverability signals and freshness. Does not prove identity by itself.</p><button class="btn sm blue" data-open-drawer="enrichDrawer">Request</button></div></article>
+  <article class="card"><div class="ch"><span class="ki gold"><svg class="icon "><use href="#i-spark"/></svg></span><h3>Find Contact Points</h3><span class="badge gold">2 credits</span></div><div class="cb"><p class="sub">Returns candidates with source, confidence and permitted-use metadata.</p><button class="btn sm gold" data-open-drawer="enrichDrawer">Request</button></div></article>
+  <article class="card"><div class="ch"><span class="ki purple"><svg class="icon "><use href="#i-graph"/></svg></span><h3>Find Possible Profiles</h3><span class="badge purple">1 credit</span></div><div class="cb"><p class="sub">Returns candidate external profiles for human confirmation; no automatic linking.</p><button class="btn sm purple" data-open-drawer="enrichDrawer">Request</button></div></article>
+ </div>
+</section>
+
+<section class="view" id="view-review" data-title="Data Review">
+ <div class="hero"><div class="herocopy"><div class="eyebrow">Field-Level Verification & Source Conflict</div><h1>Data Review</h1><p>Review duplicate candidates, stale contact points, source-rights gaps, role conflicts, consent ambiguity, and first-party promotion evidence as separate governed case types.</p></div>
+ <div class="actions"><button class="btn"><svg class="icon "><use href="#i-download"/></svg>Case report</button><button class="btn blue" data-open-modal="identityModal"><svg class="icon "><use href="#i-activity"/></svg>Open Next Case</button></div></div>
+ <div class="grid4">
+  <button class="card cb" data-route="identity"><div class="kt"><span class="kl">Possible Duplicates</span><span class="badge red">19</span></div><div class="kv">19</div><span class="sub">7 high-risk identity cases</span></button>
+  <button class="card cb"><div class="kt"><span class="kl">Contact Point Conflicts</span><span class="badge gold">12</span></div><div class="kv">12</div><span class="sub">Phone or email asserted differently</span></button>
+  <button class="card cb"><div class="kt"><span class="kl">Source Rights</span><span class="badge red">8</span></div><div class="kv">8</div><span class="sub">License or permitted use incomplete</span></button>
+  <button class="card cb" data-route="consent"><div class="kt"><span class="kl">Consent Ambiguity</span><span class="badge purple">9</span></div><div class="kv">9</div><span class="sub">Unknown subject, purpose or validity</span></button>
+  <button class="card cb"><div class="kt"><span class="kl">Relationship Conflicts</span><span class="badge gold">14</span></div><div class="kv">14</div><span class="sub">Owner, occupant or representative mismatch</span></button>
+  <button class="card cb"><div class="kt"><span class="kl">Stale Data</span><span class="badge blue">67</span></div><div class="kv">67</div><span class="sub">Refresh policy exceeded</span></button>
+  <button class="card cb"><div class="kt"><span class="kl">Suppression Mismatch</span><span class="badge red">5</span></div><div class="kv">5</div><span class="sub">Connector and platform state differ</span></button>
+  <button class="card cb"><div class="kt"><span class="kl">Promotion Evidence</span><span class="badge green">11</span></div><div class="kv">11</div><span class="sub">Ready to establish direct relationship</span></button>
+ </div>
+ <div class="sectionhead"><div class="stitle"><h2>Unified Case Queue</h2><p>Risk-prioritized, evidence-linked and reversible.</p></div><div class="sactions"><select class="filter"><option>All risk levels</option><option>High</option><option>Medium</option><option>Low</option></select><select class="filter"><option>All case types</option><option>Identity</option><option>Source Rights</option><option>Consent</option><option>Relationship</option></select></div></div>
+ <div class="tablewrap"><table class="table"><thead><tr><th>Risk</th><th>Case</th><th>Entity</th><th>Issue</th><th>Evidence</th><th>Owner</th><th>SLA</th><th>Status</th><th></th></tr></thead><tbody>
+  <tr><td><span class="badge red">High</span></td><td><span class="name">DR-01942</span><span class="sub">Identity</span></td><td>Michael Torres</td><td>Possible false link</td><td>4 sources · 1 conflict</td><td>Data Steward</td><td>38 min</td><td><span class="badge purple">Review</span></td><td><button class="btn xs purple" data-open-modal="identityModal">Open</button></td></tr>
+  <tr><td><span class="badge red">High</span></td><td><span class="name">DR-01939</span><span class="sub">Source Rights</span></td><td>386 imported records</td><td>Unknown permitted use</td><td>Attestation incomplete</td><td>Privacy Officer</td><td>2 hr</td><td><span class="badge red">Quarantine</span></td><td><button class="btn xs">Open</button></td></tr>
+  <tr><td><span class="badge gold">Medium</span></td><td><span class="name">DR-01935</span><span class="sub">Relationship</span></td><td>John Smith</td><td>Public owner vs field occupant</td><td>County assertion + rep note</td><td>Sales Manager</td><td>5 hr</td><td><span class="badge gold">Pending</span></td><td><button class="btn xs" data-open-modal="promotionModal">Review</button></td></tr>
+  <tr><td><span class="badge gold">Medium</span></td><td><span class="name">DR-01931</span><span class="sub">Consent</span></td><td>Sandra Nguyen</td><td>Receipt subject unresolved</td><td>Signed receipt + old contact ID</td><td>Privacy Officer</td><td>7 hr</td><td><span class="badge purple">Review</span></td><td><button class="btn xs purple" data-open-modal="consentModal">Open</button></td></tr>
+ </tbody></table></div>
+</section>
+
+<section class="view" id="view-audit" data-title="Audit & History">
+ <div class="hero"><div class="herocopy"><div class="eyebrow">Evidence, Causality & Reversibility</div><h1>Audit & History</h1><p>Trace capture, import, mapping, identity decisions, PII reveal, consent, suppression, enrichment, sharing, and downstream use through correlated evidence—not debug logs.</p></div>
+ <div class="actions"><button class="btn"><svg class="icon "><use href="#i-filter"/></svg>Advanced query</button><button class="btn blue"><svg class="icon "><use href="#i-download"/></svg>Export evidence bundle</button></div></div>
+ <div class="gmain">
+  <article class="card"><div class="ch"><span class="ki blue"><svg class="icon "><use href="#i-clock"/></svg></span><h3>Contact Evidence Timeline</h3><p>John Smith · C-10442</p></div><div class="cb timeline">
+   <div class="timeitem"><i class="timedot blue"></i><div><strong>Contact point enrichment requested</strong><span>ENR-02418 · Justin Johnson · policy PD-18AB · 3 credits estimated · 8:44 PM</span></div></div>
+   <div class="timeitem"><i class="timedot gold"></i><div><strong>Public owner assertion linked as candidate</strong><span>County/appraisal capability · effective Jan 1, 2026 · retrieved Jul 25 · confidence high</span></div></div>
+   <div class="timeitem"><i class="timedot green"></i><div><strong>Field interaction established direct relationship</strong><span>Door conversation · rep Cody Tatum · property 123 Main St · evidence note EV-9931</span></div></div>
+   <div class="timeitem"><i class="timedot purple"></i><div><strong>Consent receipt issued</strong><span>Inspection & estimate · SMS/email/phone · Field Notice v3.2 · receipt CR-9182</span></div></div>
+   <div class="timeitem"><i class="timedot blue"></i><div><strong>Source record normalized and linked</strong><span>Google Contacts · source resource people/c123 · mapping Google v3 · crosswalk retained</span></div></div>
+   <div class="timeitem"><i class="timedot"></i><div><strong>P0 capture received</strong><span>Quick Contact · user entered phone and name · raw capture CAP-1182 retained</span></div></div>
+  </div></article>
+  <div class="stack">
+   <article class="card"><div class="ch"><h3>Correlation Context</h3></div><div class="cb detailgrid" style="grid-template-columns:1fr">
+    <div class="detail"><label>Canonical Entity</label><strong>per_01JH8K10442</strong><small>MDM write kernel</small></div>
+    <div class="detail"><label>Trace / Causation</label><strong>tr_8429 · cause_CAP-1182</strong><small>Browser → workflow → MDM</small></div>
+    <div class="detail"><label>Policy Bundle</label><strong>contact-policy@8d19a4</strong><small>Decision references preserved</small></div>
+    <div class="detail"><label>Consent Epoch</label><strong>cmp-v17 · receipt CR-9182</strong><small>Current at latest action</small></div>
+   </div></article>
+   <article class="card"><div class="ch"><h3>Reversible Actions</h3></div><div class="cb stack">
+    <button class="btn red" data-toast="Link retraction workflow requires steward approval"><svg class="icon "><use href="#i-refresh"/></svg>Retract identity link</button>
+    <button class="btn" data-toast="Relationship history opened"><svg class="icon "><use href="#i-link"/></svg>End relationship</button>
+    <button class="btn" data-toast="Consent withdrawal workflow opened"><svg class="icon "><use href="#i-shield"/></svg>Withdraw consent</button>
+    <button class="btn red" data-toast="Privacy erasure workflow opened"><svg class="icon "><use href="#i-trash"/></svg>Start privacy erasure</button>
+   </div></article>
+  </div>
+ </div>
+</section>
+
+<section class="view" id="view-properties" data-title="Associated Properties">
+ <div class="hero"><div class="herocopy"><div class="eyebrow">Contact-Centered Property Relationships</div><h1>Associated Properties</h1><p>This Contact workflow view shows relationship roles and evidence only. Full Property workflow is delivered in the separate Property SPA.</p></div><div class="actions"><button class="btn blue" data-open-modal="quickModal"><svg class="icon "><use href="#i-plus"/></svg>Link Property</button></div></div>
+ <div class="tablewrap"><table class="table"><thead><tr><th>Property</th><th>Relationship</th><th>Trust</th><th>Valid From</th><th>Evidence</th><th>Active Work</th><th></th></tr></thead><tbody>
+  <tr><td><span class="name">123 Main St, Plano, TX</span><span class="sub">Property P-30291 · Parcel matched</span></td><td>Public-record owner + field-confirmed decision maker</td><td><span class="badge green">Confirmed</span></td><td>Jul 25, 2026</td><td>County assertion + rep confirmation</td><td>Inspection lead</td><td><button class="btn xs">Open</button></td></tr>
+  <tr><td><span class="name">4817 Shady Brook Ln, Plano, TX</span><span class="sub">Property P-19821</span></td><td>Possible previous occupant</td><td><span class="badge gold">Candidate</span></td><td>Unknown</td><td>Imported mailing address</td><td>None</td><td><button class="btn xs">Review</button></td></tr>
+  <tr><td><span class="name">2901 Roundabout Ln, Allen, TX</span><span class="sub">Property P-32218</span></td><td>Authorized representative for Porter Properties</td><td><span class="badge blue">Documented</span></td><td>Mar 11, 2025</td><td>Management agreement</td><td>Active project</td><td><button class="btn xs">Open</button></td></tr>
+ </tbody></table></div>
+</section>
+
+<section class="view" id="view-campaigns" data-title="Campaign Enrollment">
+ <div class="hero"><div class="herocopy"><div class="eyebrow">Contact Eligibility & Enrollment History</div><h1>Campaign Enrollment</h1><p>Contact-level enrollment is governed by audience snapshot, source rights, purpose, channel eligibility, suppression, frequency caps and current consent at execution time.</p></div></div>
+ <div class="tablewrap"><table class="table"><thead><tr><th>Campaign</th><th>Purpose</th><th>Enrollment</th><th>Channels</th><th>Eligibility</th><th>Response</th><th>Outcome</th><th></th></tr></thead><tbody>
+  <tr><td><span class="name">North Plano Hail Follow-Up</span><span class="sub">CAM-2026-118</span></td><td>Inspection offer</td><td>Jul 25, 2026</td><td>Direct mail · Email</td><td><span class="badge green">Eligible</span></td><td>Email reply</td><td>Lead created</td><td><button class="btn xs">Timeline</button></td></tr>
+  <tr><td><span class="name">Spring Maintenance</span><span class="sub">CAM-2026-042</span></td><td>Seasonal promotion</td><td>Mar 2, 2026</td><td>Email</td><td><span class="badge red">Suppressed</span></td><td>Unsubscribed</td><td>Closed</td><td><button class="btn xs">Evidence</button></td></tr>
+  <tr><td><span class="name">Warranty Inspection</span><span class="sub">CAM-2025-217</span></td><td>Existing customer service</td><td>Nov 12, 2025</td><td>SMS · Phone</td><td><span class="badge green">Eligible</span></td><td>Appointment accepted</td><td>Completed</td><td><button class="btn xs">Timeline</button></td></tr>
+ </tbody></table></div>
+</section>
+
+
+ </div>
+</main>
+</div>
+<div class="scrim" id="scrim"></div>
+<div class="toast" id="toast"><i></i><span id="toastText">Saved</span></div>
+
+
+<section class="fullpanel" id="contact360">
+ <header class="fphead"><button class="ib" data-close-panel="contact360"><svg class="icon "><use href="#i-chevron"/></svg></button><div class="avatar" style="background:#17335f;color:#7babff">JS</div><div><h1 id="c360Name">John Smith</h1><p id="c360Sub">Person · C-10442 · P4 Direct relationship</p></div><span class="badge green">Canonical</span><span class="badge blue">Homeowner confirmed</span><div class="spacer"></div>
+  <div class="actions"><button class="btn" data-open-modal="consentModal"><svg class="icon "><use href="#i-shield"/></svg>Consent</button><button class="btn" data-open-drawer="enrichDrawer"><svg class="icon "><use href="#i-spark"/></svg>Enrich</button><button class="btn blue" data-toast="Lead quick-create opened"><svg class="icon "><use href="#i-plus"/></svg>Create Lead</button><button class="btn"><svg class="icon "><use href="#i-more"/></svg></button></div>
+ </header>
+ <div class="tabs" data-tabset="contact360tabs">
+  <button class="tab active" data-tab="c-overview">Overview</button><button class="tab" data-tab="c-contactpoints">Contact Points</button><button class="tab" data-tab="c-properties">Properties</button><button class="tab" data-tab="c-conversations">Conversations</button><button class="tab" data-tab="c-relationships">Relationships</button><button class="tab" data-tab="c-consent">Preferences & Consent</button><button class="tab" data-tab="c-provenance">Data & Provenance</button><button class="tab" data-tab="c-activity">Audit Timeline</button>
+ </div>
+ <div class="fpbody">
+  <div class="tabpane active" id="c-overview">
+   <div class="statusrail" style="margin-bottom:13px">
+    <div class="statusnode done"><i></i><strong>P0 Captured</strong><span>Quick add · Jul 22</span></div><div class="statusnode done"><i></i><strong>P1 Normalized</strong><span>Handles parsed</span></div><div class="statusnode done"><i></i><strong>P2 Candidate</strong><span>One exact candidate</span></div><div class="statusnode done"><i></i><strong>P3 Linked</strong><span>Crosswalk verified</span></div><div class="statusnode active"><i></i><strong>P4 Direct</strong><span>Door confirmation</span></div><div class="statusnode active"><i></i><strong>Consent</strong><span>Inspection purpose</span></div>
+   </div>
+   <div class="gmain">
+    <div class="stack">
+     <article class="card"><div class="ch"><span class="ki blue"><svg class="icon "><use href="#i-user"/></svg></span><h3>Identity & Reachability</h3><span class="badge green">68% contactable</span></div><div class="cb">
+      <div class="detailgrid">
+       <div class="detail"><label>Preferred Display Name</label><strong>John A. Smith</strong><small>Survivorship projection · 3 sources</small></div>
+       <div class="detail"><label>Contextual Role</label><strong>Homeowner / Decision Maker</strong><small>Field-confirmed for 123 Main St</small></div>
+       <div class="detail"><label>Organization</label><strong>Independent homeowner</strong><small>No active company relationship</small></div>
+       <div class="detail"><label>Record Owner</label><strong>Cody Tatum</strong><small>North Dallas Sales</small></div>
+      </div>
+      <div class="sectionhead"><div class="stitle"><h2>Contact Points</h2></div><button class="btn sm" data-tab-jump="c-contactpoints">Manage</button></div>
+      <div class="grid3">
+       <div class="callout green"><strong>Mobile · (972) 413-8902</strong><p>Homeowner confirmed · SMS consent for inspection · primary</p></div>
+       <div class="callout"><strong>Email · john.smith@example.com</strong><p>Imported + validated · email promotion consent not present</p></div>
+       <div class="callout gold"><strong>Mail · 123 Main St</strong><p>Property relationship confirmed · deliverability standardized</p></div>
+      </div>
+     </div></article>
+     <article class="card"><div class="ch"><span class="ki green"><svg class="icon "><use href="#i-home"/></svg></span><h3>Properties & Work</h3><button class="btn xs" data-toast="Quick property link opened"><svg class="icon "><use href="#i-plus"/></svg>Link property</button></div><div class="cb">
+      <div class="row"><span class="ki green"><svg class="icon "><use href="#i-home"/></svg></span><div class="rowcopy"><strong>123 Main St, Plano, TX 75023</strong><span>Public-record owner + field-confirmed decision maker · active inspection lead</span></div><span class="badge green">Confirmed</span><button class="btn xs">Open</button></div>
+      <div class="row"><span class="ki gold"><svg class="icon "><use href="#i-home"/></svg></span><div class="rowcopy"><strong>4817 Shady Brook Ln, Plano, TX</strong><span>Possible previous occupant · imported address only</span></div><span class="badge gold">Candidate</span><button class="btn xs">Review</button></div>
+      <div class="row"><span class="ki blue"><svg class="icon "><use href="#i-building"/></svg></span><div class="rowcopy"><strong>Porter Properties Portfolio</strong><span>Authorized representative · management agreement evidence</span></div><span class="badge blue">Documented</span><button class="btn xs">Open</button></div>
+     </div></article>
+     <article class="card"><div class="ch"><span class="ki cyan"><svg class="icon "><use href="#i-message"/></svg></span><h3>Recent Conversations</h3><button class="btn xs" data-tab-jump="c-conversations">View all</button></div><div class="cb timeline">
+      <div class="timeitem"><i class="timedot green"></i><div><strong>Inbound SMS: “Tomorrow at 10 works.”</strong><span>Appointment updates · consent valid · Jul 26 7:32 PM</span></div></div>
+      <div class="timeitem"><i class="timedot blue"></i><div><strong>Inspection request email delivered</strong><span>Regarding 123 Main St · template INSPECT-04 · Jul 26 4:18 PM</span></div></div>
+      <div class="timeitem"><i class="timedot gold"></i><div><strong>Door conversation recorded</strong><span>Cody Tatum · homeowner confirmed · missing shingles observation · Jul 25</span></div></div>
+     </div></article>
+    </div>
+    <div class="stack">
+     <article class="card"><div class="ch"><h3>Data Passport</h3><button class="btn xs" data-tab-jump="c-provenance">Full history</button></div><div class="cb">
+      <div class="detailgrid" style="grid-template-columns:1fr">
+       <div class="detail"><label>Canonical Person ID</label><strong>per_01JH8K10442</strong><small>Tenant-scoped MDM kernel</small></div>
+       <div class="detail"><label>Primary Data Origin</label><strong>Tenant first-party CRM</strong><small>Google source crosswalk retained</small></div>
+       <div class="detail"><label>Direct Relationship</label><strong>Established Jul 25, 2026</strong><small>In-person homeowner confirmation</small></div>
+       <div class="detail"><label>Last Identity Review</label><strong>Jul 25 · Data Steward</strong><small>No unresolved high-risk conflicts</small></div>
+      </div>
+     </div></article>
+     <article class="card"><div class="ch"><h3>Channel Decision</h3></div><div class="cb stack">
+      <div class="row"><span class="ki cyan"><svg class="icon "><use href="#i-message"/></svg></span><div class="rowcopy"><strong>SMS · Appointment updates</strong><span>Allowed · receipt CR-9182 · valid until Jul 2027</span></div><span class="badge green">Allow</span></div>
+      <div class="row"><span class="ki blue"><svg class="icon "><use href="#i-mail"/></svg></span><div class="rowcopy"><strong>Email · Inspection information</strong><span>Allowed · direct relationship and purpose policy</span></div><span class="badge green">Allow</span></div>
+      <div class="row"><span class="ki purple"><svg class="icon "><use href="#i-mail"/></svg></span><div class="rowcopy"><strong>Email · Seasonal promotion</strong><span>Consent not recorded</span></div><span class="badge gold">Review</span></div>
+      <div class="row"><span class="ki red"><svg class="icon "><use href="#i-message"/></svg></span><div class="rowcopy"><strong>SMS · Marketing</strong><span>Blocked without campaign-specific opt-in</span></div><span class="badge red">Deny</span></div>
+     </div></article>
+     <article class="card"><div class="ch"><h3>Recommended Next Actions</h3></div><div class="cb stack">
+      <button class="btn blue" data-toast="Inspection lead opened"><svg class="icon "><use href="#i-calendar"/></svg>Confirm inspection</button>
+      <button class="btn purple" data-open-modal="consentModal"><svg class="icon "><use href="#i-shield"/></svg>Collect promotional preference</button>
+      <button class="btn gold" data-open-drawer="enrichDrawer"><svg class="icon "><use href="#i-spark"/></svg>Validate email freshness · 1 credit</button>
+      <button class="btn" data-toast="Contact summary exported"><svg class="icon "><use href="#i-download"/></svg>Export governed summary</button>
+     </div></article>
+    </div>
+   </div>
+  </div>
+  <div class="tabpane" id="c-contactpoints">
+   <div class="sectionhead"><div class="stitle"><h2>Contact Points</h2><p>Each phone, email, address and profile is a separate handle with its own source, confidence, validity and eligibility.</p></div><div class="sactions"><button class="btn blue" data-toast="Contact point editor opened"><svg class="icon "><use href="#i-plus"/></svg>Add Contact Point</button></div></div>
+   <div class="tablewrap"><table class="table"><thead><tr><th>Type</th><th>Value</th><th>Label</th><th>Trust State</th><th>Source</th><th>Effective / Retrieved</th><th>Eligibility</th><th></th></tr></thead><tbody>
+    <tr><td>Phone</td><td><span class="name">(972) 413-8902</span></td><td>Mobile · Primary</td><td><span class="badge green">Homeowner confirmed</span></td><td>Field confirmation + Google</td><td>Jul 25 / Jul 25</td><td>SMS appointments · Voice</td><td><button class="btn xs"><svg class="icon "><use href="#i-more"/></svg></button></td></tr>
+    <tr><td>Email</td><td><span class="name">john.smith@example.com</span></td><td>Personal</td><td><span class="badge blue">Validated</span></td><td>Google Contacts</td><td>May 4 / Jul 22</td><td>Inspection email only</td><td><button class="btn xs"><svg class="icon "><use href="#i-more"/></svg></button></td></tr>
+    <tr><td>Address</td><td><span class="name">123 Main St, Plano, TX 75023</span></td><td>Residential</td><td><span class="badge green">Field confirmed</span></td><td>Property relationship</td><td>Jul 25 / Jul 25</td><td>Postal eligible</td><td><button class="btn xs"><svg class="icon "><use href="#i-more"/></svg></button></td></tr>
+    <tr><td>Profile</td><td><span class="name">Possible external profile</span></td><td>Candidate</td><td><span class="badge gold">72% candidate</span></td><td>Enrichment capability</td><td>Unknown / Jul 24</td><td>Not operational</td><td><button class="btn xs purple">Confirm</button></td></tr>
+   </tbody></table></div>
+  </div>
+  <div class="tabpane" id="c-properties">
+   <div class="sectionhead"><div class="stitle"><h2>Property Relationships</h2><p>Roles are bitemporal relationship contracts; ownership, occupancy, management and decision authority remain distinct.</p></div></div>
+   <div class="grid3">
+    <article class="card"><div class="ch"><span class="ki green"><svg class="icon "><use href="#i-home"/></svg></span><h3>123 Main St</h3><span class="badge green">Confirmed</span></div><div class="cb"><p class="sub">OWNS candidate from public record; OCCUPIES and DECISION_MAKER confirmed in person.</p><div class="detailgrid" style="grid-template-columns:1fr 1fr"><div class="detail"><label>Valid from</label><strong>Jul 25, 2026</strong></div><div class="detail"><label>Evidence</label><strong>3 assertions</strong></div></div></div></article>
+    <article class="card"><div class="ch"><span class="ki gold"><svg class="icon "><use href="#i-home"/></svg></span><h3>4817 Shady Brook Ln</h3><span class="badge gold">Candidate</span></div><div class="cb"><p class="sub">Historical mailing-address assertion; no owner or occupancy confirmation.</p><button class="btn sm">Review relationship</button></div></article>
+    <article class="card"><div class="ch"><span class="ki blue"><svg class="icon "><use href="#i-building"/></svg></span><h3>Porter Portfolio</h3><span class="badge blue">Representative</span></div><div class="cb"><p class="sub">AUTHORIZED_FOR relationship documented by uploaded management agreement.</p><button class="btn sm">View evidence</button></div></article>
+   </div>
+  </div>
+  <div class="tabpane" id="c-conversations">
+   <div class="sectionhead"><div class="stitle"><h2>Unified Conversations</h2><p>Every interaction is scoped to channel, purpose, property, lead/project, sender identity and current eligibility.</p></div><div class="sactions"><button class="btn blue" data-toast="Compose drawer opened"><svg class="icon "><use href="#i-message"/></svg>Compose</button></div></div>
+   <div class="gmain">
+    <article class="card"><div class="cb timeline">
+     <div class="timeitem"><i class="timedot green"></i><div><strong>SMS · Inbound</strong><span>“Tomorrow at 10 works.” · property 123 Main St · appointment purpose · 7:32 PM</span></div></div>
+     <div class="timeitem"><i class="timedot blue"></i><div><strong>Email · Outbound</strong><span>Inspection confirmation · delivered · opened once · 4:18 PM</span></div></div>
+     <div class="timeitem"><i class="timedot gold"></i><div><strong>Door Visit · In person</strong><span>Homeowner confirmed · consent captured · photos discussed · Jul 25</span></div></div>
+     <div class="timeitem"><i class="timedot"></i><div><strong>Internal note</strong><span>“May need gutter scope as well.” · Cody Tatum · Jul 25</span></div></div>
+    </div></article>
+    <article class="card"><div class="ch"><h3>Compose Guardrails</h3></div><div class="cb stack">
+     <div class="callout green"><strong>Appointment SMS available</strong><p>Purpose-specific receipt valid; sender registration healthy; local-time window open.</p></div>
+     <div class="callout gold"><strong>Promotional email needs review</strong><p>Direct relationship exists, but no promotional preference receipt is stored.</p></div>
+     <div class="callout red"><strong>Marketing SMS unavailable</strong><p>Candidate phone validation and identity do not create SMS opt-in.</p></div>
+    </div></article>
+   </div>
+  </div>
+  <div class="tabpane" id="c-relationships">
+   <div class="sectionhead"><div class="stitle"><h2>Relationship Graph</h2><p>Contextual roles connect the Person to Properties, Organizations, tenant teams and other people without mutating pure identity.</p></div></div>
+   <div class="card cb">
+    <svg viewBox="0 0 1000 370" style="width:100%;height:auto;min-height:320px">
+     <defs><linearGradient id="nodeG" x1="0" x2="1"><stop stop-color="#246fff"/><stop offset="1" stop-color="#00c7df"/></linearGradient></defs>
+     <g stroke="#39445b" stroke-width="2"><path d="M500 185L245 85"/><path d="M500 185L245 285"/><path d="M500 185L755 85"/><path d="M500 185L755 285"/><path d="M500 185L500 45"/></g>
+     <g font-family="system-ui" text-anchor="middle"><circle cx="500" cy="185" r="58" fill="url(#nodeG)"/><text x="500" y="180" fill="#fff" font-size="18" font-weight="800">John Smith</text><text x="500" y="202" fill="#dce8ff" font-size="11">Canonical Person</text>
+     <g><rect x="145" y="47" width="200" height="76" rx="18" fill="#13251f" stroke="#00d59a"/><text x="245" y="78" fill="#58e9bd" font-weight="800">123 Main St</text><text x="245" y="99" fill="#9aa" font-size="11">OWNS? · OCCUPIES · DECIDES</text></g>
+     <g><rect x="145" y="247" width="200" height="76" rx="18" fill="#25200f" stroke="#ffae00"/><text x="245" y="278" fill="#ffc047" font-weight="800">4817 Shady Brook</text><text x="245" y="299" fill="#9aa" font-size="11">POSSIBLE PREVIOUS OCCUPANT</text></g>
+     <g><rect x="655" y="47" width="200" height="76" rx="18" fill="#141d32" stroke="#3d82ff"/><text x="755" y="78" fill="#82adff" font-weight="800">Porter Properties</text><text x="755" y="99" fill="#9aa" font-size="11">AUTHORIZED REPRESENTATIVE</text></g>
+     <g><rect x="655" y="247" width="200" height="76" rx="18" fill="#241a35" stroke="#9364ff"/><text x="755" y="278" fill="#b99fff" font-weight="800">North Dallas Sales</text><text x="755" y="299" fill="#9aa" font-size="11">ASSIGNED TO CODY TATUM</text></g>
+     <g><rect x="415" y="10" width="170" height="55" rx="16" fill="#19191e" stroke="#5b5b67"/><text x="500" y="34" fill="#ddd" font-weight="800">Mary Smith</text><text x="500" y="52" fill="#888" font-size="10">HOUSEHOLD CANDIDATE</text></g></g>
+    </svg>
+   </div>
+  </div>
+  <div class="tabpane" id="c-consent">
+   <div class="sectionhead"><div class="stitle"><h2>Preferences, Consent & Suppression</h2><p>Receipts and operational suppressions are separate, versioned records.</p></div><button class="btn purple" data-open-modal="consentModal"><svg class="icon "><use href="#i-plus"/></svg>Capture preference</button></div>
+   <div class="grid2">
+    <article class="card"><div class="ch"><h3>Active Receipts</h3></div><div class="cb stack">
+     <div class="row"><span class="ki green"><svg class="icon "><use href="#i-shield"/></svg></span><div class="rowcopy"><strong>Inspection & Estimate</strong><span>SMS, email and phone · Field Notice v3.2 · expires Jul 26, 2027</span></div><span class="badge green">Active</span></div>
+     <div class="row"><span class="ki blue"><svg class="icon "><use href="#i-shield"/></svg></span><div class="rowcopy"><strong>Project Operations</strong><span>Email and voice · contract notice v1.8 · valid while project relationship active</span></div><span class="badge blue">Conditional</span></div>
+    </div></article>
+    <article class="card"><div class="ch"><h3>Suppressions & Restrictions</h3></div><div class="cb stack">
+     <div class="row"><div class="rowcopy"><strong>Marketing SMS</strong><span>No opt-in receipt</span></div><span class="badge red">Blocked</span></div>
+     <div class="row"><div class="rowcopy"><strong>Promotional email</strong><span>No preference recorded</span></div><span class="badge gold">Review</span></div>
+     <div class="row"><div class="rowcopy"><strong>Do Not Call</strong><span>No tenant or registry suppression currently detected</span></div><span class="badge green">Clear</span></div>
+    </div></article>
+   </div>
+  </div>
+  <div class="tabpane" id="c-provenance">
+   <div class="sectionhead"><div class="stitle"><h2>Source Assertions & Provenance</h2><p>Conflicting source values coexist; the display projection is explained, not silently overwritten.</p></div></div>
+   <div class="tablewrap"><table class="table"><thead><tr><th>Assertion</th><th>Value</th><th>Source / Crosswalk</th><th>Origin Class</th><th>Confidence</th><th>Effective</th><th>Retrieved</th><th>Status</th><th></th></tr></thead><tbody>
+    <tr><td>Display name</td><td>John A. Smith</td><td>Google · people/c123</td><td>Tenant First-Party</td><td>High</td><td>May 4, 2024</td><td>Jul 22, 2026</td><td><span class="badge green">Survives</span></td><td><button class="btn xs">Evidence</button></td></tr>
+    <tr><td>Legal owner name</td><td>JOHN ALLEN SMITH</td><td>Public property source</td><td>Public Record</td><td>High</td><td>Jan 1, 2026</td><td>Jul 25, 2026</td><td><span class="badge blue">Assertion</span></td><td><button class="btn xs">Evidence</button></td></tr>
+    <tr><td>Mobile phone</td><td>(972) 413-8902</td><td>Field confirmation</td><td>Direct Capture</td><td>Verified</td><td>Jul 25, 2026</td><td>Jul 25, 2026</td><td><span class="badge green">Primary</span></td><td><button class="btn xs">Evidence</button></td></tr>
+    <tr><td>Old phone</td><td>(469) 555-0124</td><td>Licensed third-party list</td><td>Licensed Third-Party</td><td>Medium</td><td>Unknown</td><td>Jul 20, 2026</td><td><span class="badge gray">Superseded</span></td><td><button class="btn xs">Evidence</button></td></tr>
+   </tbody></table></div>
+  </div>
+  <div class="tabpane" id="c-activity">
+   <div class="sectionhead"><div class="stitle"><h2>Audit Timeline</h2><p>Actor, workload, purpose, decision, evidence, causation and idempotency references are retained for governed actions.</p></div></div>
+   <article class="card"><div class="cb timeline">
+    <div class="timeitem"><i class="timedot blue"></i><div><strong>Enrichment request submitted</strong><span>Justin Johnson · ENR-02418 · policy decision PD-18AB · 8:44 PM</span></div></div>
+    <div class="timeitem"><i class="timedot green"></i><div><strong>SMS response linked to canonical Person</strong><span>Messaging adapter · purpose appointment updates · 7:32 PM</span></div></div>
+    <div class="timeitem"><i class="timedot purple"></i><div><strong>Consent receipt issued</strong><span>CR-9182 · signature evidence SHA-256 · Field Notice v3.2 · Jul 25</span></div></div>
+    <div class="timeitem"><i class="timedot gold"></i><div><strong>Direct relationship established</strong><span>Cody Tatum · in-person homeowner confirmation · workflow REL-10028</span></div></div>
+    <div class="timeitem"><i class="timedot blue"></i><div><strong>Identity link verified</strong><span>Data Steward · source Google people/c123 → canonical per_01JH8K10442</span></div></div>
+    <div class="timeitem"><i class="timedot"></i><div><strong>Quick capture created</strong><span>CAP-1182 · P0 · phone/name entered · Jul 22</span></div></div>
+   </div></article>
+  </div>
+ </div>
+</section>
+
+
+<div class="overlay" id="quickModal">
+ <section class="modal xl"><header class="mhead"><span class="ki blue"><svg class="icon "><use href="#i-plus"/></svg></span><div><h2>Quick Contact Capture</h2><p>Creates a provisional P0 source record. No paid enrichment or destructive merge.</p></div><button class="close" data-close-modal><svg class="icon "><use href="#i-x"/></svg></button></header>
+ <div class="mbody">
+  <div class="segmented" id="quickMode" style="max-width:650px;margin-bottom:14px"><button class="seg active" data-qmode="smart">Smart Paste</button><button class="seg" data-qmode="manual">Manual</button><button class="seg" data-qmode="card">Business Card</button><button class="seg" data-qmode="browser">Browser Capture</button></div>
+  <div id="quickSmart">
+   <div class="grid2">
+    <div>
+     <div class="field full"><label>Paste any contact block, email signature or note</label><textarea class="textarea" id="smartPaste" style="min-height:190px" placeholder="John Smith&#10;(972) 555-0193&#10;john@example.com&#10;123 Main St, Plano, TX&#10;Interested in roof inspection"></textarea><div class="hint">Local parser detects obvious handles. A backend cognitive adjunct may propose additional fields with confidence and evidence.</div></div>
+     <div class="actions" style="justify-content:flex-start;margin-top:10px"><button class="btn blue" id="parseSmart"><svg class="icon "><use href="#i-spark"/></svg>Parse & Propose</button><button class="btn" id="fillSmartExample">Use example</button></div>
+    </div>
+    <article class="card"><div class="ch"><h3>Detected Candidate</h3><span class="badge gold">P0 Draft</span></div><div class="cb" id="smartPreview">
+     <div class="empty"><div><div class="round"><svg class="icon lg"><use href="#i-spark"/></svg></div><strong>Paste contact evidence</strong><p class="sub">The preview will separate Person, Contact Points, Property candidate, Organization and Notes.</p></div></div>
+    </div></article>
+   </div>
+  </div>
+  <div id="quickManual" style="display:none">
+   <div class="formgrid">
+    <div class="field third"><label>Entity Type</label><select class="select" id="qEntityType"><option>Person</option><option>Organization</option><option>Unknown / handle only</option></select></div>
+    <div class="field third"><label>First / Display Name</label><input class="input" id="qFirst" placeholder="John"></div>
+    <div class="field third"><label>Last / Legal Suffix</label><input class="input" id="qLast" placeholder="Smith"></div>
+    <div class="field third"><label>Phone</label><input class="input" id="qPhone" placeholder="(555) 000-0000"></div>
+    <div class="field third"><label>Email</label><input class="input" id="qEmail" placeholder="john@example.com"></div>
+    <div class="field third"><label>Organization</label><input class="input" id="qOrg" placeholder="Optional"></div>
+    <div class="field eight"><label>Associated Property / Address</label><input class="input" id="qAddress" placeholder="Start typing an address or paste it"></div>
+    <div class="field third"><label>Relationship</label><select class="select"><option>Unknown</option><option>Possible owner</option><option>Possible occupant</option><option>Property manager</option><option>Authorized representative</option><option>Referral source</option></select></div>
+    <div class="field full"><label>Capture Note</label><textarea class="textarea" id="qNote" placeholder="What was observed or why this contact is being added?"></textarea></div>
+   </div>
+  </div>
+  <div id="quickCard" style="display:none">
+   <div class="dropzone" id="cardDrop"><div><div class="round" style="margin:auto;width:50px;height:50px;border-radius:15px;background:#24242b;display:grid;place-items:center"><svg class="icon lg"><use href="#i-camera"/></svg></div><strong>Photograph or upload a business card</strong><span>Image becomes evidence. Extraction creates proposals only; review before capture.</span><br><button class="btn blue" style="margin-top:12px"><svg class="icon "><use href="#i-camera"/></svg>Choose image</button></div></div>
+  </div>
+  <div id="quickBrowser" style="display:none">
+   <div class="grid2">
+    <article class="card"><div class="ch"><h3>Browser Selection</h3><span class="badge blue">Active-tab gesture</span></div><div class="cb">
+     <div class="detailgrid" style="grid-template-columns:1fr"><div class="detail"><label>Selected text</label><strong>Jane Porter · jane@porterproperties.com · (469) 555-0138</strong><small>User selected visible text in LynkedUp Capture</small></div><div class="detail"><label>Source page</label><strong>Saved only with user confirmation</strong><small>Restricted domains can disable extraction</small></div></div>
+     <button class="btn blue" style="margin-top:12px" id="browserUse"><svg class="icon "><use href="#i-copy"/></svg>Use Selection</button>
+    </div></article>
+    <article class="card"><div class="ch"><h3>Privacy Guardrails</h3></div><div class="cb stack"><div class="callout green"><strong>No background harvesting</strong><p>Content is parsed locally and transmitted only after preview confirmation.</p></div><div class="callout red"><strong>Credentials and hidden fields excluded</strong><p>Password inputs, cookies, tokens and non-visible content are never captured.</p></div></div></article>
+   </div>
+  </div>
+  <div class="sectionhead"><div class="stitle"><h2>Source, Visibility & Next Step</h2><p>These controls apply to every quick-capture mode.</p></div></div>
+  <div class="formgrid">
+   <div class="field third"><label>Data Origin Class <span class="req">*</span></label><select class="select" id="qOrigin"><option>USER_PROVIDED</option><option>FIRST_PARTY_DIRECT</option><option>TENANT_FIRST_PARTY_CRM</option><option>PUBLIC_RECORD</option><option>LICENSED_THIRD_PARTY</option><option>PARTNER_PROVIDED</option><option>UNKNOWN_QUARANTINED</option></select><div class="hint">Origin remains attached to each assertion even after later direct interaction.</div></div>
+   <div class="field third"><label>Visibility</label><select class="select"><option>Private to me</option><option selected>North Dallas Sales team</option><option>Entire organization</option><option>Selected users</option></select></div>
+   <div class="field third"><label>Record Owner</label><select class="select"><option>Justin Johnson</option><option>Cody Tatum</option><option>Hannah Reyes</option><option>Unassigned queue</option></select></div>
+   <div class="field full"><label class="check"><input type="checkbox" id="qResolve" checked><span><strong>Search existing canonical contacts after capture</strong><span>Exact source crosswalk or safe deterministic matches may link; ambiguous results create P2 review cases.</span></span></label></div>
+  </div>
+  <div class="callout gold" style="margin-top:12px"><strong>Third-party is not converted by relabeling.</strong><p>A later inbound response, field confirmation, signed preference, contract, or documented relationship can establish a new first-party relationship assertion. The original third-party assertion remains in provenance.</p></div>
+ </div>
+ <footer class="mfoot"><span class="sub">Creates capture_id + raw evidence + source classification + audit event</span><div class="right"><button class="btn" data-close-modal>Cancel</button><button class="btn" id="saveP0">Save P0 Draft</button><button class="btn blue" id="saveResolve">Save & Resolve</button></div></footer>
+ </section>
+</div>
+
+<div class="overlay" id="importModal">
+ <section class="modal xl"><header class="mhead"><span class="ki blue"><svg class="icon "><use href="#i-upload"/></svg></span><div><h2>Contact Import & Reconciliation</h2><p id="importSubtitle">Source → evidence → mapping → identity → governance → commit</p></div><button class="close" data-close-modal><svg class="icon "><use href="#i-x"/></svg></button></header>
+ <div class="mbody">
+  <div class="stepper" id="importStepper">
+   <div class="step active" data-step-ind="1"><i>1</i>Source</div><div class="step" data-step-ind="2"><i>2</i>Connect</div><div class="step" data-step-ind="3"><i>3</i>Preview</div><div class="step" data-step-ind="4"><i>4</i>Origin</div><div class="step" data-step-ind="5"><i>5</i>Map</div><div class="step" data-step-ind="6"><i>6</i>Transform</div><div class="step" data-step-ind="7"><i>7</i>Resolve</div><div class="step" data-step-ind="8"><i>8</i>Access</div><div class="step" data-step-ind="9"><i>9</i>Consent</div><div class="step" data-step-ind="10"><i>10</i>Commit</div>
+  </div>
+  <div class="wizardbody">
+   <section class="wizardpage active" data-wstep="1">
+    <div class="sectionhead" style="margin-top:0"><div class="stitle"><h2>Choose Source</h2><p>Predefined sources carry a versioned mapping and crosswalk strategy; custom files use assisted mapping.</p></div></div>
+    <div class="sourcegrid" id="wizardSources">
+     <div class="source active" data-source="custom"><span class="rec">Flexible</span><div class="logo"><svg class="icon "><use href="#i-upload"/></svg></div><strong>Custom CSV</strong><span>Detect headers, delimiter, data types and likely canonical fields.</span></div>
+     <div class="source" data-source="google"><span class="rec">OAuth / CSV</span><div class="logo"><svg class="icon "><use href="#i-users"/></svg></div><strong>Google Contacts</strong><span>Selected account sync or Google CSV export.</span></div>
+     <div class="source" data-source="apple"><span class="rec">Selected / vCard</span><div class="logo"><svg class="icon "><use href="#i-user"/></svg></div><strong>Apple Contacts</strong><span>Native selected contacts or vCard files.</span></div>
+     <div class="source" data-source="acculynx"><span class="rec">API / Export</span><div class="logo"><svg class="icon "><use href="#i-building"/></svg></div><strong>AccuLynx</strong><span>Approved connector or source-native export.</span></div>
+     <div class="source" data-source="jobnimbus"><div class="logo"><svg class="icon "><use href="#i-cloud"/></svg></div><strong>JobNimbus</strong><span>Approved connector or export mapping.</span></div>
+     <div class="source" data-source="salesrabbit"><span class="rec">API</span><div class="logo"><svg class="icon "><use href="#i-map"/></svg></div><strong>SalesRabbit</strong><span>Lead/contact activity connector and source IDs.</span></div>
+     <div class="source" data-source="hubspot"><div class="logo"><svg class="icon "><use href="#i-graph"/></svg></div><strong>HubSpot</strong><span>Contacts, companies and selected associations.</span></div>
+     <div class="source" data-source="vcard"><div class="logo"><svg class="icon "><use href="#i-file"/></svg></div><strong>vCard</strong><span>Single or multi-contact .vcf file.</span></div>
+    </div>
+    <div class="callout" style="margin-top:14px"><strong>Connector boundary</strong><p>Only official or contractually permitted APIs are used. Otherwise LynkedUpPro supports source-native exports and preserves the external record ID as a crosswalk.</p></div>
+   </section>
+   <section class="wizardpage" data-wstep="2">
+    <div class="sectionhead" style="margin-top:0"><div class="stitle"><h2>Connect or Upload</h2><p id="connectHint">Upload a CSV or paste sample data.</p></div></div>
+    <div class="grid2">
+     <div>
+      <label class="dropzone" id="csvDrop"><input type="file" id="csvFile" accept=".csv,.txt,.vcf"><div><div class="round" style="margin:auto;width:52px;height:52px;border-radius:15px;background:#24242b;display:grid;place-items:center"><svg class="icon lg"><use href="#i-upload"/></svg></div><strong>Drop source export here</strong><span>CSV, text, or vCard · local browser preview before commit</span><br><button class="btn blue" type="button" id="chooseFile" style="margin-top:12px">Choose file</button></div></label>
+      <div class="actions" style="justify-content:flex-start;margin-top:10px"><button class="btn" id="loadSample"><svg class="icon "><use href="#i-file"/></svg>Load sample CSV</button><button class="btn" id="downloadTemplate"><svg class="icon "><use href="#i-download"/></svg>Download canonical template</button></div>
+     </div>
+     <article class="card"><div class="ch"><h3>Connector Configuration</h3><span class="badge blue" id="connectorBadge">Custom</span></div><div class="cb">
+      <div id="connectorCustom"><div class="formgrid"><div class="field full"><label>Delimiter</label><select class="select" id="delimiter"><option value=",">Comma</option><option value=";">Semicolon</option><option value="\t">Tab</option><option value="|">Pipe</option></select></div><div class="field full"><label>Header row</label><select class="select"><option>First row</option><option>No header</option></select></div><div class="field full"><label>Encoding</label><select class="select"><option>Auto-detect UTF-8</option><option>Windows-1252</option></select></div></div></div>
+      <div id="connectorOauth" style="display:none"><div class="callout green"><strong>Scoped OAuth connection</strong><p>Select an account and choose contact groups or a bounded date range. Credentials are not stored in this HTML prototype.</p></div><button class="btn blue" style="margin-top:12px" id="simulateConnect"><svg class="icon "><use href="#i-link"/></svg>Connect Source</button></div>
+      <div id="connectorApi" style="display:none"><div class="formgrid"><div class="field full"><label>Connector Mode</label><select class="select"><option>Approved API</option><option>Source-native export</option></select></div><div class="field full"><label>Credential Reference</label><input class="input" placeholder="Vault-backed credential name (simulated)"></div><div class="field full"><label>Location / Workspace</label><input class="input" placeholder="Select source location"></div></div><button class="btn blue" style="margin-top:12px" id="simulateApi"><svg class="icon "><use href="#i-link"/></svg>Test Connection</button></div>
+     </div></article>
+    </div>
+   </section>
+   <section class="wizardpage" data-wstep="3">
+    <div class="sectionhead" style="margin-top:0"><div class="stitle"><h2>File & Schema Preview</h2><p>Inspect before the system infers any mapping.</p></div><div class="sactions"><span class="filetag" id="fileSummary"><svg class="icon "><use href="#i-file"/></svg>sample_contacts.csv · 5 rows</span></div></div>
+    <div class="grid4" style="margin-bottom:12px"><div class="detail"><label>Rows</label><strong id="previewRows">5</strong><small>excluding header</small></div><div class="detail"><label>Columns</label><strong id="previewCols">10</strong><small>detected</small></div><div class="detail"><label>Encoding</label><strong>UTF-8</strong><small>high confidence</small></div><div class="detail"><label>Delimiter</label><strong>Comma</strong><small>auto-detected</small></div></div>
+    <div class="previewtable" id="csvPreview"></div>
+    <div class="grid3" style="margin-top:12px"><div class="callout green"><strong>Header quality</strong><p>9 recognizable business fields; 1 custom field.</p></div><div class="callout gold"><strong>Potential sensitive data</strong><p>Phone, email and residential address will be tokenized at trusted ingress.</p></div><div class="callout"><strong>Source IDs</strong><p>External IDs will be retained as crosswalks and never replaced by LynkedUpPro IDs.</p></div></div>
+   </section>
+   <section class="wizardpage" data-wstep="4">
+    <div class="sectionhead" style="margin-top:0"><div class="stitle"><h2>Data Origin & Permitted Use</h2><p>An authorized person attests to source and rights. Unknown origin is quarantined, not guessed.</p></div></div>
+    <div class="formgrid">
+     <div class="field third"><label>Origin Class <span class="req">*</span></label><select class="select" id="importOrigin"><option>TENANT_FIRST_PARTY_CRM</option><option>FIRST_PARTY_DIRECT</option><option>USER_AUTHORIZED_CONTACT_STORE</option><option>PUBLIC_RECORD</option><option>LICENSED_THIRD_PARTY</option><option>PARTNER_PROVIDED</option><option>UNKNOWN_QUARANTINED</option></select></div>
+     <div class="field third"><label>Source Owner</label><input class="input" value="NorthStar Roofing LLC"></div>
+     <div class="field third"><label>Collection Period</label><input class="input" value="2021-01-01 to 2026-07-25"></div>
+     <div class="field third"><label>Permitted Uses</label><select class="select" multiple style="height:98px;padding-top:8px"><option selected>Customer service</option><option selected>Sales follow-up</option><option>Marketing email</option><option>Marketing SMS</option><option>Data enrichment</option></select></div>
+     <div class="field third"><label>Jurisdiction / Territory</label><input class="input" value="Texas · United States"></div>
+     <div class="field third"><label>License / Agreement Reference</label><input class="input" placeholder="Contract, DPA, source notice, or internal policy"></div>
+     <div class="field full"><label>Evidence Attachment</label><div class="dropzone" style="min-height:90px"><div><svg class="icon "><use href="#i-file"/></svg> <strong>Attach agreement, notice, or source export statement</strong><span>Optional for tenant CRM; required for licensed third-party and partner data.</span></div></div></div>
+     <div class="field full"><label class="check"><input type="checkbox" id="attest"><span><strong>I am authorized to attest to this source and the selected permitted uses.</strong><span>The attestation is signed with my platform principal, timestamp, source fingerprint and mapping version.</span></span></label></div>
+    </div>
+    <div class="callout gold" style="margin-top:12px"><strong>Origin does not equal consent.</strong><p>First-party data does not automatically authorize every marketing channel. Third-party data may be stored or reviewed under a governed purpose even when electronic outreach is blocked.</p></div>
+   </section>
+   <section class="wizardpage" data-wstep="5">
+    <div class="sectionhead" style="margin-top:0"><div class="stitle"><h2>Column Mapping</h2><p>The mapping assistant proposes canonical fields, transformations and reasons. Confirm or override every field.</p></div><div class="sactions"><button class="btn purple" id="rerunMapping"><svg class="icon "><use href="#i-spark"/></svg>Re-run Suggestions</button><button class="btn" id="saveMapping"><svg class="icon "><use href="#i-file"/></svg>Save Template</button></div></div>
+    <div class="mapgrid">
+     <div class="mapping" id="mappingRows"><div class="maprow header"><span>Source Column</span><span></span><span>Canonical Target</span><span>Confidence</span><span>Action</span></div></div>
+     <div class="stack">
+      <article class="card"><div class="ch"><h3>Assistant Reasoning</h3><span class="badge purple">Advisory</span></div><div class="cb" id="mappingReason"><div class="callout"><strong>Given Name → Person.GivenName</strong><p>Exact semantic match, high value consistency, no transformation required.</p></div><div class="callout gold" style="margin-top:8px"><strong>Property Address</strong><p>Proposed as Place.PostalAddress and a candidate ASSOCIATED_WITH relationship—not stored as a Person column.</p></div></div></article>
+      <article class="card"><div class="ch"><h3>Canonical Coverage</h3></div><div class="cb"><div class="meter"><span>Person</span><div class="progress"><i style="width:92%"></i></div><b>92%</b></div><div class="meter"><span>Contact Points</span><div class="progress green"><i style="width:84%"></i></div><b>84%</b></div><div class="meter"><span>Property Link</span><div class="progress gold"><i style="width:68%"></i></div><b>68%</b></div><div class="meter"><span>Source Crosswalk</span><div class="progress purple"><i style="width:100%"></i></div><b>100%</b></div></div></article>
+     </div>
+    </div>
+   </section>
+   <section class="wizardpage" data-wstep="6">
+    <div class="sectionhead" style="margin-top:0"><div class="stitle"><h2>Transform & Normalize</h2><p>Review deterministic transformations before identity resolution.</p></div></div>
+    <div class="grid2">
+     <article class="card"><div class="ch"><h3>Transformation Plan</h3></div><div class="cb stack">
+      <label class="check"><input type="checkbox" checked><span><strong>Normalize phone to E.164</strong><span>Preserve raw source value as evidence.</span></span></label>
+      <label class="check"><input type="checkbox" checked><span><strong>Split Full Name</strong><span>Assistant proposal; uncertain suffixes remain in review.</span></span></label>
+      <label class="check"><input type="checkbox" checked><span><strong>Standardize state and country</strong><span>TX → Texas; US → United States.</span></span></label>
+      <label class="check"><input type="checkbox" checked><span><strong>Parse labeled phone/email types</strong><span>Mobile, home, work, other.</span></span></label>
+      <label class="check"><input type="checkbox" checked><span><strong>Resolve property-address candidates</strong><span>Creates Place candidate and relationship assertion; does not copy property facts into Person.</span></span></label>
+      <label class="check"><input type="checkbox"><span><strong>Map source lifecycle to Lead</strong><span>Off by default. Import Contacts and Properties without flooding sales pipeline.</span></span></label>
+     </div></article>
+     <article class="card"><div class="ch"><h3>Value Crosswalks</h3></div><div class="cb">
+      <div class="maprow header" style="grid-template-columns:1fr 30px 1fr 90px"><span>Source Value</span><span></span><span>LynkedUpPro Value</span><span>Rows</span></div>
+      <div class="maprow" style="grid-template-columns:1fr 30px 1fr 90px"><span>Homeowner</span><span>→</span><select><option>PROPERTY_OWNER_CANDIDATE</option></select><span>214</span></div>
+      <div class="maprow" style="grid-template-columns:1fr 30px 1fr 90px"><span>Customer</span><span>→</span><select><option>CUSTOMER_ROLE</option></select><span>118</span></div>
+      <div class="maprow" style="grid-template-columns:1fr 30px 1fr 90px"><span>Unsubscribed</span><span>→</span><select><option>EMAIL_SUPPRESSION</option></select><span>17</span></div>
+      <div class="maprow" style="grid-template-columns:1fr 30px 1fr 90px"><span>Do Not Call</span><span>→</span><select><option>VOICE_SUPPRESSION</option></select><span>9</span></div>
+     </div></article>
+    </div>
+   </section>
+   <section class="wizardpage" data-wstep="7">
+    <div class="sectionhead" style="margin-top:0"><div class="stitle"><h2>Identity Resolution Strategy</h2><p>Choose how deterministic matches, possible matches and unmatched rows are handled.</p></div></div>
+    <div class="grid3">
+     <article class="card"><div class="ch"><h3>Exact Matches</h3><span class="badge green">233 expected</span></div><div class="cb stack">
+      <label class="check"><input type="radio" name="exact" checked><span><strong>Auto-link safe exact matches</strong><span>Source crosswalk, exact validated phone/email under tenant risk profile.</span></span></label>
+      <label class="check"><input type="radio" name="exact"><span><strong>Send all to review</strong><span>No automatic canonical link.</span></span></label>
+     </div></article>
+     <article class="card"><div class="ch"><h3>Possible Matches</h3><span class="badge gold">73 expected</span></div><div class="cb stack">
+      <label class="check"><input type="radio" name="possible" checked><span><strong>Create review cases</strong><span>Preserve source record as P2 and show evidence comparison.</span></span></label>
+      <label class="check"><input type="radio" name="possible"><span><strong>Import separately</strong><span>Create provisional entities with candidate links.</span></span></label>
+      <label class="check"><input type="radio" name="possible"><span><strong>Skip</strong><span>Retain exception file only.</span></span></label>
+     </div></article>
+     <article class="card"><div class="ch"><h3>No Match</h3><span class="badge blue">942 expected</span></div><div class="cb stack">
+      <label class="check"><input type="radio" name="none" checked><span><strong>Create canonical entity after validation</strong><span>Source record advances through P0/P1 to new canonical Person or Organization.</span></span></label>
+      <label class="check"><input type="radio" name="none"><span><strong>Create provisional only</strong><span>Require steward verification before canonical creation.</span></span></label>
+     </div></article>
+    </div>
+    <div class="callout red" style="margin-top:12px"><strong>Destructive merge is unavailable.</strong><p>Import can verify or propose links. Source rows remain intact, and verified links can be retracted with projection replay.</p></div>
+   </section>
+   <section class="wizardpage" data-wstep="8">
+    <div class="sectionhead" style="margin-top:0"><div class="stitle"><h2>Visibility, Ownership & Downstream Creation</h2><p>Sharing, identity resolution and sales-object creation are independent decisions.</p></div></div>
+    <div class="grid2">
+     <article class="card"><div class="ch"><h3>Access Scope</h3></div><div class="cb stack">
+      <label class="check"><input type="radio" name="access"><span><strong>Private to importer</strong><span>Only importer and permitted data stewards.</span></span></label>
+      <label class="check"><input type="radio" name="access" checked><span><strong>Selected teams</strong><span>North Dallas Sales and Data Stewardship.</span></span></label>
+      <label class="check"><input type="radio" name="access"><span><strong>Entire organization</strong><span>Subject to field masks and export permissions.</span></span></label>
+      <div class="field full"><label>Selected teams/users</label><input class="input" value="North Dallas Sales, Data Stewardship"></div>
+     </div></article>
+     <article class="card"><div class="ch"><h3>Record Ownership & Objects</h3></div><div class="cb stack">
+      <div class="field full"><label>Default Record Owner</label><select class="select"><option>Preserve mapped source owner</option><option>Justin Johnson</option><option>Round robin by team</option><option>Unassigned queue</option></select></div>
+      <label class="check"><input type="checkbox" checked><span><strong>Create Contacts and Property relationships</strong><span>Default; does not create Leads.</span></span></label>
+      <label class="check"><input type="checkbox"><span><strong>Create Leads when qualification fields exist</strong><span>Requires source, property, need and assignment mapping.</span></span></label>
+      <label class="check"><input type="checkbox"><span><strong>Add to selected prospect list</strong><span>Campaign eligibility is evaluated separately.</span></span></label>
+     </div></article>
+    </div>
+   </section>
+   <section class="wizardpage" data-wstep="9">
+    <div class="sectionhead" style="margin-top:0"><div class="stitle"><h2>Consent, Preference & Suppression Import</h2><p>Imported statuses require evidence and mapping; unknown values do not become consent.</p></div></div>
+    <div class="grid2">
+     <article class="card"><div class="ch"><h3>Consent Evidence</h3></div><div class="cb stack">
+      <label class="check"><input type="radio" name="consentImp" checked><span><strong>No consent receipts in this file</strong><span>Contact records may still be imported. Channel decisions remain unknown/restricted.</span></span></label>
+      <label class="check"><input type="radio" name="consentImp"><span><strong>Import documented receipts</strong><span>Requires purpose, channel, notice/version, timestamp, subject and evidence reference.</span></span></label>
+      <label class="check"><input type="radio" name="consentImp"><span><strong>Import legacy preference assertions</strong><span>Creates provisional evidence requiring policy review; not an active receipt by default.</span></span></label>
+     </div></article>
+     <article class="card"><div class="ch"><h3>Suppressions</h3></div><div class="cb stack">
+      <label class="check"><input type="checkbox" checked><span><strong>Import email unsubscribes</strong><span>Most restrictive state wins across synchronized sources.</span></span></label>
+      <label class="check"><input type="checkbox" checked><span><strong>Import Do Not Call</strong><span>Creates tenant-specific suppression evidence.</span></span></label>
+      <label class="check"><input type="checkbox" checked><span><strong>Import SMS opt-outs</strong><span>Provider and platform suppression states are reconciled.</span></span></label>
+      <label class="check"><input type="checkbox"><span><strong>Import postal preference</strong><span>Requires explicit mapped source field.</span></span></label>
+     </div></article>
+    </div>
+    <div class="callout gold" style="margin-top:12px"><strong>Unknown is not granted.</strong><p>Missing, blank, old or generic “contact okay” fields do not generate purpose-specific consent receipts.</p></div>
+   </section>
+   <section class="wizardpage" data-wstep="10">
+    <div class="sectionhead" style="margin-top:0"><div class="stitle"><h2>Dry Run & Commit</h2><p>Review impact, exceptions, cost and governed actions before any write.</p></div></div>
+    <div id="dryRunSummary">
+     <div class="grid4"><div class="detail"><label>Rows</label><strong>1,248</strong><small>5 previewed</small></div><div class="detail"><label>New Contacts</label><strong>942</strong><small>after validation</small></div><div class="detail"><label>Exact Links</label><strong>233</strong><small>safe deterministic</small></div><div class="detail"><label>Review Cases</label><strong>73</strong><small>possible matches</small></div><div class="detail"><label>Properties</label><strong>688</strong><small>create or link</small></div><div class="detail"><label>Invalid Rows</label><strong>17</strong><small>exception file</small></div><div class="detail"><label>Enrichment</label><strong>None</strong><small>0 credits</small></div><div class="detail"><label>Rollback Window</label><strong>24 hours</strong><small>before downstream action</small></div></div>
+     <div class="grid2" style="margin-top:12px">
+      <article class="card"><div class="ch"><h3>Governance Checks</h3></div><div class="cb stack"><div class="row"><div class="rowcopy"><strong>Source attestation</strong><span>Signed by Justin Johnson</span></div><span class="badge green">Pass</span></div><div class="row"><div class="rowcopy"><strong>Mapping completeness</strong><span>9 mapped · 1 ignored custom column</span></div><span class="badge green">Pass</span></div><div class="row"><div class="rowcopy"><strong>Identity risk profile</strong><span>73 cases routed to steward</span></div><span class="badge gold">Review</span></div><div class="row"><div class="rowcopy"><strong>Consent interpretation</strong><span>No fabricated receipts</span></div><span class="badge green">Pass</span></div></div></article>
+      <article class="card"><div class="ch"><h3>Commit Plan</h3></div><div class="cb"><div class="callout green"><strong>Atomic batch with idempotency</strong><p>Run ID, file fingerprint and source crosswalk prevent duplicate creation on retry.</p></div><div class="callout" style="margin-top:9px"><strong>Events and lineage</strong><p>Import, mapping, resolution, entity, relationship, suppression and exception events are correlated to one run.</p></div><button class="btn" style="margin-top:12px" id="downloadExceptions"><svg class="icon "><use href="#i-download"/></svg>Download dry-run exceptions</button></div></article>
+     </div>
+    </div>
+    <div id="commitProgress" style="display:none">
+     <article class="card"><div class="ch"><span class="ki blue"><svg class="icon "><use href="#i-refresh"/></svg></span><h3>Import in Progress</h3><span class="badge blue" id="commitState">Preparing</span></div><div class="cb"><div class="progress" style="height:10px"><i id="commitBar" style="width:0"></i></div><p class="sub" id="commitText">Creating immutable import run and validating idempotency…</p><div class="timeline" id="commitTimeline" style="margin-top:16px"></div></div></article>
+    </div>
+   </section>
+  </div>
+ </div>
+ <footer class="wizardfooter"><span class="sub" id="wizardHelp">Step 1 of 10 · choose one source</span><div class="right"><button class="btn" id="wizardBack">Back</button><button class="btn blue" id="wizardNext">Continue</button></div></footer>
+ </section>
+</div>
+
+<div class="overlay" id="consentModal">
+ <section class="modal xl"><header class="mhead"><span class="ki purple"><svg class="icon "><use href="#i-shield"/></svg></span><div><h2>Capture Consent & Communication Preferences</h2><p>Creates a signed, purpose-specific receipt; it does not bypass authorization or suppression.</p></div><button class="close" data-close-modal><svg class="icon "><use href="#i-x"/></svg></button></header>
+ <div class="mbody">
+  <div class="statusrail" style="margin-bottom:14px"><div class="statusnode done"><i></i><strong>Subject</strong><span>Canonical contact</span></div><div class="statusnode active"><i></i><strong>Purpose</strong><span>Explicit selection</span></div><div class="statusnode"><i></i><strong>Channels</strong><span>Preference choices</span></div><div class="statusnode"><i></i><strong>Notice</strong><span>Versioned evidence</span></div><div class="statusnode"><i></i><strong>Sign</strong><span>Receipt issued</span></div></div>
+  <div class="grid2">
+   <div class="stack">
+    <article class="card"><div class="ch"><h3>Subject & Context</h3><span class="badge green">MDM resolved</span></div><div class="cb formgrid">
+     <div class="field full"><label>Canonical Contact</label><input class="input" value="John Smith · C-10442 · per_01JH8K10442"></div>
+     <div class="field third"><label>Property / Job Context</label><select class="select"><option>123 Main St · Inspection Lead</option><option>No property context</option></select></div>
+     <div class="field third"><label>Jurisdiction</label><select class="select"><option>Texas · United States</option></select></div>
+     <div class="field third"><label>Captured By</label><input class="input" value="Justin Johnson · Owner"></div>
+    </div></article>
+    <article class="card"><div class="ch"><h3>Purposes & Channels</h3></div><div class="cb">
+     <div class="formgrid">
+      <div class="field full"><label>Processing Purpose <span class="req">*</span></label><select class="select" id="consentPurpose"><option>Inspection & estimate information</option><option>Appointment and service updates</option><option>Project operations</option><option>Claim assistance</option><option>Seasonal promotions</option><option>Referral program</option></select></div>
+      <div class="field full"><label>Channels</label><div class="choicegrid">
+       <label class="choice active"><input type="checkbox" checked style="display:none"><strong>SMS</strong><span>Appointment and selected-purpose messages.</span></label>
+       <label class="choice active"><input type="checkbox" checked style="display:none"><strong>Email</strong><span>Documents, confirmations and selected-purpose messages.</span></label>
+       <label class="choice active"><input type="checkbox" checked style="display:none"><strong>Phone</strong><span>Calls about the selected property and purpose.</span></label>
+       <label class="choice"><input type="checkbox" style="display:none"><strong>WhatsApp</strong><span>Official business account messages.</span></label>
+       <label class="choice"><input type="checkbox" style="display:none"><strong>Postal</strong><span>Mail preference; not always consent-dependent.</span></label>
+       <label class="choice"><input type="checkbox" style="display:none"><strong>Promotional Offers</strong><span>Separate optional marketing purpose.</span></label>
+      </div></div>
+      <div class="field third"><label>Expected Frequency</label><select class="select"><option>As needed for this request</option><option>Up to 4 messages/month</option><option>Monthly</option></select></div>
+      <div class="field third"><label>Validity</label><select class="select"><option>12 months</option><option>Until project completion</option><option>6 months</option><option>Custom date</option></select></div>
+      <div class="field third"><label>Preferred Language</label><select class="select"><option>English</option><option>Spanish</option><option>Hindi</option></select></div>
+     </div>
+    </div></article>
+   </div>
+   <div class="stack">
+    <article class="card"><div class="ch"><h3>Notice & Capture Method</h3><span class="badge purple">v3.2</span></div><div class="cb formgrid">
+     <div class="field full"><label>Notice Template</label><select class="select"><option>Field Communication Notice v3.2</option><option>Web Preference Notice v2.6</option><option>Homeowner Portal Notice v1.4</option></select></div>
+     <div class="field full"><label>Capture Method</label><select class="select" id="captureMethod"><option>In-person signature on device</option><option>Secure homeowner link</option><option>Web form</option><option>Recorded verbal consent with evidence</option><option>Imported documented receipt</option></select></div>
+     <div class="field full"><div class="callout"><strong>Plain-language disclosure</strong><p>NorthStar Roofing may contact you about the inspection and estimate for 123 Main St through the channels you select. Message frequency varies. You may withdraw at any time. Consent to promotional messages is optional and not a condition of service.</p></div></div>
+     <div class="field full"><label class="check"><input type="checkbox" checked id="ackNotice"><span><strong>The homeowner reviewed the selected notice and preferences.</strong><span>Receipt records notice hash, language, displayed text, timestamp, device and representative.</span></span></label></div>
+    </div></article>
+    <article class="card"><div class="ch"><h3>Signature / Evidence</h3><button class="btn xs" id="clearSignature">Clear</button></div><div class="cb">
+     <div class="canvasbox"><canvas id="signatureCanvas" width="900" height="240"></canvas></div>
+     <div class="hint">Sign above or switch capture method. The resulting signature image is stored as evidence, not embedded in ordinary contact search.</div>
+    </div></article>
+    <article class="card"><div class="ch"><h3>Receipt Preview</h3></div><div class="cb detailgrid" style="grid-template-columns:1fr 1fr">
+     <div class="detail"><label>Subject</label><strong>per_01JH8K10442</strong></div><div class="detail"><label>Purpose</label><strong id="receiptPurpose">Inspection & estimate</strong></div><div class="detail"><label>Notice</label><strong>field-v3.2@sha256</strong></div><div class="detail"><label>Revocation</label><strong>Preference center / STOP / staff</strong></div>
+    </div></article>
+   </div>
+  </div>
+ </div>
+ <footer class="mfoot"><span class="sub">Final channel authorization is re-evaluated at use time.</span><div class="right"><button class="btn" data-close-modal>Cancel</button><button class="btn" id="sendConsentLink"><svg class="icon "><use href="#i-link"/></svg>Send Secure Link</button><button class="btn purple" id="issueReceipt"><svg class="icon "><use href="#i-shield"/></svg>Issue Receipt</button></div></footer>
+ </section>
+</div>
+
+<div class="overlay" id="promotionModal">
+ <section class="modal"><header class="mhead"><span class="ki green"><svg class="icon "><use href="#i-link"/></svg></span><div><h2>Establish First-Party Relationship</h2><p>Add a direct relationship assertion without rewriting the original third-party source.</p></div><button class="close" data-close-modal><svg class="icon "><use href="#i-x"/></svg></button></header>
+ <div class="mbody">
+  <div class="callout gold"><strong>Source history is immutable.</strong><p>The licensed or public assertion remains. This workflow adds new evidence that the tenant directly interacted with, serves, represents, or received information from this person.</p></div>
+  <div class="formgrid" style="margin-top:13px">
+   <div class="field third"><label>Contact</label><input class="input" value="John Smith · C-10442"></div>
+   <div class="field third"><label>Relationship Type <span class="req">*</span></label><select class="select" id="relationshipType"><option>Direct homeowner interaction</option><option>Inbound inquiry</option><option>Existing customer</option><option>Authorized representative</option><option>Referral partner</option><option>Contracting party</option></select></div>
+   <div class="field third"><label>Effective From</label><input class="input" type="date" value="2026-07-26"></div>
+   <div class="field full"><label>Evidence Type</label><div class="choicegrid">
+    <label class="choice active"><input type="radio" name="promoteEvidence" checked style="display:none"><strong>In-person confirmation</strong><span>Rep observed and recorded interaction.</span></label>
+    <label class="choice"><input type="radio" name="promoteEvidence" style="display:none"><strong>Inbound response</strong><span>Reply, call or web submission from contact point.</span></label>
+    <label class="choice"><input type="radio" name="promoteEvidence" style="display:none"><strong>Signed document</strong><span>Consent, contract, authorization or agreement.</span></label>
+   </div></div>
+   <div class="field full"><label>Property / Business Context</label><input class="input" value="123 Main St · homeowner confirmed during door visit"></div>
+   <div class="field full"><label>Evidence Note</label><textarea class="textarea">Spoke directly with John Smith at the property. He confirmed he is the homeowner and requested an inspection appointment.</textarea></div>
+   <div class="field full"><label class="check"><input type="checkbox" checked><span><strong>I confirm this evidence reflects a direct tenant-to-person interaction.</strong><span>This creates a P4 relationship assertion but does not create channel consent.</span></span></label></div>
+  </div>
+ </div>
+ <footer class="mfoot"><div class="right"><button class="btn" data-close-modal>Cancel</button><button class="btn green" id="promoteRelationship"><svg class="icon "><use href="#i-check"/></svg>Establish Relationship</button></div></footer>
+ </section>
+</div>
+
+<div class="overlay" id="identityModal">
+ <section class="modal xl"><header class="mhead"><span class="ki purple"><svg class="icon "><use href="#i-link"/></svg></span><div><h2>Identity Candidate Review</h2><p>Compare evidence, decide the link, and retain both source records.</p></div><span class="badge red">High Risk</span><button class="close" data-close-modal><svg class="icon "><use href="#i-x"/></svg></button></header>
+ <div class="mbody">
+  <div class="grid2">
+   <article class="card"><div class="ch"><h3>Incoming Source Record</h3><span class="badge gold">P2 Candidate</span></div><div class="cb detailgrid" style="grid-template-columns:1fr 1fr">
+    <div class="detail"><label>Name</label><strong>Michael Torres</strong><small>Apple selected contact</small></div><div class="detail"><label>Mobile</label><strong>(469) 555-0128</strong><small>User-selected contact point</small></div><div class="detail"><label>Email</label><strong>m.torres@example.com</strong><small>Apple personal label</small></div><div class="detail"><label>Address</label><strong>6501 Preston Rd</strong><small>Home address</small></div><div class="detail"><label>Source ID</label><strong>CNContact:84A…</strong><small>Crosswalk candidate</small></div><div class="detail"><label>Origin</label><strong>User-authorized contact store</strong><small>Imported Jul 26</small></div>
+   </div></article>
+   <article class="card"><div class="ch"><h3>Existing Canonical Contact</h3><span class="badge green">P4 Direct</span></div><div class="cb detailgrid" style="grid-template-columns:1fr 1fr">
+    <div class="detail"><label>Name</label><strong>Michael A. Torres</strong><small>Display projection</small></div><div class="detail"><label>Mobile</label><strong>(469) 555-0128</strong><small>Validated Apr 2026</small></div><div class="detail"><label>Email</label><strong>michael.t@example.com</strong><small>Different email</small></div><div class="detail"><label>Property</label><strong>6501 Preston Rd</strong><small>Customer relationship</small></div><div class="detail"><label>Canonical ID</label><strong>per_01JH8K10982</strong><small>Tenant MDM</small></div><div class="detail"><label>Direct Evidence</label><strong>Signed estimate</strong><small>Apr 14, 2026</small></div>
+   </div></article>
+  </div>
+  <div class="sectionhead"><div class="stitle"><h2>Evidence Comparison</h2><p>Resolver proposal is advisory and calibrated against the current risk profile.</p></div></div>
+  <div class="tablewrap"><table class="table"><thead><tr><th>Feature</th><th>Incoming</th><th>Existing</th><th>Assessment</th><th>Weight</th></tr></thead><tbody>
+   <tr><td>Normalized mobile</td><td>+14695550128</td><td>+14695550128</td><td><span class="badge green">Exact</span></td><td>Strong</td></tr>
+   <tr><td>Property</td><td>6501 Preston Rd</td><td>6501 Preston Rd</td><td><span class="badge green">Exact</span></td><td>Strong</td></tr>
+   <tr><td>Name</td><td>Michael Torres</td><td>Michael A. Torres</td><td><span class="badge blue">Compatible</span></td><td>Medium</td></tr>
+   <tr><td>Email</td><td>m.torres@example.com</td><td>michael.t@example.com</td><td><span class="badge gold">Different</span></td><td>Conflict</td></tr>
+   <tr><td>Temporal overlap</td><td>Current contact</td><td>Current customer</td><td><span class="badge blue">Plausible</span></td><td>Medium</td></tr>
+  </tbody></table></div>
+  <div class="grid3" style="margin-top:12px">
+   <div class="callout green"><strong>Resolver score: 0.88</strong><p>Strong phone/property match; below automatic high-risk threshold because email conflicts and source crosswalk is new.</p></div>
+   <div class="callout"><strong>Graph coherence</strong><p>No competing person currently uses this phone/property combination in the tenant graph.</p></div>
+   <div class="callout gold"><strong>Recommended action</strong><p>Verify link; retain both emails as separately sourced contact points and do not mark the new email verified.</p></div>
+  </div>
+ </div>
+ <footer class="mfoot"><button class="btn" id="identityDefer">Defer</button><div class="right"><button class="btn red" id="keepSeparate">Keep Separate</button><button class="btn purple" id="verifyLink"><svg class="icon "><use href="#i-link"/></svg>Verify Link</button></div></footer>
+ </section>
+</div>
+
+<div class="overlay" id="captureResolveModal">
+ <section class="modal"><header class="mhead"><span class="ki blue"><svg class="icon "><use href="#i-bolt"/></svg></span><div><h2>Resolve Quick Capture</h2><p>Raw evidence → normalized handles → candidate search.</p></div><button class="close" data-close-modal><svg class="icon "><use href="#i-x"/></svg></button></header>
+ <div class="mbody">
+  <div class="statusrail" style="margin-bottom:13px"><div class="statusnode done"><i></i><strong>P0 Captured</strong><span>Raw evidence</span></div><div class="statusnode active"><i></i><strong>P1 Normalize</strong><span>Review parse</span></div><div class="statusnode"><i></i><strong>P2 Candidate</strong><span>Search MDM</span></div><div class="statusnode"><i></i><strong>P3 Link</strong><span>Governed decision</span></div></div>
+  <div class="grid2">
+   <article class="card"><div class="ch"><h3>Raw Capture</h3></div><div class="cb"><div class="detail"><label>Selected Text</label><strong>Jane Porter · jane@porterproperties.com · (469) 555-0138</strong><small>Browser extension · user-confirmed selection</small></div><div class="detail" style="margin-top:8px"><label>Source Context</label><strong>Commercial property directory</strong><small>URL retained by explicit user choice · 8:39 PM</small></div></div></article>
+   <article class="card"><div class="ch"><h3>Normalization Proposal</h3><span class="badge purple">Assistant</span></div><div class="cb formgrid"><div class="field full"><label>Person</label><input class="input" value="Jane Porter"></div><div class="field full"><label>Organization</label><input class="input" value="Porter Properties"></div><div class="field full"><label>Email</label><input class="input" value="jane@porterproperties.com"></div><div class="field full"><label>Phone</label><input class="input" value="+14695550138"></div></div></article>
+  </div>
+  <div class="callout gold" style="margin-top:12px"><strong>Candidate organization match found.</strong><p>Porter Property Group LLC shares the domain and phone prefix. Create Person and propose REPRESENTS relationship after review.</p></div>
+ </div>
+ <footer class="mfoot"><div class="right"><button class="btn" data-close-modal>Save P1</button><button class="btn blue" id="resolveCapture"><svg class="icon "><use href="#i-search"/></svg>Search & Create Candidates</button></div></footer>
+ </section>
+</div>
+
+<div class="overlay" id="extensionModal">
+ <section class="modal"><header class="mhead"><span class="ki cyan"><svg class="icon "><use href="#i-bolt"/></svg></span><div><h2>LynkedUp Capture Extension</h2><p>User-gesture capture from the active page.</p></div><button class="close" data-close-modal><svg class="icon "><use href="#i-x"/></svg></button></header>
+ <div class="mbody">
+  <div class="grid2">
+   <article class="card"><div class="ch"><h3>Selected Page Content</h3><span class="badge blue">Active Tab</span></div><div class="cb"><div class="callout"><strong>Detected locally</strong><p>Jane Porter · (469) 555-0138 · jane@porterproperties.com · 2901 Roundabout Ln, Allen, TX</p></div><div class="choicegrid" style="margin-top:10px"><button class="choice active"><strong>Add Contact</strong><span>Person + contact points</span></button><button class="choice"><strong>Add Property</strong><span>Address candidate</span></button><button class="choice"><strong>Add Lead</strong><span>Quick linked capture</span></button></div></div></article>
+   <article class="card"><div class="ch"><h3>Transmission Preview</h3></div><div class="cb stack"><div class="row"><div class="rowcopy"><strong>Visible selected text</strong><span>Included</span></div><span class="badge green">Yes</span></div><div class="row"><div class="rowcopy"><strong>Source URL</strong><span>Included only if checked</span></div><span class="badge gold">Optional</span></div><div class="row"><div class="rowcopy"><strong>Cookies / tokens / hidden inputs</strong><span>Never included</span></div><span class="badge red">No</span></div><label class="check"><input type="checkbox"><span><strong>Retain source URL as provenance</strong><span>Subject to tenant domain policy.</span></span></label></div></article>
+  </div>
+ </div>
+ <footer class="mfoot"><div class="right"><button class="btn" data-close-modal>Cancel</button><button class="btn blue" id="extensionCapture"><svg class="icon "><use href="#i-copy"/></svg>Create P0 Capture</button></div></footer>
+ </section>
+</div>
+
+<aside class="drawer" id="enrichDrawer"><header class="dhead"><span class="ki gold"><svg class="icon "><use href="#i-spark"/></svg></span><h2>Contact Enrichment</h2><button class="close" data-close-drawer><svg class="icon "><use href="#i-x"/></svg></button></header>
+ <div class="dbody">
+  <div class="detailgrid" style="grid-template-columns:1fr 1fr"><div class="detail"><label>Contact</label><strong>John Smith · C-10442</strong><small>P4 direct · property 123 Main St</small></div><div class="detail"><label>Requester</label><strong>Justin Johnson</strong><small>Owner · budget authority</small></div></div>
+  <div class="sectionhead"><div class="stitle"><h2>Select Capabilities</h2><p>Credit estimate is reserved before provider invocation.</p></div></div>
+  <div class="stack" id="enrichChoices">
+   <label class="check"><input type="checkbox" data-credit="1" checked><span><strong>Validate primary phone · 1 credit</strong><span>Line type, format, freshness and risk signals.</span></span></label>
+   <label class="check"><input type="checkbox" data-credit="1" checked><span><strong>Validate primary email · 1 credit</strong><span>Domain and deliverability signals.</span></span></label>
+   <label class="check"><input type="checkbox" data-credit="2"><span><strong>Find additional contact points · 2 credits</strong><span>Returns candidates only; does not create consent.</span></span></label>
+   <label class="check"><input type="checkbox" data-credit="1"><span><strong>Find possible external profiles · 1 credit</strong><span>Human confirmation required before linking.</span></span></label>
+  </div>
+  <div class="sectionhead"><div class="stitle"><h2>Purpose & Governance</h2></div></div>
+  <div class="formgrid"><div class="field full"><label>Business Reason</label><select class="select"><option>Inspection lead follow-up</option><option>Existing customer service</option><option>Commercial account qualification</option><option>Data quality remediation</option></select></div><div class="field full"><label>Notes</label><textarea class="textarea">Validate the homeowner contact points before sending the inspection confirmation.</textarea></div></div>
+  <div class="callout green" style="margin-top:12px"><strong>Eligible with owner approval</strong><p>Property and direct relationship are established. Contact append requires a separate purpose and source-rights check.</p></div>
+  <div class="card cb" style="margin-top:12px"><div class="row"><div class="rowcopy"><strong>Estimated Data Credits</strong><span>Technical failures and recent cache hits are not double-charged.</span></div><strong id="enrichTotal" style="font-size:24px;color:var(--gold)">2</strong></div><div class="row"><div class="rowcopy"><strong>Team budget remaining</strong><span>North Dallas Sales</span></div><strong>248</strong></div></div>
+ </div>
+ <footer class="dfoot"><button class="btn" data-close-drawer>Cancel</button><div class="right"><button class="btn gold" id="submitEnrich"><svg class="icon "><use href="#i-spark"/></svg>Reserve & Run</button></div></footer>
+</aside>
+
+<aside class="drawer" id="creditsDrawer"><header class="dhead"><span class="ki gold"><svg class="icon "><use href="#i-coins"/></svg></span><h2>Data Credits</h2><button class="close" data-close-drawer><svg class="icon "><use href="#i-x"/></svg></button></header>
+ <div class="dbody">
+  <div class="grid2"><div class="detail"><label>Organization Balance</label><strong style="font-size:25px;color:var(--gold)">2,480</strong><small>620 reserved</small></div><div class="detail"><label>Current Cycle</label><strong>3,747 used</strong><small>93 saved through cache</small></div></div>
+  <div class="sectionhead"><div class="stitle"><h2>Capability Usage</h2></div></div>
+  <div class="stack"><div class="meter"><span>Phone validation</span><div class="progress"><i style="width:86%"></i></div><b>812</b></div><div class="meter"><span>Email validation</span><div class="progress green"><i style="width:72%"></i></div><b>676</b></div><div class="meter"><span>Contact append</span><div class="progress gold"><i style="width:51%"></i></div><b>481</b></div><div class="meter"><span>Profile candidates</span><div class="progress purple"><i style="width:23%"></i></div><b>214</b></div></div>
+  <div class="sectionhead"><div class="stitle"><h2>Budget Controls</h2></div></div>
+  <div class="stack"><div class="row"><div class="rowcopy"><strong>Canvassers</strong><span>Request only · manager approval required</span></div><span class="badge gold">0 direct</span></div><div class="row"><div class="rowcopy"><strong>Sales representatives</strong><span>10 credits/day · approved capabilities</span></div><span class="badge blue">10/day</span></div><div class="row"><div class="rowcopy"><strong>Sales managers</strong><span>100 credits/day · bulk approval threshold 50</span></div><span class="badge purple">100/day</span></div><div class="row"><div class="rowcopy"><strong>Owner</strong><span>Organization balance and purchase authority</span></div><span class="badge green">Full</span></div></div>
+  <div class="callout" style="margin-top:12px"><strong>Provider costs are operator-only.</strong><p>Tenant users see capability price, reservation, actual charge, result and refund—not provider-specific credentials or routing.</p></div>
+ </div>
+ <footer class="dfoot"><button class="btn" data-toast="Usage ledger exported"><svg class="icon "><use href="#i-download"/></svg>Export Ledger</button><div class="right"><button class="btn gold" data-toast="Budget settings opened">Manage Budgets</button></div></footer>
+</aside>
+
+<div class="command" id="commandPalette"><div class="commandbox"><input id="commandInput" placeholder="Search contacts or run an action…"><div class="cmdresults" id="commandResults">
+ <a class="cmd" href="#contacts" data-command="open contacts"><svg class="icon "><use href="#i-users"/></svg>Open Contacts<span>Navigation</span></a>
+ <button class="cmd" data-open-modal="quickModal" data-command="quick contact add capture"><svg class="icon "><use href="#i-plus"/></svg>Quick Contact<span>Action</span></button>
+ <button class="cmd" data-open-modal="importModal" data-command="import csv google apple acculynx"><svg class="icon "><use href="#i-upload"/></svg>Start Contact Import<span>Workflow</span></button>
+ <button class="cmd" data-open-modal="consentModal" data-command="capture consent preferences"><svg class="icon "><use href="#i-shield"/></svg>Capture Consent<span>Workflow</span></button>
+ <button class="cmd" data-open-drawer="enrichDrawer" data-command="enrich validate phone email"><svg class="icon "><use href="#i-spark"/></svg>Request Enrichment<span>Capability</span></button>
+ <button class="cmd" data-open-panel="contact360" data-command="john smith contact 360"><svg class="icon "><use href="#i-user"/></svg>Open John Smith · C-10442<span>Contact</span></button>
+ </div></div></div>
+
+
+<script>
+(()=>{
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const toast=$('#toast'), toastText=$('#toastText'); let toastTimer;
+const say=(t)=>{toastText.textContent=t;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600)};
+const contacts=[
+ {id:'C-10042',name:'Kevin Hartley',initials:'KH',type:'Person',stage:'P4 Direct',role:'Homeowner confirmed',phone:'(972) 413-8902',email:'kevin.h@example.com',properties:1,origin:'Tenant First-Party',eligibility:'Eligible',consent:'SMS + Email active',owner:'Cody Tatum',updated:'2 min'},
+ {id:'C-10211',name:'Sandra Nguyen',initials:'SN',type:'Person',stage:'P4 Direct',role:'Customer',phone:'(469) 551-7034',email:'sandra.n@example.com',properties:1,origin:'Direct Capture',eligibility:'Eligible',consent:'Appointment SMS active',owner:'Darlene Brooks',updated:'18 min'},
+ {id:'C-10442',name:'John Smith',initials:'JS',type:'Person',stage:'P4 Direct',role:'Homeowner confirmed',phone:'(972) 413-8902',email:'john.smith@example.com',properties:3,origin:'Tenant First-Party',eligibility:'Eligible',consent:'Inspection receipt active',owner:'Cody Tatum',updated:'34 min'},
+ {id:'C-10720',name:'Marcus Trevino',initials:'MT',type:'Person',stage:'P3 Linked',role:'Public-record owner',phone:'(214) 837-4561',email:'Candidate email',properties:1,origin:'Public Record',eligibility:'Restricted',consent:'No electronic consent',owner:'Wade Hollis',updated:'1 hr'},
+ {id:'C-10944',name:'Brenda Kowalski',initials:'BK',type:'Person',stage:'P3 Linked',role:'Possible occupant',phone:'(972) 604-2817',email:'brenda.k@example.com',properties:1,origin:'Licensed Third-Party',eligibility:'Opted Out',consent:'SMS + email suppressed',owner:'Roy Schaefer',updated:'2 hr'},
+ {id:'C-11018',name:'Porter Property Group LLC',initials:'PP',type:'Organization',stage:'P3 Linked',role:'Commercial account',phone:'(469) 555-0138',email:'office@porterproperties.com',properties:18,origin:'Tenant First-Party',eligibility:'Eligible',consent:'Business relationship',owner:'Hannah Reyes',updated:'3 hr'},
+ {id:'P0-1188',name:'Unknown · (972) 555-0188',initials:'?',type:'Person',stage:'P0 Captured',role:'Unresolved handle',phone:'(972) 555-0188',email:'—',properties:0,origin:'Unknown / Quarantine',eligibility:'Unknown',consent:'Unknown',owner:'Justin Johnson',updated:'3 min'},
+ {id:'P2-1201',name:'Michael Torres',initials:'MT',type:'Person',stage:'P2 Candidate',role:'Possible customer match',phone:'(469) 555-0128',email:'m.torres@example.com',properties:1,origin:'Direct Capture',eligibility:'Restricted',consent:'Subject unresolved',owner:'Data Steward',updated:'34 min'}
+];
+const stageClass=s=>s.includes('P4')?'green':s.includes('P3')?'blue':s.includes('P2')?'purple':s.includes('P1')?'cyan':'gold';
+const eligClass=e=>e==='Eligible'?'green':e==='Opted Out'?'red':e==='Restricted'?'gold':'gray';
+function renderContacts(){
+ const tb=$('#contactRows'); if(!tb)return;
+ const type=$('#contactType')?.value||'',stage=$('#contactStage')?.value||'',origin=$('#contactOrigin')?.value||'',elig=$('#contactabilityFilter')?.value||'',owner=$('#contactOwner')?.value||'';
+ const q=($('#globalSearch')?.value||'').toLowerCase();
+ const rows=contacts.filter(c=>(!type||c.type===type)&&(!stage||c.stage===stage)&&(!origin||c.origin===origin)&&(!elig||c.eligibility===elig)&&(!owner||c.owner===owner)&&(!q||JSON.stringify(c).toLowerCase().includes(q)));
+ tb.innerHTML=rows.map(c=>`<tr><td><input type="checkbox"></td><td><div style="display:flex;align-items:center;gap:9px"><div class="avatar" style="width:31px;height:31px;background:#152b4e;color:#78a7ff;font-size:10px">${c.initials}</div><div><button class="name open-contact" data-contact="${c.id}" style="border:0;background:transparent;padding:0;cursor:pointer">${c.name}</button><span class="sub">${c.id} · ${c.type}</span></div></div></td><td><span class="badge ${stageClass(c.stage)}">${c.stage}</span><span class="sub">${c.role}</span></td><td>${c.phone}<span class="sub">${c.email}</span></td><td>${c.properties}</td><td><span class="badge ${c.origin.includes('Third')?'gold':c.origin.includes('Public')?'purple':c.origin.includes('Unknown')?'red':'blue'}">${c.origin}</span></td><td><span class="badge ${eligClass(c.eligibility)}">${c.eligibility}</span><span class="sub">${c.consent}</span></td><td>${c.owner}</td><td>${c.updated}</td><td class="tdactions"><button class="btn xs open-contact" data-contact="${c.id}">360</button><button class="btn xs">•••</button></td></tr>`).join('')||`<tr><td colspan="10"><div class="empty"><div><strong>No contacts match the current filters</strong><p class="sub">Clear one or more filters.</p></div></div></td></tr>`;
+ $$('.open-contact',tb).forEach(b=>b.onclick=()=>openContact(b.dataset.contact));
+}
+['contactType','contactStage','contactOrigin','contactabilityFilter','contactOwner'].forEach(id=>$('#'+id)?.addEventListener('change',renderContacts));
+$('#globalSearch')?.addEventListener('input',renderContacts);
+function route(id){
+ $$('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+id));
+ $$('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===id));
+ history.replaceState(null,'','#'+id); window.scrollTo({top:0,behavior:'smooth'});
+ $('#sidebar').classList.remove('open');
+}
+$$('[data-view]').forEach(a=>a.onclick=e=>{e.preventDefault();route(a.dataset.view)});
+$$('[data-route]').forEach(b=>b.onclick=()=>route(b.dataset.route));
+const start=(location.hash||'#dashboard').slice(1); if($('#view-'+start))route(start);
+$('#mobileMenu').onclick=()=>$('#sidebar').classList.add('open');
+$('#collapseSide').onclick=()=>{const s=$('#sidebar');if(innerWidth>900){s.style.width=s.style.width==='78px'?'':'78px';document.querySelector('.shell').style.gridTemplateColumns=s.style.width==='78px'?'78px minmax(0,1fr)':''}else s.classList.remove('open')};
+function openModal(id){const m=$('#'+id);if(m){m.classList.add('open');$('#commandPalette').classList.remove('open')}}
+function closeModals(){$$('.overlay.open').forEach(x=>x.classList.remove('open'))}
+function openDrawer(id){closeDrawers();$('#'+id)?.classList.add('open');$('#scrim').classList.add('open');$('#commandPalette').classList.remove('open')}
+function closeDrawers(){$$('.drawer.open').forEach(x=>x.classList.remove('open'));$('#scrim').classList.remove('open')}
+function openPanel(id){$('#'+id)?.classList.add('open');document.body.style.overflow='hidden';$('#commandPalette').classList.remove('open')}
+function closePanel(id){$('#'+id)?.classList.remove('open');document.body.style.overflow=''}
+$$('[data-open-modal]').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.openModal)));
+$$('[data-close-modal]').forEach(b=>b.onclick=closeModals);
+$$('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeModals()}));
+$$('[data-open-drawer]').forEach(b=>b.addEventListener('click',()=>openDrawer(b.dataset.openDrawer)));
+$$('[data-close-drawer]').forEach(b=>b.onclick=closeDrawers);$('#scrim').onclick=closeDrawers;
+$$('[data-open-panel]').forEach(b=>b.onclick=()=>openPanel(b.dataset.openPanel));
+$$('[data-close-panel]').forEach(b=>b.onclick=()=>closePanel(b.dataset.closePanel));
+function openContact(id){const c=contacts.find(x=>x.id===id)||contacts[2];$('#c360Name').textContent=c.name;$('#c360Sub').textContent=`${c.type} · ${c.id} · ${c.stage}`;openPanel('contact360')}
+$$('.open-contact').forEach(b=>b.onclick=()=>openContact(b.dataset.contact));
+$$('[data-toast]').forEach(b=>b.addEventListener('click',()=>say(b.dataset.toast)));
+$$('[data-tabset]').forEach(set=>{const tabs=$$('.tab',set);tabs.forEach(t=>t.onclick=()=>{tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');const root=set.parentElement;$$('.tabpane',root).forEach(p=>p.classList.toggle('active',p.id===t.dataset.tab))})});
+$$('[data-tab-jump]').forEach(b=>b.onclick=()=>{const id=b.dataset.tabJump;const tab=$(`.tab[data-tab="${id}"]`);tab?.click();document.querySelector('.fullpanel').scrollTo({top:0,behavior:'smooth'})});
+$$('.choice').forEach(c=>c.addEventListener('click',()=>{if(c.closest('#wizardSources'))return;if(c.parentElement?.classList.contains('sourcegrid'))return;const p=c.parentElement; if(p?.classList.contains('choicegrid')){if(c.querySelector('input[type=radio]'))$$('.choice',p).forEach(x=>x.classList.remove('active'));c.classList.toggle('active');const inp=c.querySelector('input');if(inp)inp.checked=c.classList.contains('active')}}));
+$('#exportContacts').onclick=()=>say('Export preflight opened — only policy-eligible fields will be included');
+$$('[data-contact-filter]').forEach(b=>b.onclick=()=>{route('contacts');say('Saved view applied: '+b.querySelector('strong').textContent)});
+// quick capture
+$$('#quickMode .seg').forEach(s=>s.onclick=()=>{$$('#quickMode .seg').forEach(x=>x.classList.remove('active'));s.classList.add('active');['Smart','Manual','Card','Browser'].forEach(x=>$('#quick'+x).style.display=s.dataset.qmode===x.toLowerCase()?'block':'none')});
+function parseSmartText(text){
+ const email=(text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)||[])[0]||'';
+ const phone=(text.match(/(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/)||[])[0]||'';
+ const lines=text.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+ const name=lines.find(x=>!x.includes('@')&&!/\d{3}/.test(x)&&x.length<50)||'Unknown';
+ const address=lines.find(x=>/\d+\s+[\w .'-]+(?:st|street|rd|road|ln|lane|dr|drive|ave|avenue|blvd|pkwy|ct|court)\b/i.test(x))||'';
+ const org=lines.find(x=>/(llc|inc|corp|properties|roof|construction|company)/i.test(x)&&x!==name)||'';
+ const notes=lines.filter(x=>![name,email,phone,address,org].includes(x)).join(' · ');
+ return {name,email,phone,address,org,notes};
+}
+function renderSmart(o){$('#smartPreview').innerHTML=`<div class="detailgrid" style="grid-template-columns:1fr 1fr"><div class="detail"><label>Person / Display Name</label><strong>${o.name||'Not detected'}</strong><small>Assistant proposal</small></div><div class="detail"><label>Organization</label><strong>${o.org||'Not detected'}</strong><small>Optional relationship candidate</small></div><div class="detail"><label>Phone</label><strong>${o.phone||'Not detected'}</strong><small>Identity handle · unverified</small></div><div class="detail"><label>Email</label><strong>${o.email||'Not detected'}</strong><small>Identity handle · unverified</small></div><div class="detail"><label>Property / Address</label><strong>${o.address||'Not detected'}</strong><small>Separate Place candidate</small></div><div class="detail"><label>Notes</label><strong>${o.notes||'—'}</strong><small>Raw text retained as evidence</small></div></div><div class="callout gold" style="margin-top:10px"><strong>Proposed only</strong><p>Review the parse. Identity, property and relationship links are resolved after the P0 capture is committed.</p></div>`}
+$('#parseSmart').onclick=()=>renderSmart(parseSmartText($('#smartPaste').value));
+$('#fillSmartExample').onclick=()=>{$('#smartPaste').value='John Smith\n(972) 555-0193\njohn.smith@example.com\n123 Main St, Plano, TX 75023\nInterested in a roof inspection after the May storm';$('#parseSmart').click()};
+$('#browserUse').onclick=()=>{$('#smartPaste').value='Jane Porter\njane@porterproperties.com\n(469) 555-0138\nPorter Properties';$$('#quickMode .seg')[0].click();$('#parseSmart').click()};
+function addQuick(resolve){const o=parseSmartText($('#smartPaste').value||`${$('#qFirst').value} ${$('#qLast').value}\n${$('#qPhone').value}\n${$('#qEmail').value}\n${$('#qAddress').value}`);contacts.unshift({id:'P0-'+Math.floor(1200+Math.random()*700),name:o.name||'Unresolved contact',initials:(o.name||'?').split(/\s+/).map(x=>x[0]).join('').slice(0,2),type:$('#qEntityType').value||'Person',stage:resolve?'P1 Normalized':'P0 Captured',role:'Quick capture',phone:o.phone||$('#qPhone').value||'—',email:o.email||$('#qEmail').value||'—',properties:o.address?1:0,origin:$('#qOrigin').value.replaceAll('_',' '),eligibility:'Unknown',consent:'Unknown',owner:'Justin Johnson',updated:'Now'});renderContacts();closeModals();say(resolve?'P0 captured and normalization workflow started':'Provisional P0 contact captured')};
+$('#saveP0').onclick=()=>addQuick(false);$('#saveResolve').onclick=()=>addQuick(true);
+// extension
+$('#openExtensionDemo').onclick=()=>openModal('extensionModal');$('#extensionCapture').onclick=()=>{closeModals();say('Browser selection saved as provisional P0 capture')};
+// import
+let importStep=1, importSource='custom', headers=[], csvData=[];
+const sampleCSV=`External ID,First Name,Last Name,Mobile Phone,Email,Property Address,City,State,Relationship,Opt Out
+SRC-1001,John,Smith,(972) 555-0193,john.smith@example.com,123 Main St,Plano,TX,Homeowner,
+SRC-1002,Sandra,Nguyen,(469) 551-7034,sandra.n@example.com,4817 Shady Brook Ln,Plano,TX,Customer,
+SRC-1003,Marcus,Trevino,(214) 837-4561,,1234 Oak Creek Blvd,Plano,TX,Public Owner,
+SRC-1004,Brenda,Kowalski,(972) 604-2817,brenda.k@example.com,890 Custer Rd,Plano,TX,Possible Occupant,SMS
+SRC-1005,Porter Property Group LLC,,(469) 555-0138,office@porterproperties.com,2901 Roundabout Ln,Allen,TX,Property Manager,`;
+function parseCSV(text,delimiter=','){const rows=[];let row=[],cell='',q=false;for(let i=0;i<text.length;i++){const ch=text[i],n=text[i+1];if(ch==='"'&&q&&n==='"'){cell+='"';i++}else if(ch==='"'){q=!q}else if(ch===delimiter&&!q){row.push(cell);cell=''}else if((ch==='\n'||ch==='\r')&&!q){if(ch==='\r'&&n==='\n')i++;row.push(cell);cell='';if(row.some(x=>x.trim()!==''))rows.push(row);row=[]}else cell+=ch}row.push(cell);if(row.some(x=>x.trim()!==''))rows.push(row);return rows}
+function loadCSV(text,name='sample_contacts.csv'){const d=$('#delimiter').value==='\\t'?'\t':$('#delimiter').value||',';const rows=parseCSV(text,d);headers=rows[0]||[];csvData=rows.slice(1);$('#fileSummary').innerHTML=`${document.querySelector('#fileSummary svg')?.outerHTML||''}${name} · ${csvData.length} rows`;renderPreview();renderMappings();$('#previewRows').textContent=csvData.length;$('#previewCols').textContent=headers.length;say(`Loaded ${csvData.length} rows and ${headers.length} columns`)};
+function renderPreview(){const el=$('#csvPreview');if(!headers.length){el.innerHTML='<div class="empty"><strong>No data loaded</strong></div>';return}el.innerHTML=`<table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${csvData.slice(0,10).map(r=>`<tr>${headers.map((_,i)=>`<td>${r[i]||''}</td>`).join('')}</tr>`).join('')}</tbody></table>`}
+const targets=['Ignore','Source.CrosswalkID','Person.GivenName','Person.FamilyName','Person.DisplayName','Organization.LegalName','ContactPoint.Phone','ContactPoint.Email','Place.PostalAddress','Place.City','Place.State','Relationship.RoleAssertion','Suppression.Channel','Consent.LegacyAssertion','App.RecordOwner','App.Notes'];
+function suggest(h){const x=h.toLowerCase();if(/external|source.*id|contact.*id/.test(x))return['Source.CrosswalkID','high'];if(/first|given/.test(x))return['Person.GivenName','high'];if(/last|family|surname/.test(x))return['Person.FamilyName','high'];if(/full.*name|display.*name/.test(x))return['Person.DisplayName','high'];if(/company|organization/.test(x))return['Organization.LegalName','high'];if(/phone|mobile|cell/.test(x))return['ContactPoint.Phone','high'];if(/email/.test(x))return['ContactPoint.Email','high'];if(/address|street/.test(x))return['Place.PostalAddress','high'];if(/city/.test(x))return['Place.City','high'];if(/state|province/.test(x))return['Place.State','high'];if(/relationship|role|type/.test(x))return['Relationship.RoleAssertion','med'];if(/opt.*out|unsubscribe|dnc/.test(x))return['Suppression.Channel','med'];if(/owner|assignee|rep/.test(x))return['App.RecordOwner','med'];if(/note|comment/.test(x))return['App.Notes','high'];return['Ignore','low']}
+function renderMappings(){const root=$('#mappingRows');if(!root)return;root.innerHTML='<div class="maprow header"><span>Source Column</span><span></span><span>Canonical Target</span><span>Confidence</span><span>Action</span></div>'+headers.map((h,i)=>{const [t,c]=suggest(h);return `<div class="maprow"><div><strong style="font-size:10px">${h}</strong><span class="sub">${csvData.slice(0,3).map(r=>r[i]).filter(Boolean).join(' · ').slice(0,60)}</span></div><span>→</span><select data-map-index="${i}">${targets.map(v=>`<option ${v===t?'selected':''}>${v}</option>`).join('')}</select><span class="confidence ${c}">${c.toUpperCase()}</span><button class="btn xs" data-map-reason="${i}">Why?</button></div>`}).join('');$$('[data-map-reason]',root).forEach(b=>b.onclick=()=>{const h=headers[+b.dataset.mapReason],[t,c]=suggest(h);$('#mappingReason').innerHTML=`<div class="callout ${c==='low'?'gold':'green'}"><strong>${h} → ${t}</strong><p>Proposal based on header semantics, sampled values, source profile and canonical data contract. Confidence: ${c}. Confirm before commit.</p></div>`})}
+function setImportSource(s){importSource=s;$$('#wizardSources .source').forEach(x=>x.classList.toggle('active',x.dataset.source===s));$('#connectorBadge').textContent=s.toUpperCase();const oauth=['google','apple','hubspot'].includes(s),api=['acculynx','jobnimbus','salesrabbit'].includes(s);$('#connectorCustom').style.display=!oauth&&!api?'block':'none';$('#connectorOauth').style.display=oauth?'block':'none';$('#connectorApi').style.display=api?'block':'none';$('#connectHint').textContent=oauth?'Connect an account or upload a source-native export.':api?'Use an approved connector or upload the source-native export.':'Upload a file or load sample data.'}
+$$('#wizardSources .source').forEach(s=>s.onclick=()=>setImportSource(s.dataset.source));
+$$('[data-import-source]').forEach(s=>s.addEventListener('click',()=>setTimeout(()=>setImportSource(s.dataset.importSource),0)));
+$('#chooseFile').onclick=()=>$('#csvFile').click();$('#csvFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>loadCSV(rd.result,f.name);rd.readAsText(f)};
+['dragenter','dragover'].forEach(ev=>$('#csvDrop').addEventListener(ev,e=>{e.preventDefault();$('#csvDrop').classList.add('drag')}));['dragleave','drop'].forEach(ev=>$('#csvDrop').addEventListener(ev,e=>{e.preventDefault();$('#csvDrop').classList.remove('drag')}));$('#csvDrop').addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f){const rd=new FileReader();rd.onload=()=>loadCSV(rd.result,f.name);rd.readAsText(f)}});
+$('#loadSample').onclick=()=>loadCSV(sampleCSV);$('#simulateConnect').onclick=()=>{loadCSV(sampleCSV,importSource+'_contacts_sync.csv');say('Scoped source connection simulated')};$('#simulateApi').onclick=()=>{loadCSV(sampleCSV,importSource+'_export.csv');say('Connector test passed and sample schema loaded')};
+function download(name,text,type='text/csv'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+$('#downloadTemplate').onclick=()=>download('lynkeduppro_contact_import_template.csv','External ID,Entity Type,First Name,Last Name,Organization,Phone,Phone Type,Email,Email Type,Property Address,Relationship,Source Owner,Notes\n');
+$('#downloadExceptions').onclick=()=>download('import_dry_run_exceptions.csv','Row,Reason,Action\n17,Invalid phone,Review\n42,Missing source rights,Quarantine\n');
+$('#saveMapping').onclick=()=>say('Mapping template saved as a versioned draft');$('#rerunMapping').onclick=()=>{renderMappings();say('Mapping proposals refreshed')};
+function showImportStep(n){importStep=Math.max(1,Math.min(10,n));$$('.wizardpage').forEach(p=>p.classList.toggle('active',+p.dataset.wstep===importStep));$$('[data-step-ind]').forEach(s=>{const v=+s.dataset.stepInd;s.classList.toggle('active',v===importStep);s.classList.toggle('done',v<importStep)});$('#wizardBack').style.visibility=importStep===1?'hidden':'visible';$('#wizardNext').textContent=importStep===10?'Commit Import':'Continue';$('#wizardHelp').textContent=`Step ${importStep} of 10 · ${['choose source','connect or upload','preview file','attest origin','confirm mapping','review transforms','resolution policy','access and objects','consent and suppression','dry run and commit'][importStep-1]}`;if(importStep===3&&!headers.length)loadCSV(sampleCSV);if(importStep===5)renderMappings()}
+$('#wizardBack').onclick=()=>showImportStep(importStep-1);$('#wizardNext').onclick=()=>{if(importStep===4&&!$('#attest').checked){say('Source attestation is required before continuing');return}if(importStep<10)showImportStep(importStep+1);else runCommit()};
+function runCommit(){$('#dryRunSummary').style.display='none';$('#commitProgress').style.display='block';$('#wizardNext').classList.add('disabled');const steps=['Creating import run and idempotency ledger','Tokenizing sensitive handles','Applying reviewed mappings and transformations','Resolving exact matches and creating P2 cases','Creating canonical contacts and relationships','Publishing events, projections and run report'];let i=0;const root=$('#commitTimeline');root.innerHTML='';const tick=()=>{if(i>=steps.length){$('#commitState').textContent='Complete';$('#commitState').className='badge green';$('#commitText').textContent='Import completed: 942 created · 233 linked · 73 review cases · 17 exceptions.';contacts.unshift({id:'C-'+Math.floor(12000+Math.random()*1000),name:'Imported Contact Example',initials:'IC',type:'Person',stage:'P3 Linked',role:'Imported contact',phone:'(972) 555-0193',email:'imported@example.com',properties:1,origin:$('#importOrigin').value.replaceAll('_',' '),eligibility:'Unknown',consent:'Unknown',owner:'Justin Johnson',updated:'Now'});renderContacts();say('Import completed and reconciliation cases created');return}const pct=Math.round((i+1)/steps.length*100);$('#commitBar').style.width=pct+'%';$('#commitText').textContent=steps[i]+'…';root.innerHTML+=`<div class="timeitem"><i class="timedot ${i<2?'blue':i<5?'gold':'green'}"></i><div><strong>${steps[i]}</strong><span>Completed with correlation and audit references</span></div></div>`;i++;setTimeout(tick,650)};tick()}
+// consent canvas
+const canvas=$('#signatureCanvas'),ctx=canvas.getContext('2d');let drawing=false,last=null;function pos(e){const r=canvas.getBoundingClientRect(),p=e.touches?.[0]||e;return[(p.clientX-r.left)*canvas.width/r.width,(p.clientY-r.top)*canvas.height/r.height]}
+function startDraw(e){drawing=true;last=pos(e);e.preventDefault()}function draw(e){if(!drawing)return;const p=pos(e);ctx.strokeStyle='#111';ctx.lineWidth=4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(...last);ctx.lineTo(...p);ctx.stroke();last=p;e.preventDefault()}function endDraw(){drawing=false}
+['pointerdown','touchstart'].forEach(ev=>canvas.addEventListener(ev,startDraw));['pointermove','touchmove'].forEach(ev=>canvas.addEventListener(ev,draw));['pointerup','pointerleave','touchend'].forEach(ev=>canvas.addEventListener(ev,endDraw));$('#clearSignature').onclick=()=>ctx.clearRect(0,0,canvas.width,canvas.height);$('#consentPurpose').onchange=e=>$('#receiptPurpose').textContent=e.target.value;
+$('#sendConsentLink').onclick=()=>{closeModals();say('Secure consent link created and queued through eligible channel')};$('#issueReceipt').onclick=()=>{if(!$('#ackNotice').checked){say('Notice acknowledgment is required');return}closeModals();say('Consent receipt CR-'+Math.floor(9200+Math.random()*500)+' issued and linked to canonical subject')};
+// relationship + identity + capture
+$('#promoteRelationship').onclick=()=>{closeModals();say('P4 direct relationship established; original source provenance preserved')};
+$('#verifyLink').onclick=()=>{closeModals();say('Canonical link verified; both source assertions retained')};$('#keepSeparate').onclick=()=>{closeModals();say('Records kept separate with a negative-match decision')};$('#identityDefer').onclick=()=>{closeModals();say('Case deferred with current evidence version')};$('#resolveCapture').onclick=()=>{closeModals();say('P1 normalization committed; P2 candidates created')};
+// enrichment
+function calcCredits(){$('#enrichTotal').textContent=$$('#enrichChoices input:checked').reduce((a,x)=>a+(+x.dataset.credit||0),0)}
+$$('#enrichChoices input').forEach(x=>x.onchange=calcCredits);$('#submitEnrich').onclick=()=>{closeDrawers();say(`Enrichment started with ${$('#enrichTotal').textContent} credits reserved`)};
+// command palette
+const cp=$('#commandPalette'),ci=$('#commandInput');function openCommand(){cp.classList.add('open');ci.focus();ci.select()}function closeCommand(){cp.classList.remove('open');ci.value='';$$('.cmd').forEach(x=>x.style.display='flex')}
+$('#globalSearch').addEventListener('focus',e=>{if(!e.target.value)openCommand()});cp.onclick=e=>{if(e.target===cp)closeCommand()};ci.oninput=()=>{const q=ci.value.toLowerCase();$$('.cmd').forEach(x=>x.style.display=(x.dataset.command||x.textContent).toLowerCase().includes(q)?'flex':'none')};$$('.cmd').forEach(x=>x.addEventListener('click',()=>closeCommand()));
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCommand()}if(e.key==='Escape'){closeCommand();closeModals();closeDrawers();$$('.fullpanel.open').forEach(p=>closePanel(p.id))}});
+renderContacts();renderPreview();showImportStep(1);
+})();
+</script>
+
+</body></html>

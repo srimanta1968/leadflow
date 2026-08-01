@@ -1,0 +1,136 @@
+{
+  "name": "POST /api/sla/policies - Define an SLA policy for a lead type",
+  "description": "Creates the SLA policy that decides how long a lead of a given type has for its first human response. Creating a row at the collection root, so it answers 201. Policies are matched FIRST-MATCH-WINS in ascending evaluation_order, deliberately mirroring how routing_rules are evaluated so an operator learns one precedence model rather than two: a policy with source_channel omitted is the catch-all. This is what makes 'different lead types get different SLAs' configurable rather than hard-coded - before this endpoint every lead got a flat 30-minute window regardless of channel, which is wrong in both directions (a live_chat prospect is waiting in the window right now, while a csv_import row is not). When NO policy matches a lead, routing falls back to the 30-minute default so a tenant that has configured nothing still gets a running clock. first_response_minutes is bounded to 1..10080 (one week): a zero-minute target would breach on arrival, and a target beyond a week is not an SLA anyone monitors. business_hours_only records the INTENT that the target should run on the tenant's business calendar; LeadFlow's local wall-clock fallback cannot honour it, and ProjexCloud sdk-sla applies it when the gateway is configured - the flag is stored either way so the policy does not have to be rewritten when the gateway is connected. Protected - SLA targets decide when somebody is judged late, so they are never publicly writable. QA: depends on register and login.",
+  "endpoint": "/api/sla/policies",
+  "method": "POST",
+  "taskId": "9857c559-f963-4e5f-ac05-00d8ca036bba",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 15,
+  "expectedStatus": 201,
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "source_channel": [
+      "web_form",
+      "landing_page",
+      "facebook",
+      "instagram",
+      "linkedin",
+      "tiktok",
+      "google_ads",
+      "live_chat",
+      "phone",
+      "email",
+      "referral",
+      "webhook",
+      "api",
+      "csv_import"
+    ]
+  },
+  "captureResponse": {
+    "sla-policies.create.response.data.policy.id": "data.policy.id"
+  },
+  "testCases": [
+    {
+      "name": "Define a fast SLA for live-chat leads",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "name": "{{dynamic:name}}",
+        "source_channel": "{{static:live_chat}}",
+        "first_response_minutes": 5,
+        "business_hours_only": false,
+        "evaluation_order": 10,
+        "is_active": true
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "policy": {
+            "source_channel": "live_chat",
+            "first_response_minutes": 5,
+            "business_hours_only": false,
+            "evaluation_order": 10,
+            "is_active": true
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject an unknown source channel",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "name": "{{dynamic:name}}",
+        "source_channel": "{{static:carrier_pigeon}}",
+        "first_response_minutes": 5,
+        "business_hours_only": false,
+        "evaluation_order": 10,
+        "is_active": true
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject a zero-minute target that would breach on arrival",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "name": "{{dynamic:name}}",
+        "source_channel": "{{static:web_form}}",
+        "first_response_minutes": 0,
+        "business_hours_only": false,
+        "evaluation_order": 10,
+        "is_active": true
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated policy creation",
+      "payload": {
+        "name": "{{dynamic:name}}",
+        "source_channel": "{{static:live_chat}}",
+        "first_response_minutes": 5,
+        "business_hours_only": false,
+        "evaluation_order": 10,
+        "is_active": true
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "name is missing or over 160 characters, source_channel is present but not one of the fourteen channels, first_response_minutes is absent or not an integer between 1 and 10080, business_hours_only is not a boolean, evaluation_order is not an integer between 0 and 100000, or is_active is not a boolean"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "CONFLICT",
+      "status": 409,
+      "when": "an active policy already exists for that source_channel at the same evaluation_order - two policies that tie would make the effective SLA depend on insertion order, which is not something an operator can reason about"
+    }
+  ]
+}

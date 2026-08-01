@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Token mirror.
+ *
+ * The Tailwind theme is the source of truth for application code, but the same
+ * values are exposed as CSS custom properties so the mockup's own class names
+ * port across unchanged and so canvas/SVG code can read them at runtime.
+ */
+:root {
+  --bg: #070708;
+  --bg2: #0a0a0d;
+  --sidebar: #0b0b0d;
+  --panel: #151519;
+  --panel2: #1b1b20;
+  --panel3: #202027;
+  --line: #303038;
+  --line2: #3a3a44;
+  --text: #f4f4f6;
+  --muted: #9999a4;
+  --soft: #6e6e79;
+  --blue: #3d82ff;
+  --mag: #ff3cab;
+  --green: #00d59a;
+  --gold: #ffae00;
+  --purple: #9364ff;
+  --cyan: #00c7df;
+  --red: #ff4f63;
+  --orange: #ff783d;
+  --shadow: 0 18px 55px rgba(0, 0, 0, 0.35);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-bg text-text font-sans antialiased;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  /* A visible focus ring on every interactive element — the design system's
+     accessibility floor, not a per-component decision. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    @apply outline-none ring-2 ring-blue/70 ring-offset-2 ring-offset-bg rounded-md;
+  }
+
+  ::selection {
+    background: rgba(61, 130, 255, 0.32);
+  }
+}
+
+@layer components {
+  /* The shell's horizontal rhythm. Every marketing section uses this so the
+     left edge of the copy lines up down the whole page. */
+  .lf-container {
+    @apply mx-auto w-full max-w-shell px-6 md:px-10;
+  }
+
+  /* The one panel treatment. A bespoke card anywhere else is a lint failure. */
+  .lf-panel {
+    @apply rounded-2xl border border-line bg-panel;
+  }
+
+  .lf-panel-raised {
+    @apply rounded-2xl border border-line bg-panel shadow-panel;
+  }
+
+  /* Eyebrow label above a section heading. */
+  .lf-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-muted;
+  }
+
+  .lf-h1 {
+    @apply text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl;
+  }
+
+  .lf-h2 {
+    @apply text-3xl font-bold leading-tight tracking-tight sm:text-4xl;
+  }
+
+  .lf-lede {
+    @apply text-lg leading-relaxed text-muted sm:text-xl;
+  }
+
+  .lf-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors duration-150;
+  }
+
+  .lf-btn-primary {
+    @apply lf-btn bg-blue text-white hover:bg-blue/85;
+  }
+
+  .lf-btn-secondary {
+    @apply lf-btn border border-line2 bg-panel2 text-text hover:border-blue/60 hover:bg-panel3;
+  }
+
+  .lf-btn-ghost {
+    @apply lf-btn text-muted hover:text-text;
+  }
+
+  .lf-input {
+    @apply w-full rounded-xl border border-line bg-panel2 px-4 py-3 text-sm text-text placeholder:text-soft focus:border-blue/60;
+  }
+
+  .lf-label {
+    @apply mb-2 block text-xs font-semibold uppercase tracking-wider text-muted;
+  }
+
+  /* Small status pill. `tone` is applied by the caller from the token set so
+     colour meaning stays consistent (green = healthy, gold = at risk, ...). */
+  .lf-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

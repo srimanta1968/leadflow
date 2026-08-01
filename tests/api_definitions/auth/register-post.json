@@ -1,0 +1,91 @@
+{
+  "name": "POST /api/auth/register - Create a LeadFlow account",
+  "description": "Registers a LeadFlow user and returns a signed session token in the same response. This is the auth bootstrap: it PROVIDES the token every protected endpoint consumes, so it is deliberately unauthenticated. ProjexCloud is the identity authority for LeadFlow; the local users table is the session-bound projection this endpoint writes. Email must be unique and is stored lower-cased; password must be at least 8 characters and is bcrypt-hashed before storage. MUST-46 note: password resolves from the test_password config variable rather than from a captured value, deliberately. A password is never present in any response body, so NO endpoint anywhere can produce it and no captureResponse can capture it - this is the genuine producer-less case the rule permits. It is not an entity id, so the VAR-FOR-FK antipattern does not apply. The variable is declared per environment so a dev secret is never carried into staging or production. Login must present the SAME value, so both definitions reference that one config variable. QA: run this before any protected endpoint - it is the producer of the auth.register.response.data.token key.",
+  "endpoint": "/api/auth/register",
+  "method": "POST",
+  "taskId": "8ac5c78e-b994-4513-8da6-2cbd637b287f",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": false,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 201,
+  "fieldEnums": {
+    "role": ["user", "admin"]
+  },
+  "captureResponse": {
+    "auth.register.response.data.token": "data.token",
+    "auth.register.response.data.user.id": "data.user.id",
+    "auth.register.response.data.user.email": "data.user.email"
+  },
+  "testCases": [
+    {
+      "name": "Register a new user",
+      "payload": {
+        "email": "{{dynamic:email}}",
+        "password": "{{var:test_password}}",
+        "username": "{{dynamic:username}}",
+        "first_name": "{{dynamic:first_name}}",
+        "last_name": "{{dynamic:last_name}}",
+        "phone": "{{dynamic:phone}}"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "user": {
+            "role": "user",
+            "is_active": true,
+            "email_verified": false
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject a password shorter than eight characters",
+      "payload": {
+        "email": "{{dynamic:email}}",
+        "password": "{{static:short}}",
+        "username": "{{dynamic:username}}",
+        "first_name": "{{dynamic:first_name}}",
+        "last_name": "{{dynamic:last_name}}",
+        "phone": "{{dynamic:phone}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject a malformed email",
+      "payload": {
+        "email": "{{static:not-an-email}}",
+        "password": "{{var:test_password}}",
+        "username": "{{dynamic:username}}",
+        "first_name": "{{dynamic:first_name}}",
+        "last_name": "{{dynamic:last_name}}",
+        "phone": "{{dynamic:phone}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "email is missing or malformed, password is absent or shorter than 8 characters, or any supplied field exceeds its maximum length"
+    },
+    {
+      "code": "EMAIL_ALREADY_EXISTS",
+      "status": 409,
+      "when": "an account already exists with the supplied email"
+    },
+    {
+      "code": "USERNAME_ALREADY_EXISTS",
+      "status": 409,
+      "when": "a username was supplied and another account already holds it"
+    }
+  ]
+}

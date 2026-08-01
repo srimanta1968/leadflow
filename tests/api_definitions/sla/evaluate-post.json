@@ -1,0 +1,118 @@
+{
+  "name": "POST /api/sla/evaluate - Run the SLA monitoring sweep against ProjexCloud sdk-sla",
+  "description": "Runs the SLA monitoring sweep: asks ProjexCloud sdk-sla for the authoritative clock verdict on every lead with a running response clock, then records what it learns - setting leads.sla_breached and sla_breach_reason for a breach and writing an observation row to sla_metrics for analysis. ESCALATION: the sweep also raises SLA alerts, reported as alerts_raised and alerts_delivered. An at_risk lead warns its OWNER (owner_warning) while the clock is still running; a breached lead additionally escalates to every active MANAGER (manager_breach). Both tiers are attempted for a breached lead rather than only the manager one, because a lead that ran from on_track straight past its deadline between two sweeps would otherwise never warn its owner at all. Alerts are idempotent per (lead, recipient, tier), so alerts_raised is 0 on a repeat sweep even while the at_risk and breached counts stay the same - that is the anti-spam guarantee, not a missing escalation. Alerting NEVER fails the sweep: an undetected breach is worse than an undelivered notification, so a notification error is recorded on the alert row and the sweep's own findings are still committed. See GET /api/sla/alerts for the ledger and POST /api/sla/alerts/dispatch for the retry path. A command that changes state without creating an addressable resource, so it answers 200 (MUST-54). sdk-sla is the authority because the real deadline runs on a business calendar - working hours, holidays, timezone and pause windows - which LeadFlow does not hold. When the gateway is unconfigured the sweep falls back to a plain wall-clock comparison against sla_due_at and reports clock_source local_wallclock; the fallback exists so a breach is still detected during an outage, and it is NOT a reimplementation of the business calendar, which is why every observation records WHICH clock produced it. monitor_delivered reports whether the sweep reached sdk-sla at all. IDEMPOTENT: re-running changes nothing for a lead already marked breached, and newly_breached lists only the leads whose breach this call discovered - so an alerting job can drive off that list without re-notifying on every pass. A breach is never cleared by a later sweep: a missed deadline is a historical fact. Pass lead_id to evaluate a single lead (the targeted path an operator or a webhook uses); omit it to sweep every lead with an open clock, oldest first, up to limit. QA: depends on register, login and a captured lead - intake auto-routing gives that lead a running clock for the sweep to evaluate.",
+  "endpoint": "/api/sla/evaluate",
+  "method": "POST",
+  "taskId": "044cb98b-a133-4a20-ae68-816cfee326d0",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 50,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads"
+  ],
+  "fieldEnums": {
+    "state": ["on_track", "at_risk", "breached", "met"],
+    "clock_source": ["sdk_sla", "local_wallclock"],
+    "breach_reason": ["no_response_in_window", "responded_after_due"],
+    "kind": ["owner_warning", "manager_breach"]
+  },
+  "statusTransitions": {
+    "entity": "lead",
+    "field": "sla_state",
+    "flow": ["on_track", "at_risk", "breached"],
+    "transitions": [
+      {
+        "from": "on_track",
+        "to": "at_risk",
+        "via": "POST /api/sla/evaluate",
+        "notes": "At least 80 percent of the response window has elapsed with first_response_at still null. Advisory - reported in the counts and by GET /api/sla/status, but no column changes, so the escalation ladder can warn before the deadline rather than after it."
+      },
+      {
+        "from": "at_risk",
+        "to": "breached",
+        "via": "POST /api/sla/evaluate",
+        "notes": "sla_due_at has passed with no first response. Sets leads.sla_breached true and sla_breach_reason no_response_in_window, writes the observation to sla_metrics, and adds the lead to newly_breached exactly once."
+      },
+      {
+        "from": "breached",
+        "to": "breached",
+        "via": "POST /api/sla/evaluate",
+        "notes": "Idempotent no-op. The lead stays breached and does NOT reappear in newly_breached, so an alerting job driven off that list does not re-notify on every sweep."
+      }
+    ]
+  },
+  "captureResponse": {
+    "sla.evaluate.response.data.correlation_id": "data.correlation_id"
+  },
+  "testCases": [
+    {
+      "name": "Evaluate the captured lead's response clock",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "lead_id": "{{cache:leads.create.response.data.lead.id}}",
+        "limit": 100
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "evaluated": 1,
+          "alerts_raised": 0
+        }
+      }
+    },
+    {
+      "name": "Reject a lead_id that is not a UUID",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "lead_id": "{{static:not-a-uuid}}",
+        "limit": 100
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated sweep",
+      "payload": {
+        "lead_id": "{{cache:leads.create.response.data.lead.id}}",
+        "limit": 100
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "lead_id is present but not a well-formed UUID, or limit is present and not an integer between 1 and 500"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "lead_id is a well-formed UUID that no lead holds"
+    }
+  ]
+}

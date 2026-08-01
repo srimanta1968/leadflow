@@ -1,0 +1,162 @@
+{
+  "name": "POST /api/leads/:id/first-response - Record the first human response and stop the SLA clock",
+  "description": "Records a valid human first response against a lead, which STOPS its response clock and logs the measured response time for analysis. A command against an existing lead rather than the creation of a new resource, so it answers 200 (MUST-54). response_seconds is measured from the lead's created_at - the moment the prospect submitted - NOT from assigned_at: the prospect has been waiting since arrival, and measuring from assignment would let a lead sit unrouted for an hour and still report a fast response. state reports the outcome the ProjexCloud sdk-sla monitor computed: met when the response landed before sla_due_at, breached when it did not. When the gateway is unconfigured the handler falls back to a local wall-clock comparison and reports clock_source local_wallclock, so the field always tells a reader WHICH clock produced the verdict - the business-calendar clock only sdk-sla holds, or LeadFlow's plain wall-clock. monitor_delivered reports whether the observation reached sdk-sla; a false value means the local projection is authoritative for now and the reconciliation sweep (POST /api/sla/evaluate) will re-assert it. IDEMPOTENT: a lead whose clock has already been stopped answers 200 with already_recorded:true and the ORIGINAL first_response_at unchanged - a retry after a timeout must never overwrite the real response time with a later one, which would silently turn a breach into a pass. A lead with no owner and no sla_due_at can still record a response: the response genuinely happened, so it is logged with target_minutes null and no breach verdict rather than rejected. QA: depends on register (which creates the user named as responded_by_user_id), login, and a captured lead - intake auto-routing means that lead already has a running clock.",
+  "endpoint": "/api/leads/:id/first-response",
+  "method": "POST",
+  "taskId": "044cb98b-a133-4a20-ae68-816cfee326d0",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 40,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads"
+  ],
+  "fieldEnums": {
+    "channel": ["email", "phone", "sms", "live_chat", "linkedin", "meeting"],
+    "state": ["on_track", "at_risk", "breached", "met"],
+    "clock_source": ["sdk_sla", "local_wallclock"],
+    "breach_reason": ["no_response_in_window", "responded_after_due"]
+  },
+  "statusTransitions": {
+    "entity": "lead",
+    "field": "sla_state",
+    "flow": ["on_track", "at_risk", "breached", "met"],
+    "transitions": [
+      {
+        "from": "on_track",
+        "to": "at_risk",
+        "via": "POST /api/sla/evaluate",
+        "notes": "The monitoring sweep moves a lead to at_risk once at least 80 percent of its response window has elapsed with no first response. Advisory only - no column changes, so the escalation ladder can act before a breach rather than after."
+      },
+      {
+        "from": "at_risk",
+        "to": "breached",
+        "via": "POST /api/sla/evaluate",
+        "notes": "The sweep sets leads.sla_breached and sla_breach_reason no_response_in_window once sla_due_at has passed with first_response_at still null."
+      },
+      {
+        "from": "on_track",
+        "to": "met",
+        "via": "POST /api/leads/:id/first-response",
+        "notes": "Sets first_response_at, which stops the clock, and writes the measured response time to sla_metrics. met means the response landed before sla_due_at."
+      },
+      {
+        "from": "at_risk",
+        "to": "met",
+        "via": "POST /api/leads/:id/first-response",
+        "notes": "A response inside the window still counts as met - at_risk is a warning, not a penalty."
+      },
+      {
+        "from": "breached",
+        "to": "breached",
+        "via": "POST /api/leads/:id/first-response",
+        "notes": "A response after sla_due_at stops the clock but does NOT clear the breach. sla_breach_reason becomes responded_after_due and the observation is logged so the late response time is still available for analysis. A breach is a historical fact and is never erased by acting late."
+      }
+    ]
+  },
+  "captureResponse": {
+    "sla.first-response.response.data.sla.lead_id": "data.sla.lead_id"
+  },
+  "testCases": [
+    {
+      "name": "Record a first response inside the window",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "payload": {
+        "channel": "{{static:email}}",
+        "note": "{{dynamic:text}}",
+        "responded_by_user_id": "{{cache:auth.register.response.data.user.id}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "already_recorded": false,
+          "sla": {
+            "state": "met"
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject an unknown response channel",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "payload": {
+        "channel": "{{static:carrier_pigeon}}",
+        "note": "{{dynamic:text}}",
+        "responded_by_user_id": "{{cache:auth.register.response.data.user.id}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject a lead id that is not a UUID",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{static:not-a-uuid}}"
+      },
+      "payload": {
+        "channel": "{{static:email}}",
+        "note": "{{dynamic:text}}",
+        "responded_by_user_id": "{{cache:auth.register.response.data.user.id}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated first-response record",
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "payload": {
+        "channel": "{{static:email}}",
+        "note": "{{dynamic:text}}",
+        "responded_by_user_id": "{{cache:auth.register.response.data.user.id}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "the id path parameter is not a well-formed UUID (checked before the query so a malformed id answers 400 rather than causing Postgres to raise an invalid-input error that would surface as a 500), channel is absent or not one of the six response channels, note is over 500 characters, or responded_by_user_id is present but not a UUID"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no lead exists with the supplied id, or responded_by_user_id is a well-formed UUID that no user holds"
+    }
+  ]
+}

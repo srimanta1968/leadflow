@@ -1,0 +1,2438 @@
+--- PAGE 1 ---
+Prelaunch License
+Sales Workflow SOP + Execution  
+Playbook
+ProjectLight CRM | Expanded Playbook Edition | Social Lead to Onboarding
+THE OPERATING PROMISE
+Every lead has one accountable owner, one documented 
+next action, one exact due time, and one intended outcome - 
+from first signal through onboarding.
+Prepared for: Lynked Up Pro Internal Sales Team
+Document owner: VP Sales / Revenue Operations
+Effective date: July 14, 2026 | Review cycle: every 30 days during prelaunch | Version 3.0
+CONFIDENTIAL - DO NOT DISTRIBUTE OUTSIDE LYNKED UP PRO
+--- PAGE 2 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 2 of 50
+01
+COMMAND CARD: ZERO LEADS 
+LEFT BEHIND
+The daily rules every rep, manager, and automation must follow.
+OPERATING PROMISE
+Every open lead has one owner, one backup owner, one 
+stage, one priority, one exact next action, one due time, and 
+one intended outcome.
+NON-NEGOTIABLE STANDARD
+30-minute human response For qualifying inbound leads received 9:00 a.m.-5:00 p.m. Central 
+Time, a real rep begins a tracked contact attempt within 30 minutes.
+After-hours priority Acknowledge immediately; create a priority task for 8:45 a.m. next 
+business day; first human attempt due by 9:30 a.m. CT.
+No blank NEXT An open record cannot be saved, advanced, or closed from an activity 
+without a named next action and exact due time.
+No-answer automation Selecting No Answer triggers the approved email and, only when SMS-
+eligible, the approved text within two minutes.
+Calendar before goodbye A verbal follow-up is not a next step. Book the meeting live or create a 
+dated owner task before ending the interaction.
+Truth over hype Separate available, beta, roadmap, excluded, and usage-based items. 
+Never promise results or “everything forever.”
+Master workflow
+LEAD > MERGE > ROUTE > ACK > CALL > BOOK > CLOSE > START
+Success test: At any moment, leadership can answer: Who owns this lead? What happened last? What happens next? When is it due? What is 
+blocking the sale?
+--- PAGE 3 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 3 of 50
+02
+ROLES, COVERAGE, AND 
+ACCOUNTABILITY
+The queue is a team responsibility; the record is owned by one 
+named person.
+ROLE OWNS MUST NOT DELEGATE
+Sales Rep / SDR First response, call outcomes, qualification, 
+follow-up, booking, CRM notes. Accurate disposition and NEXT.
+Backup Rep Takes over when the primary is unavailable or 
+near breach. Immediate accept/decline with reason.
+Sales Manager SLA board, coverage, coaching, reassignment, 
+stale pipeline. Same-day recovery of breaches/orphans.
+Revenue Operations Routing, dedup, sequences, templates, 
+dashboards, provider health. System integrity and rollback.
+Leadership Offer truth, staffing, claims, incentives, executive 
+escalation. No false urgency or compliance bypass.
+Client Success / Onboarding Closed-won intake, kickoff scheduling, readiness, 
+promise check. Acknowledgement of every handoff.
+Coverage standard
+TIME / EVENT PRIMARY ACTION CONTROL
+8:45 a.m. CT Opening rep validates phone, email, SMS, 
+calendar, and clears overnight queue. Manager confirms coverage.
+9:00 a.m.-5:00 p.m. CT Thirty-minute SLA applies to qualifying inbound 
+leads. Configured as America/Chicago, not fixed UTC-6.
+4:30-5:30 p.m. CT Late coverage stays active so 4:59 p.m. leads 
+receive the full response window. No early sign-off.
+PTO / meeting / outage Primary becomes unavailable before routing; 
+backup receives the lead. Shared queue alone is not coverage.
+Weekend / company holiday Immediate acknowledgement; task due first 
+business morning. Holiday calendar maintained by RevOps.
+MANAGER RULE
+A breached or orphaned lead remains a management 
+incident until it is reassigned, recovered, and reviewed.
+--- PAGE 4 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 4 of 50
+03
+LEAD CAPTURE AND 
+PROJECTLIGHT CRM RECORD
+Create one canonical record from every identifiable sales signal.
+SIGNAL CREATE / MERGE? INITIAL PATH
+Website or social lead form YES - High intent Acknowledge, assign, start 30-minute SLA.
+DM, chat, inbound call, referral YES Respond in-channel; capture/verify contact data; 
+create NEXT live.
+Comment saying “interested,” “demo,” or “info” YES when identifiable Public acknowledgement, compliant private reply, 
+CRM merge.
+Checkout started but not paid YES - Highest priority Payment-assistance task; same-day rep outreach 
+when allowed.
+License purchase completed YES - CLOSED WON Verify payment, welcome, leadership/CS alert, 
+onboarding calendar.
+Known contact revisits pricing or replies MERGE + rescore Pause generic nurture; urgent owner task.
+Like, view, impression, anonymous visit NO sales record Retarget anonymously; do not invent identity or 
+consent.
+Canonical record workflow
+EVENT > IDENTITY > DEDUPE > OWNER > NEXT > ALERT
+Required fields before the record is active
+IDENTITY + SOURCE OWNERSHIP + LIFECYCLE COMMUNICATION + COMMERCIAL
+Name/company; usable phone/email/social ID; 
+original source; latest source; campaign/UTM; 
+form/ad/content.
+Primary rep; backup rep; manager; assigned time; 
+stage; priority; score; last activity; NEXT 
+type/owner/due time/outcome.
+Timezone; preferred channel; SMS 
+eligibility/source/time; email status; DNC; offer 
+version; checkout/payment state; close/nurture 
+reason.
+Dedup rule: Match normalized email, E.164 phone, linked social ID, and open opportunity. Preserve every source event and consent record. 
+Replayed webhooks use idempotency keys so they do not duplicate leads, tasks, messages, or payments.
+--- PAGE 5 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 5 of 50
+04
+THE 30-MINUTE SLA AND 
+AFTER-HOURS PATH
+Automation starts the clock; a real rep completes the human 
+response requirement.
+Business-hours inbound: 9:00 a.m.-5:00 p.m. Central Time
+TIME SYSTEM REP / MANAGER
+T+0 Merge/create, score, assign primary + backup, 
+write NEXT and SLA due time. Rep opens source context.
+T+1 min Send acknowledgement email and eligible SMS; 
+mobile/desktop alert. Prepare concise first-call reason.
+T+15 min Rep reminder if no logged attempt. Rep calls immediately.
+T+25 min Manager “at risk” alert. Manager confirms coverage or triggers backup.
+T+30 min SLA breach flag if no valid human attempt. Backup takes lead; manager records recovery.
+T+45 min Auto-reassign if still untouched. Sales Director receives critical alert.
+Outside business hours
+WHEN AUTOMATION NOW NEXT BUSINESS DAY
+5:00 p.m.-8:59 a.m.; weekend; approved holiday
+Acknowledge receipt, state priority next business 
+day, capture booking option, assign overnight 
+queue.
+8:30 digest; 8:45 owner task; first call due by 
+9:30 a.m. CT.
+Prospect requests same-night contact Route only to an approved on-call rep if coverage 
+exists. Never promise an unavailable callback.
+Lead arrived 4:59 p.m. Business-hours SLA applies. Late coverage remains active through 5:30 p.m.
+VALID HUMAN ATTEMPT
+The rep reviews context, initiates a tracked call from the 
+approved number/dialer, allows a reliable disposition, logs 
+the exact outcome, and confirms NEXT. A task click or bulk 
+email alone does not satisfy the SLA.
+--- PAGE 6 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 6 of 50
+05
+ALERTS, ESCALATION, AND 
+EXCEPTION COVERAGE
+Use real-time alerts for risk; use digests for routine visibility.
+TRIGGER WHO IS ALERTED REQUIRED RESPONSE
+New P0/P1 lead Primary rep + backup; manager sees live board. Accept/open lead and start call preparation.
+No attempt at 15 minutes Primary rep. Call now or request reassignment.
+No attempt at 25 minutes Manager + primary + backup. Manager confirms owner and calls coverage.
+No attempt at 30 minutes Manager + backup; breach dashboard. Backup attempts contact; manager logs cause.
+No attempt at 45 minutes Sales Director / leadership critical channel. Reassign and recover immediately.
+Direct purchase / payment success Rep, manager, leadership digest, CS/onboarding. Confirm payment and schedule onboarding.
+Reply, booking, pricing click, checkout restart Owner + manager for high score. Pause generic sequence; human response within 
+15 minutes.
+Provider / connector failure RevOps + manager on duty. Use manual fallback and incident ticket.
+Exception rules
+EXCEPTION CONTROL
+Rep in meeting / PTO / offline Do not route to unavailable reps. If status changes after assignment, 
+backup accepts the record.
+SMS not eligible Send email only; create a call task. Never silently mark text as sent.
+Duplicate lead from another platform Merge activity and preserve attribution; do not restart the same 
+acknowledgement inside the 30-minute dedup window.
+Connector outage Queue event, export/manual-create critical leads, and backfill after 
+restoration using event IDs.
+Alert fatigue Real-time only for high intent, at-risk SLA, breach, purchase, or failure. 
+Routine activity appears in 8:30 a.m. and 4:45 p.m. digests.
+Ownership dispute Manager assigns one primary owner immediately; compensation rules are 
+resolved separately and never delay contact.
+Leadership view: The live dashboard must show leads waiting, oldest wait, SLA at risk, SLA breached, unowned records, missing NEXT, failed 
+messages, purchases waiting for onboarding, and stale opportunities.
+--- PAGE 7 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 7 of 50
+06
+PIPELINE STAGES AND REQUIRED 
+NEXT ACTIONS
+Every stage has an entry condition, exit condition, and mandatory 
+NEXT.
+STAGE ENTRY EXIT / NEXT
+1. New - Unworked Identifiable inbound event; owner assigned. Tracked first attempt. NEXT: call due inside SLA.
+2. Attempting Contact At least one valid attempt. Connected, booked, disqualified, or active cadence. 
+NEXT: exact touch.
+3. Connected - Qualifying Two-way interaction. Fit/pain/timing/decision path documented. NEXT: 
+demo or dated callback.
+4. Demo Scheduled Accepted calendar event. Meeting held, rescheduled, or no-show. NEXT: prep 
++ meeting.
+5. Demo / Discovery Complete Pain, impact, desired outcome, stakeholders 
+captured.
+Commercial step or nurture. NEXT: review/decision 
+meeting.
+6. Commercial Review Approved offer version shared. Checkout sent, verbal no, or follow-up event. NEXT: 
+exact decision action.
+7. Checkout / Agreement Sent Valid link/terms delivered. Payment success, explicit decline, or agreed hold. 
+NEXT: payment review.
+8. Closed Won - Onboarding Pending Payment/terms verified. Onboarding accepted and implementation owner 
+assigned. NEXT: kickoff.
+9. Nurture Fit exists; not active now. Reactivated or closed. NEXT: dated value touch tied 
+to reason.
+10. Closed Lost Definitive no/no fit/unresponsive after policy. Reason code and learning note; optional future date if 
+truly appropriate.
+Stage hygiene controls
+CONTROL STANDARD
+No NEXT Stage save blocked or red exception task created; manager alerted.
+Overdue NEXT Red queue immediately; manager after 15 minutes; reassignment by policy.
+Stage aging Manager reviews open deals with no meaningful activity for five business 
+days.
+Date pushing A due date cannot be moved repeatedly without a new customer 
+commitment or manager reason.
+Feature dependency Record required capability and current status; never substitute a roadmap 
+promise for an exit criterion.
+--- PAGE 8 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 8 of 50
+07
+IMMEDIATE RESPONSE AND NO-
+ANSWER AUTOMATION
+The first 30 minutes should feel fast, personal, and coordinated - 
+never robotic.
+Inbound response flow
+ACK > REVIEW > CALL > OUTCOME > FOLLOW-UP > NEXT
+CALL OUTCOME SYSTEM ACTION REP NEXT
+Connected - qualified Pause prospecting; send booking confirmation if 
+scheduled.
+Complete discovery fields and book next step 
+live.
+Callback requested Send short confirmation. Create exact date/time task; repeat context.
+No answer / voicemail Email + eligible SMS within two minutes; log 
+attempt; no duplicate sends.
+Optional 15-25 second voicemail; confirm next 
+call.
+Wrong number / carrier error Suppress bad channel; create Data Repair. Use approved email/social path or close invalid 
+data.
+Not now Pause active cadence; enter reason-based 
+nurture. Capture event and exact reactivation date.
+Not interested / STOP Cancel active sequence; apply suppression. Close respectfully; no persuasion after opt-out.
+Purchase completed Welcome + handoff + onboarding workflow. Congratulate and confirm kickoff.
+Voicemail - first attempt (15-25 seconds)
+Intent: Create recognition and point the prospect to the easier reply 
+channels; do not pitch features.
+Warm, calm: “Hey [First Name], this is [Rep] with Lynked Up Pro. 
+You just [requested information / asked about the prelaunch 
+license], and I wanted to respond while it was fresh.”
+Close: “I will send a quick text and email so you can choose the 
+easiest way to connect. My number is [phone].”
+Automation safety: Any inbound reply pauses promotional sequence steps and creates an urgent owner task. Logistics reminders may 
+continue only when relevant to an accepted meeting or purchase.
+--- PAGE 9 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 9 of 50
+08
+14-DAY ACTIVE CADENCE AND 
+LONG-TERM NURTURE
+Persistent, relevant, and respectful - no random “just checking in” 
+messages.
+TIMING PRIMARY TOUCH MESSAGE PURPOSE / BRANCH
+T+0 Call + acknowledgement Respond while interest is fresh. Connected/reply 
+pauses the generic cadence.
+T+2-3 hours Second call High-intent recovery inside safe local calling 
+hours.
+Next business morning Call + personalized email Reference source and likely problem; offer one 
+clear next step.
+Day 2 SMS or social reply Short, human, channel-appropriate question.
+Day 3 Call + value email Share one relevant workflow insight; not a feature 
+brochure.
+Day 5 Personal video or tailored note Use approved proof or screen example; never 
+fabricate outcomes.
+Day 7 Call + decision note Ask whether to meet now, revisit later, or close 
+the loop.
+Day 10 Manager/founder touch for strategic leads only Transparent prelaunch invitation; no executive 
+spam.
+Day 14 Final active-cycle call + close-loop email Move to nurture or Closed Lost with reason and 
+future date when appropriate.
+Long-term nurture
+DAY 30
+INSIGHT > DAY 45
+STATUS > DAY 60
+USE CASE > DAY 90
+CHECK-IN > QUARTERLY
+REACTIVATE
+CONTROL DEFAULT
+Channel eligibility No SMS or marketing email without the approved status/source. 
+Suppression always wins.
+Quiet hours 8:00 a.m.-9:00 p.m. recipient local time unless stricter policy applies.
+Frequency No more than one automated SMS per day in this SOP; avoid stacking calls, 
+texts, and emails inside a short window.
+One CTA Reply, book, review terms, complete checkout, or reschedule - one primary 
+action per message.
+Reactivation Reply, direct question, booking, pricing/checkout activity, or relevant 
+product milestone returns the lead to an active owner.
+--- PAGE 10 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 10 of 50
+09
+CALENDAR, MEETING, 
+REMINDER, AND NO-SHOW SOP
+A meeting is real only when the invite is accepted, synced, and visible 
+in ProjectLight.
+Calendar setup - mandatory for every rep
+REQUIREMENT STANDARD
+Approved booking link Connected to the rep calendar with two-way sync; included in email, SMS, 
+DMs, proposals, and forms.
+Availability Correct working hours, PTO, holidays, buffer time, minimum notice, and 
+max meetings/day.
+Timezone Automatic detection; display Central Time when manually confirming.
+Meeting types 15-minute fit call, 30-minute demo, 30-minute decision review, 60-minute 
+onboarding.
+Event content Purpose, agenda, meeting link, contact details, company, CRM record ID, 
+assigned rep, cancellation/reschedule link.
+Testing Desktop/mobile test, double-book test, reminder test, CRM event creation, 
+and fallback owner.
+Booking flow
+BOOK LIVE > SEND INVITE > SYNC CRM > CONFIRM > REMIND > MEET
+EVENT AUTOMATION HUMAN ACTION
+Booked Immediate email + eligible SMS; calendar invite; 
+prep task. Confirm purpose, attendees, and outcome.
+24 hours before Reminder + reschedule link. Review discovery notes.
+2 hours before Short logistics reminder. Prepare tailored demo path.
+15 minutes before Internal rep alert only. Open record and meeting room.
+No-show at +10 minutes Email/SMS rebook message; mark no-show. Call once, then create 24-hour rebook task.
+Calendar sync failure Incident + manual fallback task. Send manual invite before ending contact.
+Naming standard: [LUP Demo] Company - First Last | [LUP Decision] Company - First Last | [LUP Onboarding] Company - License/Team
+--- PAGE 11 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 11 of 50
+10
+HUMAN CALL DELIVERY AND 
+OPENING
+Use anchor language, not a robotic monologue. Sound calm, curious, 
+and prepared.
+ELEMENT DELIVERY STANDARD
+Tone Warm confidence. Professional, fast, calm - never frantic or overly “salesy.”
+Energy About 10% above the prospect; match pace without copying stress or 
+negativity.
+Pace Conversational. Slow down on important points and after questions.
+Inflection Use a grounded downward finish on clear statements; avoid sounding 
+unsure or sing-song.
+Listening Aim to listen more than talk. Ask one question at a time and allow silence.
+Language Use the prospect’s words. Avoid jargon, feature dumping, and “just 
+checking in.”
+Demeanor Smile before dialing, sit/stand tall, take notes, and sound genuinely pleased 
+they raised a hand.
+First call - permission and curiosity opener
+Intent: Lower resistance, connect the call to the prospect’s action, 
+and invite a real conversation.
+Warm recognition: “Hi [First Name], this is [Rep] with Lynked Up 
+Pro. You just [filled out the form / messaged us / started the 
+Founders License checkout].”
+Permission: “Did I catch you with two minutes?”
+Curiosity - pause after this: “What caught your attention, or what 
+was happening in the business that made you raise your hand 
+today?”
+Set an upfront contract
+Intent: Make the conversation safe and mutual; remove the fear of a 
+surprise pitch.
+Set the frame: “I am not going to dump a software pitch on you. I 
+will ask a few questions, tell you honestly where we fit and where 
+we do not, and then we can either book a 30-minute demo, set a 
+later follow-up, or close the loop. Fair?”
+If they are busy: “Totally fair. Is your main interest lead follow-up, 
+project visibility, or the prelaunch license? Great - let’s lock a 
+better time. Is morning or afternoon easier?”
+Do not read word-for-word: Keep the intent and structure. Use natural contractions, pauses, and the prospect’s language. The best call 
+sounds like a prepared human, not a recited script.
+--- PAGE 12 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 12 of 50
+11
+DISCOVERY PLAYBOOK: 
+DIAGNOSE BEFORE 
+DEMONSTRATING
+Combine SPIN-style questions, Sandler-style mutual qualification, 
+Gong-style pacing, and tactical empathy.
+Conversation map
+RAPPORT > CONTRACT > CURRENT 
+STATE > PROBLEM > IMPACT > DESIRED 
+STATE > DECISION
+Core questions - choose the relevant 11-14, do not rapid-fire all of them
+AREA HUMAN QUESTIONS
+Trigger “What made this worth looking at now?” “What did you see that felt 
+relevant?”
+Current workflow “Walk me through a lead from first inquiry to paid job.” “Where do reps and 
+office staff work today?”
+Problem “Where does that process break most often?” “What gets missed, delayed, 
+or duplicated?”
+Impact “When that happens, what does it cost in time, jobs, margin, or owner 
+attention?” “Who feels it most?”
+Frequency / urgency “How often does that happen?” “What happens if nothing changes in the 
+next six months?”
+Past attempts “What have you tried?” “Why did it not stick?”
+Adoption “What would make your reps actually use a new system?”
+Success “Ninety days after rollout, what must be visibly better for you to call this a 
+win?”
+Decision path “Who else needs to be comfortable?” “How will you compare options and 
+make the decision?”
+Timing / economics “Is there a deadline or budget window?” “What level of problem is worth 
+solving now?”
+Risk “What makes you cautious about a prelaunch platform?”
+Next step “If the demo proves the right things, what happens next?”
+Discovery summary before the demo
+Intent: Prove that you listened and get permission to tailor the 
+demonstration.
+Reflect: “Let me make sure I have this right. You are dealing with 
+[problem], it creates [impact], and the priority is [desired 
+outcome] by [timing]. The people involved are [stakeholders]. Did 
+I miss anything important?”
+Transition: “Then I will show only the workflows tied to those 
+outcomes, and I will be clear about what is live, beta, or 
+roadmap.”
+--- PAGE 13 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 13 of 50
+12
+DEMO PLAYBOOK AND 
+FOUNDERS LICENSE 
+POSITIONING
+Turn the product into a workflow story; do not tour every menu.
+30-minute demo agenda
+MINUTES FOCUS REP BEHAVIOR
+0-3 Confirm agenda and decision outcome. Restate the problem and ask permission to adjust.
+3-7 Current-state recap. Use the prospect’s language; confirm priority.
+7-22 Tailored workflow demo. Show 2-4 relevant moments, not every feature. 
+Ask check-in questions.
+22-26 Fit, risk, and feature status. Label LIVE / BETA / ROADMAP / NOT INCLUDED.
+26-29 Commercial path. Use only the approved Offer Data Sheet.
+29-30 Decision or scheduled next step. Book it live; send the invite before goodbye.
+The Lynked Up Pro workflow story
+FIND
+LEADS > SELL
+FOLLOW-UP > PROVE
+THE WORK > BUILD
+THE JOB > COLLECT
++ GROW
+STATUS LABEL REP LANGUAGE
+LIVE “This is available in the current configuration we are reviewing.”
+BETA “This is being used in a controlled early stage; scope and behavior may 
+change.”
+ROADMAP “This is planned, not a purchase promise. We will not attach a guaranteed 
+date unless it is written in the approved terms.”
+USAGE / THIRD PARTY “This may carry separate SMS, email, data, AI, scan, payment, or provider 
+charges under the terms.”
+NOT INCLUDED “That is outside this offer/configuration. Let’s decide whether it is truly 
+required.”
+Founders / Prelaunch License positioning
+Intent: Create legitimate urgency through transparency, not pressure.
+Position: “The Founders License is limited early access before 
+standard pricing and public availability, under the written terms.”
+Truth: “It does not mean every future feature forever. I will show 
+the exact included core features, current status, limits, and any 
+usage-based items.”
+Fit check: “The question is whether the current value and early-
+access terms solve enough of your priority now - not whether 
+every roadmap idea is finished.”
+--- PAGE 14 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 14 of 50
+13
+COMMERCIAL REVIEW, CLOSE, 
+AND NEXT-STEP CONTROL
+Close the gap between interest and a real decision without forcing 
+the buyer.
+Fit summary formula
+PROBLEM + IMPACT + DESIRED OUTCOME + FIT + HONEST 
+LIMITATION + DECISION
+“You told me [problem] is creating [impact]. The outcome 
+you want is [goal]. The strongest fit is [2-3 workflows]. The 
+limitation to be clear about is [status/risk]. What feels 
+unresolved?”
+Commercial flow
+CONFIRM FIT > REVIEW 
+TERMS > ANSWER 
+RISK > SEND 
+CHECKOUT > VERIFY 
+PAYMENT > BOOK 
+ONBOARDING
+Decision ask
+Intent: Invite a clear yes/no and surface the real barrier.
+Ask: “Assuming the written terms match what we reviewed, are 
+you comfortable reserving the license today?”
+If hesitation: “It sounds like there is still a risk we have not 
+resolved. What would need to be true for this to feel like a smart 
+decision?”
+If yes: “Great. I will stay with you through the checkout, then we 
+will book onboarding before we end.”
+PROSPECT RESPONSE REQUIRED NEXT ACTION
+Ready to buy Send approved checkout; remain available; verify payment event; move to 
+Closed Won - Onboarding Pending.
+Needs another stakeholder Book a decision meeting with required attendees; send one-page recap and 
+terms.
+Needs time Ask what specifically must be evaluated; set an exact decision date and 
+owner.
+Budget/timing later Capture budget event; enter reason-based nurture with a dated 
+reactivation.
+No fit / no Close respectfully with reason; do not force nurture.
+Feature dependent Record exact capability and status; no roadmap promise; schedule only if a 
+real future review event exists.
+Commercial truth: Price, quantity, payment options, license limits, implementation expectations, refund/cancellation terms, included features, 
+variable charges, and scarcity language must come from the current approved Offer Data Sheet - never memory or improvisation.
+--- PAGE 15 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 15 of 50
+14
+OBJECTION HANDLING I: 
+CLARIFY BEFORE RESPONDING
+Listen > Label > Explore > Respond > Confirm > Schedule.
+TACTICAL EMPATHY
+Do not “overcome” the buyer. Name the concern without 
+judgment, ask a calibrated question, answer only the real 
+issue, and confirm what remains.
+OBJECTION HUMAN RESPONSE NEXT
+“It costs too much.”
+“It sounds like the investment feels ahead of the 
+value right now. Compared with what - budget 
+available, alternatives, or the cost of the current 
+problem?” Then quantify the impact using the 
+prospect’s own facts; never invent ROI.
+Reconfirm value, payment path, or close/nurture.
+“We already have a CRM.”
+“That makes sense. I would not replace a working 
+system without a reason. Where does it still break 
+between lead, follow-up, field proof, production, or 
+owner visibility?”
+Define the gap; demo only the gap.
+“Send me information.”
+“Happy to. So I send something useful, which issue 
+should it help you evaluate? And when should we 
+spend 15 minutes deciding whether it is relevant?”
+Send tailored asset + calendar.
+“I need to think about it.”
+“Of course. Usually that means fit, timing, money, 
+trust, or another person. Which one deserves the 
+thinking?”
+Book decision event around the real issue.
+“I need my partner/team.”
+“Absolutely. What will they care about most, and what 
+would make the next conversation productive for 
+them?”
+Book with stakeholders; add agenda.
+Rep self-check after any objection
+ASK YOURSELF YES / NO
+Did I label the concern without arguing?
+Did I ask one question before presenting?
+Did I answer the stated issue with approved facts?
+Did I confirm what remains unresolved?
+Did we schedule a real next action?
+--- PAGE 16 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 16 of 50
+15
+OBJECTION HANDLING II: 
+PRELAUNCH TRUST AND 
+ADOPTION
+Be strongest where early-stage software is naturally questioned: 
+maturity, readiness, adoption, and implementation.
+OBJECTION HUMAN RESPONSE NEXT
+“You are a new company.”
+“That is a fair risk to examine. Which part worries you 
+most - continuity, support, security, feature maturity, 
+or implementation?” Review only approved evidence 
+and terms.
+Document risk and evidence required.
+“That feature is not live.”
+“You are right to separate today from roadmap. Is 
+that capability a must-have for the decision, or would 
+the current workflow create enough value without it?”
+No promise; close, nurture, or proceed on current 
+value.
+“My reps will not use it.”
+“What have they rejected before, and why?” Show 
+the smallest role-specific workflow, required 
+behaviors, training, and manager controls.
+Define adoption plan and owner.
+“We do not have time to implement.”
+“What would make implementation feel 
+manageable?” Separate prelaunch license purchase 
+from the actual onboarding plan; set realistic scope.
+Book onboarding/readiness session.
+“We are comparing competitors.” “Good. What decision criteria matter most?” Compare 
+workflows and fit, not insults or unsupported claims. Create side-by-side criteria and decision date.
+“What if the launch slips?”
+“Let’s rely on the written terms and current feature 
+status, not a verbal promise. What timing dependency 
+would make delay unacceptable?”
+Escalate contractual question; do not improvise.
+“What about usage fees?”
+“Let’s itemize what is included and what may vary - 
+SMS, email, data, advanced AI, scans, payments, or 
+third-party services - using the approved sheet.”
+Confirm cost model in writing.
+Close-lost / nurture reason codes
+NO FIT > TIMING > BUDGET > FEATURE > RIVAL > TRUST > NO REPLY
+Learning standard: Every Closed Lost record captures the decisive reason, the prospect’s wording, the offer/version discussed, the competing 
+option when known, and a future event only when one truly exists.
+--- PAGE 17 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 17 of 50
+16
+EMAIL TEMPLATES: FIRST 
+RESPONSE AND BOOKING
+Personalize the first line; keep one CTA; do not hide feature status or 
+pricing terms.
+EMAIL 1 | Immediate form confirmation
+Subject: We received your Lynked Up Pro request
+Hi [First Name],
+Thanks for reaching out about Lynked Up Pro and the Prelaunch / Founders License. I am reviewing your request now and will call you shortly 
+from [number].
+The goal is simple: understand what caught your attention, see whether the platform fits your workflow, and give you an honest next step.
+Prefer to choose a time? [Booking Link]
+[Rep Name] | Lynked Up Pro
+EMAIL 2 | After-hours acknowledgement
+Subject: You are in our priority follow-up queue
+Hi [First Name],
+We received your request after today’s live sales hours. Your lead is in our priority queue for the next business morning, and a rep will make 
+the first call by 9:30 a.m. Central Time.
+You may also choose a time here: [Booking Link]
+Thank you,
+Lynked Up Pro
+EMAIL 3 | No answer after call
+Subject: Tried you - quick Lynked Up Pro follow-up
+Hi [First Name],
+I just tried you regarding your interest in Lynked Up Pro. No problem if the timing was off.
+What caught your attention most: lead follow-up, sales visibility, project operations, or the Prelaunch / Founders License?
+Reply here or choose a time: [Booking Link]
+[Rep Name]
+EMAIL 4 | Demo confirmation
+Subject: Confirmed: Lynked Up Pro demo - [Date/Time]
+Hi [First Name],
+You are confirmed for [Date] at [Time] [Timezone].
+We will focus on: [Problem 1], [Problem 2], and whether the current Prelaunch / Founders License terms fit your team. I will clearly label what is 
+live, beta, roadmap, or outside the offer.
+Join: [Meeting Link] | Reschedule: [Link]
+[Rep Name]
+--- PAGE 18 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 18 of 50
+17
+EMAIL TEMPLATES: ADVANCE, 
+DECIDE, AND ONBOARD
+Each email should move the buyer to one clear outcome.
+EMAIL 5 | Demo recap and decision step
+Subject: Recap and next step for [Company]
+Hi [First Name],
+You shared that [problem] is causing [impact], and the priority is [desired outcome] by [timing]. The strongest fit we reviewed was [workflow 1] 
+and [workflow 2].
+Important limitation/status: [live / beta / roadmap / not included].
+Next step: [Decision Review] on [Date/Time]. [Calendar Link]
+[Rep Name]
+EMAIL 6 | Checkout / commercial follow-up
+Subject: Lynked Up Pro license terms and secure checkout
+Hi [First Name],
+Here is the approved Prelaunch / Founders License checkout and written terms: [Secure Link].
+Please review the included features, license limits, implementation expectations, variable/third-party charges, and cancellation/refund terms. 
+Reply with any question before completing payment.
+Our agreed decision time is [Date/Time].
+[Rep Name]
+EMAIL 7 | Close the loop / recycle
+Subject: Should I keep this active?
+Hi [First Name],
+I have tried to connect because you asked about Lynked Up Pro. I do not want to create noise.
+Which is most accurate?
+1 - Book a conversation
+2 - Revisit on [Month/Date]
+3 - Close the loop
+Reply with 1, 2, or 3. If I do not hear back, I will move this out of the active follow-up queue.
+[Rep Name]
+EMAIL 8 | Closed won - welcome and onboarding
+Subject: Welcome to Lynked Up Pro - schedule onboarding
+Hi [First Name],
+Welcome to Lynked Up Pro. Your Prelaunch / Founders License payment has been verified.
+The next step is a 60-minute onboarding kickoff with [Onboarding Lead]. Choose a time here: [Onboarding Link].
+Before the call, please complete: [Prework Link]. We will confirm users, priorities, integrations, timeline, and the commitments made during 
+sales.
+[Rep Name] + [Onboarding Lead]
+--- PAGE 19 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 19 of 50
+18 SMS TEMPLATE LIBRARY
+Short, conversational, permission-aware, and tied to one action.
+TRIGGER APPROVED TEMPLATE
+Immediate inbound Hi [First Name] - [Rep] with Lynked Up Pro. I received your [form/message] and 
+will call shortly from [number]. Prefer a time? [Link]. Reply STOP to opt out.
+After hours Thanks for reaching out to Lynked Up Pro. You are in our priority queue for the 
+next business morning. Choose a time: [Link]. Reply STOP to opt out.
+No answer Hi [First Name], I just tried you about Lynked Up Pro. What caught your attention 
+most - follow-up, operations, or the Founders License? [Rep] [Link]
+Callback confirmed Confirmed - I will call [Day] at [Time] [TZ] from [number]. If anything changes, 
+reply here. - [Rep]
+Demo booked You are set for the Lynked Up Pro demo on [Day] at [Time] [TZ]. Join: [Link] | 
+Reschedule: [Link]
+Two-hour reminder Reminder: Lynked Up Pro demo today at [Time] [TZ]. We will focus on [priority]. 
+Join: [Link]
+No-show Hi [First Name], we missed you at the Lynked Up Pro demo. No worries - rebook 
+here: [Link], or reply with a better day.
+Decision / checkout I sent the approved license terms and secure checkout. What question needs to 
+be resolved before [agreed decision time]? - [Rep]
+Closed won Welcome to Lynked Up Pro. Payment is confirmed. Schedule onboarding here: 
+[Link]. Your onboarding lead is [Name].
+Breakup Should I keep this active? Reply 1 = book, 2 = later, 3 = close. - [Rep], Lynked Up 
+Pro
+SMS GATE
+Automated texts run only when the record has an approved 
+eligibility/consent basis and is inside allowed hours. STOP, 
+unsubscribe, complaint, invalid number, or do-not-contact 
+suppresses queued sales texts immediately. 
+Legal/Compliance owns final rules.
+Reply handling: Any reply pauses the generic sequence and creates an urgent owner task. Do not continue automated persuasion while a 
+human conversation is active.
+--- PAGE 20 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 20 of 50
+19
+CLOSED-WON HANDOFF AND 
+ONBOARDING
+The sale is not complete until the customer has an accepted kickoff 
+and a named implementation owner.
+Closed-won flow
+VERIFY > CLOSE 
+WON > WELCOME > HANDOFF > INVITE > KICKOFF > 30-DAY 
+CHECK
+PATH IMMEDIATE ACTION
+Direct online purchase Verify payment/terms event; create Closed Won - Onboarding Pending; 
+assign AE + onboarding lead; send welcome and scheduling link.
+Rep-assisted purchase Stay with buyer through checkout; verify success; confirm email/phone; 
+schedule onboarding live.
+Payment pending / failed Do not mark Closed Won. Create Payment Assistance task and send secure 
+recovery link.
+Refund/cancellation request Escalate under written terms; freeze expansion messaging; keep auditable 
+history.
+Required internal handoff
+FIELD REQUIRED CONTENT
+Commercial truth Offer version, quantity, payment state, approved exceptions, variable 
+charges discussed.
+Business case Problems, impact, desired 90-day outcome, success measures, urgency.
+Stakeholders Decision maker, admin, users, technical/financial contacts.
+Product scope Live features purchased; beta/roadmap discussion; explicit exclusions; 
+integrations.
+Promises / risk Every commitment made, unresolved concern, adoption risk, deadline.
+Kickoff Accepted date/time, onboarding owner, prework status, meeting link.
+Onboarding calendar invite description
+Intent: Set clear expectations and prevent the customer from 
+repeating the sales story.
+Purpose: Confirm users, priorities, configuration, 
+data/integrations, timeline, training, and success measures.
+Bring: Decision maker or admin, user list, current tools, priority 
+workflow, required integrations, and open questions.
+Outcome: Approved onboarding plan with owners, milestones, 
+next meeting, and risks.
+--- PAGE 21 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 21 of 50
+20
+LEADERSHIP DASHBOARD AND 
+OPERATING RHYTHM
+Manage the system with leading indicators, funnel outcomes, and 
+quality controls.
+KPI LAUNCH STANDARD / VIEW
+NEXT completeness 100% of open leads and opportunities.
+30-minute SLA At least 95% during business hours; every miss has cause + recovery.
+Median first human attempt Track by source, rep, day, and hour.
+Contact / booking / show rates Trend by source and rep; do not hide poor-quality lead sources.
+Demo-to-license and lead-to-license By cohort, offer version, source, segment, and rep.
+Pipeline aging Zero unowned; zero active leads without NEXT; stale-stage count and 
+value.
+Message quality Delivery, bounce, opt-out, complaint, reply, and failure rates.
+Onboarding handoff 100% of paid licenses assigned and kickoff scheduled within one business 
+day.
+Forecast confidence Decision date, stakeholder, next event, risk, and evidence for every 
+forecast deal.
+Operating rhythm
+CADENCE MEETING / REVIEW OUTPUT
+Daily 8:45 a.m. Overnight queue + coverage check. Owners confirmed; priority calls started.
+Daily noon SLA risk and failed-automation review. Breaches recovered; failures assigned.
+Daily 4:45 p.m. Stale/overdue NEXT sweep. No lead left without a dated action.
+Weekly Monday Pipeline, source quality, forecast. Stage cleanup and decisions.
+Weekly Wednesday Call coaching using recordings/notes where 
+permitted. One behavior commitment per rep.
+Weekly Friday Win/loss, opt-out, complaint, nurture reactivation. Process and message changes.
+Monthly Cross-functional post-mortem. Approved SOP/config revisions and tests.
+Coaching scorecard: Opening/context, agenda contract, question quality, listening, problem/impact depth, tailored demo, feature-status 
+honesty, objection diagnosis, clear ask, and scheduled NEXT.
+--- PAGE 22 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 22 of 50
+21
+COMPLIANCE, QA, AND 
+AUTOMATION FAILURE 
+RUNBOOK
+A fast sales process must also be permission-aware, auditable, and 
+resilient.
+CONTROL AREA MINIMUM STANDARD
+Commercial email Accurate sender/subject, business identity and physical address, clear opt-
+out, suppression process, and vendor monitoring.
+SMS
+Document approved eligibility/consent basis; identify sender; honor 
+STOP/HELP and quiet hours; suppress immediately; legal review by 
+jurisdiction.
+Calling / recording Use approved numbers and scripts; follow calling-hour, DNC, and 
+recording-consent rules.
+Offer truth Only approved price, terms, feature status, claims, and scarcity. Material 
+statements remain in the CRM recap.
+Data access Role-based permissions, minimum necessary data, audit logs, secure links, 
+no card data in notes.
+AI use AI may suggest messages, scores, summaries, and next actions; a qualified 
+human reviews consequential outputs.
+Failure runbook
+FAILURE FALLBACK OWNER / SLA
+Social/form connector down Export or manually create critical leads; retain original 
+event ID; backfill after recovery. RevOps - immediate.
+SMS/email provider failure Retry safely once; do not duplicate; create 
+call/manual email task; flag dashboard. RevOps + manager.
+Calendar sync failure Send manual invite and record URL; repair same 
+business day. Rep + Systems Admin.
+Payment webhook missing Verify in gateway; do not mark won on assumption; 
+create finance/RevOps task. RevOps - immediate for buyer present.
+Duplicate sends / automation loop Pause sequence globally if needed; suppress 
+contact; investigate event/idempotency trail. RevOps incident lead.
+Wrong timezone / holiday rule Use America/Chicago + recipient timezone; correct 
+tasks and notify affected leads. RevOps + manager.
+Release gate: No automation goes live without test leads for business hours, after hours, duplicate event, reply suppression, opt-out, bad 
+phone, bounced email, rep unavailable, purchase success, payment failure, calendar failure, and rollback.
+--- PAGE 23 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 23 of 50
+22
+POST-MORTEM GAP REVIEW: 
+WHAT COULD STILL FAIL?
+Treat these as launch gates, not footnotes. Each risk needs an owner, 
+test, and evidence.
+GAP / FAILURE MODE CONTROL OWNER
+Offer facts are not finalized; reps improvise price, 
+terms, or scarcity.
+Approved versioned Offer Data Sheet; CRM requires 
+version; call audits. Leadership + Legal
+Live/beta/roadmap status is inconsistent. Product status matrix with owner and update date; 
+demo labels. Product + RevOps
+Social forms create duplicates or lose attribution. Canonical identity rules, immutable original source, 
+event IDs, daily dedup audit. RevOps
+30-minute SLA fails near 5:00 p.m., PTO, or holidays. Late coverage, backup owner, America/Chicago 
+logic, holiday calendar tests. Sales Manager
+Automations continue after reply, purchase, opt-out, 
+or complaint.
+Global reply/purchase/suppression stops with queue 
+cancellation tests. RevOps + Compliance
+No-answer SMS is sent without approved basis. SMS eligibility gate; email/call fallback; consent audit. Compliance
+Managers receive too many alerts and ignore critical 
+ones.
+Severity tiers; real-time only for 
+risk/breach/purchase/failure; digests for routine. Sales Manager
+Calendar link breaks or double-books. Weekly synthetic booking test; manual invite fallback; 
+same-day repair. Systems Admin
+Sales promise does not match onboarding delivery. Required promise/exclusion field; CS accepts/rejects 
+handoff; call-note audit. AE + CS
+Payment success is assumed from checkout intent. Gateway verification required before Closed Won; 
+recovery path for failed/pending. RevOps + Finance
+Nurture becomes spam or has no reactivation logic. Reason-based segments, frequency/quiet-hour 
+controls, dated human trigger. Marketing + Sales
+Metrics disagree across dashboards. Written KPI definitions, event timestamps, source-of-
+truth audit, versioned reports. RevOps
+TOP LAUNCH BLOCKERS
+Do not go live without: (1) approved offer/feature truth, (2) 
+staffed primary + backup coverage, (3) consent/suppression 
+controls, (4) tested reply/purchase stops, (5) payment and 
+calendar verification, and (6) a manual fallback for connector 
+failure.
+Post-mortem question: For every missed or mishandled lead ask: What signal entered? What should the system have done? What did the 
+human do? Where did detection fail? Which control changes - process, staffing, data, message, or software?
+--- PAGE 24 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 24 of 50
+23
+GO-LIVE CHECKLIST, 
+APPROVALS, AND METHOD 
+BASIS
+Launch only when the operating system, people, offer, and fallbacks 
+are ready.
+GO-LIVE GATE PASS EVIDENCE STATUS
+Offer Data Sheet approved Price, quantity, limits, terms, feature status, usage 
+charges, claims, scarcity. ___
+Owners and backups loaded Rep schedules, PTO, holidays, manager-on-duty, late 
+coverage. ___
+All lead sources tested Forms, DMs, chat, calls, referrals, checkout, 
+purchase. ___
+Zero-Orphan validator tested Owner, backup, stage, priority, NEXT, due time, 
+intended outcome. ___
+30-minute SLA alerts tested 15/25/30/45-minute paths and reassignment. ___
+Email/SMS approved Templates, sender identity, consent/eligibility, 
+STOP/unsubscribe, quiet hours. ___
+Calendar tested Booking, sync, reminders, no-show, manual fallback, 
+onboarding invite. ___
+Payment tested Success, pending, failed, duplicate webhook, 
+refund/cancellation escalation. ___
+Dashboards reconciled SLA, NEXT, source, funnel, quality, onboarding 
+metrics. ___
+Team certified Role-play opening, discovery, demo, objections, 
+close, CRM disposition. ___
+Incident owner named Connector, provider, calendar, payment, duplicate-
+send response. ___
+30-day post-mortem booked Cross-functional review on calendar with data owner. ___
+Approval
+ROLE NAME SIGNATURE / DATE
+Executive Sponsor
+VP Sales / Sales Manager
+Revenue Operations
+Legal / Compliance
+Client Success / Onboarding
+Method and source basis
+Method: Huthwaite SPIN; Sandler; Gong; Black Swan Group; FTC commercial-email guidance; and counsel-reviewed SMS/calling rules. Internal basis: Lynked Up Pro 
+Website FAQ (July 14, 2026), Web Lead Management SOP v3 (April 10, 2026), competitive audits (May 20, 2026), and Time Kills Deals (July 11, 2026). Product and 
+commercial facts always defer to the latest approved source. Proof builds trust. Speed creates momentum. Consistent follow-up closes deals.
+--- PAGE 25 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 25 of 50
+24
+PART II - SALES EXECUTION 
+PLAYBOOK  |  Manager setup, CRM build, scripts, 
+cadences, and coaching
+ 
+SALES SCRIPT HEADER: This person you're talking to could 
+take you one step closer to your goals. Be excited and go 
+crush it! Be curious. Be useful. Have fun.
+ 
+Purpose: Part I defines the operating rules. Part II turns those 
+rules into a build plan, a manager system, a complete contact 
+sequence, and human sales conversations the team can actually 
+use.
+ 
+BUILD IT
+Roles, data, integrations, routing, 
+alerts, stages, calendar, and 
+payment.
+RUN IT
+Manager coverage, queue control, 
+coaching, reporting, and change 
+management.
+SAY IT
+Calls, voicemails, SMS, email, 
+discovery, demo, objections, and 
+close.
+IMPROVE IT
+Acceptance tests, post-mortems, 
+scorecards, and controlled 
+experiments.
+ 
+THE LYNKED UP PRO CONVERSATION METHOD 
+Method element How the team uses it
+Up-front agreement Set purpose, time, agenda, and a truthful possible outcome before 
+discovery.
+Current state -> gap -> future state Understand what happens today, the business impact, and what must be 
+different.
+SPIN-style diagnosis Use situation sparingly; explore problem, implication, and desired payoff.
+Tactical empathy Label concerns, summarize accurately, and ask calm calibrated questions.
+Teach, tailor, take control Offer one relevant insight, connect it to the buyer, and guide a clear decision 
+path.
+No-pressure qualification A clear no is better than a fake maybe. Protect trust and keep the pipeline 
+truthful. 
+Playbook rule: Use the scripts as conversation scaffolding. Never 
+sound like you are reading. Listen for the buyer’s exact words, 
+slow down, and make the next question feel earned.
+ 
+--- PAGE 26 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 26 of 50
+25 IMPLEMENTATION OWNERSHIP  | 
+Who builds, approves, runs, and improves the system
+ 
+Workstream Sales Manager ProjectLight / RevOps Other owner / approval
+Offer truth Train to the approved offer and stop 
+improvisation.
+Version offer fields, templates, and 
+expiration dates. Product + Finance + Leadership approve.
+Coverage Set rep schedules, backups, PTO, 
+holidays, and 5:30 PM late coverage.
+Load availability, capacity, round-robin, 
+and fallback rules. Leadership funds staffing.
+Lead intake Define which signals are P0/P1/P2 and 
+who owns each.
+Connect sources, validate payloads, 
+dedupe, preserve attribution.
+Marketing owns source forms and consent 
+copy.
+SLA Enforce the 30-minute standard and 
+intervene before breach.
+Calculate clocks, create tasks, alert, 
+reassign, and audit. Leadership receives systemic breaches.
+Messaging Approve tone, coach personalization, audit 
+quality.
+Build versioned templates, eligibility gates, 
+stop rules, logs.
+Compliance / Legal approves channel 
+rules.
+Pipeline Define stage entry/exit evidence and aging 
+limits.
+Block invalid moves; require NEXT; create 
+exception queues.
+Finance / CS approve commercial and 
+handoff stages.
+Calendar Set meeting types, host coverage, buffers, 
+and no-show standards.
+Sync calendars, event IDs, reminders, 
+reschedule, and fallback.
+Customer Success owns onboarding 
+calendar.
+Reporting Run daily queue and weekly funnel 
+reviews; coach from evidence.
+Build dashboards, reconcile metrics, and 
+surface data gaps. Leadership reviews weekly/monthly.
+ 
+BUILD SEQUENCE - DO NOT AUTOMATE CHAOS 
+1 Manager Approve offer, promises, stages, owner model, 
+coverage hours, and service levels.
+2 RevOps Build data model, permissions, source adapters, 
+dedupe, and canonical activity timeline.
+3 Manager + RevOps Configure routing, SLA timers, alerts, task rules, 
+and stage gates.
+4 Compliance Approve forms, consent evidence, sender 
+identities, opt-outs, quiet hours, and retention.
+5 RevOps Build sequences, calendar, payment, onboarding, 
+dashboards, and outage queues.
+6 Manager Train and certify reps on calls, CRM dispositions, 
+next actions, and escalation.
+7 Cross-functional Run end-to-end acceptance tests with real test 
+records and evidence.
+8 Leadership Approve go-live, monitor first 10 business days, 
+and require a 30-day post-mortem.
+ 
+Single accountable owner: Every implementation item has one 
+accountable owner, one due date, one acceptance test, and one 
+escalation path. Shared ownership without a named decision-
+maker is not ownership.
+ 
+--- PAGE 27 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 27 of 50
+26
+SALES MANAGER SETUP AND 
+OPERATING RHYTHM  |  The manager makes 
+the system real
+ 
+PRELAUNCH SETUP COUNTDOWN 
+When Sales manager action Evidence of completion
+T-30 to T-21 days
+Approve offer sheet, target customer, qualification 
+standard, stages, coverage, territories, and backup 
+rules.
+Signed sales design + staffing calendar.
+T-20 to T-14 days
+Approve scripts, cadence objectives, templates, 
+dispositions, objection responses, and escalation 
+language.
+Controlled template library and role-play plan.
+T-13 to T-7 days
+Run role plays; certify first call, discovery, demo, 
+close, no-show, payment recovery, and CRM 
+hygiene.
+Scorecards at or above certification threshold.
+T-6 to T-2 days Run live-source tests, inspect dashboards, verify late-
+day coverage, and rehearse manual fallback. Passed acceptance test packet.
+T-1 day
+Freeze noncritical changes, confirm on-call owners, 
+publish queue coverage, and open launch command 
+channel.
+Launch roster + escalation contacts.
+Launch + 10 days Inspect every breach, sample messages/calls daily, 
+correct routing, and celebrate verified wins. Daily launch log + corrective actions.
+ 
+DAILY, WEEKLY, AND MONTHLY MANAGER RHYTHM 
+Cadence Meeting / review Required output
+8:45 AM daily 10-minute launch huddle: wins, priority queue, 
+coverage, demos, payments, blockers. Named owners for every P0/P1 and one team focus.
+11:30 AM daily SLA and stale-task sweep. Reassignments, capacity fixes, and coaching 
+moments.
+4:30 PM daily Late-day coverage, payment, no-show, and 
+onboarding sweep.
+No unowned overnight blocker; 5:30 PM coverage 
+confirmed.
+Weekly Funnel, source quality, stage aging, objections, calls, 
+and forecast. Three corrective actions with owner/date.
+Biweekly Individual coaching and call review. One behavior to keep, one to change, one practice 
+assignment.
+Monthly Workflow, template, compliance, deliverability, 
+staffing, and post-mortem review. Approved version changes and retest plan.
+ 
+FUN, NOT FLUFF
+Celebrate a great question, a clean no, 
+and a perfect handoff - not just 
+revenue.
+COACH THE MOMENT
+Use exact call timestamps and CRM 
+events; avoid vague advice.
+PROTECT THE BUYER
+No fake scarcity, pressure, or roadmap 
+promises.
+PROTECT THE REP
+Clear coverage, fast answers, and fair 
+lead distribution.
+ 
+--- PAGE 28 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 28 of 50
+27
+PROJECTLIGHT CRM MUST-
+HAVE FEATURES  |  Launch blockers, force 
+multipliers, and future intelligence
+ 
+P0 - REQUIRED BEFORE THE INTERNAL SALES TEAM CAN RELY ON PROJECTLIGHT 
+Must-have capability Minimum acceptance standard
+Universal lead intake API/webhook/manual intake for forms, DMs, chat, calls, referrals, checkout, and 
+purchases; raw source event retained.
+Canonical identity + dedupe Match source ID, normalized email, E.164 phone, company/domain, social ID, and 
+transaction ID; preserve merge history.
+Ownership + backup Primary rep, backup, manager, assignment/acceptance timestamps, capacity, PTO, and 
+automatic fallback.
+Next-action enforcement Non-terminal record cannot save or advance without action type, owner, date/time, 
+purpose, and intended outcome.
+SLA clock + alerts America/Chicago business clock, recipient-local contact rules, T+15/T+25/T+30/T+45 
+alerts, breach reason, and reassignment.
+Two-way communications Email, SMS, call, voicemail, social/DM note, reply detection, delivery status, and a 
+single chronological timeline.
+Consent + suppression Permission evidence, quiet hours, opt-out/DNC, invalid/bounce, global suppression, 
+frequency caps, and auditable stop reasons.
+Sequence orchestration Event-based steps; pause on reply; replace CTA on booking; stop on payment/opt-out; 
+idempotency and dedup.
+Calendar engine Round-robin/pool availability, timezone, event IDs, reminders, reschedule, cancel, no-
+show, and onboarding scheduling.
+Payment + onboarding Checkout state, verified payment, unique transaction handling, Closed Won, presale 
+suppression, customer/license, and handoff tasks.
+Dashboards + exceptions SLA, next-action coverage, stage aging, source funnel, messages, appointments, 
+payment, onboarding, breaches, and outages.
+Security + audit Role permissions, template/version history, immutable activity events, exports, retention 
+controls, and incident evidence.
+ 
+P1 AND P2 ROADMAP 
+P1 - SALES EFFICIENCY
+Power dialer, voicemail workflow, lead 
+scoring, snippets, saved views, task 
+queues, mobile push, call recording with 
+approved consent.
+P1 - MANAGER CONTROL
+Conversation review, QA sampling, 
+routing simulation, template approval, 
+capacity forecast, source/rep 
+benchmarking.
+P2 - AI ASSIST
+Suggested next best action, draft 
+personalization, call summary, risk flags, 
+objection trends, coaching prompts - with 
+human review.
+P2 - OPTIMIZATION
+Experiment framework, predictive scoring, 
+conversion forecasting, attribution, 
+sequence performance, and cohort 
+analysis.
+ 
+Definition of useful: ProjectLight is useful only when a rep can 
+open one screen and know: who is this, why now, what happened, 
+what may I do, what do I say, and what exact action is due next.
+ 
+--- PAGE 29 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 29 of 50
+28
+CRM DATA MODEL, FIELDS, AND 
+PERMISSIONS  |  Build the source of truth before 
+building automations
+ 
+Object Purpose Required links / fields
+Lead / Contact Person identity and communication eligibility. Name, role, company, email, phone, timezone, source 
+IDs, status, owner, consent/suppression.
+Account Company context and duplicate prevention. Legal/display name, domain, size/segment, current tools, 
+locations, owner, open opportunities.
+Opportunity Commercial buying journey. Stage, priority, fit, pain/impact/outcome, stakeholders, 
+decision process/date, offer version, forecast.
+Source Event Immutable proof of why the record exists.
+Platform, event ID, timestamp, form/version, 
+campaign/ad/creative/UTM, raw payload, permission 
+evidence.
+Activity Calls, SMS, email, DMs, notes, replies, meetings. Actor, channel, timestamps, direction, message/call ID, 
+delivery, disposition, related objective.
+NEXT Action / Task One owned future commitment. Type, owner, due date/time, purpose, intended outcome, 
+priority, status, completion evidence.
+Consent / Suppression Channel eligibility and revocation. Channel, purpose, source/text/version/time, evidence, 
+expiration if applicable, opt-out/DNC/bounce.
+Meeting Calendar state and outcome. Event ID, host, attendees, timezone, type, join/reschedule 
+links, reminders, show/no-show, outcome.
+Payment / License Verified commercial state. Processor/session/transaction ID, offer/terms version, 
+amount/status, license ID, refund/cancel state.
+Onboarding Handoff Delivery continuity after sale. CS owner/backup, kickoff event, prework, promises, risks, 
+integrations, success outcomes, milestones.
+Exception / Incident Visible failure and corrective action. Type, affected records, timeline, root cause, owner, due 
+date, recovery, verification.
+ 
+ROLE PERMISSIONS 
+Role Can do Cannot do without approval
+Rep Work assigned leads; send approved messages; call; 
+update stage; create next actions; book meetings.
+Change offer terms, delete audit events, override 
+suppression, bulk export, or publish templates.
+Manager Reassign, approve exceptions, review calls, see team 
+dashboards, return incomplete records.
+Change compliance rules, payment states, or 
+production automations alone.
+RevOps Configure data, routing, automation, templates, 
+dashboards, integrations, and reconciliation.
+Approve product claims, commercial exceptions, or 
+legal policy.
+Leadership / Product / Finance / CS Approve their controlled areas and receive defined 
+escalations.
+Edit unrelated operational evidence or bypass 
+handoff rules. 
+Save and stage gate: Open records require owner + backup + 
+stage + priority + permission state + last disposition + exact NEXT. 
+Closed Won remains nonterminal until onboarding is accepted 
+and calendarized.
+ 
+--- PAGE 30 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 30 of 50
+29
+INTEGRATION AND CHANNEL 
+SETUP  |  Source adapters, sender identity, calendar, 
+payment, and fallbacks
+ 
+System / source Implementation checklist Failure queue owner
+Meta / Instagram / Facebook
+Lead form webhook, source lead ID, form/version, 
+campaign/ad/creative, DM/comment context, permission fields, 
+retry/idempotency.
+RevOps + Marketing
+LinkedIn Lead Gen Form, campaign/form IDs, company/profile, 
+message context, source-specific permission and dedupe. RevOps + Marketing
+TikTok / Google / YouTube Lead form or landing event, click/UTM, campaign/ad, form 
+proof, timestamp, identity validation. RevOps + Marketing
+Website / chat Demo/pricing/contact events, page/referrer/session, form 
+version, submitted permissions, transcript, bot handoff. RevOps + Web owner
+Phone / call tracking Unique tracking numbers, inbound source, recording/consent 
+policy, disposition, rep association, missed-call event. Sales Ops
+Email
+Approved sending domain, SPF/DKIM/DMARC, sender 
+identity, reply routing, bounce/complaint/unsubscribe, template 
+versions.
+RevOps + IT
+SMS Approved brand/use case/number, opt-in proof, HELP/STOP 
+handling, quiet hours, delivery receipts, suppression, caps. RevOps + Compliance
+Calendar Google/Microsoft sync, pooled hosts, buffers, timezones, 
+event IDs, reminders, reschedule/cancel, no-show, fallback. RevOps + Sales Manager
+Checkout / payment
+Session and transaction IDs, approved links, 
+pending/failed/success/refund states, webhook signatures, 
+idempotency.
+Finance + RevOps
+ 
+CHANNEL CONFIGURATION GATES 
+IDENTITY
+No channel goes live until sender name, reply path, 
+ownership, and support path are clear.
+PERMISSION
+Store what the prospect saw and submitted; do not 
+infer SMS permission from a phone number.
+TIME
+Internal SLA uses America/Chicago. Customer 
+contact uses recipient-local rules and policy.
+STOP
+Reply, booking, payment, opt-out, bounce, complaint, 
+or live rep activity can pause/replace automation.
+CAP
+One objective owner, global frequency limits, and a 
+30-minute no-answer dedup window.
+FALLBACK
+Every connector has retry, dead-letter queue, alert, 
+manual continuation, and reconciliation.
+ 
+Launch evidence: For every integration, retain a passing test 
+record, source payload, created CRM record, message/event IDs, 
+expected task, expected alert, and cleanup/replay evidence.
+ 
+--- PAGE 31 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 31 of 50
+30
+ROUTING, CAPACITY, SLA, AND 
+ALERT CONFIGURATION  |  The queue 
+should know who can act before the lead arrives
+ 
+ROUTING DECISION ORDER 
+1 Eligibility
+Validate identity, source, permission, contact 
+time, and required data. Invalid/ambiguous routes 
+to review.
+2 Priority
+P0 verified purchase; P1 
+form/demo/pricing/checkout; P2 active 
+social/referral; P3 nurture/content.
+3 Specialty
+Match segment, geography, language, partner, 
+account owner, product/technical need, and 
+conflict rules.
+4 Availability
+Use live status, schedule, PTO, meeting blocks, 
+current P0/P1 load, and maximum concurrent 
+leads.
+5 Assignment
+Assign primary + backup + manager; preserve 
+original owner/source; start acceptance and 
+response clocks.
+6 Fallback
+Unaccepted, unavailable, or at-risk leads move to 
+backup/round-robin without resetting the source 
+timestamp.
+ 
+ALERT LADDER AND REQUIRED ACTION 
+Time / condition ProjectLight action Human response
+T+0 Create/merge; assign; alert rep + backup + manager; 
+create First Call; send eligible acknowledgment. Rep accepts and reviews context.
+T+5 unaccepted Push reminder; display countdown; notify backup. Primary accepts or backup prepares.
+T+15 no human attempt Yellow manager warning; show capacity/availability and 
+one-click reassign. Manager confirms owner and removes blocker.
+T+25 no human attempt Red alert to manager + backup; freeze new P1 
+assignment to overloaded rep if configured. Backup takes lead or manager reassigns.
+T+30 breach Mark breach; reassign; notify leadership; require breach 
+reason and customer recovery action.
+New owner attempts immediately; manager opens 
+incident if systemic.
+T+45 unresolved Critical incident; page on-call leadership/RevOps; list 
+every affected lead. Pause broken workflow if needed; run emergency queue.
+Overdue NEXT Red queue immediately; manager after 15 minutes; 
+capacity/fallback rules apply. Complete, reschedule with buyer evidence, or reassign.
+No owner / missing NEXT Block save/stage or create integrity exception; manager 
+alert. Correct before other work is considered complete.
+ 
+Late-day staffing rule: A 4:59 PM Central lead has a 5:29 PM 
+deadline. Staff closing coverage through 5:30 PM or change the 
+published eligibility window. Never hide an impossible SLA inside 
+the CRM.
+ 
+--- PAGE 32 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 32 of 50
+31
+PROJECTLIGHT ACTIONS BY 
+STAGE - INBOUND TO DEMO  |  What 
+the CRM does, what the rep does, and what the manager watches
+ 
+Stage ProjectLight CRM must do Sales rep must do Manager control / exit evidence
+NEW - UNWORKED
+Create/merge; assign owners; calculate SLA; 
+acknowledge if eligible; create First Call; start 
+alerts.
+Accept, review source, call within SLA, log 
+disposition and exact NEXT.
+No unassigned/missing NEXT; exit only after 
+tracked human attempt.
+ATTEMPTING CONTACT
+Run approved cadence; schedule 
+call/email/SMS tasks; pause on reply/booking; 
+monitor caps and channel eligibility.
+Personalize each touch; change angle, not 
+just wording; keep next attempt dated.
+Watch repeated no-answer, invalid data, 
+collisions, and overdue attempts.
+CONNECTED - QUALIFYING
+Pause generic chase; create live conversation 
+task; surface discovery fields and approved 
+script prompts.
+Set up-front contract; diagnose current state, 
+problem, impact, outcome, fit, timing, 
+stakeholders, and decision path.
+Exit requires meaningful notes plus booked 
+demo/callback or truthful 
+disqualification/nurture.
+DEMO SCHEDULED
+Create event; store event ID; send 
+confirmation/reminders; create prep task; 
+suppress booking CTAs.
+Confirm attendees, purpose, agenda, priority 
+workflows, decision objective, and invite 
+receipt.
+Accepted calendar event, right attendees, and 
+prep complete; no stale tentative meetings.
+NO-SHOW
+Cancel old reminder state; create rescue task; 
+trigger permitted rescue SMS/email after 
+human call; offer rebook.
+Call within 5 minutes; use empathy; offer two 
+replacement times; log reason.
+Second no-show requires manager review 
+and different commitment strategy.
+ 
+STAGE-ENTRY AUTOMATION CHECKS 
+WHY NOW?
+Source event and requested outcome 
+are visible to the rep.
+MAY WE?
+Channel permission, timezone, and 
+suppression are evaluated before 
+send.
+WHO OWNS?
+Primary, backup, manager, and 
+capacity state are explicit.
+WHAT NEXT?
+One exact action, due time, and 
+intended outcome exist.
+ 
+Manager coaching trigger: When a rep connects but does not 
+book a next step, ProjectLight creates a coaching flag: Was the 
+pain unclear, the value weak, the decision process unknown, or 
+the ask missing?
+ 
+--- PAGE 33 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 33 of 50
+32
+PROJECTLIGHT ACTIONS BY 
+STAGE - DEMO TO 
+ONBOARDING  |  Every commercial stage has an 
+evidence-based exit
+ 
+Stage ProjectLight CRM must do Sales rep / owner must do Manager control / exit evidence
+DEMO / DISCOVERY COMPLETE
+Open recap template; require pains, impact, 
+desired outcome, workflows shown, feature 
+status, objections, stakeholders, decision 
+date.
+Send personalized recap within 2 hours; 
+confirm what matters; book 
+decision/commercial review.
+No “great demo” stage movement without a 
+dated decision step.
+COMMERCIAL REVIEW
+Attach approved offer/terms version; track 
+recipients, questions, exceptions, and 
+decision meeting.
+Review value and scope; label 
+active/beta/roadmap/excluded; ask what must 
+be resolved for a decision.
+Any discount/exception requires approval and 
+written record.
+CHECKOUT / AGREEMENT SENT
+Track secure link, session status, agreed 
+decision time; create payment follow-up; stop 
+duplicate offers.
+Stay available; clarify 
+process/approver/terms/technical blocker; 
+never collect card data in messages.
+Aging beyond agreed date triggers manager 
+review; payment pending is not Closed Won.
+PAYMENT VERIFIED
+Use unique transaction; mark Closed Won; 
+stop presale; create customer/license; alert 
+AE/manager/Finance/CS/leadership; create 
+onboarding workflow.
+Thank buyer; confirm admin/contact; offer two 
+onboarding times; complete handoff.
+Closed Won incomplete until CS accepts and 
+kickoff is booked or a buyer-driven exception 
+is owned.
+NURTURE
+Assign reason-based journey; schedule value 
+touches; monitor engagement; 
+rescore/reactivate on high-intent events.
+Send useful, relevant content; honor timing; 
+keep one future NEXT.
+Quarterly review of stale nurture, product 
+gaps, and reactivation performance.
+CLOSED LOST
+Require reason, competitor/alternative, 
+decision date, learning, and allowed 
+reactivation rule; suppress active chase.
+Close respectfully; confirm whether future 
+contact is wanted; leave the relationship 
+stronger.
+Manager reviews losses for controllable 
+patterns and false “unresponsive” reasons.
+ 
+Automation principle: ProjectLight should automate consistency, 
+not persuasion. A reply, objection, commercial question, or buying 
+signal creates a human task and pauses generic outbound until 
+the owner responds.
+ 
+--- PAGE 34 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 34 of 50
+33
+14-DAY ACTIVE CONTACT 
+CADENCE  |  One coordinated sequence with a clear 
+purpose at every touch
+ 
+Step Timing Channel Objective / message angle Required NEXT / ProjectLight 
+action
+1 T+0 Email + eligible SMS Acknowledge request, identify rep, 
+set expectation, offer two times.
+Create First Call due inside SLA; log 
+message IDs.
+2 T+5-20 Call #1
+Source-aware opening; discover 
+what caught attention; book 
+fit/demo.
+Disposition + exact NEXT before 
+task closes.
+3 After no answer Voicemail + SMS #2 + Email #2 Human missed-call message and 
+easy reply path.
+Schedule Call #2; 30-minute dedup 
+prevents message burst.
+4 T+3-5 hours Call #2 New time window; ask one direct, 
+relevant question.
+Connect/book or schedule Day 2 
+call.
+5 Day 2 AM Call #3 + SMS #3
+Value hypothesis: owner/next-action 
+visibility, follow-up, operations, or 
+prelaunch access.
+Personalize track based on 
+response/engagement.
+6 Day 2 PM Email #3 Short diagnostic and one useful 
+insight; invite 10-minute fit check. Create Day 4 task; pause if reply.
+7 Day 4 Call #4 + SMS #4 Clarify priority: this month, later, or 
+not now. Book, nurture with date, or continue.
+8 Day 5 Email #4 Decision checklist / what good 
+follow-up operations require.
+Track click/reply; no score-only 
+automation sends.
+9 Day 7 Call #5 + Email #5 Business case, stakeholder, and 
+next-step clarity.
+Set decision/demo or explicit later 
+date.
+10 Day 9 SMS #5 Low-friction choice: fit check, 
+overview, or close loop.
+Reply pauses sequence and alerts 
+owner.
+11 Day 10 Call #6 + Email #6 Ask what remains unresolved; offer 
+two concrete paths.
+Manager review if high intent but no 
+next step.
+12 Day 12 SMS #6 Permission-based final active check. Set final call task or nurture date.
+13 Day 14 Call #7 + Email/SMS breakup Respectful close-the-loop; 1=book, 
+2=later, 3=close.
+Move to Nurture or Closed Lost with 
+reason and future NEXT.
+ 
+Sequence stop rules: Stop or replace generic steps on reply, 
+booked meeting, buyer-requested callback, opt-out, invalid 
+channel, payment, customer status, live rep activity, or a higher-
+priority service issue. Never let automation argue with a human.
+ 
+--- PAGE 35 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 35 of 50
+34
+CALL SEQUENCE - ATTEMPTS 1 
+THROUGH 3  |  Open warm, stay human, and earn the 
+next conversation
+ 
+SALES SCRIPT HEADER: This person you're talking to could 
+take you one step closer to your goals. Be excited and go 
+crush it! Be curious. Be useful. Have fun.
+ 
+CALL #1 - SPEED TO LEAD
+Warm, upbeat, unhurried. Smile and stand.
+Rep: 'Hey [First Name], this is [Rep] with Lynked Up Pro. You just [filled out 
+the form / messaged us] about [source topic]. Did I catch you with two 
+minutes?'
+If YES: 'Perfect. I do not want to launch into a pitch. What caught your 
+attention enough to reach out today?' [Pause. Listen. Reflect one phrase.] 
+'Got it. How are you handling that today?'
+If BUSY: 'Totally fair. I can be brief, or we can lock a better time. Is [Time A] 
+or [Time B] easier?' Book live.
+If WHAT IS THIS ABOUT?: 'You asked about Lynked Up Pro and the 
+Prelaunch License. I want to see whether the platform fits the way your 
+team actually sells and runs work - and tell you quickly if it does not.'
+ 
+VOICEMAIL #1
+12-20 seconds. Friendly, not dramatic.
+'Hey [First Name], [Rep] with Lynked Up Pro. I am following up on your 
+[form/message] about [topic]. I will send a quick text so you have my 
+number. Call or text me when convenient - [number].'
+ 
+CALL #2 - SAME DAY
+Different angle. Do not repeat Call #1 word for word.
+'Hey [First Name], [Rep] again. I wanted to try you at a different time. Your 
+request mentioned [topic]. Usually that means a team is trying to fix either 
+missed follow-up, lack of visibility, or too many disconnected tools. Which 
+one is closest - or am I off?'
+If they answer: explore one implication, then: 'That is worth a real look. 
+Would [Time A] or [Time B] work for a focused conversation?'
+ 
+CALL #3 - DAY 2
+Calm confidence. Offer value before another ask.
+'Hi [First Name], [Rep] with Lynked Up Pro. One reason I kept this on my 
+list: when leads, follow-up, and project handoffs live in separate places, the 
+leak is usually invisible until revenue is gone. Is that a problem you are 
+actively trying to solve, or was your inquiry more exploratory?'
+If ACTIVE: ask impact + desired outcome and book. If EXPLORATORY: 
+offer the two-minute overview and set a dated check-back. If NOT A FIT: 
+thank them and close cleanly.'
+ 
+After every attempt: Log outcome, voicemail yes/no, objection or 
+signal, and the exact next action. “Tried calling” is not a complete 
+CRM record.
+ 
+--- PAGE 36 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 36 of 50
+35
+CALL SEQUENCE - ATTEMPTS 4 
+THROUGH 7  |  Change the reason for the call, not just 
+the day
+ 
+SALES SCRIPT HEADER: This person you're talking to could 
+take you one step closer to your goals. Be excited and go 
+crush it! Be curious. Be useful. Have fun.
+ 
+Attempt Human talk track Required next action
+CALL #4 - DAY 4
+'Hey [First Name], quick check so I follow your lead. Is 
+improving [known problem] a this-month priority, a later-
+this-quarter priority, or not something you want to pursue 
+right now?' [Let them choose. Do not rescue the silence.]
+Book a fit/demo, set a buyer-approved future date, or 
+document not-now reason.
+CALL #5 - DAY 7
+'I have been thinking about what you shared/requested. 
+The real question is not whether another CRM has 
+features - it is whether your team will know who owns 
+every lead and what happens next. Would it be useful to 
+map that workflow for 15 minutes?'
+Book workflow review; add stakeholder/decision task.
+CALL #6 - DAY 10
+'I do not want to keep guessing. What is the main thing 
+stopping this from moving forward: timing, trust in a 
+prelaunch platform, budget, another decision-maker, or 
+simply not enough value yet?'
+Answer/verify one blocker; schedule decision or close 
+loop.
+CALL #7 - DAY 14
+'I promised myself I would not become the rep who 
+follows up forever without permission. Should we book a 
+conversation, revisit on a specific date, or close this out 
+for now?'
+1=book; 2=nurture with exact date/reason; 3=Closed Lost 
+/ no active chase.
+REACTIVATION - DAY 30+
+'Hey [First Name], we spoke/reached out around [month] 
+about [problem]. I am calling because [relevant update / 
+timing event]. Has anything changed in how you are 
+handling [problem]?'
+If new signal exists, move to Connected and book. 
+Otherwise set next nurture or close.
+ 
+VOICEMAIL PROGRESSION 
+VOICEMAIL #2
+Make the reason specific.
+'Hi [First Name], [Rep] with Lynked Up Pro. I am reaching out because you 
+asked about [topic], and I have one question about how your team handles 
+[problem]. I will text it as well. My number is [number].'
+ 
+FINAL ACTIVE VOICEMAIL
+Respectful and low pressure.
+'Hey [First Name], [Rep] with Lynked Up Pro. I am going to move this out of 
+my active follow-up so I do not create noise. I will send a quick message 
+with three options: talk now, revisit later, or close the loop. Either way, 
+thank you for checking us out.'
+ 
+Demeanor: Positive energy is not pressure. Sound like a capable 
+human who is happy to help, comfortable with a no, and genuinely 
+interested in the answer.
+ 
+--- PAGE 37 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 37 of 50
+36
+SMS SEQUENCE - MESSAGES 1 
+THROUGH 5  |  Short, personal, permission-aware, and 
+tied to one action
+ 
+# / trigger Approved starting template ProjectLight next action
+SMS 1 - Immediate inbound
+Hi [First Name] - [Rep] with Lynked Up Pro. I just received 
+your [form/message] about [topic]. I will call from [number] 
+shortly. Is now okay, or is [Time A]/[Time B] better? Reply 
+STOP to opt out.
+Log send ID; create First Call inside SLA. If reply, pause 
+sequence and alert rep.
+SMS 2 - Missed Call #1
+Hi [First Name], I just tried you. No pressure - what 
+caught your eye most: 1) lead follow-up, 2) sales visibility, 
+3) project operations, or 4) the Prelaunch License? - 
+[Rep] [Link]
+If SMS 1 sent within 30 minutes, delay/consolidate. 
+Schedule Call #2.
+SMS 3 - Day 2 value question
+Quick thought: most teams do not need another app - 
+they need every lead to have an owner and a next action. 
+Is follow-up the main issue for you, or something else?
+Reply creates urgent human task. No reply -> Day 2 
+email and Day 4 call.
+SMS 4 - Day 4 priority check
+I want to follow your lead, [First Name]. Is solving [known 
+problem] a this-month priority, later this quarter, or not 
+right now?
+Book, set dated nurture, or continue based on buyer 
+response.
+SMS 5 - Day 9 low-friction choice What would be most useful? A = 10-minute fit check, B = 
+2-minute overview, C = close the loop for now. - [Rep]
+A/B/C disposition updates stage and exact NEXT 
+automatically.
+ 
+PERSONALIZATION RULES 
+USE SOURCE
+Reference the actual form, DM, referral, 
+event, or checkout - never pretend 
+familiarity.
+ONE QUESTION
+Ask one easy-to-answer question, not a 
+paragraph of discovery.
+ONE CTA
+Call, reply, choose A/B/C, or book - never 
+four competing actions.
+STOP FAST
+Any opt-out, complaint, invalid number, or 
+channel restriction suppresses queued 
+texts.
+ 
+SMS approval gate: These are operating templates, not legal approval. 
+Production eligibility, required disclosure, quiet hours, sender identity, and 
+opt-out handling must follow counsel-approved policy and current 
+carrier/platform requirements.
+ 
+--- PAGE 38 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 38 of 50
+37
+SMS SEQUENCE - MESSAGES 6 
+THROUGH 10  |  Close the active loop, then reactivate 
+with a real reason
+ 
+# / trigger Approved starting template ProjectLight next action
+SMS 6 - Day 12 permission check
+Last active check from me, [First Name]: should I keep 
+working to connect, circle back on a specific date, or 
+close this for now? - [Rep]
+Create final-call task; reply pauses sequence.
+SMS 7 - Day 14 breakup
+Should I keep this active? Reply 1 = book a conversation, 
+2 = revisit later, 3 = close the loop. Either answer is 
+helpful. - [Rep], Lynked Up Pro
+1=book; 2=require date/reason; 3=Closed Lost; no reply 
+-> reason-coded nurture.
+SMS 8 - Day 30 reactivation
+Hi [First Name] - [Rep] with Lynked Up Pro. We 
+spoke/reached out about [problem]. [Relevant 
+update/timing reason]. Has anything changed on your 
+side?
+High-intent reply reopens opportunity and creates same-
+day call.
+SMS 9 - Checkout assistance
+I sent the approved Lynked Up Pro license terms and 
+secure checkout. What question needs to be resolved 
+before [agreed decision time]? - [Rep]
+Create payment/decision task; do not mark Closed Won 
+until verified.
+SMS 10 - Closed Won
+Welcome to Lynked Up Pro, [First Name] - payment is 
+confirmed. Your next step is onboarding with [Owner]. I 
+can book it with you now, or use: [Link].
+Stop presale; assign CS; onboarding event or owned 
+exception due within 24 hours.
+ 
+LIFECYCLE SMS LIBRARY 
+Trigger Message
+Demo booked You are set for Lynked Up Pro on [Day] at [Time] [TZ]. We will focus on [priority]. 
+Join: [Link] | Reschedule: [Link].
+2-hour reminder Looking forward to our call at [Time] [TZ]. We will keep it focused on [priority]. 
+Join: [Link].
+No-show rescue Hi [First Name], we missed you. No worries. Would [Time A] or [Time B] work, or 
+use [Link]?
+Callback confirmed Confirmed - I will call [Day] at [Time] [TZ] from [number]. Reply here if anything 
+changes.
+Payment failed/pending It looks like checkout did not complete. I can help with the process, but please do 
+not send payment details by text. Secure link: [Link]. 
+Reply handling: Any reply becomes a priority owner task. The 
+human response target during staffed hours is 5 minutes. Generic 
+persuasion pauses while a real conversation is active.
+ 
+--- PAGE 39 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 39 of 50
+38
+EMAIL SEQUENCE - MESSAGES 
+1 THROUGH 4  |  Every email advances one decision, 
+not five
+ 
+EMAIL 1 - IMMEDIATE ACKNOWLEDGMENT
+Subject: Got your Lynked Up Pro request
+Hi [First Name],
+Thanks for reaching out about [source/topic]. I am [Rep], and I will call shortly from [number]. Before I do, what are you most interested in improving: lead follow-up, 
+sales visibility, project operations, or learning about the Prelaunch License?
+A quick conversation is usually the fastest way to tell whether there is a fit. Is [Time A] or [Time B] better?
+[Rep] | [Phone] | [Calendar]
+ 
+EMAIL 2 - MISSED CALL
+Subject: I just tried you
+Hi [First Name],
+I just tried to reach you about your Lynked Up Pro [form/message]. No worries if the timing was bad. I wanted to understand what caught your attention and whether 
+it is worth a focused conversation.
+Reply with the best time, choose [Time A] or [Time B], or use [Calendar].
+[Rep]
+ 
+EMAIL 3 - DAY 2 VALUE HYPOTHESIS
+Subject: Where leads usually get lost
+Hi [First Name],
+A common problem is not a lack of effort. It is that lead ownership, follow-up, messages, appointments, and project handoffs live in different places - so no one sees 
+the leak soon enough.
+Lynked Up Pro is designed around a simple standard: every lead has an owner and a next action. Is that close to the problem you are trying to solve?
+A 10-minute fit check should be enough to know. [Time A] or [Time B]?
+[Rep]
+ 
+EMAIL 4 - DAY 5 DIAGNOSTIC
+Subject: Five questions for a leak-proof sales workflow
+Hi [First Name],
+Here are five questions worth asking:
+1. Does every new lead receive an owner and due time automatically?
+2. Can leadership see overdue follow-up without asking?
+3. Do email, SMS, calls, and calendar live on one timeline?
+4. Does a no-answer outcome create the next action automatically?
+5. Does Closed Won immediately schedule onboarding?
+Which one is hardest today? Reply with the number, and I will show you the relevant workflow.
+[Rep]
+ 
+After each send: ProjectLight logs template version, personalization, 
+message ID, delivery, reply, link activity, and the next human task. 
+Opens/clicks may inform priority but never replace a real buying signal.
+ 
+--- PAGE 40 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 40 of 50
+39
+EMAIL SEQUENCE - MESSAGES 
+5 THROUGH 8  |  Ask for clarity, then earn the right to 
+re-engage
+ 
+EMAIL 5 - DAY 7 BUSINESS CASE
+Subject: What would need to change for this to matter?
+Hi [First Name],
+I do not want to assume software is the answer. The useful question is: what would have to change in your current process for a new platform to be worth the effort?
+For example: faster lead response, fewer missed follow-ups, clearer rep accountability, smoother sales-to-project handoff, or better owner visibility.
+Which outcome matters most - and by when?
+[Rep] | [Calendar]
+ 
+EMAIL 6 - DAY 10 DECISION PATH
+Subject: What is still unresolved?
+Hi [First Name],
+I have tried to connect because you showed interest in Lynked Up Pro. Rather than keep guessing, which of these is the real blocker?
+A. Timing
+B. Budget or approval
+C. Trust in a prelaunch platform
+D. A feature or integration
+E. Not enough value / not a fit
+Reply with a letter. I will either answer it directly, set a better date, or close the loop respectfully.
+[Rep]
+ 
+EMAIL 7 - DAY 14 BREAKUP
+Subject: Should I keep this active?
+Hi [First Name],
+I do not want to create noise. Which is most accurate?
+1 - Book a conversation
+2 - Revisit on a specific date
+3 - Close the loop
+Reply with 1, 2, or 3. If I do not hear back, I will move this out of the active follow-up queue and only reconnect when there is a relevant reason.
+[Rep]
+ 
+EMAIL 8 - DAY 30 REACTIVATION
+Subject: Has anything changed with [problem]?
+Hi [First Name],
+We connected/reached out around [month] about [problem]. I am checking back because [specific update, new capacity, product status, timing event, or buyer-
+requested date].
+Has anything changed in how you are handling [problem]? If it is worth revisiting, I can hold [Time A] or [Time B]. If not, no problem.
+[Rep]
+ 
+Email quality check: Accurate subject, real sender, approved 
+signature/address/unsubscribe controls, buyer-specific context, one CTA, 
+no invented urgency, and a next action in ProjectLight.
+ 
+--- PAGE 41 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 41 of 50
+40
+FIRST-CALL HUMAN 
+CONVERSATION PLAYBOOK  |  
+Energy, tone, branches, and a clean next step
+ 
+SALES SCRIPT HEADER: This person you're talking to could 
+take you one step closer to your goals. Be excited and go 
+crush it! Be curious. Be useful. Have fun.
+ 
+BODY
+Stand or sit tall. Smile before dialing. 
+Keep your hands relaxed.
+TONE
+Warm, confident, curious. Never 
+rushed, defensive, or overly familiar.
+PACE
+Slow down after questions. Let silence 
+do work. One question at a time.
+MINDSET
+Your job is not to force a yes. It is to 
+create clarity and the right next step.
+ 
+OPEN
+Source-aware and permission-based.
+'Hey [First Name], this is [Rep] with Lynked Up Pro. You [filled out / 
+messaged / were referred] about [specific topic]. Did I catch you with 
+two minutes?'
+ 
+Buyer response Rep response and delivery
+“Yes / sure.” 'Awesome - thank you. I do not want to assume. What caught your attention 
+enough to reach out?' [Curious tone. Stop talking.]
+“I am busy.” 'Totally fair. I can be brief, or we can put a real time on the calendar. Is [Time A] 
+or [Time B] better?' [Helpful, not apologetic.]
+“What is this about?” 'You asked about Lynked Up Pro / the Prelaunch License. I want to see whether it 
+fits the way your team handles [source topic] and tell you quickly if it does not.'
+“Just send information.” 'Happy to. So I send the right thing instead of a generic deck, is the bigger issue 
+follow-up, visibility, operations, or the license itself?'
+“How much is it?” 'I will give you the current approved terms. First, may I ask two quick questions so 
+I do not quote the wrong fit or make assumptions about what you need?'
+“Not interested.” 'Understood. Before I close it, was the timing wrong, the problem not important, or 
+did something about Lynked Up Pro miss the mark?' [Respect the answer.] 
+TRANSITION
+Earn discovery.
+'Based on what you said, it sounds like [summary in buyer words]. Would it 
+be okay if I ask a few questions about how that works today, then I can tell 
+you whether a deeper demo makes sense?'
+ 
+End every live call: Summarize what you heard, state the agreed 
+next step, book it live, verify the invite, and tell the buyer exactly 
+what will happen next. Then update ProjectLight before starting 
+another task.
+ 
+--- PAGE 42 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 42 of 50
+41
+DISCOVERY AND 
+QUALIFICATION SCRIPT  |  Diagnose 
+before you demonstrate
+ 
+SALES SCRIPT HEADER: This person you're talking to could 
+take you one step closer to your goals. Be excited and go 
+crush it! Be curious. Be useful. Have fun.
+ 
+UP-FRONT AGREEMENT
+Set mutual expectations.
+'We have about [15/20] minutes. I would like to understand how you handle 
+leads and work today, where the friction is, and what you want to improve. 
+If there is a fit, we will agree on a useful next step. If there is not, we can 
+say that honestly. Sound fair?'
+ 
+Discovery area Primary questions Listen for / record
+Trigger / why now “What happened that made this worth looking at now?” “What 
+caught your attention?” Event, urgency, initiative, failure, growth, buyer emotion.
+Current state “Walk me through a lead from first inquiry to closed job.” “What 
+systems and handoffs are involved?” Tools, people, steps, delays, workarounds, ownership.
+Problem “Where does that process break down?” “What is hardest to 
+see or control?”
+Missed follow-up, slow response, duplicate work, unclear 
+accountability.
+Implication “When that happens, what does it cost - time, jobs, cash flow, 
+trust, or management attention?”
+Business impact, frequency, examples, consequence of no 
+change.
+Desired outcome “Six months from now, what must be different for this to be a 
+win?” Measurable outcome, user adoption, owner visibility, timing.
+Priority / timing “Why solve it now instead of later?” “Is there a date or event 
+driving this?” Decision date, launch, season, contract, growth target.
+Decision process “Who else needs to be comfortable?” “What criteria will you 
+use?” “How does approval happen?” Economic buyer, users, technical/finance, steps, alternatives.
+Investment path “How do you normally evaluate and fund a system like this?” Budget source, willingness, implementation resources - no 
+premature discounting.
+Risk / prelaunch “What would make you hesitant about joining before full 
+launch?” Trust, support, roadmap, migration, adoption, terms.
+Success / commitment “If we can prove [outcome], what would the next decision step 
+be?” Mutual action and specific next meeting.
+ 
+SUMMARY CHECK
+Mirror their words; invite correction.
+'Let me make sure I have this right. Today [current state]. The biggest 
+problem is [problem], which causes [impact]. You want [desired outcome] 
+by [timing], and [stakeholders/process] will be involved. What did I miss or 
+get wrong?'
+ 
+Qualification result: Advance only when there is a real problem, 
+plausible fit, credible timing, decision path, and mutually agreed 
+next step. Otherwise nurture or close with respect.
+ 
+--- PAGE 43 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 43 of 50
+42
+DEMO AND VALUE-MAPPING 
+SCRIPT  |  Show the workflow that solves the problem - not 
+every feature
+ 
+SALES SCRIPT HEADER: This person you're talking to could 
+take you one step closer to your goals. Be excited and go 
+crush it! Be curious. Be useful. Have fun.
+ 
+30-MINUTE DEMO FLOW 
+0-3 Reconnect Confirm time, attendees, purpose, and what 
+changed since discovery.
+3-6 Reframe Restate current state, business impact, desired 
+outcome, and decision objective.
+6-21 Show Demonstrate no more than three workflows tied 
+directly to the buyer’s problems.
+21-25 Verify Ask what fits, what does not, and what concern 
+remains.
+25-28 Commercial Review approved offer/scope/status only if the 
+value and fit are clear.
+28-30 Advance Book decision/checkout/onboarding step live; 
+state owners and date.
+ 
+OPENING
+Set a decision objective.
+'We planned 30 minutes. I will start by confirming what I heard, then show 
+the workflows tied to [problem 1] and [problem 2]. I will not try to show 
+everything. At the end, we should know whether to move forward, identify a 
+gap, or stop. Fair?'
+ 
+Demo moment Human language
+Before a workflow 'You said [problem] happens when [current state]. Let me show you how 
+ProjectLight is intended to handle that.'
+After a workflow 'How would this change the way your team works today?' Then pause. Do not 
+answer for them.
+Value check 'Where would this create the most value: speed, accountability, visibility, handoff, 
+or something else?'
+Feature status 'This is [active / beta / configuration-dependent / roadmap / excluded] under the 
+current approved offer. I do not want to blur that line.'
+Gap 'That requirement matters. I do not want to guess. I will verify with Product and 
+answer in writing by [time].'
+Transition to decision 'Based on what we reviewed, what would keep this from moving to [decision / 
+checkout / stakeholder review]?' 
+DEMO PREP AND CRM EVIDENCE 
+• Know the source, pains, impact, desired outcome, current tools, attendees, decision date, open questions, and feature-risk labels.
+• Use a clean demo environment and a pre-tested path. Never improvise production behavior or expose another customer’s data.
+• After the demo, record workflows shown, reactions, value language, objections, feature status, decision process, and exact next meeting.
+--- PAGE 44 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 44 of 50
+43
+OBJECTION HANDLING 
+LIBRARY  |  LACE: Listen, Acknowledge, Clarify, Execute a 
+next step
+ 
+SALES SCRIPT HEADER: This person you're talking to could 
+take you one step closer to your goals. Be excited and go 
+crush it! Be curious. Be useful. Have fun.
+ 
+Objection Human response Next action
+“It is too expensive.”
+'It sounds like the investment is not yet justified by the value 
+you see. Is the concern the amount, the timing, or confidence 
+that [outcome] will happen?' Then quantify the problem and 
+compare only to approved terms.
+Resolve value/scope; book decision; no unapproved discount.
+“I need to think about it.”
+'Absolutely. Usually “think about it” means a question is still 
+unresolved. What specifically do you need to become 
+comfortable with?'
+Name question, owner, decision date, and next meeting.
+“Send me information.” 'Happy to. To avoid sending a generic pile, what question 
+should the information help you answer?' Send one relevant asset; set 10-minute review time.
+“We already have a CRM.” 'That may be the right answer. What does it do well, and 
+where does your team still work around it?' Identify gap/fit; do not attack competitor.
+“We are too busy.” 'That makes sense. Is the busyness a reason to wait, or part of 
+the problem you need the system to reduce?' Offer short fit call or buyer-selected future date.
+“Prelaunch feels risky.” 'That is a fair concern. What risk matters most: reliability, 
+support, roadmap, data, adoption, or the commercial terms?'
+Answer with approved evidence; document gap; schedule risk 
+review.
+“I need my partner/team.” 'Of course. What will they care about most, and can we 
+include them so you are not carrying the whole explanation?' Book stakeholder meeting; send tailored recap.
+“We need [roadmap feature].”
+'I do not want to sell you a future promise. Today that is 
+[status]. Is it a must-have for purchase, or could the current 
+workflow solve enough value without it?'
+Record dependency; Product answer in writing; qualify 
+honestly.
+“Not now.” 'Understood. What would need to happen for this to become 
+relevant - and when should I check back?' Nurture reason + exact date/event.
+“No.” 'Thank you for being direct. Was it fit, timing, trust, investment, 
+or something we could have handled better?' Close Lost with learning; respect contact preference.
+ 
+What not to do: Do not interrupt, debate, minimize, stack 
+features, create fake urgency, promise roadmap dates, or keep 
+talking after the buyer has answered. Curiosity first; evidence 
+second; next step third.
+ 
+--- PAGE 45 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 45 of 50
+44
+CLOSE, CHECKOUT, AND 
+PAYMENT SCRIPTS  |  Make the decision easy 
+to understand and safe to complete
+ 
+SALES SCRIPT HEADER: This person you're talking to could 
+take you one step closer to your goals. Be excited and go 
+crush it! Be curious. Be useful. Have fun.
+ 
+DECISION CHECK
+Calm, direct, no pressure.
+'We agreed the main problem is [problem], the impact is [impact], and the 
+outcome you want is [outcome]. Based on what you have seen, does 
+Lynked Up Pro feel like the right next step, the wrong fit, or is one condition 
+still unresolved?'
+ 
+Situation Human talk track ProjectLight next action
+Ready to buy
+'Great. I will send the approved terms and secure 
+checkout now. Let us stay together while you review it so 
+I can answer questions. I will never ask for card details by 
+phone, text, email, or CRM note.'
+Send versioned offer/link; track session; set payment 
+review task.
+One condition remains
+'Let us make that specific. What answer or evidence do 
+you need, who owns it, and by when should we 
+reconvene?'
+Create named blocker task + decision meeting.
+Needs stakeholder
+'Rather than have you resell it internally, let us bring [role] 
+into a focused 20-minute review. Is [Time A] or [Time B] 
+better?'
+Book stakeholder decision event.
+Checkout started 'I saw the checkout begin. Was the blocker the process, 
+the terms, an approver, or a technical issue?' Payment Assistance; no duplicate pressure.
+Payment failed/pending
+'It looks like the payment did not complete. I can help with 
+the process, and Finance can verify the status. Please do 
+not send any payment details in ordinary messages.'
+Keep Payment Pending; secure recovery path; Finance 
+alert.
+Direct online purchase
+'Welcome - and thank you for trusting us early. Payment 
+is verified. The next win is getting onboarding on the 
+calendar so your team has a clear start.'
+Closed Won; stop presale; confirm admin; book 
+onboarding.
+No decision
+'A maybe without a date is hard for both of us. Should we 
+set a real decision time, move this to a later date, or close 
+it for now?'
+Decision date, nurture date, or Closed Lost.
+ 
+Commercial truth: Use only the current approved Offer Data 
+Sheet: price, limits, included features, usage/third-party charges, 
+rollout, refund/cancellation, scarcity, support, and feature status. If 
+unsure, verify in writing.
+ 
+--- PAGE 46 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 46 of 50
+45
+CALENDAR, NO-SHOW, AND 
+ONBOARDING SCRIPTS  |  Book live, 
+confirm purpose, and make every meeting earn its place
+ 
+Moment Human script / customer message ProjectLight action
+Book live
+'The useful next step is [meeting purpose]. I have [Time A] or 
+[Time B] in your timezone. Which works better?' Create event 
+while speaking and verify receipt.
+Create event ID; attendees; purpose; source opportunity; prep 
+task; NEXT = meeting.
+Invite description
+Purpose: confirm [problem/outcome]. Agenda: current 
+workflow, relevant Lynked Up Pro workflow, open risks, 
+decision/next step. Bring: [stakeholders/data].
+Versioned meeting template; correct join/reschedule/cancel 
+links.
+24-hour reminder
+“Looking forward to tomorrow at [time]. We will focus on 
+[priority]. Please include [stakeholder] and bring [item] if 
+available.”
+Send reminder; create rep prep task; check acceptance.
+1-hour reminder “Reminder: Lynked Up Pro at [time] [TZ]. Join: [link]. We will 
+keep it focused on [priority].” Suppress if canceled/rescheduled; alert rep.
+No-show call
+'Hey [First Name], I had us down for [time] and wanted to 
+make sure everything is okay. No problem if the day got away 
+from you. Is [Time A] or [Time B] easier?'
+Call within 5 minutes; mark No Show; cancel old reminders; 
+create rebook.
+No-show message
+“We missed you - no worries. Would [Time A] or [Time B] 
+work, or use [link]? I will keep the next conversation focused 
+on [priority].”
+Permitted SMS/email after human attempt; second no-show 
+flags manager.
+Reschedule “Confirmed for [new time] [TZ]. The previous invite is canceled. 
+Purpose remains [purpose].” One active event ID; regenerate reminders; preserve history.
+Onboarding booking
+'Welcome to Lynked Up Pro. The next step is a 60-minute 
+kickoff with [CS owner] to confirm users, priorities, 
+integrations, timeline, training, and success measures. Is 
+[Time A] or [Time B] better?'
+Assign CS + backup; create handoff; event due within 24 
+hours.
+ 
+ONBOARDING INVITE CHECKLIST 
+WHO
+Admin, decision-maker, key users, sales 
+rep, CS owner, technical contact when 
+needed.
+WHY
+Customer problem, desired 90-day 
+outcome, commitments, limitations, and 
+risks.
+WHAT
+Users, roles, data, integrations, workflow 
+priority, training, milestones, next meeting.
+WHEN
+Confirmed event within 24 hours of 
+payment or buyer-driven exception with 
+owner/date.
+ 
+--- PAGE 47 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 47 of 50
+46
+LONG-TERM NURTURE AND 
+REACTIVATION  |  Stay relevant without becoming 
+noise
+ 
+Nurture reason Cadence and content Reactivation trigger / NEXT
+Timing / season Buyer-approved date; 30-60 day value touch; 14 days 
+before event; one confirmation.
+Calendar/date arrives, seasonal event, or inbound 
+engagement -> same-day owner task.
+Budget / approval cycle Useful business-case asset, planning reminder, and 
+stakeholder prep - not repeated discounting.
+Budget window, approval meeting, or buyer reply -> 
+decision call.
+Current contract / tool Check 90/60/30 days before renewal; send 
+migration/transition questions.
+Renewal window -> discovery refresh and stakeholder 
+map.
+Product / integration gap Only verified status updates; no vague “coming soon” 
+messages.
+Product-approved status materially changes -> owner 
+reviews fit before contacting.
+Trust / prelaunch risk Proof, process transparency, support/onboarding clarity, 
+and updated terms when approved.
+New evidence, reference permission, or buyer-requested 
+date -> risk review.
+No response after active cadence Day 30, 60, 90, then quarterly max unless engagement. 
+Change the reason, not just the subject line.
+Reply, pricing/demo visit, form, DM, checkout, or referral 
+-> rescore/reactivate.
+No fit today Do not nurture unless a specific future change could 
+create fit and contact is permitted.
+Material fit change only; otherwise Closed Lost remains 
+closed.
+ 
+NURTURE MESSAGE STARTERS 
+Timing Message starter
+Day 30 “You asked about [problem] last month. Has the priority changed, or is [agreed 
+timing] still the right window?”
+Day 60 “A useful question for teams evaluating CRM: who can see every overdue next 
+action today? Has that become easier or harder?”
+Day 90 “We have an update related to [verified relevant area]. It may or may not change 
+fit. Worth a 10-minute revisit?”
+Quarterly “Checking in for the reason we agreed: [reason/event]. Should we revisit, move 
+the date, or close the loop?” 
+Nurture standard: Every nurture record still has one owner and 
+one dated next action. A nurture list without reason, permission, 
+relevance, and a future event is a forgotten-lead warehouse.
+ 
+--- PAGE 48 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 48 of 50
+47
+MANAGER DASHBOARD, 
+ALERTS, AND COACHING  |  Manage 
+outcomes, exceptions, and behavior - not activity theater
+ 
+Dashboard / KPI Required view Manager action
+P0/P1 live queue Unassigned, unaccepted, countdown, at-risk, breached, 
+capacity, source, owner/backup.
+Intervene before breach; reassign; document systemic 
+causes.
+Next-action coverage Percent and count missing/overdue by rep/stage/source; 
+repeated date pushes. Correct daily; coach exact next-action quality.
+Response performance Median/P95 time, 30-minute attainment, late-day/after-
+hours, exception reasons.
+Fix staffing/routing; never blame reps for impossible 
+coverage.
+Connect / book / show By source, campaign, form, rep, segment, time window, 
+attempt number. Find quality, opening, cadence, and calendar problems.
+Stage conversion / aging Connected->demo->commercial->checkout->won, age, 
+decision date, losses. Coach discovery/decision; clean false pipeline.
+Messaging health Delivery, reply, bounce, complaint, opt-out, invalid, 
+duplicate suppression, channel caps.
+Pause broken sender/sequence; protect permission and 
+reputation.
+Payment / onboarding Started/pending/failed/verified; time to kickoff; incomplete 
+handoffs; promises/risks. Escalate blocked revenue and customer-start risk.
+Source economics Lead, appointment, show, close, revenue, cost and 
+quality where available.
+Shift spend only after data and operational quality are 
+validated.
+ 
+15-MINUTE COACHING LOOP 
+2 min Rep State the call objective and self-score one strong 
+moment and one missed moment.
+4 min Listen Review one exact segment. Manager asks what the 
+buyer said and what it meant.
+4 min Coach Choose one behavior: opening, question, pause, 
+empathy, value, truth, objection, or next step.
+3 min Practice Role-play the same moment twice with buyer 
+variation.
+2 min Commit Set one observable behavior and the next call 
+sample date.
+ 
+Team energy: Open huddles with one customer win and one 
+great behavior. Run “best question of the week,” “cleanest next 
+step,” and “fastest save” shout-outs. Keep it competitive, useful, 
+and fun - never humiliating.
+ 
+--- PAGE 49 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 49 of 50
+48
+REP CERTIFICATION AND FUN 
+TEAM STANDARDS  |  Confidence comes from 
+practice, clarity, and a team that enjoys winning
+ 
+Certification station Rep must demonstrate Pass standard
+CRM hygiene Create/merge, permission check, disposition, stage, exact 
+NEXT, calendar, offer version, handoff. Zero missing required fields; no duplicate/collision.
+Speed-to-lead Review context, call inside SLA, no-answer bundle, 
+backup/escalation. Correct sequence in timed simulation.
+First call Warm opening, permission, source awareness, curiosity, 
+busy branch, book live. Natural delivery; no script reading; clear next step.
+Discovery Current state, problem, impact, future outcome, timing, 
+stakeholders, decision, investment path. Accurate summary in buyer words; qualification decision.
+Demo Reframe, show three or fewer relevant workflows, label 
+feature status, verify value. No feature dumping or unapproved promise.
+Objections Price, timing, send info, existing CRM, prelaunch risk, 
+partner, roadmap, no. LACE; evidence; next step; comfort with no.
+Close / payment Decision check, checkout, pending/failed recovery, direct 
+purchase, no card-data request. Approved offer only; correct payment state.
+Calendar / onboarding Book live, invite purpose, no-show rescue, CS handoff, 
+kickoff due. Accepted event and complete handoff.
+ 
+DAILY REP RESET - 5 MINUTES 
+1. GET READY
+Availability on, headset/phone ready, 
+calendar open, approved offer current.
+2. OWN THE QUEUE
+Clear overnight P0/P1 and overdue NEXT 
+before low-priority work.
+3. PICK THE WHY
+Know why each lead raised a hand and 
+the one question you want answered.
+4. BRING ENERGY
+This person could take you one step 
+closer to your goals. Be excited and go 
+crush it!
+ 
+FUN OPERATING RITUALS 
+• Monday “Let’s Cook” kickoff: one target, one role-play, one source campaign focus, one team reward.
+• Daily win bell only after the CRM record, next action, and handoff are complete - no ghost celebrations.
+• Friday call lab: best question, best recovery, best clean no, best handoff, and one funny-but-useful lesson.
+• Leaderboard balances speed, quality, conversion, clean records, show rate, and onboarding - not just raw dials.
+Culture standard: High standards and high energy belong 
+together. Coach hard on process, stay respectful with people, tell 
+the truth, celebrate progress, and make the work enjoyable.
+ 
+--- PAGE 50 ---
+PRELAUNCH LICENSE SALES SOP | EXPANDED PLAYBOOK EDITION
+CONFIDENTIAL - INTERNAL USE ONLY Version 3.0 | July 14, 2026 Page 50 of 50
+49
+GO-LIVE, QA, AND POST-
+MORTEM GAP CLOSURE  |  Prove the 
+system works before trusting revenue to it
+ 
+Test / gap Pass evidence Owner
+10:00 AM form One record; source/consent; owner/backup; due 10:30; 
+messages/tasks/alerts; human attempt. RevOps + Manager
+4:59 PM form Closing coverage; due 5:29; no overnight misclassification. Manager
+After-hours / weekend / holiday Eligible acknowledgment; priority next business day; recipient-
+local contact rule. RevOps
+Duplicate form + DM + webhook replay One canonical record; events preserved; one active sequence; 
+no duplicate sends. RevOps
+Rep unavailable / no acceptance Backup and reassignment; original source time preserved; 
+alerts continue. Manager
+No answer Voicemail flag; coordinated SMS/email; dedup; exact next call. RevOps + Manager
+Reply / booking / payment / opt-out Correct pause/replace/stop behavior across every tool. RevOps + Compliance
+Calendar reschedule / no-show One active event; correct reminders; rescue task; no stale 
+links. RevOps
+Payment pending / success / duplicate No premature Close; one 
+customer/license/welcome/onboarding. Finance + RevOps
+Closed Won incomplete 24-hour alert, CS owner, accepted event or buyer-driven 
+exception. CS + Manager
+Open record missing NEXT Save/stage blocked or integrity exception visible to manager. RevOps
+Provider / CRM outage Emergency queue, manual continuity, reconciliation, no 
+duplicate burst. RevOps + Leadership
+ 
+POST-MORTEM - 30 MINUTES, NO BLAME, NO VAGUE FIXES 
+5 Facts Timeline, affected leads, customer impact, 
+system/user events, and current containment.
+5 Detection How the problem was found; why monitoring did or 
+did not catch it sooner.
+8 Root cause People, process, system, data, third-party, training, 
+and policy contributors.
+7 Corrective action Immediate fix + permanent control; one owner and 
+due date for each.
+5 Verification
+Acceptance test, metric, retest date, 
+SOP/template/version update, and affected-lead 
+recovery.
+ 
+Final launch gate: Offer approved. Staffing real. ProjectLight P0 
+features live. Sources tested. Scripts certified. Messaging 
+permitted. Calendar and payment proven. Dashboards reconciled. 
+Manual fallback ready. Post-mortem booked. Then - let’s cook.
+ 
+GO CRUSH IT: Every lead represents a business owner, a 
+team, and a problem they care enough to explore. Show up 
+fast. Listen well. Tell the truth. Set the next action. Have fun 
+winning the right way.
+ 

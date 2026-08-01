@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InboundCRM — Component Sourcing Matrix</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d24; --muted:#5b6472; --line:#e4e7ec;
+    --brand:#2f5bea; --brand-soft:#eaf0ff;
+    --sdk:#0f766e; --sdk-bg:#d6f3ef; --lift:#6941c6; --lift-bg:#f2ecff;
+    --build:#9a6b00; --build-bg:#fdf2d8; --drop:#b42318; --drop-bg:#fdeceb;
+    --ok:#1a7f47; --ok-bg:#e3f5ea;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0f1218; --panel:#171b22; --ink:#e8eaed; --muted:#9aa4b2; --line:#272d38;
+    --brand:#7d9bff; --brand-soft:#1a2540;
+    --sdk:#4fd1c5; --sdk-bg:#0f2e2b; --lift:#c3a6ff; --lift-bg:#241a3a;
+    --build:#f0c24b; --build-bg:#332a12; --drop:#ff8b80; --drop-bg:#3a1a17;
+    --ok:#5cd598; --ok-bg:#123023;
+    --shadow:0 1px 2px rgba(0,0,0,.4);}}
+  :root[data-theme="dark"]{--bg:#0f1218;--panel:#171b22;--ink:#e8eaed;--muted:#9aa4b2;--line:#272d38;--brand:#7d9bff;--brand-soft:#1a2540;--sdk:#4fd1c5;--sdk-bg:#0f2e2b;--lift:#c3a6ff;--lift-bg:#241a3a;--build:#f0c24b;--build-bg:#332a12;--drop:#ff8b80;--drop-bg:#3a1a17;--ok:#5cd598;--ok-bg:#123023;}
+  :root[data-theme="light"]{--bg:#f6f7f9;--panel:#fff;--ink:#1a1d24;--muted:#5b6472;--line:#e4e7ec;--brand:#2f5bea;--brand-soft:#eaf0ff;--sdk:#0f766e;--sdk-bg:#d6f3ef;--lift:#6941c6;--lift-bg:#f2ecff;--build:#9a6b00;--build-bg:#fdf2d8;--drop:#b42318;--drop-bg:#fdeceb;--ok:#1a7f47;--ok-bg:#e3f5ea;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1140px;margin:0 auto;padding:32px 20px 80px}
+  a{color:var(--brand)}
+  h1,h2,h3{line-height:1.25;letter-spacing:-.01em}
+  h1{font-size:29px;margin:0 0 6px}
+  h2{font-size:21px;margin:42px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+  h3{font-size:16px;margin:22px 0 8px}
+  p{margin:10px 0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85em;background:var(--brand-soft);padding:1px 6px;border-radius:5px;border:1px solid var(--line);word-break:break-word}
+  .sub{color:var(--muted);font-size:14px}
+  header.doc{border-bottom:1px solid var(--line);padding-bottom:18px}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);background:var(--brand-soft);padding:4px 10px;border-radius:999px;margin-bottom:12px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:12px;color:var(--muted);font-size:13px}
+  .meta b{color:var(--ink);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);margin:16px 0}
+  .formula{font-size:18px;font-weight:700;text-align:center;padding:18px;line-height:1.7}
+  .formula .s{color:var(--sdk)} .formula .l{color:var(--lift)} .formula .b{color:var(--build)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin:18px 0}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px;box-shadow:var(--shadow)}
+  .stat .n{font-size:28px;font-weight:800;line-height:1}
+  .stat .l{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600}
+  .stat.sdk .n{color:var(--sdk)} .stat.lift .n{color:var(--lift)} .stat.build .n{color:var(--build)} .stat.drop .n{color:var(--drop)}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;letter-spacing:.02em}
+  .p-sdk{background:var(--sdk-bg);color:var(--sdk)}
+  .p-lift{background:var(--lift-bg);color:var(--lift)}
+  .p-build{background:var(--build-bg);color:var(--build)}
+  .p-drop{background:var(--drop-bg);color:var(--drop)}
+  .p-ok{background:var(--ok-bg);color:var(--ok)}
+  .p-dot::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+  .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:16px 0;box-shadow:var(--shadow)}
+  table{border-collapse:collapse;width:100%;min-width:760px;background:var(--panel);font-size:13px}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--bg);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+  tr:last-child td{border-bottom:none}
+  td.cap{font-weight:600;white-space:nowrap}
+  .ev{color:var(--muted);font-size:12px}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:12.5px;color:var(--muted)}
+  .callout{border-radius:12px;padding:13px 17px;margin:14px 0;border:1px solid var(--line)}
+  .callout.info{background:var(--brand-soft)}
+  .callout.sdk{background:var(--sdk-bg);border-color:var(--sdk)}
+  .callout.lift{background:var(--lift-bg);border-color:var(--lift)}
+  ul.tight{margin:8px 0;padding-left:20px}
+  ul.tight li{margin:4px 0}
+  .toc{columns:2;column-gap:26px;font-size:14px}
+  .toc a{display:block;padding:3px 0;text-decoration:none;color:var(--ink)}
+  .toc a:hover{color:var(--brand)}
+  @media (max-width:640px){.toc{columns:1}}
+  footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  .themebtn{position:fixed;top:14px;right:14px;background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:6px 10px;font-size:12px;cursor:pointer;box-shadow:var(--shadow);z-index:9}
+  @media print{.themebtn{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<button class="themebtn" onclick="var r=document.documentElement;var d=(r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark';r.setAttribute('data-theme',d?'light':'dark')">◐ Theme</button>
+<div class="wrap">
+
+<header class="doc">
+  <span class="kicker">InboundCRM · Report 1 of 2 · Component Sourcing</span>
+  <h1>InboundCRM — Component Sourcing Matrix</h1>
+  <p class="sub">For every capability the Lynked Up Pro inbound-sales SOP requires, this maps <b>where the code should come from</b> — a ProjexCloud SDK, a lift from ProjexCRM, or new build — with a side-by-side SDK-vs-copy comparison and file/table-level detail. Companion to <em>Report 2 — Build Strategy Analysis</em>.</p>
+  <div class="meta">
+    <span><b>Target:</b> C:\projex_verticals\InboundCRM (separate project, own database)</span>
+    <span><b>Sources:</b> ProjexCloud SDKs + ProjexCRM (projex_crm)</span>
+    <span><b>Date:</b> 14 Jul 2026</span>
+    <span><b>Basis:</b> LinkedUp Pro SOP v3.0 gap analysis</span>
+  </div>
+</header>
+
+<div class="panel formula">
+  InboundCRM &nbsp;=&nbsp; <span class="s">ProjexCloud SDKs</span> <span class="sub">(platform + gap capabilities)</span><br>
+  &nbsp;+&nbsp; <span class="l">Lifted ProjexCRM engines</span> <span class="sub">(proven email / sequence / booking)</span>
+  &nbsp;+&nbsp; <span class="b">Thin new build</span> <span class="sub">(dashboard, NEXT-gate, glue)</span>
+</div>
+
+<div class="callout info">
+  <b>The core insight.</b> The SOP capabilities ProjexCRM was <em>missing</em> (identity, RBAC, SLA/routing, backup coverage, consent, audit, SMS, payment, workflow) map almost 1:1 onto <b>mature, v1.0.0 ProjexCloud SDKs</b>. The capabilities ProjexCRM is <em>strong</em> at (email send, sequence cadence, reply-sync, booking) map onto <b>early / semantically-mismatched SDKs</b> (<code>sdk-campaign</code> 0.1.0, <code>sdk-engagement</code> = field-service, no calendar SDK). So the two sources are <b>complementary, not competing</b> — SDKs supply the platform &amp; the gaps; ProjexCRM supplies the proven outreach engine.
+</div>
+
+<div class="stats">
+  <div class="stat sdk"><div class="n">~18</div><div class="l">Capabilities from SDKs</div></div>
+  <div class="stat lift"><div class="n">~14</div><div class="l">Engines lifted from ProjexCRM</div></div>
+  <div class="stat build"><div class="n">~5</div><div class="l">Built new (thin)</div></div>
+  <div class="stat drop"><div class="n">~70%</div><div class="l">ProjexCRM services NOT copied</div></div>
+</div>
+
+<nav class="toc panel">
+  <a href="#decision">1 · The SDK-vs-Copy decision rule</a>
+  <a href="#matrix">2 · Capability sourcing matrix (side-by-side)</a>
+  <a href="#sdklist">3 · ProjexCloud SDKs to consume</a>
+  <a href="#lift">4 · ProjexCRM lift-list (files A/B/C)</a>
+  <a href="#tables">5 · Table-DDL provenance</a>
+  <a href="#coupling">6 · Coupling threads to cut</a>
+  <a href="#consume">7 · How each source is consumed</a>
+</nav>
+
+<div class="panel" style="padding:12px 16px">
+  <div class="legend">
+    <span><span class="pill p-sdk p-dot">SDK</span> ProjexCloud package</span>
+    <span><span class="pill p-lift p-dot">LIFT</span> copy from ProjexCRM</span>
+    <span><span class="pill p-build p-dot">BUILD</span> write new</span>
+    <span><span class="pill p-drop p-dot">DROP</span> do not copy</span>
+  </div>
+</div>
+
+<!-- ===== 1 DECISION RULE ===== -->
+<section id="decision">
+<h2>1 · The SDK-vs-Copy decision rule</h2>
+<p>Every capability was scored on four axes. The winner per row in §2 follows this rule:</p>
+<div class="panel">
+<ul class="tight">
+  <li><b>Prefer an SDK</b> when it is <span class="pill p-ok">v1.0.0 + publishConfig</span> and semantically fits — because it is (a) already the missing SOP capability, (b) maintained centrally, (c) audit/policy/identity-wired by design. <span class="sub">→ identity, rebac, policy, tenant, consent, notification, workflow, webhook, payment, billing, approval.</span></li>
+  <li><b>Prefer an SDK with adaptation</b> when the engine is real but tuned for another vertical (field-service/geo) — reuse the engine, re-model the inputs for B2B. <span class="sub">→ assignment, dispatch, lead-scoring, identity-resolver, ingest, crm.</span> These are workspace-only (no publishConfig yet) → add publishConfig or vendor.</li>
+  <li><b>Lift from ProjexCRM</b> when ProjexCRM has a battle-tested implementation and the SDK equivalent is early (0.1.0), a stub, or semantically wrong. <span class="sub">→ email send transport, sequence cadence engine, IMAP reply-sync, bounce/suppression deliverability, calendar/booking, pipeline board.</span></li>
+  <li><b>Build new</b> only where neither source fits: the leadership operational dashboard, the NEXT-action save-gate, offer/feature-status matrix, and closed-won→onboarding orchestration (composed from <code>sdk-workflow</code>).</li>
+</ul>
+</div>
+<div class="callout info"><b>Registry fact that makes this possible.</b> ProjexCloud publishes <code>@projexlight/*</code> packages to a private Verdaccio registry (<code>.npmrc</code> → <code>http://localhost:4873/</code>, prod <code>npm.projexcloud.com</code>). A separate project can install the ~14 <code>publishConfig</code> SDKs as versioned deps today; the rest need a one-line <code>publishConfig</code> add or vendoring.</div>
+</section>
+
+<!-- ===== 2 MATRIX ===== -->
+<section id="matrix">
+<h2>2 · Capability sourcing matrix <span class="sub">— SDK vs ProjexCRM-copy, side by side</span></h2>
+<p>Ordered by SOP layer. “Chosen source” is the recommendation; the two option columns show the trade-off.</p>
+<div class="tblwrap">
+<table>
+<thead><tr><th>Capability (SOP)</th><th>ProjexCloud SDK option</th><th>ProjexCRM-copy option</th><th style="width:150px">Chosen source</th></tr></thead>
+<tbody>
+  <tr><td class="cap">Identity / auth / sessions</td><td><code>sdk-identity</code> + <code>sdk-principal-token</code> — persons, sessions, federation, signed tokens (v1.0.0, 2258 LOC)</td><td>ProjexCRM auth is tenant-pool-coupled &amp; single-operator; a gap in the SOP</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="cap">RBAC / authorization</td><td><code>sdk-rebac</code> (Zanzibar) + <code>sdk-policy</code> (ABAC IQL→Cedar) + <code>sdk-capability</code></td><td>ProjexCRM <code>rbac.service</code> = <code>admin/agent/viewer</code>, wrong taxonomy</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="cap">Multi-tenant workspace</td><td><code>sdk-tenant</code> + <code>sdk-tenant-lifecycle</code></td><td>ProjexCRM tenancy = DB pool-sharding (not row-level); drop</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="cap">Audit / evidence (immutable)</td><td><code>sdk-audit</code> (hash-chain + verifier) + <code>sdk-evidence</code> (chain-of-custody)</td><td>ProjexCRM <code>access-log</code> = auth events only</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="cap">Lead intake / ingest</td><td><code>sdk-ingest</code> (idempotent batch ETL) + <code>sdk-crm</code> <code>crm.lead</code></td><td>Lift public web-capture &amp; booking routes for the form/DM front door</td><td><span class="pill p-sdk">SDK</span> + <span class="pill p-lift">LIFT</span></td></tr>
+  <tr><td class="cap">Identity resolution / dedupe</td><td><code>sdk-identity-resolver</code> — EMPI probabilistic match + merge events (1156 LOC)</td><td>ProjexCRM <code>lead-dedup</code>/<code>global-contact</code> — email/LinkedIn only, hard-deletes</td><td><span class="pill p-sdk">SDK adapt</span> <span class="ev">(retune weights B2B)</span></td></tr>
+  <tr><td class="cap">CRM core: contact/deal/activity</td><td><code>sdk-crm</code> — canonical objects + <code>transitionDeal</code> + events incl. closed-won (v0.1.0)</td><td>ProjexCRM <code>funnel.service</code> — richer pipeline board + stage config</td><td><span class="pill p-sdk">SDK</span> spine + <span class="pill p-lift">LIFT</span> funnel</td></tr>
+  <tr><td class="cap"><b>Assignment / routing / backup / capacity</b></td><td><code>sdk-assignment</code> — <code>assignByTask</code>, <code>accept/rejectAssignment</code>, <b>workload</b> + <code>sdk-dispatch</code> queue</td><td>ProjexCRM = single manual assignee, no backup/capacity/routing (SOP gap)</td><td><span class="pill p-sdk">SDK adapt</span></td></tr>
+  <tr><td class="cap"><b>30-min SLA clock + escalation ladder</b></td><td><code>sdk-approval</code> — per-step SLA breach → escalation persona + <code>sdk-notification</code> alerts</td><td>ProjexCRM has none (the SOP’s #1 gap)</td><td><span class="pill p-sdk">SDK adapt</span> + <span class="pill p-build">glue</span></td></tr>
+  <tr><td class="cap">NEXT-action enforcement</td><td><code>sdk-crm</code> activities model the NEXT record</td><td>ProjexCRM has no NEXT concept</td><td><span class="pill p-sdk">SDK</span> + <span class="pill p-build">save-gate</span></td></tr>
+  <tr><td class="cap">Consent (legal basis)</td><td><code>sdk-consent</code> — purposes/receipts, <code>checkConsent</code> gate (v1.0.0)</td><td>—</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="cap">Suppression / bounce / DNC (deliverability)</td><td>Not an SDK concern (consent ≠ deliverability)</td><td>ProjexCRM <code>webhook-security</code> <code>suppressionService</code> + bounce classifiers — a gem</td><td><span class="pill p-lift">LIFT</span></td></tr>
+  <tr><td class="cap"><b>Multi-channel send inc. SMS</b></td><td><code>sdk-notification</code> — Twilio SMS + SES/SMTP email + Slack/push, templates, quiet-hours (2425 LOC)</td><td>ProjexCRM email-only; no SMS (SOP gap)</td><td><span class="pill p-sdk">SDK</span> <span class="ev">(transport)</span></td></tr>
+  <tr><td class="cap">Email send transport</td><td><code>sdk-notification</code> SMTP/SES adapters</td><td>ProjexCRM <code>email-sender</code> + provider send-primitives (proven multi-provider)</td><td><span class="pill p-sdk">SDK</span> or <span class="pill p-lift">LIFT</span> <span class="ev">(either; unify on SDK)</span></td></tr>
+  <tr><td class="cap"><b>Sequence / cadence orchestration</b></td><td><code>sdk-campaign</code> journeys — minimal (314 LOC, 0.1.0); <code>sdk-engagement</code> is field-service (mismatch)</td><td>ProjexCRM <code>sequence-step-executor</code> — pause-on-reply, stop-on-optout, send-window, idempotency (proven)</td><td><span class="pill p-lift">LIFT</span></td></tr>
+  <tr><td class="cap">Reply detection / inbox sync</td><td>none</td><td>ProjexCRM <code>inbox-sync</code> — IMAP header thread-matching + auto-pause</td><td><span class="pill p-lift">LIFT</span></td></tr>
+  <tr><td class="cap">Calendar / booking / availability</td><td><b>no calendar SDK</b> — only connectors (gworkspace/ms365/zoom)</td><td>ProjexCRM <code>calendar.service</code> + booking + ICS (real tz math)</td><td><span class="pill p-lift">LIFT</span> (+ connector for 2-way sync)</td></tr>
+  <tr><td class="cap">Pipeline / funnel board</td><td><code>sdk-crm</code> deal/stage transitions</td><td>ProjexCRM <code>funnel.service</code> — stage config, board, aging</td><td><span class="pill p-lift">LIFT</span> on SDK spine</td></tr>
+  <tr><td class="cap">Lead scoring / prioritization</td><td><code>sdk-lead-scoring</code> — model + feature weights (geo-tuned)</td><td>ProjexCRM scoring = AI/prospecting</td><td><span class="pill p-sdk">SDK adapt</span> <span class="ev">(B2B features)</span></td></tr>
+  <tr><td class="cap">Durable workflow (closed-won→onboarding)</td><td><code>sdk-workflow</code> — steps, pause/resume, saga (v1.0.0, 1299 LOC)</td><td>ProjexCRM has no onboarding handoff</td><td><span class="pill p-sdk">SDK</span> + <span class="pill p-build">onboarding def</span></td></tr>
+  <tr><td class="cap">Payment / checkout / license (closed-won)</td><td><code>sdk-payment</code> + <code>sdk-billing</code> + <code>sdk-meter</code> (charges/refunds/invoices)</td><td>ProjexCRM Stripe = CRM’s own SaaS billing only</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="cap">Outbound webhooks</td><td><code>sdk-webhook</code> — HMAC/mTLS, outbox, SSRF-guard, retries</td><td>ProjexCRM webhook handling is inbound-only</td><td><span class="pill p-sdk">SDK</span></td></tr>
+  <tr><td class="cap">Leadership operational dashboard</td><td>none (query SDK tables)</td><td>ProjexCRM dashboards are engagement/marketing (SOP gap)</td><td><span class="pill p-build">BUILD</span></td></tr>
+  <tr><td class="cap">Next-best-action</td><td><code>sdk-recommendation</code> = 20-LOC stub</td><td>ProjexCRM recommendation = AI/prospecting</td><td><span class="pill p-build">BUILD thin</span></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<!-- ===== 3 SDK LIST ===== -->
+<section id="sdklist">
+<h2>3 · ProjexCloud SDKs to consume</h2>
+<p>Maturity: <b>REAL</b> = substantive impl; <b>ADAPT</b> = real but re-model for B2B; <b>THIN</b> = early/stub. “Pub” = v1.0.0 with <code>publishConfig</code> (installable off the registry today); “WS” = workspace-only (add <code>publishConfig</code> or vendor).</p>
+<div class="tblwrap">
+<table>
+<thead><tr><th>SDK</th><th>Fills</th><th>Maturity</th><th style="width:70px">Consume</th></tr></thead>
+<tbody>
+  <tr><td class="cap">sdk-identity</td><td>Auth, persons, sessions, federation</td><td><span class="pill p-ok">REAL</span> 2258 LOC</td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-principal-token</td><td>Signed audience-bound tokens + rotation</td><td><span class="pill p-ok">REAL</span></td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-rebac</td><td>Relationship-based access</td><td><span class="pill p-ok">REAL</span></td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-policy</td><td>ABAC IQL→Cedar policy engine</td><td><span class="pill p-ok">REAL</span> 1072 LOC</td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-tenant</td><td>Tenant CRUD/metadata</td><td><span class="pill p-ok">REAL</span></td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-consent</td><td>Consent purposes/receipts + <code>checkConsent</code></td><td><span class="pill p-ok">REAL</span></td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-notification</td><td><b>SMS</b>+email+push+slack, templates, quiet-hours</td><td><span class="pill p-ok">REAL</span> 2425 LOC</td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-workflow</td><td>Durable workflow (onboarding saga)</td><td><span class="pill p-ok">REAL</span> 1299 LOC</td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-webhook</td><td>Outbound webhooks (HMAC/mTLS/outbox)</td><td><span class="pill p-ok">REAL</span></td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-payment</td><td>Charges/refunds/methods</td><td><span class="pill p-ok">REAL</span> 1484 LOC</td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-billing</td><td>Invoices, showback, dunning, Stripe push</td><td><span class="pill p-ok">REAL</span> 1957 LOC</td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-approval</td><td><b>Per-step SLA + escalation</b></td><td><span class="pill p-ok">REAL</span></td><td>Pub</td></tr>
+  <tr><td class="cap">sdk-audit / sdk-evidence</td><td>Hash-chain audit + chain-of-custody</td><td><span class="pill p-ok">REAL</span></td><td>WS</td></tr>
+  <tr><td class="cap">sdk-assignment</td><td><b>Routing, backup, workload/capacity, accept/reject</b></td><td><span class="pill p-build">ADAPT</span> 709 LOC</td><td>WS</td></tr>
+  <tr><td class="cap">sdk-dispatch</td><td>Queue → assign → dispatch + broker</td><td><span class="pill p-build">ADAPT</span></td><td>WS</td></tr>
+  <tr><td class="cap">sdk-identity-resolver</td><td>Probabilistic dedupe / merge</td><td><span class="pill p-build">ADAPT</span> 1156 LOC</td><td>WS</td></tr>
+  <tr><td class="cap">sdk-crm</td><td>Contact/deal/activity spine + closed-won event</td><td><span class="pill p-build">ADAPT</span> v0.1.0</td><td>WS</td></tr>
+  <tr><td class="cap">sdk-lead-scoring</td><td>Scoring model + feature weights</td><td><span class="pill p-build">ADAPT</span> 860 LOC</td><td>WS</td></tr>
+  <tr><td class="cap">sdk-ingest</td><td>Idempotent batch intake front door</td><td><span class="pill p-build">ADAPT</span></td><td>WS</td></tr>
+  <tr><td class="cap">sdk-recommendation</td><td>Next-best-action</td><td><span class="pill p-drop">THIN stub</span> 20 LOC</td><td>build instead</td></tr>
+  <tr><td class="cap">sdk-engagement / sdk-event</td><td>field-service encounters / ticketing</td><td><span class="pill p-drop">MISMATCH</span></td><td>do not use for sales</td></tr>
+</tbody>
+</table>
+</div>
+<div class="callout sdk"><b>Foundation auto-injected by the ProjexCloud AI planner:</b> <code>sdk-tenant</code>, <code>sdk-identity</code>, <code>sdk-audit</code> are always pulled in as the identity/AIM spine — you don’t select them manually.</div>
+</section>
+
+<!-- ===== 4 LIFT LIST ===== -->
+<section id="lift">
+<h2>4 · ProjexCRM lift-list <span class="sub">— what to copy (A/B), what to leave (C)</span></h2>
+<p><b>Category A</b> = lift as-is (self-contained). <b>Category B</b> = lift with light adapt (localized coupling to cut). <b>Category C</b> = do not copy (prospecting-specific, dead, or SDK-replaced). All paths under <code>server/src/</code>.</p>
+
+<h3>A — Lift as-is <span class="pill p-lift">LIFT</span></h3>
+<div class="tblwrap"><table>
+<thead><tr><th>File</th><th>Tables</th><th>Note</th></tr></thead>
+<tbody>
+  <tr><td class="cap">services/send-queue.service.ts</td><td>outreach_send_queue</td><td>Priority/attempt/status queue; only dep is <code>dataService</code>.</td></tr>
+  <tr><td class="cap">services/send-window.service.ts</td><td>outreach_send_windows</td><td>Business-hours / allowed-days gating; fully generic.</td></tr>
+  <tr><td class="cap">services/webhook-security.service.ts</td><td>email_suppression_list, email_bounce_log</td><td><code>suppressionService</code> + provider HMAC verify + bounce classification. Gem.</td></tr>
+  <tr><td class="cap">services/unsubscribe.service.ts</td><td>outreach_unsubscribe_tokens, optout_events</td><td>Drop the <code>prospects</code> UPDATE branch (trivial).</td></tr>
+  <tr><td class="cap">services/calendar.service.ts</td><td>calendar_appointments</td><td>Booking CRUD + availability slotting.</td></tr>
+  <tr><td class="cap">services/business-context.service.ts</td><td>business_contexts</td><td>Sender/company profile for booking + email.</td></tr>
+  <tr><td class="cap">services/user-integration.service.ts</td><td>user_integrations</td><td>Encrypted SMTP/IMAP/API creds; needs <code>encryption.service</code>.</td></tr>
+  <tr><td class="cap">services/encryption.service.ts</td><td>—</td><td>Self-contained AES cred encryption.</td></tr>
+  <tr><td class="cap">utils/ics-email.utils.ts · url-token.ts · html-email-wrapper.ts · lead-activity-logger.ts · request-context.ts</td><td>—</td><td>Zero/one-dep helpers. Pure lift.</td></tr>
+</tbody>
+</table></div>
+
+<h3>B — Lift with light adapt <span class="pill p-lift">LIFT</span> <span class="sub">(cut the noted coupling)</span></h3>
+<div class="tblwrap"><table>
+<thead><tr><th>File</th><th>Coupling to cut</th></tr></thead>
+<tbody>
+  <tr><td class="cap">services/email-outreach.service.ts <span class="ev">(split!)</span></td><td>Keep only send-primitives (<code>sendViaSendGrid/Mailgun/Postmark</code>, <code>sendEmailViaProvider</code>). <b>Drop</b> the AI message-generation half (LLM, domain-vocabulary, product-alignment).</td></tr>
+  <tr><td class="cap">services/email-sender.service.ts</td><td>Imports <code>workspace-context</code> for team From-identity → re-point to identity SDK or drop org branch.</td></tr>
+  <tr><td class="cap">workers/send-queue-processor.ts</td><td><code>creditService.canAfford/deductCredits</code> → billing SDK/no-op; delete <code>prospects</code> send branch.</td></tr>
+  <tr><td class="cap">workers/sequence-step-executor.ts</td><td>Remove <code>prospects</code>/<code>prospect_stage</code> branches; re-point <code>creditService</code>. Emit via <code>sdk-notification</code>.</td></tr>
+  <tr><td class="cap">services/outreach-sequence.service.ts</td><td>Delete <code>baseAgentService.register()</code> call (severs whole agent mesh). Keep CRUD/exec.</td></tr>
+  <tr><td class="cap">services/sequence-trigger / sequence-cancellation / sequence-placeholder</td><td>Adapt trigger taxonomy (form-submit, reply) for inbound.</td></tr>
+  <tr><td class="cap">services/outreach-orchestrator.service.ts</td><td>Frequency-cap / circuit-breaker guardrails — adapt thresholds. Generic.</td></tr>
+  <tr><td class="cap">services/funnel.service.ts</td><td>Sever the <code>outreach-sequence</code> stage-trigger import (or keep). Pipeline CRUD is the value.</td></tr>
+  <tr><td class="cap">workers/inbox-sync.service.ts</td><td>Reads <code>prospect_outreach</code> to correlate replies → re-point to <code>communication_logs</code>.</td></tr>
+  <tr><td class="cap">workers/{sendgrid,mailgun,postmark}-bounce-sync.service.ts</td><td>Replace <code>emailPatternIntelligence.recordBounce()</code> with plain suppression insert; swap multi-pool iteration for single-pool query.</td></tr>
+  <tr><td class="cap">services/booking-notification.service.ts + followup-scheduling.service.ts + routes/public-booking.routes.ts</td><td>Confirmation/reminder + ICS + public booking page. Adapt lead→contact linkage.</td></tr>
+  <tr><td class="cap">utils/dataService.ts + database/pool-manager.ts</td><td>Lift trimmed: keep <code>query/transaction</code> + single-pool fallback; drop <code>queryAcrossUserPools</code>, team-routing, <code>org-pool-cache</code>. <b>Ship no <code>db.config.json</code> → auto single-DB.</b></td></tr>
+</tbody>
+</table></div>
+
+<h3>C — Do NOT copy <span class="pill p-drop">DROP</span></h3>
+<div class="panel">
+<ul class="tight">
+  <li><b>Identity/RBAC/billing/consent</b> (SDK-replaced): all <code>*.middleware.ts</code>, <code>auth*.service</code>, <code>mfa</code>, <code>rbac.service</code>, <code>organization*</code>, <code>access-log</code>, <code>credit/subscription/stripe/billing-resolver/usage-history</code>, <code>workspace-context</code>, <code>crm-integration</code>.</li>
+  <li><b>LinkedIn / scraping / extension</b> (prospecting): all <code>linkedin*</code>, <code>extension-capture</code>, <code>website-scraper</code>, <code>public-capture.routes</code>, <code>chrome-extension/</code>.</li>
+  <li><b>Prospect discovery / enrichment / email-pattern</b>: all <code>prospect-*</code>, <code>enrichment</code>, <code>discovery</code>, <code>global-contact</code>, <code>email-pattern-*</code>, <code>company-pattern-agent</code>, <code>email-validation*</code>, <code>lead-dedup</code>, <code>channel-ingestion</code>.</li>
+  <li><b>AI sequence-builder / DSVI-PAE / agent mesh</b>: <code>ai-sequence-builder</code>, <code>domain-vocabulary</code>, <code>product-alignment</code>, <code>base-agent</code>, <code>message-bus</code>, <code>context-agent</code>, <code>signal-analysis</code>, <code>message-generation</code>, <code>objection-handling</code>, <code>recommendation</code>, <code>send-time-optimizer</code>, all <code>ai_*</code>/<code>experiment</code> services.</li>
+  <li><b>MCP fleet / AWS</b>: <code>mcp-*</code>, <code>aws-fleet</code>, <code>fleet-manager</code>, <code>container-sizes</code>, <code>mcp.routes</code>, <code>mcp-server/</code>.</li>
+  <li><b>Campaign / weekly-campaign batch engine</b>: all <code>campaign*.service</code>, <code>admin-campaign</code>, <code>weekly-campaign</code>, <code>auto-sequence-dispatcher</code>, <code>sequence-auto-config</code>, <code>admin-lead</code>.</li>
+</ul>
+</div>
+</section>
+
+<!-- ===== 5 TABLES ===== -->
+<section id="tables">
+<h2>5 · Table-DDL provenance</h2>
+<p>InboundCRM uses its own single database. SDK-owned tables ship via each SDK’s <code>migrationsDir</code> (auto-applied on boot). ProjexCRM DDLs are lifted for the outreach/booking/pipeline layer — mapping <code>user_id</code> → the identity SDK’s owner/tenant id, dropping LinkedIn columns.</p>
+<div class="tblwrap"><table>
+<thead><tr><th>Domain</th><th>Owner / source</th><th>Tables</th></tr></thead>
+<tbody>
+  <tr><td class="cap">Identity / access</td><td><span class="pill p-sdk">SDK</span> sdk-identity/rebac/policy/tenant/principal-token</td><td><code>identity.*, rebac.*, policy.*, tenant.*, principal_token.*</code></td></tr>
+  <tr><td class="cap">Audit / consent</td><td><span class="pill p-sdk">SDK</span> sdk-audit/evidence/consent</td><td><code>audit.*, evidence.*, consent.*</code></td></tr>
+  <tr><td class="cap">CRM spine</td><td><span class="pill p-sdk">SDK</span> sdk-crm</td><td><code>crm.contact/lead/deal/activity</code></td></tr>
+  <tr><td class="cap">Assignment / SLA / notify / workflow / payment</td><td><span class="pill p-sdk">SDK</span></td><td><code>assignment.*, dispatch.*, approval.*, notification.*, workflow.*, payment.*, billing.*</code></td></tr>
+  <tr><td class="cap">Pipeline (if lifting funnel)</td><td><span class="pill p-lift">LIFT</span> ProjexCRM</td><td><code>funnel_stages, deals, deal_activities, deal_notes</code></td></tr>
+  <tr><td class="cap">Sequence engine</td><td><span class="pill p-lift">LIFT</span> ProjexCRM</td><td><code>outreach_sequences, sequence_execution_steps, sequence_step_stats, outreach_templates, stage_sequence_triggers</code></td></tr>
+  <tr><td class="cap">Send / suppression</td><td><span class="pill p-lift">LIFT</span> ProjexCRM</td><td><code>outreach_send_queue, outreach_send_windows, outreach_guard_log, outreach_circuit_breaker, outreach_unsubscribe_tokens, outreach_optout_events, email_suppression_list, email_bounce_log</code></td></tr>
+  <tr><td class="cap">Calendar / booking</td><td><span class="pill p-lift">LIFT</span> ProjexCRM</td><td><code>calendar_appointments, calendar_connections, calendar_sync_log, scheduling_links, events, event_registrations</code></td></tr>
+  <tr><td class="cap">Comms / config</td><td><span class="pill p-lift">LIFT</span> ProjexCRM</td><td><code>communication_logs, business_contexts, user_integrations, followup_*, dashboard_views, filter_configs</code></td></tr>
+  <tr><td class="cap">Prospecting tables</td><td><span class="pill p-drop">DROP</span></td><td><code>prospects, prospect_*, linkedin_*, enrichment_*, email_pattern_*, ai_*, campaigns, signal_scores, sentiment_*</code> …</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<!-- ===== 6 COUPLING ===== -->
+<section id="coupling">
+<h2>6 · The only coupling threads to cut</h2>
+<div class="callout lift">
+<p>Lifting is safe because the entanglement is <b>localized to two threads</b> — neither is structural:</p>
+<ul class="tight">
+  <li><b>Billing gate:</b> inline <code>creditService.canAfford/deductCredits</code> in <code>send-queue-processor</code> and <code>sequence-step-executor</code> → swap for <code>sdk-billing</code>/<code>sdk-meter</code> or a no-op.</li>
+  <li><b>Prospecting refs:</b> <code>prospects</code>/<code>prospect_id</code>, <code>emailPatternIntelligence</code>, <code>base-agent</code>, <code>domain-vocabulary</code>, <code>product-alignment</code> → delete the branches (all optional/nullable).</li>
+</ul>
+<p>Plus the DB layer: ship <b>no <code>db.config.json</code></b> and <code>dataService</code> collapses to a single pool automatically — the multi-tenant sharding code becomes inert.</p>
+</div>
+</section>
+
+<!-- ===== 7 CONSUME ===== -->
+<section id="consume">
+<h2>7 · How each source is consumed</h2>
+<div class="tblwrap"><table>
+<thead><tr><th>Source</th><th>Mechanism</th></tr></thead>
+<tbody>
+  <tr><td class="cap"><span class="pill p-sdk">SDK</span> (publishConfig)</td><td><code>projex install @projexlight/sdk-…</code> → versioned dep off Verdaccio; import <code>{ registerRoutes, migrationsDir, &lt;fns&gt; }</code>.</td></tr>
+  <tr><td class="cap"><span class="pill p-sdk">SDK</span> (workspace-only)</td><td>Add a one-line <code>publishConfig.registry</code> and publish, or vendor <code>packages/sdk-…/src</code> into InboundCRM.</td></tr>
+  <tr><td class="cap"><span class="pill p-lift">LIFT</span> (ProjexCRM)</td><td>Copy the specific files in §4, cut the §6 threads, keep the lifted table DDLs.</td></tr>
+  <tr><td class="cap"><span class="pill p-build">BUILD</span></td><td>New code: leadership dashboard, NEXT-action save-gate, onboarding workflow definition, next-best-action.</td></tr>
+</tbody>
+</table></div>
+<p class="sub">Composition follows the ProjexCloud <code>api-gateway</code> pattern: one backend process that <code>app.register()</code>s each SDK’s routes and appends each SDK’s <code>migrationsDir</code> to a single boot-time <code>runMigrations([...])</code>; the frontend is a Next.js app (like <code>apps/tenant-workspace</code>) using <code>@projexlight/design-system</code> over HTTP. See Report 2 for the full recipe.</p>
+</section>
+
+<footer>
+  <p><b>Method.</b> Findings from parallel source inspection of ProjexCloud (<code>packages/sdk-*</code>, <code>docs/v3.1</code>, blueprints, api-gateway) and ProjexCRM (<code>server/src</code>). SDK maturity is measured by source substance + version + <code>publishConfig</code>; ProjexCRM reuse verdicts by dependency-chain analysis. Companion: <em>InboundCRM_Build_Strategy_Analysis.html</em>.</p>
+</footer>
+</div>
+</body>
+</html>

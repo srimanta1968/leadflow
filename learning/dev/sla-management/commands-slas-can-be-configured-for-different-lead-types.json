@@ -1,0 +1,43 @@
+{
+  "scenarioName": "SLAs can be configured for different lead types",
+  "commands": [
+    {
+      "stepNum": 7,
+      "action": "fill",
+      "selector": "form input:first-of-type",
+      "originalSelector": "input[placeholder*='name' i], textarea[placeholder*='name' i]",
+      "description": "I fill \"name\" with \"Mia Davis\"",
+      "healedBy": "advanced_local",
+      "healedAt": "2026-07-30T19:41:19.798609"
+    },
+    {
+      "stepNum": 10,
+      "action": "fill",
+      "selector": "form input:first-of-type",
+      "originalSelector": "input[placeholder*='evaluation_order' i], textarea[placeholder*='evaluation_order' i]",
+      "description": "I fill \"evaluation_order\" with \"9911\"",
+      "healedBy": "advanced_local",
+      "healedAt": "2026-07-30T19:43:44.668657"
+    },
+    {
+      "stepNum": 11,
+      "action": "click",
+      "selector": "form button[type=\"submit\"]",
+      "originalSelector": "button:has-text('Save SLA target')",
+      "description": "I click \"Save SLA target\"",
+      "healedBy": "advanced_local",
+      "healedAt": "2026-07-30T19:43:45.634662"
+    },
+    {
+      "stepNum": 13,
+      "action": "click",
+      "selector": "form button[type=\"submit\"]",
+      "originalSelector": "button:has-text('Retire')",
+      "description": "I click \"Retire\"",
+      "healedBy": "advanced_local",
+      "healedAt": "2026-07-30T19:43:59.531649"
+    }
+  ],
+  "version": "4.2",
+  "timestamp": "2026-07-30T19:43:59.531663"
+}

@@ -1,0 +1,80 @@
+{
+  "name": "GET /api/sla/status - SLA compliance snapshot for the monitoring dashboard",
+  "description": "Returns the SLA compliance picture leadership reads: how many leads are on_track, at_risk, breached and met inside the reporting window, the compliance rate, the average measured response time, and the leads currently needing attention ordered by urgency. A read, so it answers 200. Served from the local projection in ONE query rather than asking ProjexCloud sdk-sla per lead - a dashboard that fanned out one SDK read per row would be unusable at queue scale, so the sweep (POST /api/sla/evaluate) is what reconciles with sdk-sla and this endpoint reads the reconciled projection. clock_source therefore reports which clock last produced the stored verdicts. at_risk is computed live from sla_due_at at read time (at least 80 percent of the window elapsed with no first response) rather than being stored, so the snapshot is never stale between sweeps. compliance_rate is met / (met + breached) over CLOSED clocks only and is null when no clock has closed in the window - reporting 100 percent for an empty window would be a lie a manager acts on. average_response_seconds is measured from lead arrival, matching POST /api/leads/:id/first-response. window_minutes selects the reporting window by lead arrival time and defaults to 1440 (24 hours), clamped to 1..10080 (one week). owner_user_id narrows the snapshot to one representative so a manager can review an individual queue. Protected by the authenticate guard - the Authorization header is required on this GET. QA: depends on register (which creates the user passed as owner_user_id), login and a captured lead so the window is non-empty.",
+  "endpoint": "/api/sla/status",
+  "method": "GET",
+  "taskId": "044cb98b-a133-4a20-ae68-816cfee326d0",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 45,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads"
+  ],
+  "fieldEnums": {
+    "state": ["on_track", "at_risk", "breached", "met"],
+    "clock_source": ["sdk_sla", "local_wallclock"]
+  },
+  "testCases": [
+    {
+      "name": "Read the SLA compliance snapshot for the last 24 hours",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "window_minutes": "1440",
+        "owner_user_id": "{{cache:auth.register.response.data.user.id}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "window_minutes": 1440
+        }
+      }
+    },
+    {
+      "name": "Reject a window_minutes that is not a number",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "window_minutes": "{{static:not-a-number}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated snapshot read",
+      "queryParams": {
+        "window_minutes": "1440"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "window_minutes is present but not an integer between 1 and 10080, or owner_user_id is present but not a well-formed UUID"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

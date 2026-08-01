@@ -1,0 +1,202 @@
+{
+  "version": "3.0",
+  "base_url": "http://host.docker.internal:5173",
+  "last_updated": "2026-07-31T05:32:17.462027",
+  "pages": {
+    "http://host.docker.internal:5173/app": {
+      "url": "http://host.docker.internal:5173/app",
+      "last_visited": "2026-07-31T05:32:16.479534",
+      "visit_count": 4,
+      "actions": {
+        "click:I click \"Sign in\"": {
+          "action_type": "click",
+          "action_label": "I click \"Sign in\"",
+          "triggered_at": "2026-07-31T05:30:45.936425",
+          "containers": {
+            "div#root": {
+              "container_selector": "div#root",
+              "container_hash": "PGRpdiBpZD0icm9vdCI+",
+              "metadata": {
+                "id": "root",
+                "classes": null,
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 0,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 1,
+                "total": 0
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:31:56.093138",
+              "usage_count": 2,
+              "elements": [],
+              "buttons": []
+            }
+          },
+          "last_triggered": "2026-07-31T05:31:56.093090"
+        },
+        "click:I click \"Capture Inbox\"": {
+          "action_type": "click",
+          "action_label": "I click \"Capture Inbox\"",
+          "triggered_at": "2026-07-31T05:32:13.984919",
+          "containers": {
+            "div#root": {
+              "container_selector": "div#root",
+              "container_hash": "PGRpdiBpZD0icm9vdCI+",
+              "metadata": {
+                "id": "root",
+                "classes": null,
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 0,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 2,
+                "total": 0
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:32:13.984923",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            }
+          }
+        },
+        "click:I click \"Route\"": {
+          "action_type": "click",
+          "action_label": "I click \"Route\"",
+          "triggered_at": "2026-07-31T05:32:16.479543",
+          "containers": {
+            "div#root": {
+              "container_selector": "div#root",
+              "container_hash": "PGRpdiBpZD0icm9vdCI+",
+              "metadata": {
+                "id": "root",
+                "classes": null,
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 0,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 3,
+                "total": 0
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:32:16.479547",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            }
+          }
+        }
+      }
+    },
+    "http://host.docker.internal:5173/app/capture": {
+      "url": "http://host.docker.internal:5173/app/capture",
+      "last_visited": "2026-07-31T05:32:12.283691",
+      "visit_count": 2,
+      "actions": {
+        "click:I click \"Quick Capture\"": {
+          "action_type": "click",
+          "action_label": "I click \"Quick Capture\"",
+          "triggered_at": "2026-07-31T05:31:58.528250",
+          "containers": {
+            "form.lf-panel.p-7": {
+              "container_selector": "form.lf-panel.p-7",
+              "container_hash": "PGZvcm0gY2xhc3M9Imxm",
+              "metadata": {
+                "id": null,
+                "name": null,
+                "classes": "lf-panel p-7 sm:p-8",
+                "role": null,
+                "action": null,
+                "method": null
+              },
+              "element_counts": {
+                "inputs": 5,
+                "selects": 2,
+                "textareas": 1,
+                "buttons": 1,
+                "total": 8
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:31:58.528263",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            },
+            "div.border-t.border-line": {
+              "container_selector": "div.border-t.border-line",
+              "container_hash": "PGRpdiBjbGFzcz0iYm9y",
+              "metadata": {
+                "id": null,
+                "classes": "border-t border-line p-3",
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 0,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 1,
+                "total": 0
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:31:58.528267",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            }
+          }
+        },
+        "click:I click \"Capture lead\"": {
+          "action_type": "click",
+          "action_label": "I click \"Capture lead\"",
+          "triggered_at": "2026-07-31T05:32:12.283699",
+          "containers": {
+            "div#root": {
+              "container_selector": "div#root",
+              "container_hash": "PGRpdiBpZD0icm9vdCI+",
+              "metadata": {
+                "id": "root",
+                "classes": null,
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 0,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 2,
+                "total": 0
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:32:12.283704",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            }
+          }
+        }
+      }
+    }
+  },
+  "selector_rankings": {},
+  "statistics": {
+    "total_pages": 2,
+    "total_actions": 5,
+    "total_containers": 6,
+    "total_extracted_containers": 0,
+    "total_elements": 0,
+    "total_buttons": 0,
+    "extraction_rate": 0.0
+  }
+}

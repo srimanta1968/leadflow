@@ -1,0 +1,108 @@
+{
+  "name": "DELETE /api/routing-rules/:id - Retire a routing rule",
+  "description": "Retires a routing rule by deactivating it. THIS IS A SOFT DELETE AND ALWAYS WILL BE: a routed lead holds routing_rule_id as a foreign key, so a hard delete would either violate that constraint or, with a cascade, erase the attribution that makes a past routing decision explainable. The question 'why did this lead go to Priya?' must stay answerable after the rule is retired, so the row is kept and only is_active flips to false. Answers 200 with a summary rather than a bodyless 204 (MUST-54), because the caller needs to know whether this call retired the rule or found it already retired, and because the resulting rule state is worth returning. IDEMPOTENT: retiring an already-retired rule answers 200 with already_inactive:true rather than failing, so a double-click or a retry is harmless. The retired rule still appears in GET /api/routing-rules (which returns all rules unless active=true is passed) but is excluded from routing decisions. This endpoint takes no request body; source_channel is documented in fieldEnums because the retired rule is RETURNED in the response and that field is enum-backed, so QA reading the API docs sees its valid values. QA: depends on register, login and a created rule.",
+  "endpoint": "/api/routing-rules/:id",
+  "method": "DELETE",
+  "taskId": "4e040fdf-69b3-4dfa-a63c-0df651c371d5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 23,
+  "expectedStatus": 200,
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/routing-rules"],
+  "fieldEnums": {
+    "source_channel": [
+      "web_form",
+      "landing_page",
+      "facebook",
+      "instagram",
+      "linkedin",
+      "tiktok",
+      "google_ads",
+      "live_chat",
+      "phone",
+      "email",
+      "referral",
+      "webhook",
+      "api",
+      "csv_import"
+    ]
+  },
+  "statusTransitions": {
+    "entity": "routing_rule",
+    "field": "is_active",
+    "flow": ["active", "retired"],
+    "transitions": [
+      {
+        "from": "active",
+        "to": "retired",
+        "via": "DELETE /api/routing-rules/:id",
+        "notes": "Sets is_active to false. The row is NOT removed, so leads that reference routing_rule_id keep their attribution."
+      },
+      {
+        "from": "retired",
+        "to": "retired",
+        "via": "DELETE /api/routing-rules/:id",
+        "notes": "Idempotent no-op. Answers 200 with already_inactive:true."
+      },
+      {
+        "from": "retired",
+        "to": "active",
+        "via": "PATCH /api/routing-rules/:id with is_active:true",
+        "notes": "A retirement is reversible — the row was never destroyed."
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Retire the rule",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:routing-rules.create.response.data.rule.id}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "rule": {
+            "is_active": false
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject an unauthenticated retirement",
+      "pathParams": {
+        "id": "{{cache:routing-rules.create.response.data.rule.id}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "the id path parameter is not a well-formed UUID"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no rule exists with the supplied id"
+    }
+  ]
+}

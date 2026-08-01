@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lynked Up Pro SOP v3.0 — ProjexCRM Gap Analysis</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d24; --muted:#5b6472; --line:#e4e7ec;
+    --brand:#2f5bea; --brand-soft:#eaf0ff;
+    --ok:#1a7f47; --ok-bg:#e3f5ea; --partial:#9a6b00; --partial-bg:#fdf2d8;
+    --miss:#b42318; --miss-bg:#fdeceb; --accent:#6941c6; --accent-bg:#f2ecff;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0f1218; --panel:#171b22; --ink:#e8eaed; --muted:#9aa4b2; --line:#272d38;
+      --brand:#7d9bff; --brand-soft:#1a2540;
+      --ok:#5cd598; --ok-bg:#123023; --partial:#f0c24b; --partial-bg:#332a12;
+      --miss:#ff8b80; --miss-bg:#3a1a17; --accent:#c3a6ff; --accent-bg:#241a3a;
+      --shadow:0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+      --bg:#0f1218; --panel:#171b22; --ink:#e8eaed; --muted:#9aa4b2; --line:#272d38;
+      --brand:#7d9bff; --brand-soft:#1a2540;
+      --ok:#5cd598; --ok-bg:#123023; --partial:#f0c24b; --partial-bg:#332a12;
+      --miss:#ff8b80; --miss-bg:#3a1a17; --accent:#c3a6ff; --accent-bg:#241a3a;
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d24; --muted:#5b6472; --line:#e4e7ec;
+    --brand:#2f5bea; --brand-soft:#eaf0ff;
+    --ok:#1a7f47; --ok-bg:#e3f5ea; --partial:#9a6b00; --partial-bg:#fdf2d8;
+    --miss:#b42318; --miss-bg:#fdeceb; --accent:#6941c6; --accent-bg:#f2ecff;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+  a{color:var(--brand)}
+  h1,h2,h3{line-height:1.25;letter-spacing:-.01em}
+  h1{font-size:30px;margin:0 0 6px}
+  h2{font-size:22px;margin:44px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+  h3{font-size:17px;margin:26px 0 10px}
+  p{margin:10px 0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;
+    background:var(--brand-soft);color:var(--ink);padding:1px 6px;border-radius:5px;
+    border:1px solid var(--line);word-break:break-word}
+  .sub{color:var(--muted);font-size:14px}
+  header.doc{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:8px}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--brand);background:var(--brand-soft);padding:4px 10px;border-radius:999px;margin-bottom:12px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:14px;color:var(--muted);font-size:13px}
+  .meta b{color:var(--ink);font-weight:600}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;
+    box-shadow:var(--shadow);margin:16px 0}
+  .verdict{border-left:5px solid var(--partial)}
+  .verdict .big{font-size:19px;font-weight:700;margin:0 0 6px}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:18px 0}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+  .stat .n{font-size:30px;font-weight:800;line-height:1}
+  .stat .l{font-size:12.5px;color:var(--muted);margin-top:6px;font-weight:600;letter-spacing:.02em}
+  .stat.ok .n{color:var(--ok)} .stat.partial .n{color:var(--partial)}
+  .stat.miss .n{color:var(--miss)} .stat.accent .n{color:var(--accent)}
+
+  /* pills */
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;
+    padding:3px 9px;border-radius:999px;white-space:nowrap;border:1px solid transparent;letter-spacing:.02em}
+  .p-ok{background:var(--ok-bg);color:var(--ok)}
+  .p-partial{background:var(--partial-bg);color:var(--partial)}
+  .p-miss{background:var(--miss-bg);color:var(--miss)}
+  .p-dot::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+
+  /* tables */
+  .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:16px 0;box-shadow:var(--shadow)}
+  table{border-collapse:collapse;width:100%;min-width:640px;background:var(--panel);font-size:13.5px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--bg);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;position:sticky;top:0}
+  tr:last-child td{border-bottom:none}
+  td.req{font-weight:600;white-space:nowrap}
+  td .ev{color:var(--muted);font-size:12.5px}
+  .num{color:var(--muted);font-variant-numeric:tabular-nums;font-weight:700}
+
+  /* domain cards */
+  .dcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin:16px 0;overflow:hidden}
+  .dcard>.head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;background:var(--bg);border-bottom:1px solid var(--line)}
+  .dcard>.head h3{margin:0;font-size:16px}
+  .dcard>.body{padding:6px 20px 16px}
+  .req-row{padding:14px 0;border-bottom:1px dashed var(--line)}
+  .req-row:last-child{border-bottom:none}
+  .req-row .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .req-row .name{font-weight:600}
+  .req-row .desc{color:var(--muted);font-size:13px;margin:5px 0 0}
+  .req-row .evi{font-size:12.5px;margin-top:7px}
+
+  .legend{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:12.5px;color:var(--muted);margin:8px 0 0}
+  .callout{border-radius:12px;padding:14px 18px;margin:14px 0;border:1px solid var(--line)}
+  .callout.warn{background:var(--miss-bg);border-color:var(--miss)}
+  .callout.info{background:var(--brand-soft)}
+  .callout.good{background:var(--ok-bg);border-color:var(--ok)}
+  .callout b{color:var(--ink)}
+  ul.tight{margin:8px 0;padding-left:20px}
+  ul.tight li{margin:5px 0}
+  .rank{display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:6px;
+    background:var(--accent-bg);color:var(--accent);font-weight:800;font-size:12px;margin-right:8px}
+  .toc{columns:2;column-gap:28px;font-size:14px}
+  .toc a{display:block;padding:3px 0;text-decoration:none;color:var(--ink)}
+  .toc a:hover{color:var(--brand)}
+  @media (max-width:640px){.toc{columns:1}h1{font-size:24px}}
+  footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  .themebtn{position:fixed;top:14px;right:14px;background:var(--panel);border:1px solid var(--line);color:var(--muted);
+    border-radius:9px;padding:6px 10px;font-size:12px;cursor:pointer;box-shadow:var(--shadow);z-index:9}
+  @media print{.themebtn{display:none}body{background:#fff}.panel,.dcard,.tblwrap,.stat{box-shadow:none}}
+</style>
+</head>
+<body>
+<button class="themebtn" onclick="var r=document.documentElement;var d=(r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark';r.setAttribute('data-theme',d?'light':'dark')">◐ Theme</button>
+<div class="wrap">
+
+<header class="doc">
+  <span class="kicker">SOP Conformance &amp; Gap Analysis</span>
+  <h1>Lynked Up Pro — Prelaunch License Sales SOP v3.0<br>vs. ProjexCRM Implementation</h1>
+  <p class="sub">A requirement-by-requirement mapping of the 50-page “ProjectLight CRM | Expanded Playbook Edition” SOP against what actually exists in the <code>projex_crm</code> codebase — with file-level evidence, verdicts, and a prioritized remediation roadmap.</p>
+  <div class="meta">
+    <span><b>SOP source:</b> Lynked_Up_Pro_Prelaunch_License_Sales_Playbook_…_v3.0.pdf</span>
+    <span><b>Analysis date:</b> 14 Jul 2026</span>
+    <span><b>Codebase:</b> C:\projex_crm (branch <code>main</code>)</span>
+    <span><b>Method:</b> 5 parallel code-exploration passes across all P0 domains</span>
+  </div>
+</header>
+
+<!-- ============ EXEC SUMMARY ============ -->
+<section id="exec">
+<div class="panel verdict">
+  <p class="big">Overall verdict: <span class="pill p-partial p-dot">MATERIAL GAP — NOT LAUNCH-READY AGAINST THIS SOP</span></p>
+  <p style="margin:8px 0 0">ProjexCRM is a strong, mature <b>outbound AI-prospecting &amp; email-sequence engine</b>. The SOP, however, specifies an <b>inbound “speed-to-lead” human sales operation</b> — 30-minute SLA, multi-rep routing with backup coverage, mandatory NEXT-action enforcement, a live leadership queue, multi-channel (SMS/phone) contact, and a closed-won→onboarding commerce handoff. That operational backbone is <b>largely absent</b>. Of the SOP’s twelve P0 “launch-blocker” capabilities, <b>none are fully met</b>, roughly <b>seven are partial</b>, and <b>four to five are missing</b>. The email/sequence/suppression machinery is genuinely excellent and reusable; the inbound-ops, routing, SLA, telephony, and commerce layers must be built.</p>
+</div>
+
+<div class="stats">
+  <div class="stat ok"><div class="n">0</div><div class="l">P0 features FULLY met</div></div>
+  <div class="stat partial"><div class="n">7</div><div class="l">P0 features PARTIAL</div></div>
+  <div class="stat miss"><div class="n">5</div><div class="l">P0 features MISSING</div></div>
+  <div class="stat accent"><div class="n">5 / 11</div><div class="l">Data-model objects solid</div></div>
+</div>
+
+<div class="callout info">
+  <b>The single most important finding — an orientation mismatch.</b> The core data model is prospect-centric and single-operator: a <code>prospects</code> table flows <code>new → validated → contacted → engaged → responded → promoted</code>, and “leads” are a promoted subset (<code>promoted_to_lead_id</code>). There is no rep-capacity model, no availability/PTO, no round-robin, and no automated routing. The SOP assumes a staffed team queue where every inbound signal is routed, owned, backed-up, and SLA-timed. Closing these gaps is a <em>feature-build</em>, not a configuration exercise.
+</div>
+</section>
+
+<!-- ============ TOC ============ -->
+<section id="toc">
+<h2>Contents</h2>
+<nav class="toc panel">
+  <a href="#scorecard">1 · P0 Capability Scorecard (SOP §27)</a>
+  <a href="#datamodel">2 · Data-Model Object Coverage (SOP §28)</a>
+  <a href="#stages">3 · Pipeline Stage Coverage (SOP §06)</a>
+  <a href="#d-intake">4 · Deep-dive: Intake, Identity &amp; Routing</a>
+  <a href="#d-sla">5 · Deep-dive: SLA, Alerts &amp; NEXT-Action</a>
+  <a href="#d-comms">6 · Deep-dive: Comms, Sequences &amp; Consent</a>
+  <a href="#d-cal">7 · Deep-dive: Calendar, Payment &amp; Onboarding</a>
+  <a href="#d-dash">8 · Deep-dive: Dashboards, RBAC &amp; Audit</a>
+  <a href="#strengths">9 · Strengths (reusable assets)</a>
+  <a href="#blockers">10 · Launch Blockers (SOP §22/§23)</a>
+  <a href="#roadmap">11 · Prioritized Remediation Roadmap</a>
+</nav>
+</section>
+
+<div class="panel" style="padding:12px 18px">
+  <div class="legend">
+    <span><span class="pill p-ok p-dot">IMPLEMENTED</span> shipped &amp; working</span>
+    <span><span class="pill p-partial p-dot">PARTIAL</span> exists but incomplete / wrong shape</span>
+    <span><span class="pill p-miss p-dot">MISSING</span> no implementation</span>
+    <span style="color:var(--muted)">Evidence cites <code>file:line</code> in the repo.</span>
+  </div>
+</div>
+
+<!-- ============ 1. SCORECARD ============ -->
+<section id="scorecard">
+<h2>1 · P0 Capability Scorecard <span class="sub">— SOP §27 “Must-Have Features / Launch Blockers”</span></h2>
+<p>The SOP defines twelve P0 capabilities that must exist “before the internal sales team can rely on ProjectLight.” Each is judged against its <em>minimum acceptance standard</em> in the SOP.</p>
+<div class="tblwrap">
+<table>
+<thead><tr><th style="width:34px">#</th><th>P0 Capability (SOP minimum standard)</th><th style="width:120px">Status</th><th>What exists / what’s missing</th></tr></thead>
+<tbody>
+  <tr><td class="num">1</td><td class="req">Universal lead intake</td><td><span class="pill p-partial">PARTIAL</span></td>
+    <td>Booking forms, event registration, Chrome-extension LinkedIn scrape, manual API create, and a funnel-event webhook exist. <span class="ev">Missing: inbound phone calls, live chat, referral intake, checkout/purchase e-commerce events, generic inbound social DM, and a durable raw-payload store.</span></td></tr>
+  <tr><td class="num">2</td><td class="req">Canonical identity + dedupe</td><td><span class="pill p-partial">PARTIAL</span></td>
+    <td>Dedupe on LinkedIn URL → email → name+company (<code>global-contact.service.ts</code>, <code>lead-dedup.service.ts</code>). <span class="ev">Missing: E.164 phone matching (no normalization), transaction-ID matching, and durable merge-history (secondary rows are hard-deleted).</span></td></tr>
+  <tr><td class="num">3</td><td class="req">Ownership + backup</td><td><span class="pill p-partial">PARTIAL</span></td>
+    <td>Single-assignee model: <code>owner_id</code>, <code>member_id</code>, <code>assigned_by</code>, <code>assigned_at</code> (<code>appdata-schema.ts:1459</code>). <span class="ev">Missing: backup rep, manager field, accept/decline + <code>accepted_at</code>, capacity/PTO, and automatic fallback.</span></td></tr>
+  <tr><td class="num">4</td><td class="req">Next-action enforcement</td><td><span class="pill p-miss">MISSING</span></td>
+    <td>No mandatory NEXT-action object (type/owner/due/purpose/outcome) and nothing blocks save/advance. “Next action” appears only as prose in a test feature file.</td></tr>
+  <tr><td class="num">5</td><td class="req">SLA clock + alerts</td><td><span class="pill p-miss">MISSING</span></td>
+    <td>No time-to-first-contact timer, no America/Chicago clock, no T+15/25/30/45 escalation ladder, no breach/reassign. Business-hours config exists but is used only for calendar availability.</td></tr>
+  <tr><td class="num">6</td><td class="req">Two-way communications</td><td><span class="pill p-partial">PARTIAL</span></td>
+    <td>Email fully automated; LinkedIn DM is manual-assist via extension. <span class="ev">Missing entirely: SMS, phone/dialer, voicemail. Activity timeline is fragmented across three stores.</span></td></tr>
+  <tr><td class="num">7</td><td class="req">Consent + suppression</td><td><span class="pill p-partial">PARTIAL</span></td>
+    <td>Strong for email: token opt-out/DNC, reason-tagged suppression list, bounce auto-suppress, per-lead frequency caps. <span class="ev">Gaps: suppression is per-tenant not cross-org global; quiet hours are sender-tz not recipient-local; no SMS STOP/HELP; opt-in consent evidence is thin.</span></td></tr>
+  <tr><td class="num">8</td><td class="req">Sequence orchestration</td><td><span class="pill p-partial">PARTIAL</span></td>
+    <td>Event-driven engine with pause-on-reply, stop-on-opt-out, and send idempotency all implemented. <span class="ev">Missing: replace-CTA-on-booking (only adds a parallel reminder seq); stop-on-payment.</span></td></tr>
+  <tr><td class="num">9</td><td class="req">Calendar engine</td><td><span class="pill p-partial">PARTIAL</span></td>
+    <td>Availability, IANA-tz math, double-book prevention, ICS invites, public booking. <span class="ev">Missing: real Google/MS two-way sync (currently <b>simulated</b>), round-robin/pooled hosts, meeting types, timed 24h/2h/15m reminders, self-serve reschedule/cancel links.</span></td></tr>
+  <tr><td class="num">10</td><td class="req">Payment + onboarding</td><td><span class="pill p-miss">MISSING</span></td>
+    <td>Stripe is wired to the CRM’s <b>own SaaS billing</b> (subscriptions + credit packs), not to selling a prospect license. <span class="ev">No closed-won checkout, no verify-before-won gate, no customer/license record, no onboarding handoff object/owner.</span></td></tr>
+  <tr><td class="num">11</td><td class="req">Dashboards + exceptions</td><td><span class="pill p-miss">MISSING</span></td>
+    <td>Engagement/marketing dashboards exist (open/reply/booking rates). <span class="ev">None of the SOP leadership signals: leads-waiting, oldest-wait, SLA at-risk/breached, unowned, missing-NEXT, failed-messages, purchases-awaiting-onboarding, stale-opportunities.</span></td></tr>
+  <tr><td class="num">12</td><td class="req">Security + audit</td><td><span class="pill p-partial">PARTIAL</span></td>
+    <td>Two RBAC systems (<code>admin/agent/viewer</code> + team <code>owner/admin/member</code>); immutable auth access-log. <span class="ev">Missing SOP roles (Rep/Manager/RevOps/Leadership), template version history, retention controls, and incident evidence store.</span></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<!-- ============ 2. DATA MODEL ============ -->
+<section id="datamodel">
+<h2>2 · Data-Model Object Coverage <span class="sub">— SOP §28 “CRM Data Model”</span></h2>
+<p>The SOP prescribes eleven first-class objects as the “source of truth before building automations.” Roughly five are solid, three partial, three absent.</p>
+<div class="tblwrap">
+<table>
+<thead><tr><th>SOP object</th><th style="width:120px">Status</th><th>Evidence / note</th></tr></thead>
+<tbody>
+  <tr><td class="req">Lead / Contact</td><td><span class="pill p-ok">IMPLEMENTED</span></td><td><code>leads</code>, <code>prospects</code>, <code>global_contacts</code> — rich but LinkedIn/prospecting-shaped.</td></tr>
+  <tr><td class="req">Account</td><td><span class="pill p-miss">MISSING</span></td><td>No accounts/companies object; company is a free-text column. <code>global_company_data</code> is enrichment, not a CRM account.</td></tr>
+  <tr><td class="req">Opportunity</td><td><span class="pill p-partial">PARTIAL</span></td><td><code>deals</code> is minimal: title, amount, stage, close-date, status. No priority/fit/pain/stakeholders/decision-date/offer-version/forecast.</td></tr>
+  <tr><td class="req">Source Event</td><td><span class="pill p-partial">PARTIAL</span></td><td><code>lead_sources</code>, <code>prospect_discoveries</code>, <code>engagement_events</code> capture origin, but no unified immutable source-event record.</td></tr>
+  <tr><td class="req">Activity</td><td><span class="pill p-ok">IMPLEMENTED</span></td><td><code>communication_logs</code>, <code>deal_activities</code>, <code>linkedin_activities</code>, plus a per-lead JSONB <code>activity_log</code>.</td></tr>
+  <tr><td class="req">NEXT-Action / Task</td><td><span class="pill p-partial">PARTIAL</span></td><td><code>followup_schedules</code> / <code>workflow_tasks</code> are automation/agent tasks that auto-fire — not a rep-owned NEXT with owner/due/purpose/outcome.</td></tr>
+  <tr><td class="req">Consent / Suppression</td><td><span class="pill p-ok">IMPLEMENTED</span></td><td><code>outreach_unsubscribe_tokens</code>, <code>outreach_optout_events</code>, <code>email_suppression_list</code>, <code>email_bounce_log</code>.</td></tr>
+  <tr><td class="req">Meeting</td><td><span class="pill p-ok">IMPLEMENTED</span></td><td><code>calendar_appointments</code>, <code>events</code>/<code>event_registrations</code>, <code>scheduling_links</code>.</td></tr>
+  <tr><td class="req">Payment / License</td><td><span class="pill p-partial">PARTIAL</span></td><td>Only CRM billing: <code>subscription_plans</code>, credit ledger, Stripe. No per-deal payment/license record.</td></tr>
+  <tr><td class="req">Onboarding Handoff</td><td><span class="pill p-miss">MISSING</span></td><td>No handoff object. <code>OnboardingPage.tsx</code> is the CRM user’s own signup setup, not closed-won customer onboarding.</td></tr>
+  <tr><td class="req">Exception / Incident</td><td><span class="pill p-miss">MISSING</span></td><td>No incident object (type/affected-records/root-cause/owner/recovery). Nearest is volatile in-memory <code>error-logger.service.ts</code> + integration-error tables.</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<!-- ============ 3. STAGES ============ -->
+<section id="stages">
+<h2>3 · Pipeline Stage Coverage <span class="sub">— SOP §06 “Pipeline Stages &amp; Required NEXT Actions”</span></h2>
+<p>The funnel is fully configurable (free-text stage names per user/org), so an operator <em>could</em> recreate the SOP stages by hand — but the shipped defaults don’t match, and none of the SOP’s stage guardrails exist. Default seeded stages are <code>Discovery · Qualification · Proposal · Negotiation · Closed Won</code> (<code>funnel.service.ts:222</code>).</p>
+<div class="tblwrap">
+<table>
+<thead><tr><th>SOP stage (§06)</th><th style="width:150px">Shipped by default?</th><th>Gap</th></tr></thead>
+<tbody>
+  <tr><td class="req">1 · New — Unworked</td><td><span class="pill p-miss">no</span></td><td rowspan="10" style="vertical-align:middle">
+    None of the ten SOP stages ship as defaults. More importantly, the mechanics the SOP attaches to stages are absent: <b>no entry/exit criteria enforcement</b>, <b>no stage-aging / “stale after 5 business days”</b> flag, and <b>invalid stage moves are not blocked</b> (<code>updateDealStage</code> allows any stage → any stage). The SOP’s rule that <b>“Closed Won stays non-terminal until onboarding is accepted &amp; calendarized”</b> is not modeled at all.</td></tr>
+  <tr><td class="req">2 · Attempting Contact</td><td><span class="pill p-miss">no</span></td></tr>
+  <tr><td class="req">3 · Connected — Qualifying</td><td><span class="pill p-miss">no</span></td></tr>
+  <tr><td class="req">4 · Demo Scheduled</td><td><span class="pill p-miss">no</span></td></tr>
+  <tr><td class="req">5 · Demo / Discovery Complete</td><td><span class="pill p-miss">no</span></td></tr>
+  <tr><td class="req">6 · Commercial Review</td><td><span class="pill p-miss">no</span></td></tr>
+  <tr><td class="req">7 · Checkout / Agreement Sent</td><td><span class="pill p-miss">no</span></td></tr>
+  <tr><td class="req">8 · Closed Won — Onboarding Pending</td><td><span class="pill p-partial">partial</span></td></tr>
+  <tr><td class="req">9 · Nurture</td><td><span class="pill p-miss">no</span></td></tr>
+  <tr><td class="req">10 · Closed Lost</td><td><span class="pill p-partial">partial</span></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<!-- ============ 4. INTAKE DEEP DIVE ============ -->
+<section id="d-intake">
+<h2>4 · Deep-dive — Lead Intake, Canonical Identity &amp; Routing</h2>
+
+<div class="dcard">
+  <div class="head"><h3>4.1 Universal lead intake</h3><span class="pill p-partial p-dot">PARTIAL</span></div>
+  <div class="body">
+    <div class="req-row">
+      <div class="top"><span class="name">Channels that work today</span><span class="pill p-ok">OK</span></div>
+      <p class="desc">Appointment booking form (<code>public-capture.routes.ts:518</code>), event registration (<code>public-events.routes.ts:169</code>), Chrome-extension LinkedIn scrape (<code>extension-capture.service.ts:114</code>), manual API create (<code>leads.routes.ts:279</code>), external-app conversion + funnel-event webhook (<code>public-lead-convert.routes.ts:38</code>, <code>public-track-event.routes.ts:75</code>).</p>
+    </div>
+    <div class="req-row">
+      <div class="top"><span class="name">Channels the SOP requires but are absent</span><span class="pill p-miss">MISSING</span></div>
+      <p class="desc">Inbound phone calls (no call ingestion), live chat, referral intake, checkout-started / purchase-completed e-commerce events, and generic inbound social DM. Raw-payload retention is weak — there is no generic store for inbound form/webhook submissions.</p>
+      <p class="evi"><b>Watch-out:</b> despite its name, <code>channel-ingestion.service.ts</code> ingests LinkedIn/email <em>performance metrics</em>, not leads.</p>
+    </div>
+  </div>
+</div>
+
+<div class="dcard">
+  <div class="head"><h3>4.2 Canonical identity &amp; dedupe</h3><span class="pill p-partial p-dot">PARTIAL</span></div>
+  <div class="body">
+    <div class="req-row">
+      <div class="top"><span class="name">Matching keys implemented</span><span class="pill p-ok">OK</span></div>
+      <p class="desc">Priority order LinkedIn URL → lowercased email → name+company (<code>global-contact.service.ts:322-392</code>); tenant-unique indexes on <code>(org|user, email)</code> and <code>(…, linkedin_url)</code>.</p>
+    </div>
+    <div class="req-row">
+      <div class="top"><span class="name">Keys the SOP requires but are missing</span><span class="pill p-miss">MISSING</span></div>
+      <p class="desc">E.164 phone (phone is stored but <b>never a match key</b> and never normalized), transaction/order ID, and domain-canonical company identity. Merge lineage is not durably preserved — <code>lead-dedup.mergeLeads</code> hard-deletes secondary rows (<code>:302</code>) and prospect <code>merged_from</code> stores source labels, not record IDs.</p>
+    </div>
+  </div>
+</div>
+
+<div class="dcard">
+  <div class="head"><h3>4.3 Ownership, backup &amp; routing</h3><span class="pill p-partial p-dot">PARTIAL / MISSING</span></div>
+  <div class="body">
+    <div class="req-row">
+      <div class="top"><span class="name">Single-assignee delegation exists</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc"><code>owner_id</code> / <code>member_id</code> / <code>assigned_by</code> / <code>assigned_at</code> with a <code>PATCH /:id/assignee</code> endpoint gated by team membership, plus an owner↔assignee message thread (<code>leads.routes.ts:1085</code>, <code>:786</code>).</p>
+    </div>
+    <div class="req-row">
+      <div class="top"><span class="name">Backup coverage &amp; auto-fallback</span><span class="pill p-miss">MISSING</span></div>
+      <p class="desc">No backup rep, no manager on the lead, no accept/decline + <code>accepted_at</code>, no capacity/PTO/out-of-office, and no automatic fallback — reassignment is entirely manual.</p>
+    </div>
+    <div class="req-row">
+      <div class="top"><span class="name">Routing engine (eligibility→priority→specialty→availability→assignment→fallback)</span><span class="pill p-miss">MISSING</span></div>
+      <p class="desc">No routing engine, no round-robin/pool distribution, no P0/P1/P2/P3 tiers. Lead <code>priority</code> is a free string (<code>low/medium/high</code>). <code>lead-prioritization.service.ts</code> ranks leads by buying-intent score — it does not route them to reps.</p>
+    </div>
+    <div class="req-row">
+      <div class="top"><span class="name">Webhook idempotency</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">Only Stripe dedupes replays — via an in-memory <code>Set</code> of the last 1000 event IDs (non-durable). Inbound lead/appointment/conversion webhooks have no idempotency keys.</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ 5. SLA DEEP DIVE ============ -->
+<section id="d-sla">
+<h2>5 · Deep-dive — SLA Clock, Escalation &amp; NEXT-Action</h2>
+<div class="callout warn">
+  <b>This is the SOP’s spine — and it is essentially unbuilt.</b> The “30-minute human response,” the T+15/25/30/45 escalation ladder, and “no blank NEXT” are the SOP’s three non-negotiables. None have a runtime implementation.
+</div>
+<div class="dcard">
+  <div class="body" style="padding-top:14px">
+    <div class="req-row"><div class="top"><span class="name">30-minute speed-to-lead SLA clock (America/Chicago, business hours)</span><span class="pill p-miss">MISSING</span></div>
+      <p class="desc">No time-to-first-contact timer, no <code>responded_at</code>/<code>breach</code> fields, no America/Chicago reference anywhere. Business-hours config exists (<code>business-context.service.ts:23</code>, default 09:00–17:00 / America/New_York) but feeds only calendar availability &amp; email formatting.</p></div>
+    <div class="req-row"><div class="top"><span class="name">Tiered escalation ladder (rep→backup→manager→director)</span><span class="pill p-miss">MISSING</span></div>
+      <p class="desc"><code>notification.service.ts</code> is a flat DB store with no timing/escalation. Event &amp; booking notifications only email the registrant/salesperson. Nothing time-based reassigns to a backup or pages a manager/director.</p></div>
+    <div class="req-row"><div class="top"><span class="name">Mandatory NEXT-action enforcement (blocks save/advance)</span><span class="pill p-miss">MISSING</span></div>
+      <p class="desc">No NEXT-action column or object; lead update/stage endpoints perform no required-field validation. Records can be saved/advanced with a blank next step.</p></div>
+    <div class="req-row"><div class="top"><span class="name">Task queue (owner / priority / completion / overdue)</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">Closest is <code>followup_schedules</code>, which <b>auto-fires</b> due items (sends a message) rather than surfacing a human to-do. No per-task owner, no priority, no human completion, no overdue flag.</p></div>
+    <div class="req-row"><div class="top"><span class="name">After-hours queue-for-morning + 8:30/4:45 digests</span><span class="pill p-miss">MISSING</span></div>
+      <p class="desc">No “queue until next business morning” path and no twice-daily operating-rhythm digest. Scheduled workers exist (sequence tick, inbox sync, bounce sync, weekly feedback) but none implement the SOP cadence.</p></div>
+  </div>
+</div>
+</section>
+
+<!-- ============ 6. COMMS DEEP DIVE ============ -->
+<section id="d-comms">
+<h2>6 · Deep-dive — Communications, Sequences &amp; Consent</h2>
+<div class="callout good">
+  <b>This is the codebase’s strongest domain.</b> The email + sequence + suppression stack is production-grade and directly reusable — the gaps are the <em>additional channels</em> (SMS/phone) and a few event-branch behaviors.
+</div>
+<div class="dcard">
+  <div class="body" style="padding-top:14px">
+    <div class="req-row"><div class="top"><span class="name">Automated send channels</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc"><b>Email</b> fully automated (Nodemailer + SendGrid/Mailgun/Postmark, <code>email-sender.service.ts</code>, <code>email-outreach.service.ts</code>). <b>LinkedIn DM</b> is manual-assist — the server marks steps <code>ready</code> and a Chrome extension sends after human approval (<code>linkedin-social-outreach.service.ts:824</code>). <b>SMS / phone / voicemail: none</b> — they appear only as channel-scoring outputs, never as a send path.</p></div>
+    <div class="req-row"><div class="top"><span class="name">Reply detection</span><span class="pill p-ok">IMPLEMENTED</span></div>
+      <p class="desc">Inbound email matched by <code>In-Reply-To</code>/<code>References</code> then auto-pauses sequences (<code>inbox-sync.service.ts</code>, <code>email-outreach.service.ts:1763</code>); LinkedIn DM replies trigger sentiment + engagement boost + stage advance.</p></div>
+    <div class="req-row"><div class="top"><span class="name">Sequence orchestration</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">Event-driven 60s-tick engine: pause-on-reply <b>✓</b>, stop-on-opt-out <b>✓</b>, event triggers (registration/attendance/no-show/booking) <b>✓</b>, send idempotency <b>✓</b>. <b>Replace-CTA-on-booking</b> only <em>adds</em> a parallel reminder sequence (doesn’t swap the “book a call” CTA or halt the in-flight chase). <b>Stop-on-payment</b> not implemented (payment = SaaS billing only).</p></div>
+    <div class="req-row"><div class="top"><span class="name">Consent &amp; suppression</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">Token opt-out/DNC with reason codes, reason-tagged <code>email_suppression_list</code>, provider bounce auto-suppression, per-lead frequency caps (24h cooldown / 5 max) — all solid. Gaps: suppression is <b>per-tenant</b> (not cross-org global DNC); quiet hours use the <b>sender/business</b> timezone (not recipient-local); no SMS STOP/HELP; explicit opt-in consent evidence is thin.</p></div>
+    <div class="req-row"><div class="top"><span class="name">Unified activity timeline</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">Per-lead JSONB <code>activity_log</code> is email/appointment-centric (no SMS/call/DM/note types) and capped at 100 entries; LinkedIn DMs, <code>communication_logs</code>, and <code>deal_activities</code> live in separate stores — not one chronological stream.</p></div>
+  </div>
+</div>
+</section>
+
+<!-- ============ 7. CALENDAR/PAYMENT DEEP DIVE ============ -->
+<section id="d-cal">
+<h2>7 · Deep-dive — Calendar, No-Show, Payment &amp; Onboarding</h2>
+<div class="dcard">
+  <div class="body" style="padding-top:14px">
+    <div class="req-row"><div class="top"><span class="name">Calendar / booking engine</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">Real availability with IANA-tz math, double-book prevention, event IDs, ICS invites, public booking page. But <b>two-way Google/Microsoft sync is simulated</b> (<code>calendar-integration.service.ts:230</code> — “we simulate by creating sync log entries”; Google OAuth requests only <code>openid email profile</code>, no calendar scope). No round-robin/pooled hosts; no meeting types — all bookings default to fixed 30-min slots.</p></div>
+    <div class="req-row"><div class="top"><span class="name">Reminders / reschedule / cancel</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">Booking confirmation email + ICS to both parties works. But no timed 24h/2h/15m pre-meeting reminders, and the confirmation says “contact us to reschedule” — no self-service reschedule/cancel link.</p></div>
+    <div class="req-row"><div class="top"><span class="name">No-show handling</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">For 1:1 sales meetings: <b>missing</b> — the cleanup worker marks every past appointment <code>completed</code> regardless of attendance. An <code>on_no_show</code> branch exists only for webinar/event registrations (requires attendance to be marked manually).</p></div>
+    <div class="req-row"><div class="top"><span class="name">Payment / checkout for closed-won</span><span class="pill p-miss">MISSING</span></div>
+      <p class="desc">Stripe = the CRM’s <b>own</b> subscription + credit-pack billing. There is no “sell the prospect a license” checkout, no started/pending/failed/success state tied to a deal, no verify-before-Closed-Won gate, and no license/transaction ID issued to a prospect.</p></div>
+    <div class="req-row"><div class="top"><span class="name">Closed-Won → onboarding handoff</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">A “Closed Won” stage exists and stage-entry can fire a generic configured sequence. But nothing suppresses in-flight presale sequences on won, no customer/license record is created, and no onboarding handoff task/workflow with a named CS owner is generated. <code>OnboardingPage.tsx</code> is CRM-user signup, not customer onboarding.</p></div>
+    <div class="req-row"><div class="top"><span class="name">Payment webhook idempotency</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">Signature verification via <code>stripe.webhooks.constructEvent</code> ✓. Idempotency is in-memory only (last-1000 <code>Set</code>) — a duplicate event after a restart could reprocess subscription state.</p></div>
+  </div>
+</div>
+</section>
+
+<!-- ============ 8. DASH/RBAC/AUDIT DEEP DIVE ============ -->
+<section id="d-dash">
+<h2>8 · Deep-dive — Dashboards, RBAC &amp; Audit</h2>
+<div class="dcard">
+  <div class="body" style="padding-top:14px">
+    <div class="req-row"><div class="top"><span class="name">Leadership operational dashboard</span><span class="pill p-miss">MISSING</span></div>
+      <p class="desc">Existing dashboards are marketing/engagement-oriented (open/response/click/booking rates; a rep recommendation queue). None of the SOP leadership signals exist — leads-waiting, oldest-wait, SLA at-risk/breached, unowned records, missing-NEXT, failed-messages, purchases-awaiting-onboarding, stale-opportunities.</p></div>
+    <div class="req-row"><div class="top"><span class="name">RBAC roles</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">Two disjoint systems — app RBAC <code>admin/agent/viewer</code> (<code>rbac.service.ts:24</code>) and team membership <code>owner/admin/member/viewer</code>. Neither models the SOP’s Rep / Manager / RevOps / Leadership hierarchy, and gating is coarse.</p></div>
+    <div class="req-row"><div class="top"><span class="name">Immutable audit / versioning / retention</span><span class="pill p-partial">PARTIAL</span></div>
+      <p class="desc">Insert-only <code>access_logs</code> exists but covers <b>auth events only</b>. No template version history, no configurable retention, no incident-evidence store. <code>error-logger.service.ts</code> is an in-memory ring buffer (lost on restart) — not durable audit.</p></div>
+    <div class="req-row"><div class="top"><span class="name">Exception / incident object</span><span class="pill p-miss">MISSING</span></div>
+      <p class="desc">No incident object with type / affected-records / root-cause / owner / recovery. Nearest artifacts are <code>crm_integration_errors</code> / <code>crm_sync_conflicts</code>, which don’t model ownership or recovery.</p></div>
+  </div>
+</div>
+</section>
+
+<!-- ============ 9. STRENGTHS ============ -->
+<section id="strengths">
+<h2>9 · Strengths — reusable assets to build on</h2>
+<div class="panel">
+<ul class="tight">
+  <li><b>Production-grade email engine</b> — multi-provider send, batch, and a lock-safe <code>send_queue</code> (<code>FOR UPDATE SKIP LOCKED</code>, per-user/global rate limits, <code>source_ref_id</code> dedup). Directly reusable for the SOP’s email sequences.</li>
+  <li><b>Deep consent/suppression &amp; deliverability</b> — token opt-out with reason codes, reason-tagged suppression list, provider bounce classification + auto-suppression, per-account bounce-rate auto-pause, per-lead frequency caps. This satisfies much of SOP §21 “Compliance/QA” for email.</li>
+  <li><b>Event-driven sequence orchestrator</b> — 60s tick with condition eval, send-window gating, credit gating, pause-on-reply, stop-on-opt-out, and event triggers. The right foundation to add replace-CTA-on-booking and stop-on-payment.</li>
+  <li><b>Reply intelligence</b> — IMAP inbox sync with header-based thread matching + sentiment; a strong base for the SOP’s “any reply pauses automation &amp; creates an urgent owner task.”</li>
+  <li><b>Booking/availability core</b> — real timezone math, double-book prevention, ICS invites, public booking page — a solid base once real Google/MS sync and reminders are added.</li>
+  <li><b>Configurable funnel + deals + activities</b> — the object graph to hang the SOP stages/NEXT-actions on already exists; it needs enrichment and guardrails, not a rebuild.</li>
+  <li><b>Multi-tenant, sharded, auditable auth</b> — RBAC scaffolding, immutable auth log, MFA, encryption service — extendable to the SOP role model.</li>
+</ul>
+</div>
+</section>
+
+<!-- ============ 10. BLOCKERS ============ -->
+<section id="blockers">
+<h2>10 · Launch Blockers <span class="sub">— mapped to SOP §22/§23 “Top Launch Blockers”</span></h2>
+<p>The SOP names six mandatory go-live gates. Current status:</p>
+<div class="tblwrap">
+<table>
+<thead><tr><th>SOP go-live gate</th><th style="width:120px">Status</th><th>Blocking gap</th></tr></thead>
+<tbody>
+  <tr><td class="req">1 · Approved offer / feature-truth</td><td><span class="pill p-miss">MISSING</span></td><td>No versioned Offer Data Sheet, no CRM “offer version” field on the deal, no LIVE/BETA/ROADMAP status matrix.</td></tr>
+  <tr><td class="req">2 · Staffed primary + backup coverage</td><td><span class="pill p-miss">MISSING</span></td><td>No backup rep, no manager, no capacity/PTO, no coverage model.</td></tr>
+  <tr><td class="req">3 · Consent / suppression controls</td><td><span class="pill p-partial">PARTIAL</span></td><td>Strong for email; SMS channel + STOP/HELP absent; suppression not cross-org global.</td></tr>
+  <tr><td class="req">4 · Tested reply / purchase stops</td><td><span class="pill p-partial">PARTIAL</span></td><td>Reply/opt-out stops work; purchase-stop and closed-won suppression do not.</td></tr>
+  <tr><td class="req">5 · Payment &amp; calendar verification</td><td><span class="pill p-miss">MISSING</span></td><td>No prospect-payment verification gate; calendar two-way sync is simulated.</td></tr>
+  <tr><td class="req">6 · Manual fallback for connector failure</td><td><span class="pill p-miss">MISSING</span></td><td>No incident object, no dead-letter/replay queue for inbound connectors, no manual-continuation workflow.</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<!-- ============ 11. ROADMAP ============ -->
+<section id="roadmap">
+<h2>11 · Prioritized Remediation Roadmap</h2>
+<p>Ordered by SOP criticality × build effort. Phase 1 items are the SOP’s non-negotiables and hard launch blockers.</p>
+
+<h3>Phase 1 — Inbound sales-ops backbone <span class="sub">(the SOP’s non-negotiables)</span></h3>
+<div class="panel">
+<ul class="tight">
+  <li><span class="rank">1</span><b>SLA clock &amp; escalation engine.</b> Add first-response tracking (<code>first_attempt_at</code>, <code>sla_due_at</code>, <code>breach_at</code>) on the America/Chicago business clock, plus a T+15/25/30/45 escalation ladder with backup + manager + director alerts. <span class="sub">Blocker #2/§04.</span></li>
+  <li><span class="rank">2</span><b>NEXT-action object + save-gate.</b> First-class task (type, owner, due-time, purpose, intended outcome); block save/stage-advance on non-terminal records when NEXT is missing (SOP §06/§28 save-gate).</li>
+  <li><span class="rank">3</span><b>Ownership + backup + routing.</b> Add backup rep, manager, accept/decline (<code>accepted_at</code>), capacity/PTO; build the eligibility→priority→specialty→availability→assignment→fallback router with P0–P3 tiers and round-robin.</li>
+  <li><span class="rank">4</span><b>Leadership operating dashboard.</b> Surface leads-waiting, oldest-wait, SLA at-risk/breached, unowned, missing-NEXT, failed-messages, purchases-awaiting-onboarding, stale-opportunities.</li>
+</ul>
+</div>
+
+<h3>Phase 2 — Channels, commerce &amp; onboarding</h3>
+<div class="panel">
+<ul class="tight">
+  <li><span class="rank">5</span><b>SMS channel (Twilio) with STOP/HELP,</b> quiet hours in recipient-local time, delivery receipts, and the SMS template library from SOP §18/§36.</li>
+  <li><span class="rank">6</span><b>Phone/dialer + voicemail logging</b> — at minimum a tracked-call disposition + voicemail-flag so a “valid human attempt” (SOP §04) can be recorded; power-dialer is P1.</li>
+  <li><span class="rank">7</span><b>Closed-won commerce &amp; onboarding.</b> Prospect license checkout, verify-payment-before-won gate, customer/license record, presale-sequence suppression on won, and an onboarding handoff object with a named CS owner + kickoff scheduling (SOP §19).</li>
+  <li><span class="rank">8</span><b>Real calendar two-way sync</b> (Google/MS Graph with calendar scopes), meeting types (15/30/60), timed 24h/2h/15m reminders, self-serve reschedule/cancel, and 1:1 no-show detection + rebook.</li>
+</ul>
+</div>
+
+<h3>Phase 3 — Intake breadth, compliance &amp; resilience</h3>
+<div class="panel">
+<ul class="tight">
+  <li><span class="rank">9</span><b>Intake breadth + raw-payload store + webhook idempotency keys</b> across all inbound connectors (forms, chat, referral, checkout, purchase, inbound call, social DM).</li>
+  <li><span class="rank">10</span><b>Identity hardening</b> — E.164 phone normalization + phone/transaction-ID match keys, domain-canonical accounts, and a durable merge-history table (stop hard-deleting merged rows).</li>
+  <li><span class="rank">11</span><b>Offer-truth &amp; feature-status matrix</b> — versioned Offer Data Sheet, deal <code>offer_version</code>, LIVE/BETA/ROADMAP labels enforced in demo/commercial stages.</li>
+  <li><span class="rank">12</span><b>Governance</b> — SOP role model (Rep/Manager/RevOps/Leadership), incident/exception object with recovery workflow, durable audit + template version history + retention controls, and the 8:30/4:45 digests.</li>
+</ul>
+</div>
+</section>
+
+<footer>
+  <p><b>Scope &amp; method.</b> Verdicts are grounded in direct source inspection across five parallel exploration passes (lead intake/identity/routing; SLA/alerts/NEXT; comms/sequences/consent; calendar/payment/onboarding; dashboards/RBAC/audit). File:line citations reference the <code>projex_crm</code> repository at analysis time. “PARTIAL” means an implementation exists but does not meet the SOP’s stated minimum acceptance standard or is shaped for outbound prospecting rather than inbound sales-ops.</p>
+  <p>Generated for internal engineering planning · Lynked Up Pro SOP v3.0 conformance review · 14 Jul 2026.</p>
+</footer>
+
+</div>
+</body>
+</html>

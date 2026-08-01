@@ -1,0 +1,109 @@
+{
+  "name": "DELETE /api/sla/policies/:id - Retire an SLA policy",
+  "description": "Retires an SLA policy by deactivating it. THIS IS A SOFT DELETE, for the same reason routing rules are: a lead's sla_due_at was computed from the policy in force when it was assigned, and the question 'why did this lead only get five minutes?' must stay answerable after the policy is retired. The row is kept and only is_active flips to false. Answers 200 with a summary rather than a bodyless 204 (MUST-54) because the caller needs to know whether this call retired the policy or found it already retired, and the resulting state is worth returning. IDEMPOTENT: retiring an already-retired policy answers 200 with already_inactive:true rather than failing, so a double-click or a retry is harmless. Retiring a policy does NOT change any lead already in flight; leads assigned afterwards fall through to the next matching policy, or to the 30-minute default when none matches. A retirement is reversible via PATCH with is_active:true. Protected - SLA targets decide when somebody is judged late. QA: depends on register, login and a created policy. Runs LAST among the policy tests (highest priority number) so the create, list and patch cases still have an active policy to work against.",
+  "endpoint": "/api/sla/policies/:id",
+  "method": "DELETE",
+  "taskId": "9857c559-f963-4e5f-ac05-00d8ca036bba",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 18,
+  "expectedStatus": 200,
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/sla/policies"],
+  "fieldEnums": {
+    "source_channel": [
+      "web_form",
+      "landing_page",
+      "facebook",
+      "instagram",
+      "linkedin",
+      "tiktok",
+      "google_ads",
+      "live_chat",
+      "phone",
+      "email",
+      "referral",
+      "webhook",
+      "api",
+      "csv_import"
+    ]
+  },
+  "statusTransitions": {
+    "entity": "sla_policy",
+    "field": "is_active",
+    "flow": ["active", "retired"],
+    "transitions": [
+      {
+        "from": "active",
+        "to": "retired",
+        "via": "DELETE /api/sla/policies/:id",
+        "notes": "Sets is_active to false. The row is NOT removed, so a past deadline stays explainable. Leads assigned afterwards fall through to the next matching policy or the 30-minute default."
+      },
+      {
+        "from": "retired",
+        "to": "retired",
+        "via": "DELETE /api/sla/policies/:id",
+        "notes": "Idempotent no-op. Answers 200 with already_inactive:true."
+      },
+      {
+        "from": "retired",
+        "to": "active",
+        "via": "PATCH /api/sla/policies/:id with is_active:true",
+        "notes": "A retirement is reversible - the row was never destroyed."
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Retire the policy",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:sla-policies.create.response.data.policy.id}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "already_inactive": false,
+          "policy": {
+            "is_active": false
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject an unauthenticated retirement",
+      "pathParams": {
+        "id": "{{cache:sla-policies.create.response.data.policy.id}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "the id path parameter is not a well-formed UUID"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no SLA policy exists with the supplied id"
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "name": "POST /api/leads/:id/assign - Assign or reassign a lead to a named owner",
+  "description": "Moves a lead to an explicitly chosen owner, overriding whatever automatic routing decided, and records routing_method as 'manual' so an audit can distinguish a policy outcome from a person taking responsibility. A command against an existing lead, so it answers 200. Unlike POST /api/leads/:id/route this is deliberately NOT idempotent-by-skip: reassignment is the whole point, so an already-owned lead IS moved, and the response returns previous_owner_user_id so the caller can show what changed. THE RESPONSE CLOCK IS NOT RESTARTED - assigned_at and sla_due_at are preserved with COALESCE. The prospect has been waiting since the lead arrived, and resetting the deadline on each reassignment would let a lead be passed around indefinitely while always appearing to be within SLA. 'reason' is REQUIRED: an unexplained reassignment is not auditable. QA: depends on register (which creates the target owner), login and a captured lead.",
+  "endpoint": "/api/leads/:id/assign",
+  "method": "POST",
+  "taskId": "4e83aaa0-e638-4a42-afbc-acc68d9e548a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 31,
+  "expectedStatus": 200,
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/leads"],
+  "fieldEnums": {
+    "routing_method": ["sdk_assignment", "rule_match", "round_robin", "manual"]
+  },
+  "statusTransitions": {
+    "entity": "lead",
+    "field": "ownership",
+    "flow": ["assigned", "reassigned"],
+    "transitions": [
+      {
+        "from": "assigned",
+        "to": "reassigned",
+        "via": "POST /api/leads/:id/assign",
+        "notes": "Sets owner_user_id to the named user and routing_method to 'manual'. Clears routing_rule_id, because a manual choice was not made by a rule. assigned_at and sla_due_at are PRESERVED - the original deadline stands."
+      }
+    ]
+  },
+  "captureResponse": {
+    "leads.assign.response.data.decision.owner_user_id": "data.decision.owner_user_id"
+  },
+  "testCases": [
+    {
+      "name": "Reassign the lead to a named owner",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "payload": {
+        "owner_user_id": "{{cache:auth.register.response.data.user.id}}",
+        "reason": "{{dynamic:text}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "decision": {
+            "routing_method": "manual"
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject a reassignment with no reason",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "payload": {
+        "owner_user_id": "{{cache:auth.register.response.data.user.id}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated reassignment",
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
+      "payload": {
+        "owner_user_id": "{{cache:auth.register.response.data.user.id}}",
+        "reason": "{{dynamic:text}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "the id path parameter or owner_user_id is not a well-formed UUID, or reason is missing, blank or over 500 characters"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no lead exists with the supplied id, or owner_user_id names no user"
+    },
+    {
+      "code": "CONFLICT",
+      "status": 409,
+      "when": "the target user exists but is deactivated, so cannot own a lead"
+    }
+  ]
+}

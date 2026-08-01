@@ -1,0 +1,139 @@
+{
+  "name": "POST /api/leads - Capture a lead through the ProjexCloud lead-capture SDK",
+  "description": "Captures an inbound lead for an authenticated caller - the application UI and server-to-server API integrations. Creating a row at the collection root, so it answers 201. The handler writes the local projection first and then asserts the lead upstream through the ProjexCloud sdk-lead-capture gateway using the new row id as the idempotency key; asserted_upstream reports whether that assertion landed, so a capture is never lost when the gateway is briefly unreachable. name, email and source are required: a capture missing any of them cannot be routed or attributed. origin_class defaults to first_party_declared. QA: depends on register and login; present the captured session token as a bearer. AUTO-ROUTING AT INTAKE: the handler routes the lead immediately after persisting it, so the response carries the owner and the started clock rather than a pre-routing snapshot, and `routed` reports whether an owner was assigned. A routing failure does NOT fail the capture - the lead is already durable and appears in the Capture Inbox as unowned for the zero-orphan sweep (POST /api/leads/route-unowned) to pick up.",
+  "endpoint": "/api/leads",
+  "method": "POST",
+  "taskId": "8ac5c78e-b994-4513-8da6-2cbd637b287f",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 201,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "source": [
+      "web_form",
+      "landing_page",
+      "facebook",
+      "instagram",
+      "linkedin",
+      "tiktok",
+      "google_ads",
+      "live_chat",
+      "phone",
+      "email",
+      "referral",
+      "webhook",
+      "api",
+      "csv_import"
+    ],
+    "origin_class": [
+      "first_party_declared",
+      "first_party_observed",
+      "partner_shared",
+      "public_record",
+      "third_party_licensed",
+      "inferred",
+      "user_asserted",
+      "unknown"
+    ],
+    "routing_method": [
+      "sdk_assignment",
+      "rule_match",
+      "round_robin",
+      "manual"
+    ]
+  },
+  "captureResponse": {
+    "leads.create.response.data.lead.id": "data.lead.id"
+  },
+  "testCases": [
+    {
+      "name": "Capture a lead from a web form",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "name": "{{dynamic:name}}",
+        "email": "{{dynamic:email}}",
+        "source": "{{static:web_form}}",
+        "phone": "{{dynamic:phone}}",
+        "company": "{{dynamic:company}}",
+        "message": "{{dynamic:text}}",
+        "origin_class": "{{static:first_party_declared}}",
+        "consent_granted": true,
+        "utm": {
+          "utm_source": "{{static:google}}",
+          "utm_medium": "{{static:cpc}}",
+          "utm_campaign": "{{static:prelaunch}}"
+        }
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "lead": {
+            "source": "web_form"
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject an unknown source channel",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "name": "{{dynamic:name}}",
+        "email": "{{dynamic:email}}",
+        "source": "{{static:carrier_pigeon}}",
+        "phone": "{{dynamic:phone}}",
+        "company": "{{dynamic:company}}",
+        "message": "{{dynamic:text}}",
+        "origin_class": "{{static:first_party_declared}}",
+        "consent_granted": true
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated capture",
+      "payload": {
+        "name": "{{dynamic:name}}",
+        "email": "{{dynamic:email}}",
+        "source": "{{static:web_form}}",
+        "phone": "{{dynamic:phone}}",
+        "company": "{{dynamic:company}}",
+        "message": "{{dynamic:text}}",
+        "origin_class": "{{static:first_party_declared}}",
+        "consent_granted": true
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "name or email is missing, email is malformed OR longer than 255 characters (the leads.email column width - unbounded input would reach the database and surface as a 500), source is not one of the fourteen channels, or origin_class is not one of the eight origin classes"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

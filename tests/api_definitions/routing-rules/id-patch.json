@@ -1,0 +1,131 @@
+{
+  "name": "PATCH /api/routing-rules/:id - Update a routing rule in place",
+  "description": "Partially updates a routing rule. Answers 200 because it modifies an existing resource rather than creating one. ONLY the fields present in the body are written, so an operator correcting a typo in the name cannot accidentally clear the channel — the handler builds its SET list from present keys rather than using COALESCE, because COALESCE cannot express a deliberate NULL. ABSENCE AND NULL DIFFER: omitting source_channel leaves it untouched, while sending source_channel:null converts the rule into a catch-all that matches every channel, which is a meaningful value rather than a missing one. An empty body is rejected rather than treated as a silent no-op, because it is a caller mistake worth reporting. If assigned_user_id is supplied the handler verifies the user exists AND is active, mirroring the guard on assignment: a rule pointing at a departed colleague routes leads into a hole. QA: depends on register, login and a created rule.",
+  "endpoint": "/api/routing-rules/:id",
+  "method": "PATCH",
+  "taskId": "4e040fdf-69b3-4dfa-a63c-0df651c371d5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 22,
+  "expectedStatus": 200,
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/routing-rules"],
+  "fieldEnums": {
+    "source_channel": [
+      "web_form",
+      "landing_page",
+      "facebook",
+      "instagram",
+      "linkedin",
+      "tiktok",
+      "google_ads",
+      "live_chat",
+      "phone",
+      "email",
+      "referral",
+      "webhook",
+      "api",
+      "csv_import"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Update every mutable field of the rule",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:routing-rules.create.response.data.rule.id}}"
+      },
+      "payload": {
+        "name": "{{dynamic:name}}",
+        "source_channel": "{{static:linkedin}}",
+        "assigned_user_id": "{{cache:auth.register.response.data.user.id}}",
+        "criteria": "{{static:source=linkedin}}",
+        "evaluation_order": 60,
+        "is_active": true
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "rule": {
+            "source_channel": "linkedin",
+            "evaluation_order": 60,
+            "is_active": true
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject an empty patch",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:routing-rules.create.response.data.rule.id}}"
+      },
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unknown source channel",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:routing-rules.create.response.data.rule.id}}"
+      },
+      "payload": {
+        "source_channel": "{{static:carrier_pigeon}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated update",
+      "pathParams": {
+        "id": "{{cache:routing-rules.create.response.data.rule.id}}"
+      },
+      "payload": {
+        "name": "{{dynamic:name}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "the body is empty, the id or assigned_user_id is not a UUID, name is blank or over 160 characters, source_channel is neither null nor one of the fourteen channels, criteria is over 255 characters, evaluation_order is not an integer between 0 and 100000, or is_active is not a boolean"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no rule has that id, or a supplied assigned_user_id names no user"
+    },
+    {
+      "code": "CONFLICT",
+      "status": 409,
+      "when": "a supplied assigned_user_id names a deactivated user, who cannot be routed to"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/mcp/main/schema/mcp-config.json",
+  "mcpServers": {
+    "projexlight": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "./mcp-server/mcp-bridge.js"
+      ],
+      "env": {
+        "MCP_SERVER_URL": "http://localhost:8766",
+        "PROJECT_ID": "894bc4c8-4cfb-407d-9e86-234b69490275"
+      }
+    }
+  }
+}

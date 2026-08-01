@@ -1,0 +1,15 @@
+{
+  "backend": {
+    "framework": "express",
+    "language": "typescript"
+  },
+  "frontend": {
+    "framework": "react",
+    "language": "typescript",
+    "styling": "tailwind"
+  },
+  "testing": {
+    "unitFramework": "jest",
+    "e2eFramework": "playwright"
+  }
+}

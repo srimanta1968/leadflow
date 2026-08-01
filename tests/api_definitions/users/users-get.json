@@ -1,0 +1,54 @@
+{
+  "name": "GET /api/users - List the team roster",
+  "description": "Returns the users who can own a lead, oldest first, as the public projection only - the password hash is never included. Pass active=false to include deactivated accounts; the default returns active users only. Protected by the authenticate guard, so the Authorization header is required on this GET. Deliberately NOT admin-gated: routing configuration, ownership reassignment and coverage all need to name a colleague, and hiding the roster from the operators who must route to it would make those screens unusable. QA: depends on register and login; register also guarantees the roster is non-empty.",
+  "endpoint": "/api/users",
+  "method": "GET",
+  "taskId": "754f1fd8-4655-4185-8a57-9d3a3b19c67e",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 15,
+  "expectedStatus": 200,
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "active": ["true", "false"],
+    "role": ["user", "admin"]
+  },
+  "captureResponse": {
+    "users.list.response.data.total": "data.total"
+  },
+  "testCases": [
+    {
+      "name": "List active users",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "active": "true"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Reject an unauthenticated roster read",
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

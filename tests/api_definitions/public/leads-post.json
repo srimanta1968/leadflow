@@ -1,0 +1,107 @@
+{
+  "name": "POST /api/public/leads - Public web-form lead capture",
+  "description": "The marketing site's lead form posts here. This is the ONLY unauthenticated write in LeadFlow and it is deliberate: a prospect filling in the landing-page form holds no session, and requiring one would defeat inbound capture entirely. It is constrained instead - a per-IP rate limit bounds the blast radius, the same validator as the authenticated route runs so no unvalidated field reaches the database or the upstream assertion, and captures land as first_party_declared assertions in the Capture Inbox rather than becoming trusted contacts. Creating a row at a collection root, so it answers 201. QA: no prerequisites; this is a standalone public entry point. AUTO-ROUTING AT INTAKE: the handler routes the lead immediately after persisting it, so the response carries the owner and the started clock rather than a pre-routing snapshot, and `routed` reports whether an owner was assigned. A routing failure does NOT fail the capture - the lead is already durable and appears in the Capture Inbox as unowned for the zero-orphan sweep (POST /api/leads/route-unowned) to pick up.",
+  "endpoint": "/api/public/leads",
+  "method": "POST",
+  "taskId": "8ac5c78e-b994-4513-8da6-2cbd637b287f",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": false,
+  "testability": "auto",
+  "priority": 5,
+  "expectedStatus": 201,
+  "fieldEnums": {
+    "source": [
+      "web_form",
+      "landing_page",
+      "facebook",
+      "instagram",
+      "linkedin",
+      "tiktok",
+      "google_ads",
+      "live_chat",
+      "phone",
+      "email",
+      "referral",
+      "webhook",
+      "api",
+      "csv_import"
+    ],
+    "origin_class": [
+      "first_party_declared",
+      "first_party_observed",
+      "partner_shared",
+      "public_record",
+      "third_party_licensed",
+      "inferred",
+      "user_asserted",
+      "unknown"
+    ],
+    "routing_method": [
+      "sdk_assignment",
+      "rule_match",
+      "round_robin",
+      "manual"
+    ]
+  },
+  "captureResponse": {
+    "public-leads.create.response.data.lead.id": "data.lead.id"
+  },
+  "testCases": [
+    {
+      "name": "Capture a lead from the marketing landing page",
+      "payload": {
+        "name": "{{dynamic:name}}",
+        "email": "{{dynamic:email}}",
+        "source": "{{static:landing_page}}",
+        "phone": "{{dynamic:phone}}",
+        "company": "{{dynamic:company}}",
+        "message": "{{dynamic:text}}",
+        "origin_class": "{{static:first_party_declared}}",
+        "consent_granted": true,
+        "utm": {
+          "utm_source": "{{static:linkedin}}",
+          "utm_medium": "{{static:social}}",
+          "utm_campaign": "{{static:launch}}"
+        }
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "lead": {
+            "source": "landing_page"
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject a submission with a malformed email",
+      "payload": {
+        "name": "{{dynamic:name}}",
+        "email": "{{static:not-an-email}}",
+        "source": "{{static:landing_page}}",
+        "phone": "{{dynamic:phone}}",
+        "company": "{{dynamic:company}}",
+        "message": "{{dynamic:text}}",
+        "origin_class": "{{static:first_party_declared}}",
+        "consent_granted": true
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "name or email is missing, email is malformed OR longer than 255 characters (the leads.email column width - unbounded input would reach the database and surface as a 500), source is not one of the fourteen channels, or origin_class is not one of the eight origin classes"
+    },
+    {
+      "code": "RATE_LIMITED",
+      "status": 429,
+      "when": "the calling address exceeded the configured submission window"
+    }
+  ]
+}

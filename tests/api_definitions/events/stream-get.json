@@ -1,0 +1,47 @@
+{
+  "name": "GET /api/events/stream - Server-Sent Events push channel",
+  "description": "STREAMING ENDPOINT - NOT A REQUEST-RESPONSE CALL (MUST-63). This route responds 200 with Content-Type text/event-stream and then HOLDS THE CONNECTION OPEN indefinitely, writing frames as changes occur. A normal test asserting a JSON body would hang until timeout, so the happy-path case asserts ONLY the handshake: status 200 and the event-stream content type. Everything after the handshake needs a streaming client and cannot be driven by the HTTP runner.\n\nSTREAMING CONTRACT for whoever consumes it. On connect the server writes a ': connected' comment frame so a client can tell 'connected and quiet' from 'never connected'. Thereafter each change is one frame: 'event: <type>' followed by 'data: {\"type\",\"subject_id\",\"at\"}' and a blank line. A ': heartbeat' comment frame is written every 25 seconds to defeat proxy idle timeouts; comment frames carry no data and are ignored by EventSource. The four event types are lead.captured, lead.routed, lead.reassigned and routing_rule.changed.\n\nEVENTS CARRY NO STATE BY DESIGN. Each one means 'something changed, re-read' — the client re-fetches the projection, which remains the source of truth. Delivery is at-most-once with no persistence or replay, so an event emitted while a client is disconnected is simply lost; that is safe only because no client correctness depends on receiving one. SINGLE INSTANCE ONLY: subscribers live in the serving process's memory, so behind more than one replica a client on replica A never sees an event published on replica B. The durable cross-instance path is the transactional outbox owned by the composition-layer epic.\n\nAUTH: protected like every other read, because the stream names leads and owners. Note the route is deliberately NOT wrapped in asyncHandler — that helper forwards a rejection to the JSON error handler, which would try to write an error body onto a response whose headers are already committed as text/event-stream.",
+  "endpoint": "/api/events/stream",
+  "method": "GET",
+  "taskId": "4e040fdf-69b3-4dfa-a63c-0df651c371d5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 40,
+  "expectedStatus": 200,
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "event": ["lead.captured", "lead.routed", "lead.reassigned", "routing_rule.changed"]
+  },
+  "testCases": [
+    {
+      "name": "Open the stream and assert the handshake only",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedHeaders": {
+        "content-type": "text/event-stream"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated stream",
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token. Rejected by the guard BEFORE the stream headers are written, so this failure is an ordinary JSON error response"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

@@ -1,0 +1,164 @@
+{
+  "auth/login-post.json": {
+    "hash": "f281fd928f258e98db2bd8cddb749a38ef8e07b967e0c9fe33831a1ef240821e",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "auth/me-get.json": {
+    "hash": "2d5a3a09def29d97b95688a0812d76dd3abd4fc792003c224570efa0d6f72ed6",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "auth/register-post.json": {
+    "hash": "0300e7e73901df4942d7f7d0ecf0d4561de8f6b9a73dacccd2144e4232c13b62",
+    "status": "findings",
+    "findingsCount": 3,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "events/stream-get.json": {
+    "hash": "5790afd67889279cf1f01a0df6d89cb9ed5671fbf462b46e7701d1a64a24dea0",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "leads/id-assign-post.json": {
+    "hash": "67040182fd3b64d0f33b358f894d01c55c97fe9a4b9b0edb3a444070311aee9c",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "leads/id-first-response-post.json": {
+    "hash": "03561faace88a83de83c2d95c6228d8798d373599d355719462aff959b7eeff4",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "leads/id-get.json": {
+    "hash": "43bde750d440d57d66d3994dcbacaaf9f0c88c1315b3c94d4da050d9236d6ed3",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "leads/id-route-post.json": {
+    "hash": "1a52040f1e1b95e800339619538b3fba2dca4c5acf436a554c2e6c3497fdee20",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "leads/leads-get.json": {
+    "hash": "3a70fd32d119eb149a7bdfa04e7849e4f42670188d7d79b276575717bfb66f6a",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "leads/leads-post.json": {
+    "hash": "6a85446a83c5b05a881b7ab6369efe321d47c08891b9e714212ff339ff5c06e3",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "leads/route-unowned-post.json": {
+    "hash": "2df6126867174ab5a05647bf814cbc61b059e62c452fbd7f0e2223cca204f53e",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "public/leads-post.json": {
+    "hash": "da80a6c5a7e01227a03ac8e1c89d058b68282821941e174620f1745c9264a75b",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "routing-rules/id-delete.json": {
+    "hash": "24904bdc8dcffadf80ef2f0fc9db8f99cb7f2cd26e9f48eb02bc492f34899f6e",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "routing-rules/id-patch.json": {
+    "hash": "ab79fac2fc5fce1d20230d4d492e9749f5a94533c3692a8f38f4fad8c29d8437",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "routing-rules/routing-rules-get.json": {
+    "hash": "5fabeaa9cee6fc8497fe7f2a70eb483f67ff4a5264af8dcfac4862bc49591060",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "routing-rules/routing-rules-post.json": {
+    "hash": "b9991dad8edc2e0e68f7a5b40ad8873c44d5fb515fa0c572cab29b6d065498a9",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "sla/alerts-acknowledge-post.json": {
+    "hash": "5767fb75e477d0be5d3ea565967f496f9cabfb7c3ef0b0e619643a0c02e9df36",
+    "status": "findings",
+    "findingsCount": 3,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "sla/alerts-dispatch-post.json": {
+    "hash": "8e2cf1eec7260f3becf0c9dddc476455ebfb1c692454ab8c5565c04aa0ea1ea0",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "sla/alerts-get.json": {
+    "hash": "739639041c70d3f5df3aabcc91f00d16ab4b8e5714aaf9ee32b8dd25747c3530",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "sla/evaluate-post.json": {
+    "hash": "c1a2d84fe00ca39fbf98377395a6d43e96964f023f0b72fa3645e284432ac99d",
+    "status": "findings",
+    "findingsCount": 3,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "sla/policies-get.json": {
+    "hash": "3c331ed3837424339d680ed342877f6be313b100f21b88eb21b15d22d99d286e",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "sla/policies-id-delete.json": {
+    "hash": "3cc9e349b8bb0bcd71b58674ec9ecb85eb039e5aab1b731121a11a5c25d96a40",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "sla/policies-id-patch.json": {
+    "hash": "624e557cabfb92aed49165524d34f55e23d77f8b5ab799ad18729b840548511b",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "sla/policies-post.json": {
+    "hash": "a4100c6e012d8efe50e612253f55d2718a08f47d7e1e35d020ebc4f4670037ed",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "sla/status-get.json": {
+    "hash": "76529014109a8026db9810d073f76ee09b764dcdc9667082a6b224ff8a4a9ed1",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "users/users-get.json": {
+    "hash": "2164543561701fa019e2b161beef6c581d0f5ada53302057349dc6682cc87616",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-07-30T18:24:36"
+  },
+  "analytics/overview-get.json": {
+    "hash": "352b0dfa3b911ea46b133f224a0d90fdbf21871002d52fef8c07992520b04906",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-01T04:35:46"
+  }
+}

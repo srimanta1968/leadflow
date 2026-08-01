@@ -1,0 +1,67 @@
+{
+  "name": "GET /api/auth/me - Read the caller's own user projection",
+  "description": "Returns the public projection of the account that owns the presented session token - never the password hash. Protected by the authenticate guard, so the Authorization header is required even though this is a GET. Used by the client to hydrate the session on page load and to decide which navigation entries a persona may see. QA: depends on login, whose captured token is presented here.",
+  "endpoint": "/api/auth/me",
+  "method": "GET",
+  "taskId": "8ac5c78e-b994-4513-8da6-2cbd637b287f",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 3,
+  "expectedStatus": 200,
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "role": ["user", "admin"]
+  },
+  "testCases": [
+    {
+      "name": "Read the authenticated user",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "user": {
+            "is_active": true
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject a request with no Authorization header",
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "Reject a malformed session token",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails signature verification, has expired, or is missing required claims"
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "the token verifies but the user it names no longer exists"
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "name": "POST /api/auth/login - Exchange credentials for a session token",
+  "description": "Validates credentials against the local identity projection and returns a signed LeadFlow session token, stamping last_login. Exchanging credentials is an action rather than a resource creation, so it answers 200 rather than 201. Unauthenticated by design - it is part of the auth bootstrap. A missing account and a wrong password both answer INVALID_CREDENTIALS, and the handler compares against a dummy hash when the account is unknown so response timing cannot be used to enumerate registered emails. QA: depends on register, which creates the account; the email resolves from register's captured auth.register.response.data.user.email key. MUST-46 note: the password resolves from the test_password config variable deliberately - a password appears in no response body, so no endpoint can produce it and no captureResponse can capture it. That is the genuine producer-less case the rule permits, and a password is not an entity id, so the VAR-FOR-FK antipattern does not apply. The variable is declared per environment so a dev secret is never carried into staging or production.",
+  "endpoint": "/api/auth/login",
+  "method": "POST",
+  "taskId": "8ac5c78e-b994-4513-8da6-2cbd637b287f",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": false,
+  "testability": "auto",
+  "priority": 2,
+  "expectedStatus": 200,
+  "dependsOn": ["POST /api/auth/register"],
+  "fieldEnums": {
+    "role": ["user", "admin"]
+  },
+  "captureResponse": {
+    "auth.login.response.data.token": "data.token",
+    "auth.login.response.data.user.id": "data.user.id"
+  },
+  "testCases": [
+    {
+      "name": "Log in with the registered account",
+      "payload": {
+        "email": "{{cache:auth.register.response.data.user.email}}",
+        "password": "{{var:test_password}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "user": {
+            "is_active": true
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject a wrong password",
+      "payload": {
+        "email": "{{cache:auth.register.response.data.user.email}}",
+        "password": "{{static:definitely-not-the-password}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "INVALID_CREDENTIALS"
+      }
+    },
+    {
+      "name": "Reject a missing password",
+      "payload": {
+        "email": "{{cache:auth.register.response.data.user.email}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "email or password is missing or blank"
+    },
+    {
+      "code": "INVALID_CREDENTIALS",
+      "status": 401,
+      "when": "no account holds that email, or the password does not match"
+    },
+    {
+      "code": "ACCOUNT_INACTIVE",
+      "status": 403,
+      "when": "the credentials are correct but the account has been deactivated"
+    }
+  ]
+}

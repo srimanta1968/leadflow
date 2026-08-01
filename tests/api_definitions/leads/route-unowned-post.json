@@ -1,0 +1,56 @@
+{
+  "name": "POST /api/leads/route-unowned - Zero-orphan sweep over unowned leads",
+  "description": "Routes every lead that currently has no owner, oldest first, and reports how many were routed and which failed. A bulk command rather than a resource creation, so it answers 200. This is the zero-orphan BACKSTOP, not the normal path: leads are routed automatically at intake by the capture endpoints, and this exists for leads that arrived while routing was impossible - no active user, or the ProjexCloud gateway down - so a transient outage does not leave a permanent hole in the queue. Failures are COLLECTED rather than thrown: one unroutable lead must not stop the rest of the queue being cleared, so the response can report 200 with a non-empty failures array. limit is clamped to 1..500 and defaults to 100. Route registration note: this literal path is mounted BEFORE /:id/route so Express does not treat 'route-unowned' as a lead id. The sweep creates no addressable resource, so captureResponse records the routed COUNT rather than an id - that is the value a dependent test or an alerting job branches on. routing_method is documented in fieldEnums because the sweep is what writes that column on each lead it places. QA: depends on register, login and at least one capture.",
+  "endpoint": "/api/leads/route-unowned",
+  "method": "POST",
+  "taskId": "4e83aaa0-e638-4a42-afbc-acc68d9e548a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 32,
+  "expectedStatus": 200,
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/leads"],
+  "fieldEnums": {
+    "routing_method": ["sdk_assignment", "rule_match", "round_robin", "manual"]
+  },
+  "captureResponse": {
+    "leads.route-unowned.response.data.routed": "data.routed"
+  },
+  "testCases": [
+    {
+      "name": "Sweep unowned leads",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "limit": 200
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Reject an unauthenticated sweep",
+      "payload": {
+        "limit": 200
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "version": "3.0",
+  "base_url": "http://host.docker.internal:5173",
+  "last_updated": "2026-07-31T05:33:18.725852",
+  "pages": {
+    "http://host.docker.internal:5173/app": {
+      "url": "http://host.docker.internal:5173/app",
+      "last_visited": "2026-07-31T05:33:12.356172",
+      "visit_count": 3,
+      "actions": {
+        "click:I click \"Sign in\"": {
+          "action_type": "click",
+          "action_label": "I click \"Sign in\"",
+          "triggered_at": "2026-07-31T05:32:34.987611",
+          "containers": {
+            "div#root": {
+              "container_selector": "div#root",
+              "container_hash": "PGRpdiBpZD0icm9vdCI+",
+              "metadata": {
+                "id": "root",
+                "classes": null,
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 0,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 1,
+                "total": 0
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:33:12.356186",
+              "usage_count": 3,
+              "elements": [],
+              "buttons": []
+            }
+          },
+          "last_triggered": "2026-07-31T05:33:12.356182"
+        }
+      }
+    },
+    "http://host.docker.internal:5173/app/analytics": {
+      "url": "http://host.docker.internal:5173/app/analytics",
+      "last_visited": "2026-07-31T05:33:18.094237",
+      "visit_count": 4,
+      "actions": {
+        "click:I click \"Analytics\"": {
+          "action_type": "click",
+          "action_label": "I click \"Analytics\"",
+          "triggered_at": "2026-07-31T05:32:37.284244",
+          "containers": {
+            "div#root": {
+              "container_selector": "div#root",
+              "container_hash": "PGRpdiBpZD0icm9vdCI+",
+              "metadata": {
+                "id": "root",
+                "classes": null,
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 2,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 1,
+                "total": 2
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:33:14.791178",
+              "usage_count": 3,
+              "elements": [],
+              "buttons": []
+            }
+          },
+          "last_triggered": "2026-07-31T05:33:14.791172"
+        },
+        "click:I click \"Clear filters\"": {
+          "action_type": "click",
+          "action_label": "I click \"Clear filters\"",
+          "triggered_at": "2026-07-31T05:33:18.094246",
+          "containers": {
+            "div#root": {
+              "container_selector": "div#root",
+              "container_hash": "PGRpdiBpZD0icm9vdCI+",
+              "metadata": {
+                "id": "root",
+                "classes": null,
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 2,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 2,
+                "total": 2
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:33:18.094250",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            }
+          }
+        }
+      }
+    }
+  },
+  "selector_rankings": {},
+  "statistics": {
+    "total_pages": 2,
+    "total_actions": 3,
+    "total_containers": 3,
+    "total_extracted_containers": 0,
+    "total_elements": 0,
+    "total_buttons": 0,
+    "extraction_rate": 0.0
+  }
+}

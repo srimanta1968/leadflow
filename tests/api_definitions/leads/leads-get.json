@@ -1,0 +1,76 @@
+{
+  "name": "GET /api/leads - List captured leads",
+  "description": "Returns captured leads newest-first from the local projection, with a total count for pagination. Served from the projection rather than fanning out to ProjexCloud so the Capture Inbox and dashboards do not issue one SDK read per row. limit is clamped to 1..200 and defaults to 50; offset defaults to 0. Protected by the authenticate guard - the Authorization header is required on this GET. QA: depends on register, login and at least one capture so the list is non-empty. The lead projection returned by this endpoint now also carries ownership and clock state - owner_user_id, owner_name (joined from users so the inbox issues no per-row lookup), assigned_at, sla_due_at, routing_method, sla_breached and first_response_at. All are null until the lead is routed via POST /api/leads/:id/route.",
+  "endpoint": "/api/leads",
+  "method": "GET",
+  "taskId": "8ac5c78e-b994-4513-8da6-2cbd637b287f",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 11,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads"
+  ],
+  "fieldEnums": {
+    "source": [
+      "web_form",
+      "landing_page",
+      "facebook",
+      "instagram",
+      "linkedin",
+      "tiktok",
+      "google_ads",
+      "live_chat",
+      "phone",
+      "email",
+      "referral",
+      "webhook",
+      "api",
+      "csv_import"
+    ],
+    "routing_method": [
+      "sdk_assignment",
+      "rule_match",
+      "round_robin",
+      "manual"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "List captured leads",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "limit": "25",
+        "offset": "0"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Reject an unauthenticated list",
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

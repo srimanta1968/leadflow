@@ -1,0 +1,70 @@
+[
+  {
+    "timestamp": "2026-07-30T21:31:01.752761",
+    "iteration": 1,
+    "llmCalls": 2,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 2,
+    "patternsCount": 1,
+    "scenarios": [
+      {
+        "name": "SLAs can be configured for different lead types",
+        "status": "failed",
+        "totalCommands": 14,
+        "successfulCommands": 12,
+        "failedAt": 13
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-07-30T21:49:09.235623",
+    "iteration": 2,
+    "llmCalls": 2,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 2,
+    "patternsCount": 1,
+    "scenarios": [
+      {
+        "name": "SLAs can be configured for different lead types",
+        "status": "failed",
+        "totalCommands": 14,
+        "successfulCommands": 11,
+        "failedAt": 12
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-07-31T05:16:44.980168",
+    "iteration": 3,
+    "llmCalls": 2,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 2,
+    "patternsCount": 1,
+    "scenarios": [
+      {
+        "name": "SLAs can be configured for different lead types",
+        "status": "failed",
+        "totalCommands": 14,
+        "successfulCommands": 11,
+        "failedAt": 12
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-07-31T05:37:51.268348",
+    "iteration": 4,
+    "llmCalls": 2,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 2,
+    "patternsCount": 1,
+    "scenarios": [
+      {
+        "name": "SLAs can be configured for different lead types",
+        "status": "failed",
+        "totalCommands": 14,
+        "successfulCommands": 12,
+        "failedAt": 13
+      }
+    ]
+  }
+]

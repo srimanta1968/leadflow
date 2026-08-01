@@ -1,0 +1,217 @@
+{
+  "version": "3.0",
+  "base_url": "http://host.docker.internal:5173",
+  "last_updated": "2026-07-31T05:36:31.268452",
+  "pages": {
+    "http://host.docker.internal:5173/demo": {
+      "url": "http://host.docker.internal:5173/demo",
+      "last_visited": "2026-07-31T05:35:11.376462",
+      "visit_count": 8,
+      "actions": {
+        "navigate": {
+          "action_type": "navigate",
+          "action_label": "I navigate to \"/demo\"",
+          "triggered_at": "2026-07-31T05:33:21.683313",
+          "containers": {
+            "form.lf-panel-raised.p-7": {
+              "container_selector": "form.lf-panel-raised.p-7",
+              "container_hash": "PGZvcm0gY2xhc3M9Imxm",
+              "metadata": {
+                "id": null,
+                "name": null,
+                "classes": "lf-panel-raised p-7 sm:p-8",
+                "role": null,
+                "action": null,
+                "method": null
+              },
+              "element_counts": {
+                "inputs": 5,
+                "selects": 0,
+                "textareas": 1,
+                "buttons": 1,
+                "total": 6
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:35:11.376476",
+              "usage_count": 5,
+              "elements": [],
+              "buttons": []
+            }
+          },
+          "last_triggered": "2026-07-31T05:35:11.376472"
+        },
+        "click:I click \"Request the session\"": {
+          "action_type": "click",
+          "action_label": "I click \"Request the session\"",
+          "triggered_at": "2026-07-31T05:33:50.957387",
+          "containers": {
+            "form.lf-panel-raised.p-7": {
+              "container_selector": "form.lf-panel-raised.p-7",
+              "container_hash": "PGZvcm0gY2xhc3M9Imxm",
+              "metadata": {
+                "id": null,
+                "name": null,
+                "classes": "lf-panel-raised p-7 sm:p-8",
+                "role": null,
+                "action": null,
+                "method": null
+              },
+              "element_counts": {
+                "inputs": 5,
+                "selects": 0,
+                "textareas": 1,
+                "buttons": 1,
+                "total": 6
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:34:45.938813",
+              "usage_count": 3,
+              "elements": [],
+              "buttons": []
+            }
+          },
+          "last_triggered": "2026-07-31T05:34:45.938810"
+        }
+      }
+    },
+    "http://host.docker.internal:5173/app": {
+      "url": "http://host.docker.internal:5173/app",
+      "last_visited": "2026-07-31T05:35:56.530836",
+      "visit_count": 2,
+      "actions": {
+        "click:I click \"Sign in\"": {
+          "action_type": "click",
+          "action_label": "I click \"Sign in\"",
+          "triggered_at": "2026-07-31T05:35:40.568698",
+          "containers": {
+            "div#root": {
+              "container_selector": "div#root",
+              "container_hash": "PGRpdiBpZD0icm9vdCI+",
+              "metadata": {
+                "id": "root",
+                "classes": null,
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 0,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 1,
+                "total": 0
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:35:56.530853",
+              "usage_count": 2,
+              "elements": [],
+              "buttons": []
+            }
+          },
+          "last_triggered": "2026-07-31T05:35:56.530849"
+        }
+      }
+    },
+    "http://host.docker.internal:5173/app/capture": {
+      "url": "http://host.docker.internal:5173/app/capture",
+      "last_visited": "2026-07-31T05:36:30.798506",
+      "visit_count": 2,
+      "actions": {
+        "click:I click \"Quick Capture\"": {
+          "action_type": "click",
+          "action_label": "I click \"Quick Capture\"",
+          "triggered_at": "2026-07-31T05:35:58.252909",
+          "containers": {
+            "form.lf-panel.p-7": {
+              "container_selector": "form.lf-panel.p-7",
+              "container_hash": "PGZvcm0gY2xhc3M9Imxm",
+              "metadata": {
+                "id": null,
+                "name": null,
+                "classes": "lf-panel p-7 sm:p-8",
+                "role": null,
+                "action": null,
+                "method": null
+              },
+              "element_counts": {
+                "inputs": 5,
+                "selects": 2,
+                "textareas": 1,
+                "buttons": 1,
+                "total": 8
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:35:58.252914",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            },
+            "div.border-t.border-line": {
+              "container_selector": "div.border-t.border-line",
+              "container_hash": "PGRpdiBjbGFzcz0iYm9y",
+              "metadata": {
+                "id": null,
+                "classes": "border-t border-line p-3",
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 0,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 1,
+                "total": 0
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:35:58.252916",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            }
+          }
+        },
+        "click:I click \"Capture lead\"": {
+          "action_type": "click",
+          "action_label": "I click \"Capture lead\"",
+          "triggered_at": "2026-07-31T05:36:30.798516",
+          "containers": {
+            "div#root": {
+              "container_selector": "div#root",
+              "container_hash": "PGRpdiBpZD0icm9vdCI+",
+              "metadata": {
+                "id": "root",
+                "classes": null,
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 0,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 2,
+                "total": 0
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-07-31T05:36:30.798520",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            }
+          }
+        }
+      }
+    }
+  },
+  "selector_rankings": {},
+  "statistics": {
+    "total_pages": 3,
+    "total_actions": 5,
+    "total_containers": 6,
+    "total_extracted_containers": 0,
+    "total_elements": 0,
+    "total_buttons": 0,
+    "extraction_rate": 0.0
+  }
+}

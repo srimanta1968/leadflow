@@ -1,0 +1,111 @@
+{
+  "_status": "Dev URLs discovered from client/vite.config.ts (server.port 5173, /api proxied to :3010) and server/.env.example (PORT=3010). QA, staging and production hostnames still NEED INPUT.",
+  "activeEnvironment": "dev",
+  "variables": {
+    "_note": "Global variables are for values that are genuinely the SAME in every environment. Anything secret-shaped belongs in environments[<env>].variables so a dev secret can never be carried into staging or production (MUST-46)."
+  },
+  "environments": {
+    "dev": {
+      "_status": "discovered from client/vite.config.ts server.port=5173 and server/.env.example PORT=3010. baseUrl is the UI origin (5173) because the UI runner drives a browser against it; apiUrl is the Express origin (3010) that the api_definition runner calls. Pointing baseUrl at 3010 makes every UI step land on the JSON API and 404.",
+      "baseUrl": "http://localhost:5173",
+      "apiUrl": "http://localhost:3010/api",
+      "variables": {
+        "test_password": "LeadFlow!Test2026",
+        "_test_password_note": "Shared by the register and login api_definitions. A password is never returned in a response, so login cannot capture it from register and both must reference this one value. Declared per environment, not globally: a password is secret-shaped, and a global would apply this dev value to every environment."
+      },
+      "portals": {
+        "leadflow": {
+          "url": "http://localhost:5173",
+          "authRealm": "leadflow"
+        }
+      }
+    },
+    "qa": {
+      "_status": "NEEDS INPUT: set the QA hostname and a QA test_password once the environment exists. Do not copy dev values.",
+      "baseUrl": "<CHANGE_ME>",
+      "apiUrl": "<CHANGE_ME>",
+      "variables": {
+        "test_password": "<CHANGE_ME>"
+      },
+      "portals": {
+        "leadflow": {
+          "url": "<CHANGE_ME>",
+          "authRealm": "leadflow"
+        }
+      }
+    },
+    "staging": {
+      "_status": "NEEDS INPUT: set the staging hostname and a staging test_password once the environment exists. Do not copy dev values.",
+      "baseUrl": "<CHANGE_ME>",
+      "apiUrl": "<CHANGE_ME>",
+      "variables": {
+        "test_password": "<CHANGE_ME>"
+      },
+      "portals": {
+        "leadflow": {
+          "url": "<CHANGE_ME>",
+          "authRealm": "leadflow"
+        }
+      }
+    },
+    "production": {
+      "_status": "NEEDS INPUT: set at go-live. Never copy dev values here. A production test_password must be provisioned out of band, never committed.",
+      "baseUrl": "<CHANGE_ME>",
+      "apiUrl": "<CHANGE_ME>",
+      "variables": {
+        "test_password": "<CHANGE_ME>"
+      },
+      "portals": {
+        "leadflow": {
+          "url": "<CHANGE_ME>",
+          "authRealm": "leadflow"
+        }
+      }
+    },
+    "development": {
+      "_status": "Written by mcp-server/run-all-tests.sh port auto-detection, which always targets the key 'development' regardless of activeEnvironment, and which the UI runner then resolves against. It therefore needs the SAME portal names and variables as 'dev' (MUST-57) or every @portal:leadflow scenario aborts with 'portal not defined'. Same local hosts as dev on purpose - both describe this machine.",
+      "baseUrl": "http://localhost:5173",
+      "apiUrl": "http://localhost:3010",
+      "variables": {
+        "test_password": "LeadFlow!Test2026",
+        "_test_password_note": "Mirrors environments.dev.variables. Both keys describe this same local machine, so the dev password is correct here; it is still declared per environment rather than globally so it can never reach qa, staging or production."
+      },
+      "portals": {
+        "leadflow": {
+          "url": "http://localhost:5173",
+          "authRealm": "leadflow"
+        }
+      }
+    }
+  },
+  "authRealms": {
+    "leadflow": {
+      "_status": "Local auth adapter. ProjexCloud becomes the identity authority when the identity spine lands; the realm name, the routes and the token shape do not change. Field names read from client/src/pages/auth/SignIn.tsx and SignUp.tsx.",
+      "loginUrl": "/signin",
+      "registerUrl": "/signup",
+      "emailField": "email",
+      "passwordField": "password",
+      "canSelfRegister": true,
+      "selfRegisterPortal": "leadflow",
+      "roles": [
+        "user",
+        "admin"
+      ]
+    }
+  },
+  "loginConfig": {
+    "loginUrl": "/signin",
+    "emailField": "email",
+    "passwordField": "password",
+    "submitButton": "Sign in",
+    "successIndicator": "Capture Inbox"
+  },
+  "testCredentials": {
+    "default": {
+      "_status": "Dev-only account for the BDD runner. Left empty previously on the assumption that canSelfRegister:true would make the runner self-register and cache the result — it does not for the UI runner, which substitutes ${login:email}/${login:password} straight from here. Empty strings therefore typed nothing into the sign-in form and EVERY auth-gated scenario failed with 'Password is required.' rather than a LOGIN_FAILED that would have named the cause. The Dev MCP registers this account automatically if it is absent from the database, so a fresh environment needs no manual step.",
+      "email": "qa.operator@leadflow.test",
+      "password": "LeadFlow!Test2026",
+      "_scope": "dev only. The .test TLD is reserved by RFC 2606 and can never be a real mailbox, so this address cannot receive mail or collide with a customer. Do NOT copy these values into qa/staging/production — provision those out of band and pass them with run-all-tests.sh --login-email/--login-password."
+    }
+  }
+}
