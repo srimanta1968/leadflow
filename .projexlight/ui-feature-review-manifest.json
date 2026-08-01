@@ -1,123 +1,141 @@
 {
-  "_features_hash": "395e68b4a84da56385298e98f56eebd7fe080cd8a8473f4155b67ba6ed45dc33",
+  "_features_hash": "24356fb4b9795e4ed73d45529e570b6aaf31b480629c56ef1c14b0ceb530fd3e",
   "client/src/pages/NotFound.tsx": {
     "hash": "407f9357cb8fef96e7e7dec0fe87d561d6c445d028690a66d42c8f5f7586888a",
     "screen": "NotFound",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:24"
+    "verifiedAt": "2026-08-01T04:50:08"
+  },
+  "client/src/pages/app/Analytics.tsx": {
+    "hash": "8ffa142d1db4e648690aaa2fed53fe438d51ee9f11be45794971e30a95b5aadd",
+    "screen": "Analytics",
+    "status": "covered",
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/app/CaptureInbox.tsx": {
     "hash": "62975a01d14c810574f34d29dd341d7631532317bae38f2845a74b21d1a06a90",
     "screen": "CaptureInbox",
     "status": "covered",
-    "verifiedAt": "2026-07-30T18:15:23"
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/app/QuickCapture.tsx": {
     "hash": "bc8941c7d221c4f92fb1b98fbfae766f489d3191f3f3055e7a05d87cf45ab673",
     "screen": "QuickCapture",
     "status": "covered",
-    "verifiedAt": "2026-07-30T18:15:23"
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/app/RoutingRules.tsx": {
     "hash": "b437279a82da4719ee4b5dd23f1d0c007878cbe2bbd1c3e3f152acec281f4d17",
     "screen": "RoutingRules",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:24"
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/app/SlaSettings.tsx": {
     "hash": "dd1019ad4f957ad0b6070b0f37c741ab34d3c96c56516000abd6c25f4441fe44",
     "screen": "SlaSettings",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:24"
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/auth/SignIn.tsx": {
     "hash": "1264034e472fc35dcb1bfb913fb935dc8b03ee3b9eeb8f2fddfbfb42693414e9",
     "screen": "SignIn",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:24"
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/auth/SignUp.tsx": {
     "hash": "4efa138de60b50b887d4c97305ae4f57d6f61d2636de741a7f4a7b0ca0262a59",
     "screen": "SignUp",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:24"
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/marketing/Demo.tsx": {
     "hash": "9ffdcbd6d062ba04a7dc6dc907adc24f102dd74dd1cfd36d779e8dd7c5b54e84",
     "screen": "Demo",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:24"
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/marketing/Home.tsx": {
     "hash": "cf7b3f509b937edb8827d8828a6a59c4d35eaa2c880dd7863f86c26434f14115",
     "screen": "Home",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:24"
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/marketing/Pricing.tsx": {
     "hash": "d61524b17eee84578f85728572395a518f0f80d524dc1659cfaf188b9460de35",
     "screen": "Pricing",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:24"
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/marketing/Product.tsx": {
     "hash": "2925ed73f3d82ac8af26326875f68377df638e7cad51f599ba91bde54fc86501",
     "screen": "Product",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:24"
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/marketing/Security.tsx": {
     "hash": "aec23b383cf9d3758f096d4ae773e8c10803acab3256f886668c22f6b4b28fe8",
     "screen": "Security",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:24"
+    "verifiedAt": "2026-08-01T04:50:08"
   },
   "client/src/pages/marketing/Solutions.tsx": {
     "hash": "b65de37eb4634ccb694cbc52513f65ba572e421ae6b786b1bf71a64d8b3e2157",
     "screen": "Solutions",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:25"
+    "verifiedAt": "2026-08-01T04:50:09"
+  },
+  "client/src/utils/analyticsView.ts": {
+    "hash": "a54c86ab53489e159b3b53b1cf6079d284b9b715fd2c8b43840bd6ce6db20bed",
+    "screen": "analytics",
+    "status": "covered",
+    "verifiedAt": "2026-08-01T04:50:09"
+  },
+  "server/src/routes/analyticsRoutes.ts": {
+    "hash": "641a7e7aa1741a5b686eda96c2745ec6b03a2f4471e3dba80681f4468b2caab2",
+    "screen": "analyticsRoutes",
+    "status": "uncovered",
+    "verifiedAt": "2026-08-01T04:50:09"
   },
   "server/src/routes/authRoutes.ts": {
     "hash": "a5a79525dfe13a0164a417e3449c2fe079cd807dba3ac7bd3c1ce96c23ac2871",
     "screen": "authRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:25"
+    "verifiedAt": "2026-08-01T04:50:09"
   },
   "server/src/routes/eventRoutes.ts": {
     "hash": "75814a494956922720f8c38befdc715a50066b3c7cc7b67ab5e3baeddb367b72",
     "screen": "eventRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:25"
+    "verifiedAt": "2026-08-01T04:50:09"
   },
   "server/src/routes/leadRoutes.ts": {
     "hash": "e2101c0562878c8f1d8e41b90a22dd4563e25bf2fa7f10f08a83bba58735b636",
     "screen": "leadRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:25"
+    "verifiedAt": "2026-08-01T04:50:09"
   },
   "server/src/routes/publicLeadRoutes.ts": {
     "hash": "da0b21e7ea9b51a7bfce03b63a9d3b9e71c7636da6820f12a17f6d74ed0daa6b",
     "screen": "publicLeadRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:25"
+    "verifiedAt": "2026-08-01T04:50:09"
   },
   "server/src/routes/routingRoutes.ts": {
     "hash": "9e2cb176a53c75c4aa90ed085ad2149a72ffd1545573a30dce6500d49cfe4294",
     "screen": "routingRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:25"
+    "verifiedAt": "2026-08-01T04:50:09"
   },
   "server/src/routes/slaRoutes.ts": {
     "hash": "b0d1c04d6cedbe828c7cfc8dc008f451ab1a8cfa6abbbafd53b6a195263f6d1d",
     "screen": "slaRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:25"
+    "verifiedAt": "2026-08-01T04:50:09"
   },
   "server/src/routes/userRoutes.ts": {
     "hash": "ab7fd0295b2515466305fcaf5fa35a3d45b8475ab2169c4c49e56e379ec352b7",
     "screen": "userRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-07-30T18:29:25"
+    "verifiedAt": "2026-08-01T04:50:09"
   }
 }

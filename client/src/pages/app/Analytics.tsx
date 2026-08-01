@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AnalyticsFilters,
   AnalyticsOverview,
@@ -11,9 +11,27 @@ import { useToast } from '../../components/feedback/ToastProvider';
 import { failureFor } from '../../content/messages';
 import { SOURCE_GROUPS, SOURCE_OPTIONS } from '../../content/leadFields';
 import { subscribeToEvents } from '../../services/eventStream';
+import {
+  AnalyticsPreferences,
+  SourceSortKey,
+  ariaSortFor,
+  clearPreferences,
+  defaultPreferences,
+  loadPreferences,
+  nextSourceSort,
+  orderDailyRows,
+  savePreferences,
+  sortSourceRows,
+  withWindow,
+} from '../../utils/analyticsView';
 
 /** Human labels for the source channel enum, from the shared vocabulary. */
 const SOURCE_LABELS = new Map(SOURCE_OPTIONS.map((option) => [option.value as string, option.label]));
+
+/** The text rendered for a channel, including the unattributed bucket. */
+function labelForSource(source: LeadSource | null): string {
+  return source ? (SOURCE_LABELS.get(source) ?? source) : 'Unattributed';
+}
 
 /** Preset reporting windows, in days. */
 const RANGE_PRESETS: { label: string; days: number }[] = [
@@ -22,13 +40,14 @@ const RANGE_PRESETS: { label: string; days: number }[] = [
   { label: '90 days', days: 90 },
 ];
 
-const MS_PER_DAY = 86_400_000;
-
-/** `YYYY-MM-DD` for a date input, in the viewer's own timezone. */
-function toDateInput(date: Date): string {
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
-}
+/** The by-source columns, in display order, with the ones that can be sorted. */
+const SOURCE_COLUMNS: { key: SourceSortKey; label: string; numeric: boolean }[] = [
+  { key: 'source', label: 'Source', numeric: false },
+  { key: 'captured', label: 'Captured', numeric: true },
+  { key: 'responded', label: 'Responded', numeric: true },
+  { key: 'breached', label: 'Breached', numeric: true },
+  { key: 'average_response_seconds', label: 'Avg response', numeric: true },
+];
 
 /**
  * Render a rate as a percentage, or an em dash when it is null.
@@ -131,12 +150,17 @@ export default function Analytics() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [live, setLive] = useState(false);
 
-  // Filters are held as strings because that is what the form controls produce;
-  // they are only interpreted by the server.
-  const [from, setFrom] = useState(() => toDateInput(new Date(Date.now() - 30 * MS_PER_DAY)));
-  const [to, setTo] = useState(() => toDateInput(new Date(Date.now() + MS_PER_DAY)));
-  const [source, setSource] = useState<string>('');
-  const [ownerUserId, setOwnerUserId] = useState<string>('');
+  // Filters, sort and daily order are one object because they are one thing:
+  // the view this operator works in. Held as strings because that is what the
+  // form controls produce, and restored from the last visit so somebody who
+  // works a single channel is not re-picking it every morning.
+  const [view, setView] = useState<AnalyticsPreferences>(() => loadPreferences());
+
+  const { from, to, source, owner_user_id: ownerUserId, sourceSort, dailyOrder } = view;
+
+  useEffect(() => {
+    savePreferences(view);
+  }, [view]);
 
   const load = useCallback(async (): Promise<void> => {
     setLoadError(null);
@@ -161,6 +185,9 @@ export default function Analytics() {
     }
   }, [from, to, source, ownerUserId]);
 
+  // Only the four SERVER filters are in the dependency list. Sorting and daily
+  // order are applied to what has already been fetched, so changing them must
+  // not spend a round trip re-asking for the same aggregate.
   useEffect(() => {
     void load();
   }, [load]);
@@ -210,20 +237,37 @@ export default function Analytics() {
   }, [load]);
 
   function applyPreset(days: number): void {
-    setFrom(toDateInput(new Date(Date.now() - days * MS_PER_DAY)));
-    setTo(toDateInput(new Date(Date.now() + MS_PER_DAY)));
+    setView((current) => withWindow(current, days));
   }
 
   function resetFilters(): void {
-    applyPreset(30);
-    setSource('');
-    setOwnerUserId('');
+    // The stored copy is removed as well as the state reset. Leaving it behind
+    // would mean "Clear filters" cleared the screen and the next visit brought
+    // the old selection straight back.
+    clearPreferences();
+    setView(defaultPreferences());
     notify({ title: 'Filters cleared', tone: 'info' });
+  }
+
+  function sortBy(key: SourceSortKey): void {
+    setView((current) => ({ ...current, sourceSort: nextSourceSort(current.sourceSort, key) }));
   }
 
   const funnel = overview?.funnel;
   const maxSourceCaptured = Math.max(1, ...(overview?.by_source ?? []).map((row) => row.captured));
   const maxDailyCaptured = Math.max(1, ...(overview?.daily ?? []).map((row) => row.captured));
+
+  // Re-sorting only when the rollup or the choice changes: a push event that
+  // leaves the numbers alone should not rebuild these arrays and re-render the
+  // whole table.
+  const sortedSources = useMemo(
+    () => sortSourceRows(overview?.by_source ?? [], sourceSort, labelForSource),
+    [overview, sourceSort]
+  );
+  const orderedDaily = useMemo(
+    () => orderDailyRows(overview?.daily ?? [], dailyOrder),
+    [overview, dailyOrder]
+  );
 
   return (
     <div className="space-y-6">
@@ -269,7 +313,7 @@ export default function Analytics() {
               type="date"
               className="lf-input"
               value={from}
-              onChange={(event) => setFrom(event.target.value)}
+              onChange={(event) => setView((current) => ({ ...current, from: event.target.value }))}
             />
           </div>
 
@@ -283,7 +327,7 @@ export default function Analytics() {
               type="date"
               className="lf-input"
               value={to}
-              onChange={(event) => setTo(event.target.value)}
+              onChange={(event) => setView((current) => ({ ...current, to: event.target.value }))}
             />
           </div>
 
@@ -296,7 +340,9 @@ export default function Analytics() {
               name="source"
               className="lf-input"
               value={source}
-              onChange={(event) => setSource(event.target.value)}
+              onChange={(event) =>
+                setView((current) => ({ ...current, source: event.target.value }))
+              }
             >
               <option value="">All sources</option>
               {SOURCE_GROUPS.map((group) => (
@@ -320,7 +366,9 @@ export default function Analytics() {
               name="owner_user_id"
               className="lf-input"
               value={ownerUserId}
-              onChange={(event) => setOwnerUserId(event.target.value)}
+              onChange={(event) =>
+                setView((current) => ({ ...current, owner_user_id: event.target.value }))
+              }
             >
               <option value="">Everyone</option>
               {owners.map((owner) => (
@@ -430,39 +478,48 @@ export default function Analytics() {
           <section className="lf-panel p-5" aria-label="By source">
             <h2 className="lf-h2 text-base">By source</h2>
             <p className="mt-1 text-xs text-soft">
-              Where leads come from, and how well each channel is served.
+              Where leads come from, and how well each channel is served. Click a column to sort —
+              channels with nothing answered sit at the bottom either way.
             </p>
 
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-[36rem] text-sm">
                 <thead>
                   <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-soft">
-                    <th scope="col" className="pb-2 pr-4 font-semibold">
-                      Source
-                    </th>
-                    <th scope="col" className="pb-2 pr-4 font-semibold">
-                      Captured
-                    </th>
-                    <th scope="col" className="pb-2 pr-4 font-semibold">
-                      Responded
-                    </th>
-                    <th scope="col" className="pb-2 pr-4 font-semibold">
-                      Breached
-                    </th>
-                    <th scope="col" className="pb-2 font-semibold">
-                      Avg response
-                    </th>
+                    {SOURCE_COLUMNS.map((column) => (
+                      <th
+                        key={column.key}
+                        scope="col"
+                        className={`pb-2 font-semibold ${column.key === 'average_response_seconds' ? '' : 'pr-4'}`}
+                        aria-sort={ariaSortFor(sourceSort, column.key)}
+                      >
+                        {/* A real button, not a click handler on the cell: sorting
+                            has to be reachable by keyboard, and a header that
+                            only responds to a mouse locks a screen-reader user
+                            out of the ordering entirely. */}
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 uppercase tracking-wide hover:text-text"
+                          onClick={() => sortBy(column.key)}
+                        >
+                          {column.label}
+                          <span aria-hidden="true" className="text-[0.65rem]">
+                            {sourceSort.key === column.key
+                              ? sourceSort.direction === 'asc'
+                                ? '▲'
+                                : '▼'
+                              : '↕'}
+                          </span>
+                        </button>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {overview.by_source.map((row) => (
+                  {sortedSources.map((row) => (
                     <tr key={row.source ?? 'unattributed'} className="border-b border-line/50">
                       <td className="py-2.5 pr-4">
-                        <span className="font-medium text-text">
-                          {row.source
-                            ? (SOURCE_LABELS.get(row.source) ?? row.source)
-                            : 'Unattributed'}
-                        </span>
+                        <span className="font-medium text-text">{labelForSource(row.source)}</span>
                         <div className="mt-1.5 w-32">
                           <Bar value={row.captured} max={maxSourceCaptured} tone="bg-blue" />
                         </div>
@@ -481,13 +538,30 @@ export default function Analytics() {
           </section>
 
           <section className="lf-panel p-5" aria-label="Daily volume">
-            <h2 className="lf-h2 text-base">Daily volume</h2>
-            <p className="mt-1 text-xs text-soft">
-              Captured, answered and breached per day across the window.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="lf-h2 text-base">Daily volume</h2>
+                <p className="mt-1 text-xs text-soft">
+                  Captured, answered and breached per day across the window.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="lf-btn lf-btn-ghost text-xs"
+                onClick={() =>
+                  setView((current) => ({
+                    ...current,
+                    dailyOrder: current.dailyOrder === 'newest' ? 'oldest' : 'newest',
+                  }))
+                }
+              >
+                {dailyOrder === 'newest' ? 'Newest first' : 'Oldest first'}
+              </button>
+            </div>
 
             <ul className="mt-4 space-y-2">
-              {overview.daily.map((point) => (
+              {orderedDaily.map((point) => (
                 <li key={point.day} className="flex items-center gap-3 text-xs">
                   <span className="w-24 shrink-0 tabular-nums text-soft">{point.day}</span>
                   <span className="flex-1">
