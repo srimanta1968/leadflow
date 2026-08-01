@@ -24,6 +24,7 @@ import {
   sortSourceRows,
   withWindow,
 } from '../../utils/analyticsView';
+import { asDuration, asPercent } from '../../utils/analyticsFormat';
 
 /** Human labels for the source channel enum, from the shared vocabulary. */
 const SOURCE_LABELS = new Map(SOURCE_OPTIONS.map((option) => [option.value as string, option.label]));
@@ -48,38 +49,6 @@ const SOURCE_COLUMNS: { key: SourceSortKey; label: string; numeric: boolean }[] 
   { key: 'breached', label: 'Breached', numeric: true },
   { key: 'average_response_seconds', label: 'Avg response', numeric: true },
 ];
-
-/**
- * Render a rate as a percentage, or an em dash when it is null.
- *
- * The distinction is the whole point: the server returns null for "nothing to
- * measure" and a number for "measured". Rendering null as 0% would report a
- * total failure for a window in which nothing happened.
- */
-function asPercent(rate: number | null): string {
-  return rate === null ? '—' : `${(rate * 100).toFixed(1)}%`;
-}
-
-/**
- * Render a duration the way somebody reads it aloud.
- *
- * "838 seconds" is accurate and unreadable on a dashboard; "14m 0s" is the same
- * fact in the form a manager compares against a thirty-minute target.
- */
-function asDuration(seconds: number | null): string {
-  if (seconds === null) {
-    return '—';
-  }
-  if (seconds < 60) {
-    return `${seconds}s`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) {
-    return `${minutes}m ${seconds % 60}s`;
-  }
-  const hours = Math.floor(minutes / 60);
-  return `${hours}h ${minutes % 60}m`;
-}
 
 interface StatTileProps {
   label: string;
