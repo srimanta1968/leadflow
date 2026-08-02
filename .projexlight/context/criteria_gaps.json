@@ -1,29 +1,41 @@
 {
-  "generatedAt": "2026-08-02T21:54:42.110396Z",
-  "taskId": "85a9af87-156e-4d84-a828-288058c8431a",
+  "generatedAt": "2026-08-02T22:17:35.643854Z",
+  "taskId": "d9ded3c4-2510-4419-a582-d8684aada9d5",
   "gaps": [
     {
-      "criterionId": "85a9af87-156e-4d84-a828-288058c8431a#AC2",
-      "criterion": "Every client-gated action is independently enforced server side",
-      "verdict": "missing",
-      "gap": "THIS IS CLIENT-SIDE GATING ONLY, and it is the same gap already open as a5844a5e#AC2 - the two are one piece of work. The PDP exists and this task now consumes it, but no mutating route calls it, so every action the UI disables remains reachable by calling the API directly with a valid token: POST /api/leads, POST /api/leads/:id/route, /assign and /first-response, POST /api/routing-rules with its PATCH and DELETE, POST /api/sla/evaluate. A hidden or disabled button is not a security control and this task's own acceptance line says so. The criterion also asks for proof by a test that calls the endpoint DIRECTLY, which cannot be written until the enforcement exists. Closing it: apply a PDP check in the mutating handlers, refuse on deny, persist the decision reference with the write, and add a negative api_definition testCase per route asserting the refusal - at which point this criterion and a5844a5e#AC2 and #AC4 all close together. I flagged this before starting the task and was asked to proceed, so it is recorded rather than silently absorbed.",
+      "criterionId": "d9ded3c4-2510-4419-a582-d8684aada9d5#AC1",
+      "criterion": "Six purposes registered idempotently at boot",
+      "verdict": "partial",
+      "gap": "All six are defined, the provisioner runs on every boot beside the role provisioner, and idempotency is proven by a test that answers 409 to every call and asserts six already_present with zero created. Not yet true against a live tenant: no ProjexCloud gateway is reachable here, so provisionConsentPurposes returns six skipped results and sdk-consent holds nothing. One boot with the gateway configured closes it. Worth carrying with it: until the purposes exist upstream the capture path should REFUSE to record consent rather than record it against an unregistered purpose - a receipt naming a purpose nobody registered looks like evidence and cannot be honoured on revocation. That refusal belongs in the capture path and is not built.",
       "evidence": {
         "files": [
-          "server/src/platform/policy/policyEngine.ts",
-          "server/src/routes/leadRoutes.ts",
-          "client/src/platform/permissions/RequirePermission.tsx"
+          "server/src/config/consentPurposes.ts",
+          "server/src/platform/consent/purposeProvisioner.ts",
+          "server/tests/unit/auditVocabulary.test.ts"
         ]
       }
     },
     {
-      "criterionId": "85a9af87-156e-4d84-a828-288058c8431a#AC3",
-      "criterion": "Permission matrix screen renders from live policy data, not a static table",
+      "criterionId": "d9ded3c4-2510-4419-a582-d8684aada9d5#AC2",
+      "criterion": "Every audit entry carries actor, purpose, decision, evidence and causation",
       "verdict": "partial",
-      "gap": "The GROUPING is live and derived: toMatrixRows builds every row from PDP verdicts, splitting permits from approval-gated actions into their own columns, and an empty result renders an explicit loading-failure message rather than a blank grid an administrator would read as 'nobody can do anything'. What is missing is the screen that mounts it - PermissionMatrix is a component with no route, so nothing in the app navigates to it yet, and the role list it takes has no live source because sdk-persona GET /api/personas is not reachable here. Closing this needs an /app/admin/permissions route, the roles fetched rather than passed in, and a Gherkin scenario reaching the screen.",
+      "gap": "The HELPER enforces it and cannot be called otherwise: all seven fields - actor, personaRole, purpose, decisionRef, evidenceRef, causationId and idempotencyRef - are required on AuditEntry, so an entry missing any of them does not compile, and a test asserts the outbound wire shape so it cannot drift. What is not true is the word EVERY: no governed action calls appendAuditEntry yet. Capture, routing, assignment, first-response, import and identity actions all still complete without writing an entry, so the vocabulary and the helper exist ahead of their callers. This is the same shape as the PDP gap - the mechanism is built and unwired - and the two should be applied to the mutating handlers in one pass, since both want the same insertion point and the audit entry wants the PDP's decisionRef.",
       "evidence": {
         "files": [
-          "client/src/features/admin/PermissionMatrix.tsx",
-          "client/tests/unit/permissions.test.ts"
+          "server/src/platform/audit/auditLog.ts",
+          "server/tests/unit/auditVocabulary.test.ts"
+        ]
+      }
+    },
+    {
+      "criterionId": "d9ded3c4-2510-4419-a582-d8684aada9d5#AC3",
+      "criterion": "Nightly chain verification runs and opens an incident on mismatch",
+      "verdict": "partial",
+      "gap": "The VERIFICATION is built and tested in all three states: an intact chain, a mismatch that opens an sdk-incident carrying the detail, and - the one most likely to mislead - an unreachable verifier reported as NOT intact, so a silent outage cannot masquerade as a clean bill of health. What is missing is NIGHTLY. Nothing schedules verifyAuditChain: there is no cron entry, no scheduler and no worker, so it runs only if something calls it, which nothing does. Closing this needs a scheduled trigger and a record of the last run, so that a verification which stops happening is itself visible - a silent scheduler is the same failure as a silent outage.",
+      "evidence": {
+        "files": [
+          "server/src/platform/audit/auditLog.ts",
+          "server/tests/unit/auditVocabulary.test.ts"
         ]
       }
     }
