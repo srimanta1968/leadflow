@@ -1,29 +1,30 @@
 {
-  "generatedAt": "2026-08-02T21:19:17.596731Z",
-  "taskId": "2d5d24eb-f4d1-489d-8283-fd6c59100752",
+  "generatedAt": "2026-08-02T21:35:22.083564Z",
+  "taskId": "a5844a5e-6b4f-4dac-86ac-241f68c9d405",
   "gaps": [
     {
-      "criterionId": "2d5d24eb-f4d1-489d-8283-fd6c59100752#AC1",
-      "criterion": "All nine SOP roles provisioned as persona role facets and rebac templates",
-      "verdict": "partial",
-      "gap": "All nine are DEFINED and the provisioning call is real, built against the payload shape the SDK catalog publishes (app_id, name, permissions, tenant_id for POST /api/role-templates; role for POST /api/personas/:persona_id/role) rather than a guessed contract - the catalog resolves those endpoints now, which it did not earlier in this session. What has not happened is provisioning against a live tenant: no gateway is configured here, so provisionRoles returns nine skipped results and nothing reaches ProjexCloud. The create path is proven against a stubbed client - nine templates, one per role, each carrying only the unaided grants - but no template exists upstream. Closing this is running the boot once with PROJEXCLOUD_GATEWAY_URL set and confirming nine templates in the tenant.",
+      "criterionId": "a5844a5e-6b4f-4dac-86ac-241f68c9d405#AC2",
+      "criterion": "Every mutating endpoint records a PDP decision reference",
+      "verdict": "missing",
+      "gap": "THE DECISION POINT EXISTS; THE SWEEP DOES NOT. Every verdict carries a decisionRef and every evaluation a batch_ref, and the endpoint returns both, but not one of the existing mutating routes calls the PDP or records a reference yet. Concretely untouched: POST /api/leads, POST /api/leads/:id/route, /assign and /first-response, POST /api/routing-rules with its PATCH and DELETE, POST /api/sla/evaluate, and POST /api/public/leads. Nine or so handlers, each needing the same three steps - evaluate before the write, refuse on deny, persist the reference alongside the change. This was deliberately not attempted in the same task as the bundle: the two are separable, and a half-applied sweep is worse than none because some endpoints would appear governed while others silently are not, and nobody could tell which from the outside. Closing it needs a middleware or handler wrapper applied to every mutating route, a column or audit field holding the reference, and one test per route asserting the write is refused when the PDP denies.",
       "evidence": {
         "files": [
-          "server/src/config/roles.ts",
-          "server/src/platform/identity/roleProvisioner.ts",
-          "server/tests/unit/roleProvisioning.test.ts"
+          "server/src/platform/policy/policyEngine.ts",
+          "server/src/routes/leadRoutes.ts",
+          "server/src/routes/routingRoutes.ts"
         ]
       }
     },
     {
-      "criterionId": "2d5d24eb-f4d1-489d-8283-fd6c59100752#AC4",
-      "criterion": "Business-unit assignment works for the North Dallas Sales example",
+      "criterionId": "a5844a5e-6b4f-4dac-86ac-241f68c9d405#AC4",
+      "criterion": "Obligations returned by the PDP are surfaced to the caller",
       "verdict": "partial",
-      "gap": "assignPersonaToBusinessUnit is implemented and asserted for the named example - the test drives persona-42 into bu-north-dallas-sales and checks the sdk-persona call shape, an already-assigned persona is treated as success rather than failure so a re-run is safe, and a persona id containing a slash is URL-encoded rather than breaking the path. But it has never run against a real tenant, and the business unit itself does not exist: creating it needs sdk-tenant POST /api/tenants/:id/bus against a reachable gateway, and there is none. So the code path is proven and the actual North Dallas Sales unit is not provisioned. Closing this needs a live tenant: create the BU, assign a persona, and read back GET /api/personas/:persona_id/roles to confirm the scope took.",
+      "gap": "Obligations are modelled, attached and returned: the response carries an obligations array per decision, and tests assert the two that a role grant cannot express - own_record_only on lead.work_assigned, which is the whole meaning of SOP \u00a728's 'works ASSIGNED leads' and without which a Rep holding the grant could work every lead in the tenant, and second_party_approval on every approval-gated action. What is NOT built is anything that ENFORCES them. isUnconditionalPermit exists to make the distinction checkable, but no caller consults it, so today a permit carrying an unmet obligation is indistinguishable from a clean permit at the point of the write. That enforcement belongs with the AC2 sweep and should land in the same change, since an obligation nothing checks is documentation.",
       "evidence": {
         "files": [
-          "server/src/platform/identity/roleProvisioner.ts",
-          "server/tests/unit/roleProvisioning.test.ts"
+          "server/src/config/policies.ts",
+          "server/src/platform/policy/policyEngine.ts",
+          "server/tests/unit/policyEngine.test.ts"
         ]
       }
     }
