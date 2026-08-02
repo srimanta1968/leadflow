@@ -83,7 +83,7 @@ export async function provisionRoles(
     try {
       await SdkGatewayClient.call({
         sdk: 'sdk-rebac',
-        path: '/v1/role-templates',
+        path: '/api/role-templates',
         method: 'POST',
         // Keyed on the role, so a retry after a timeout cannot create a second
         // template for the same actor.
@@ -142,7 +142,7 @@ export async function assignPersonaToBusinessUnit(
   try {
     await SdkGatewayClient.call({
       sdk: 'sdk-persona',
-      path: `/v1/personas/${encodeURIComponent(personaId)}/bu`,
+      path: `/api/personas/${encodeURIComponent(personaId)}/bu`,
       method: 'POST',
       idempotencyKey: `persona-bu:${personaId}:${businessUnitId}`,
       body: { business_unit_id: businessUnitId, tenant_id: config.projexCloud.tenantId },
@@ -169,7 +169,7 @@ export async function assignPersonaRole(personaId: string, roleKey: string): Pro
   try {
     await SdkGatewayClient.call({
       sdk: 'sdk-persona',
-      path: `/v1/personas/${encodeURIComponent(personaId)}/role`,
+      path: `/api/personas/${encodeURIComponent(personaId)}/role`,
       method: 'POST',
       idempotencyKey: `persona-role:${personaId}:${roleKey}`,
       // Payload shape from the catalog entry for POST /api/personas/:persona_id/role.

@@ -203,7 +203,7 @@ describe('business-unit assignment', () => {
     expect(assigned).toBe(true);
     expect(call.mock.calls[0][0]).toMatchObject({
       sdk: 'sdk-persona',
-      path: '/v1/personas/persona-42/bu',
+      path: '/api/personas/persona-42/bu',
       body: { business_unit_id: 'bu-north-dallas-sales' },
     });
   });
@@ -227,6 +227,6 @@ describe('business-unit assignment', () => {
 
     await assignPersonaToBusinessUnit('person/42', 'bu-north');
 
-    expect(call.mock.calls[0][0].path).toBe('/v1/personas/person%2F42/bu');
+    expect(call.mock.calls[0][0].path).toBe('/api/personas/person%2F42/bu');
   });
 });

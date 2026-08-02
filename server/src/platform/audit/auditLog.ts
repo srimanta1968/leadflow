@@ -75,7 +75,7 @@ export async function appendAuditEntry(entry: AuditEntry): Promise<AuditAppendRe
   try {
     await SdkGatewayClient.call({
       sdk: 'sdk-audit',
-      path: '/v1/audit/append',
+      path: '/api/audit/append',
       method: 'POST',
       // The act's own key, so a retried append lands once.
       idempotencyKey: entry.idempotencyRef,
@@ -142,7 +142,7 @@ export async function verifyAuditChain(): Promise<ChainVerificationResult> {
   try {
     const result = await SdkGatewayClient.call<{ data?: { intact?: boolean; detail?: string } }>({
       sdk: 'sdk-audit',
-      path: '/v1/audit/verify',
+      path: '/api/audit/verify',
       method: 'POST',
       correlationId,
       body: { tenant_id: config.projexCloud.tenantId },
@@ -170,7 +170,7 @@ async function openChainIncident(detail: string, correlationId: string): Promise
   try {
     const result = await SdkGatewayClient.call<{ data?: { incident_id?: string } }>({
       sdk: 'sdk-incident',
-      path: '/v1/incidents',
+      path: '/api/incidents',
       method: 'POST',
       idempotencyKey: `audit-chain:${correlationId}`,
       correlationId,

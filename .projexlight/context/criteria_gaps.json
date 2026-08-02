@@ -1,41 +1,39 @@
 {
-  "generatedAt": "2026-08-02T22:17:35.643854Z",
-  "taskId": "d9ded3c4-2510-4419-a582-d8684aada9d5",
+  "generatedAt": "2026-08-02T22:26:32.768897Z",
+  "taskId": "71afa1d4-75b7-429a-bfc3-75d1345535fd",
   "gaps": [
     {
-      "criterionId": "d9ded3c4-2510-4419-a582-d8684aada9d5#AC1",
-      "criterion": "Six purposes registered idempotently at boot",
+      "criterionId": "71afa1d4-75b7-429a-bfc3-75d1345535fd#AC2",
+      "criterion": "Reconciliation returns zero discrepancies after an erasure",
       "verdict": "partial",
-      "gap": "All six are defined, the provisioner runs on every boot beside the role provisioner, and idempotency is proven by a test that answers 409 to every call and asserts six already_present with zero created. Not yet true against a live tenant: no ProjexCloud gateway is reachable here, so provisionConsentPurposes returns six skipped results and sdk-consent holds nothing. One boot with the gateway configured closes it. Worth carrying with it: until the purposes exist upstream the capture path should REFUSE to record consent rather than record it against an unregistered purpose - a receipt naming a purpose nobody registered looks like evidence and cannot be honoured on revocation. That refusal belongs in the capture path and is not built.",
+      "gap": "The reconciliation LOGIC is built and asserted in both directions that matter - zero discrepancies when every actionable surface is proved, and the skipped surface named when one is not - and it deliberately walks PLAN to PROOFS, because checking that every proof matches a surface always passes and would never catch the case that matters. A zero-row proof counts as a real proof, since nothing to erase is a valid outcome. What does not exist is the EXECUTION that produces those proofs: nothing runs the redactions, so reconcileErasure has only ever been given proofs a test constructed. The criterion says 'after an erasure', and no erasure can yet be performed - sdk-data-rights plan-executions and the local redaction statements are both unwritten. Closing it needs the execution to run the surfaces in erasureExecutionOrder, emit a proof per surface, and reconcile against a real run.",
       "evidence": {
         "files": [
-          "server/src/config/consentPurposes.ts",
-          "server/src/platform/consent/purposeProvisioner.ts",
-          "server/tests/unit/auditVocabulary.test.ts"
+          "server/src/platform/dataRights/erasurePlan.ts",
+          "server/tests/unit/erasurePlan.test.ts"
         ]
       }
     },
     {
-      "criterionId": "d9ded3c4-2510-4419-a582-d8684aada9d5#AC2",
-      "criterion": "Every audit entry carries actor, purpose, decision, evidence and causation",
-      "verdict": "partial",
-      "gap": "The HELPER enforces it and cannot be called otherwise: all seven fields - actor, personaRole, purpose, decisionRef, evidenceRef, causationId and idempotencyRef - are required on AuditEntry, so an entry missing any of them does not compile, and a test asserts the outbound wire shape so it cannot drift. What is not true is the word EVERY: no governed action calls appendAuditEntry yet. Capture, routing, assignment, first-response, import and identity actions all still complete without writing an entry, so the vocabulary and the helper exist ahead of their callers. This is the same shape as the PDP gap - the mechanism is built and unwired - and the two should be applied to the mutating handlers in one pass, since both want the same insertion point and the audit entry wants the PDP's decisionRef.",
+      "criterionId": "71afa1d4-75b7-429a-bfc3-75d1345535fd#AC3",
+      "criterion": "Certificate includes shred proofs for encrypted PII",
+      "verdict": "missing",
+      "gap": "NOT BUILT, and it would have been dishonest to claim otherwise by adding a crypto_shred entry to the plan with nothing behind it. The ShredProof type carries an optional keyRef for a destroyed vault key, but no surface in LeadFlow currently uses crypto_shred as its method, because LeadFlow stores no encrypted PII: leads and users hold plaintext columns, and there is no envelope encryption and no vault key to destroy. So the criterion is unmeetable as stated until either PII is moved behind sdk-vault or the criterion is rescoped to the redaction proofs this schema can actually produce. Both are real options and the choice is a design decision rather than a coding one - which is why it is recorded here rather than resolved by inventing a key reference that points at nothing.",
       "evidence": {
         "files": [
-          "server/src/platform/audit/auditLog.ts",
-          "server/tests/unit/auditVocabulary.test.ts"
+          "server/src/config/erasureSurfaces.ts",
+          "server/src/platform/dataRights/erasurePlan.ts"
         ]
       }
     },
     {
-      "criterionId": "d9ded3c4-2510-4419-a582-d8684aada9d5#AC3",
-      "criterion": "Nightly chain verification runs and opens an incident on mismatch",
-      "verdict": "partial",
-      "gap": "The VERIFICATION is built and tested in all three states: an intact chain, a mismatch that opens an sdk-incident carrying the detail, and - the one most likely to mislead - an unreachable verifier reported as NOT intact, so a silent outage cannot masquerade as a clean bill of health. What is missing is NIGHTLY. Nothing schedules verifyAuditChain: there is no cron entry, no scheduler and no worker, so it runs only if something calls it, which nothing does. Closing this needs a scheduled trigger and a record of the last run, so that a verification which stops happening is itself visible - a silent scheduler is the same failure as a silent outage.",
+      "criterionId": "71afa1d4-75b7-429a-bfc3-75d1345535fd#AC4",
+      "criterion": "Residency is recorded for every person and pool",
+      "verdict": "missing",
+      "gap": "NOT BUILT. sdk-data-rights publishes GET /api/data-rights/residency/:person_id and POST /api/data-rights/residency/touch, and nothing in LeadFlow calls either, so no residency is recorded for any person or pool. This was left rather than half-built because residency is only meaningful once there is somewhere to record it against - the touch call needs a person id from a live tenant, and no gateway is reachable here, so an implementation would be untestable beyond asserting that a stub was called. Closing it needs the touch on every capture and link, a read on the Contact 360 panel, and a reconciliation that a person with no residency record is a discrepancy rather than a blank.",
       "evidence": {
         "files": [
-          "server/src/platform/audit/auditLog.ts",
-          "server/tests/unit/auditVocabulary.test.ts"
+          "server/src/platform/dataRights/erasurePlan.ts"
         ]
       }
     }

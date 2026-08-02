@@ -63,7 +63,7 @@ export async function provisionConsentPurposes(
     try {
       await SdkGatewayClient.call({
         sdk: 'sdk-consent',
-        path: '/v1/consents/purposes',
+        path: '/api/consents/purposes',
         method: 'POST',
         idempotencyKey: `consent-purpose:${purpose.key}`,
         body: {
