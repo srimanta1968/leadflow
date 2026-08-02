@@ -9,6 +9,7 @@ import { runMigrations } from './db/migrationRunner';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { platformSession } from './platform/auth';
 import { provisionRoles } from './platform/identity';
+import { provisionConsentPurposes } from './platform/consent';
 
 const app = express();
 
@@ -81,6 +82,15 @@ async function bootstrap(): Promise<void> {
   // migrations this is NOT fatal — the app serves fine against an identity
   // provider that is temporarily unreachable, and refusing to boot would turn
   // their outage into ours.
+  // Consent purposes alongside roles: both are idempotent registrations of the
+  // app's own vocabulary, and neither is fatal.
+  const purposes = await provisionConsentPurposes();
+  if (purposes.attempted) {
+    console.log(
+      `[app] consent purposes: ${purposes.created} created, ${purposes.alreadyPresent} already present, ${purposes.failed} failed`
+    );
+  }
+
   const roles = await provisionRoles();
   if (roles.attempted) {
     console.log(

@@ -1,30 +1,29 @@
 {
-  "generatedAt": "2026-08-02T21:35:22.083564Z",
-  "taskId": "a5844a5e-6b4f-4dac-86ac-241f68c9d405",
+  "generatedAt": "2026-08-02T21:54:42.110396Z",
+  "taskId": "85a9af87-156e-4d84-a828-288058c8431a",
   "gaps": [
     {
-      "criterionId": "a5844a5e-6b4f-4dac-86ac-241f68c9d405#AC2",
-      "criterion": "Every mutating endpoint records a PDP decision reference",
+      "criterionId": "85a9af87-156e-4d84-a828-288058c8431a#AC2",
+      "criterion": "Every client-gated action is independently enforced server side",
       "verdict": "missing",
-      "gap": "THE DECISION POINT EXISTS; THE SWEEP DOES NOT. Every verdict carries a decisionRef and every evaluation a batch_ref, and the endpoint returns both, but not one of the existing mutating routes calls the PDP or records a reference yet. Concretely untouched: POST /api/leads, POST /api/leads/:id/route, /assign and /first-response, POST /api/routing-rules with its PATCH and DELETE, POST /api/sla/evaluate, and POST /api/public/leads. Nine or so handlers, each needing the same three steps - evaluate before the write, refuse on deny, persist the reference alongside the change. This was deliberately not attempted in the same task as the bundle: the two are separable, and a half-applied sweep is worse than none because some endpoints would appear governed while others silently are not, and nobody could tell which from the outside. Closing it needs a middleware or handler wrapper applied to every mutating route, a column or audit field holding the reference, and one test per route asserting the write is refused when the PDP denies.",
+      "gap": "THIS IS CLIENT-SIDE GATING ONLY, and it is the same gap already open as a5844a5e#AC2 - the two are one piece of work. The PDP exists and this task now consumes it, but no mutating route calls it, so every action the UI disables remains reachable by calling the API directly with a valid token: POST /api/leads, POST /api/leads/:id/route, /assign and /first-response, POST /api/routing-rules with its PATCH and DELETE, POST /api/sla/evaluate. A hidden or disabled button is not a security control and this task's own acceptance line says so. The criterion also asks for proof by a test that calls the endpoint DIRECTLY, which cannot be written until the enforcement exists. Closing it: apply a PDP check in the mutating handlers, refuse on deny, persist the decision reference with the write, and add a negative api_definition testCase per route asserting the refusal - at which point this criterion and a5844a5e#AC2 and #AC4 all close together. I flagged this before starting the task and was asked to proceed, so it is recorded rather than silently absorbed.",
       "evidence": {
         "files": [
           "server/src/platform/policy/policyEngine.ts",
           "server/src/routes/leadRoutes.ts",
-          "server/src/routes/routingRoutes.ts"
+          "client/src/platform/permissions/RequirePermission.tsx"
         ]
       }
     },
     {
-      "criterionId": "a5844a5e-6b4f-4dac-86ac-241f68c9d405#AC4",
-      "criterion": "Obligations returned by the PDP are surfaced to the caller",
+      "criterionId": "85a9af87-156e-4d84-a828-288058c8431a#AC3",
+      "criterion": "Permission matrix screen renders from live policy data, not a static table",
       "verdict": "partial",
-      "gap": "Obligations are modelled, attached and returned: the response carries an obligations array per decision, and tests assert the two that a role grant cannot express - own_record_only on lead.work_assigned, which is the whole meaning of SOP \u00a728's 'works ASSIGNED leads' and without which a Rep holding the grant could work every lead in the tenant, and second_party_approval on every approval-gated action. What is NOT built is anything that ENFORCES them. isUnconditionalPermit exists to make the distinction checkable, but no caller consults it, so today a permit carrying an unmet obligation is indistinguishable from a clean permit at the point of the write. That enforcement belongs with the AC2 sweep and should land in the same change, since an obligation nothing checks is documentation.",
+      "gap": "The GROUPING is live and derived: toMatrixRows builds every row from PDP verdicts, splitting permits from approval-gated actions into their own columns, and an empty result renders an explicit loading-failure message rather than a blank grid an administrator would read as 'nobody can do anything'. What is missing is the screen that mounts it - PermissionMatrix is a component with no route, so nothing in the app navigates to it yet, and the role list it takes has no live source because sdk-persona GET /api/personas is not reachable here. Closing this needs an /app/admin/permissions route, the roles fetched rather than passed in, and a Gherkin scenario reaching the screen.",
       "evidence": {
         "files": [
-          "server/src/config/policies.ts",
-          "server/src/platform/policy/policyEngine.ts",
-          "server/tests/unit/policyEngine.test.ts"
+          "client/src/features/admin/PermissionMatrix.tsx",
+          "client/tests/unit/permissions.test.ts"
         ]
       }
     }
