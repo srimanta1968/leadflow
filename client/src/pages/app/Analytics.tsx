@@ -95,6 +95,53 @@ function Bar({ value, max, tone }: { value: number; max: number; tone: string })
 }
 
 /**
+ * Where the compliance figures on this screen actually come from.
+ *
+ * A breach rate is only as defensible as the clock that produced it. ProjexCloud
+ * `sdk-sla` judges a deadline against the tenant's business calendar — working
+ * hours, holidays, timezone; LeadFlow's fallback compares plain elapsed time, so
+ * a lead that arrived at 17:55 counts as breached by 09:05 the next morning when
+ * on the calendar it never was. Both are shown to a manager as "breach rate", so
+ * the screen states which one it is rather than letting the reader assume.
+ *
+ * Rendered as a line of prose under the tiles rather than a fifth tile: it
+ * qualifies the numbers above it, and a number in a box invites comparison with
+ * the other boxes instead of reading as the caveat it is.
+ */
+function ProvenanceNote({ overview }: { overview: AnalyticsOverview }) {
+  const { attainment, clock_provenance: provenance } = overview;
+  const target =
+    attainment.target_minutes === null ? null : `${attainment.target_minutes}-minute target`;
+
+  return (
+    <section className="lf-panel px-5 py-4" aria-label="Measurement provenance">
+      <p className="text-sm text-muted">
+        <span className="font-semibold text-text">
+          Target attainment {asPercent(attainment.attainment_rate)}
+        </span>{' '}
+        — {attainment.met} of {attainment.closed} closed clocks met their{' '}
+        {target ?? 'response target'}.{' '}
+        {attainment.delivered ? (
+          <>Judged by ProjexCloud <code className="text-xs">sdk-sla</code> on your business calendar.</>
+        ) : (
+          <>
+            Counted by LeadFlow on elapsed time — ProjexCloud was unavailable, so working hours and
+            holidays are not reflected.
+          </>
+        )}
+      </p>
+
+      {provenance.mixed && (
+        <p className="mt-2 text-xs text-gold" role="status">
+          This window's breach figures come from both clocks: part of it was judged on the business
+          calendar and part on elapsed time. Read the breach rate as a blend of the two.
+        </p>
+      )}
+    </section>
+  );
+}
+
+/**
  * The analytics dashboard.
  *
  * Answers two questions the operational screens deliberately do not: how fast
@@ -399,6 +446,8 @@ export default function Analytics() {
               tone="red"
             />
           </section>
+
+          <ProvenanceNote overview={overview} />
 
           {/* The funnel, as counts and as the rate between each pair of stages.
               Both are shown because a rate without its denominator invites the

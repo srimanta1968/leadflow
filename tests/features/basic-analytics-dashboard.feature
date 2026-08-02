@@ -35,22 +35,30 @@ Feature: Basic Analytics Dashboard
   only closed clocks, that a rate with no denominator is null rather than zero,
   and that response time is measured from arrival - is asserted where it can be
   asserted precisely, against a controlled historical window:
-  server/tests/integration/analytics.test.ts (16 cases) and
+  server/tests/integration/analytics.test.ts (28 cases) and
   tests/api_definitions/analytics/overview-get.json. A browser test cannot pin
   those down, because the dashboard renders whatever the database currently
   holds.
 
-  Background:
-    Given I navigate to "/signin"
-    When I fill "email" with "${login:email}"
-    And I fill "password" with "${login:password}"
-    And I click "Sign in"
-    Then I should see "Capture Inbox"
+  "Target attainment" is the ProjexCloud sdk-sla contribution to this screen.
+  The step below proves the line RENDERS; which of its two readings appears
+  depends on whether a gateway is configured, and no gateway is reachable in
+  this environment, so the delivered-from-sdk-sla wording is proven instead by
+  the stubbed attainment cases in server/tests/integration/analytics.test.ts.
+
+  SIGN-IN is the @login:default tag, not a Background block. The runner only
+  attaches steps after it has seen a Scenario: line, so the hand-written
+  Background this file used to carry was parsed into nothing - every scenario
+  below ran SIGNED OUT and asserted against the marketing site. The tag runs the
+  flow from tests/config/test-config.json loginConfig, which is the same four
+  steps (/signin, email, password, "Sign in", then "Capture Inbox"), so nothing
+  is lost by deleting them and they stop drifting from the real sign-in screen.
 
   @scenario_id:e377ca3c-a942-4178-9cf3-fe5c37b2ba6c
   @scenario_type:UI
   @ui_test
   @portal:leadflow
+  @login:default
   Scenario: Dashboard displays key metrics accurately.
     When I click "Analytics"
     Then I should see "Response times and conversion across the capture funnel"
@@ -58,11 +66,13 @@ Feature: Basic Analytics Dashboard
     And I should see "Median response"
     And I should see "90th percentile"
     And I should see "Breach rate"
+    And I should see "Target attainment"
 
   @scenario_id:1fca44d2-b06d-4171-a568-3db7d14e77cd
   @scenario_type:UI
   @ui_test
   @portal:leadflow
+  @login:default
   Scenario: Data updates in real-time.
     When I click "Analytics"
     Then I should see "Conversion funnel"
@@ -72,6 +82,7 @@ Feature: Basic Analytics Dashboard
   @scenario_type:UI
   @ui_test
   @portal:leadflow
+  @login:default
   Scenario: Users can filter data by various parameters.
     When I click "Analytics"
     Then I should see "By source"

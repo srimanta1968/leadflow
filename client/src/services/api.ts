@@ -292,6 +292,34 @@ export interface AnalyticsOverview {
     median_seconds: number | null;
     p90_seconds: number | null;
   };
+  /**
+   * How the window performed against its response target.
+   *
+   * `delivered` says whether ProjexCloud `sdk-sla` answered. When it did, the
+   * figures are judged on the tenant's business calendar; when it did not, the
+   * server counted them locally on elapsed time. The screen has to say which,
+   * because a calendar-aware rate and a wall-clock rate are not the same claim.
+   */
+  attainment: {
+    delivered: boolean;
+    source: 'sdk_sla' | 'local_wallclock';
+    target_minutes: number | null;
+    closed: number;
+    met: number;
+    breached: number;
+    attainment_rate: number | null;
+  };
+  /** Which clock produced the closed verdicts this window's breach figures rest on. */
+  clock_provenance: {
+    gateway_configured: boolean;
+    current_clock_source: 'sdk_sla' | 'local_wallclock';
+    by_clock_source: {
+      clock_source: 'sdk_sla' | 'local_wallclock' | null;
+      closed: number;
+      breached: number;
+    }[];
+    mixed: boolean;
+  };
   by_source: {
     source: LeadSource | null;
     captured: number;

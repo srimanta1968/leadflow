@@ -281,6 +281,67 @@ const TOOLS = [
     }
   },
   {
+    name: 'projexlight_review_task_delta',
+    description: 'ACCEPTANCE-CRITERIA REVIEW OF THIS TASK\'S DIFF (third-party review). Scope is the DELTA — the files this task changed — never the corpus. TWO MODES. (1) taskId only -> returns the review packet: changed files, the api_definitions you touched with their testCase/negative/errorCase/dataset counts and coversCriterion declarations, plus the criteria to review against. Review as a THIRD PARTY who did not write the diff: look for the gap, do not confirm your own work. For each criterion name the executable artifact that would FAIL if it regressed (an api_definition testCase for an endpoint, a Gherkin step for a screen). "The code looks right" is NOT evidence. (2) findings[] -> records anything not "covered" to .projexlight/context/criteria_gaps.json, which surfaces on the NEXT task AND BLOCKS projexlight_complete_task until closed. An EMPTY findings list clears the sticky. Run BEFORE complete_task.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string', description: 'UUID of the task being reviewed (required)' },
+        projectPath: { type: 'string', description: 'Project root path' },
+        criteria: {
+          type: 'array',
+          description: 'Criteria to review against — normally from projexlight_get_task_instruction -> criteriaContext.taskCriteria',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Criterion id, e.g. "<feature_uuid>#AC2"' },
+              text: { type: 'string', description: 'Criterion text' }
+            }
+          }
+        },
+        findings: {
+          type: 'array',
+          description: 'RECORD MODE. Omit for packet mode. Pass [] to CLEAR the sticky after a clean review.',
+          items: {
+            type: 'object',
+            properties: {
+              criterionId: { type: 'string', description: 'Copy EXACTLY from the packet — it is the join key' },
+              criterion: { type: 'string', description: 'Criterion text' },
+              verdict: { type: 'string', enum: ['covered', 'partial', 'missing'], description: 'Anything other than "covered" is recorded as a gap and blocks completion' },
+              gap: { type: 'string', description: 'What is missing. Required when verdict is not "covered"' },
+              evidence: {
+                type: 'object',
+                description: 'Name the executable proof',
+                properties: {
+                  apiDefinitions: { type: 'array', items: { type: 'string' } },
+                  scenarios: { type: 'array', items: { type: 'string' } },
+                  files: { type: 'array', items: { type: 'string' } }
+                }
+              }
+            },
+            required: ['criterionId', 'verdict']
+          }
+        },
+        baseRef: { type: 'string', description: 'Git ref to diff against (default: HEAD)' }
+      },
+      required: ['taskId']
+    }
+  },
+  {
+    name: 'projexlight_sync_feature_file',
+    description: 'SYNC A .feature FILE BACK INTO PROJEXLIGHT (reuse first, create last). Closes the round trip: ProjexLight pushes scenarios DOWN into .feature files, but scenarios YOU author never reached ProjexLight, so feature validation, the shared UI backlog and coverage never knew about them. RESOLUTION ORDER: (1) @scenario_id: tag that exists under this feature -> UPDATE its bdd_steps; (2) else match by normalized title WITHIN the feature -> REUSE that id; (3) else match by title ELSEWHERE in the project -> REUSE and report the move; (4) else CREATE. Create is the LAST resort — it never duplicates an existing scenario. New/reused ids are WRITTEN BACK into the file as @scenario_id: tags, which makes re-running idempotent: COMMIT THE FILE afterwards or the next sync will duplicate. If the existing scenarios cannot be read it REFUSES (502) rather than creating blind. Scenarios present in ProjexLight but in no file are REPORTED, never deleted. ALWAYS run with dryRun:true first.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        featureFile: { type: 'string', description: 'Path to the .feature file (absolute, or relative to the project root)' },
+        projectPath: { type: 'string', description: 'Project root path' },
+        featureId: { type: 'string', description: 'Optional override; normally read from the file\'s @feature_id: tag' },
+        dryRun: { type: 'boolean', description: 'Report what WOULD happen without writing anything (no DB changes, no tag write-back)' }
+      },
+      required: ['featureFile']
+    }
+  },
+  {
     name: 'projexlight_review_ui_features',
     description: 'UI/BDD FEATURE REVIEW AGENT (incremental). Verifies every UI screen/page in the code has a Gherkin .feature file under tests/features/ (run via the Playwright/BDD Test MCP). Flags uncovered screens and re-checks when UI code or the feature corpus changes; covered+unchanged screens are skipped (content-hash cached). Run after generating/modifying UI code, then create/update the .feature files for flagged screens.',
     inputSchema: {
@@ -1301,6 +1362,8 @@ const TOOL_ENDPOINTS = {
   'projexlight_get_api_definition_rules': { method: 'GET', path: '/api/rules/api-definition' },
   'projexlight_review_api_definitions': { method: 'POST', path: '/api/instruction/review-api-definitions' },
   'projexlight_review_ui_features': { method: 'POST', path: '/api/instruction/review-ui-features' },
+  'projexlight_review_task_delta': { method: 'POST', path: '/api/instruction/review-task-delta' },
+  'projexlight_sync_feature_file': { method: 'POST', path: '/api/features/sync-feature-file' },
   'projexlight_generate_api_docs': { method: 'POST', path: '/api/instruction/generate-api-docs' },
   'projexlight_pre_commit_regression_check': { method: 'POST', path: '/api/pre-commit-regression-check' },
   'projexlight_decision_tree': { method: 'POST', path: '/api/instruction/decision-tree' },

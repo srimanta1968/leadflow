@@ -410,8 +410,56 @@ export class Fixtures {
     }
   }
 
-  /** Remove leads created inside a window, so an analytics test cleans up after itself. */
+  /**
+   * Record the SLA monitor's observation for a lead.
+   *
+   * Written directly because the monitor only ever stamps `clock_source` from
+   * its OWN current configuration, so there is no way through the application to
+   * produce a window holding both a business-calendar verdict and a wall-clock
+   * one — which is precisely the case the provenance rollup exists to report.
+   *
+   * @param leadId      The lead the observation is about.
+   * @param clockSource Which clock produced the verdict.
+   * @param state       Clock outcome: `breached`, `met`, `at_risk`, `on_track`.
+   */
+  static async recordObservation(
+    leadId: string,
+    clockSource: 'sdk_sla' | 'local_wallclock',
+    state: string
+  ): Promise<void> {
+    try {
+      await dataService.query(
+        `INSERT INTO sla_metrics (subject_lead_id, state, violation, clock_source, observed_at)
+         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+         ON CONFLICT (subject_lead_id) WHERE subject_lead_id IS NOT NULL
+         DO UPDATE SET state        = EXCLUDED.state,
+                       violation    = EXCLUDED.violation,
+                       clock_source = EXCLUDED.clock_source,
+                       observed_at  = EXCLUDED.observed_at`,
+        [leadId, state, state === 'breached', clockSource]
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`recordObservation('${leadId}', '${clockSource}') fixture failed: ${message}`);
+    }
+  }
+
+  /**
+   * Remove leads created inside a window, so an analytics test cleans up after
+   * itself.
+   *
+   * Observations go first: `sla_metrics.subject_lead_id` is a foreign key to
+   * `leads (id)`, so deleting a lead the monitor has observed would fail the
+   * constraint and leave the window populated for the next test.
+   */
   static async deleteLeadsInWindow(from: Date, to: Date): Promise<void> {
+    await dataService.query(
+      `DELETE FROM sla_metrics
+        WHERE subject_lead_id IN (
+          SELECT id FROM leads WHERE created_at >= $1 AND created_at < $2
+        )`,
+      [from, to]
+    );
     await dataService.query(
       'DELETE FROM leads WHERE created_at >= $1 AND created_at < $2',
       [from, to]

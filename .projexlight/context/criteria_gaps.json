@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-08-02T17:33:34.046734Z",
+  "taskId": "db4906c8-2dea-47e7-a9c6-ff57c83f6207",
+  "gaps": [
+    {
+      "criterionId": "a63a3ca6-90ba-43fc-b342-1de04bfa8350#AC1",
+      "criterion": "Dashboard displays key metrics accurately.",
+      "verdict": "partial",
+      "gap": "The metrics and their provenance are implemented and proven at the service and endpoint layers, but two links in the chain have never actually executed. (1) The Gherkin step 'And I should see \"Target attainment\"' in tests/features/basic-analytics-dashboard.feature is the only executable proof that the provenance line RENDERS, and no scenario in this project has ever been run by the Playwright/BDD runner - the Test MCP container has no LeadFlow workspace mount, so tests/features is unreachable to it. This task did fix a defect that would have made that run meaningless: the file's Background block was parsed before any Scenario and never executed, so all three scenarios ran signed out; they now carry @login:default. (2) The delivered-from-sdk-sla branch of AnalyticsService.askAttainment has never spoken to a real gateway - PROJEXCLOUD_GATEWAY_URL is unset in every environment here, so the endpoint always answers with attainment.delivered:false and the locally-counted figures. The branch is proven only against a stub at the SdkGatewayClient boundary. The same environment limitation is already recorded against the ProjexCloud linkage criterion on Lead Capture. (3) By deliberate choice the api_definition's happy-path testCase does not assert the attainment or clock_provenance blocks: their values follow from whether a gateway is configured rather than from request input, so pinning delivered:false would document this environment rather than the contract and would fail the moment a gateway exists.",
+      "evidence": {
+        "apiDefinitions": [
+          "tests/api_definitions/analytics/overview-get.json"
+        ],
+        "scenarios": [
+          "Dashboard displays key metrics accurately."
+        ],
+        "files": [
+          "server/src/services/AnalyticsService.ts",
+          "server/tests/integration/analytics.test.ts",
+          "client/src/pages/app/Analytics.tsx",
+          "tests/features/basic-analytics-dashboard.feature"
+        ]
+      }
+    }
+  ]
+}

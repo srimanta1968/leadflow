@@ -1,6 +1,9 @@
+import { randomUUID } from 'crypto';
 import { dataService } from './DataService';
+import { SdkGatewayClient } from './projexcloud/SdkGatewayClient';
+import { SLA_WINDOW_MINUTES } from './RoutingService';
 import { AnalyticsOverviewQuery } from '../validators/analyticsValidators';
-import { LeadSourceChannel } from '../types';
+import { LeadSourceChannel, SlaClockSource } from '../types';
 
 /** Counts of leads reaching each stage of the capture-to-response funnel. */
 export interface AnalyticsFunnel {
@@ -62,6 +65,93 @@ export interface AnalyticsDailyPoint {
   breached: number;
 }
 
+/** How many closed clocks in the window one clock produced the verdict for. */
+export interface AnalyticsClockShare {
+  /**
+   * `sdk_sla` for the ProjexCloud business-calendar clock, `local_wallclock` for
+   * LeadFlow's outage fallback, and null for a closed clock the monitor has not
+   * observed yet — it has an outcome on the lead but no observation row stating
+   * which clock decided it.
+   */
+  clock_source: SlaClockSource | null;
+  closed: number;
+  breached: number;
+}
+
+/**
+ * Which clock the breach figures in this window actually rest on.
+ *
+ * This is the ProjexCloud SDK's contribution to the analytics rollup, and it is
+ * the difference between a defensible compliance number and an indefensible one.
+ * `sdk-sla` judges a deadline against the tenant's business calendar — working
+ * hours, holidays, timezone, pause windows. LeadFlow's fallback compares plain
+ * elapsed time. The fallback exists so a genuine breach is still DETECTED during
+ * a gateway outage, but the two are not the same measurement: a lead that
+ * arrived at 17:55 breaches on the wall clock by 09:05 the next morning and does
+ * not breach at all on a business calendar.
+ *
+ * `SlaMonitorService` is careful to record `clock_source` on every observation
+ * for exactly this reason. Aggregating the breach rate without carrying that
+ * provenance forward would average the two clocks together silently and undo
+ * that care at the last step — which is why `mixed` is reported rather than left
+ * for the reader to infer.
+ */
+export interface AnalyticsClockProvenance {
+  /** True when a gateway URL and API key are both configured right now. */
+  gateway_configured: boolean;
+  /** The clock a verdict recorded at this moment would carry. */
+  current_clock_source: SlaClockSource;
+  /** Closed clocks in the window, split by the clock that judged them. */
+  by_clock_source: AnalyticsClockShare[];
+  /**
+   * True when more than one distinct clock produced the closed verdicts in this
+   * window. A mixed window's breach rate is a blend of two measurements and
+   * should be read — and presented — with that caveat.
+   */
+  mixed: boolean;
+}
+
+/**
+ * Response-time attainment for the window, from ProjexCloud `sdk-sla`.
+ *
+ * The rest of this rollup is counted locally on purpose — the dashboard reads
+ * LeadFlow's own projection so it never fans out into a read per lead. This one
+ * block is different: attainment is a judgement about whether targets were MET,
+ * and the target and the calendar it is judged against belong to `sdk-sla`, not
+ * to LeadFlow. Asking upstream for it is ONE call for the whole window, so the
+ * no-fan-out rule holds.
+ *
+ * When the gateway is unconfigured or unreachable the same figures are derived
+ * from the local projection and `delivered` is false. That fallback is a
+ * DIFFERENT measurement, not a cheaper route to the same one: it counts the
+ * breach flags already on the lead rows against the default target, with no
+ * business calendar. `source` says which of the two the reader is looking at,
+ * so a wall-clock number is never mistaken for a calendar-aware one.
+ */
+export interface AnalyticsAttainment {
+  /** True when `sdk-sla` answered; false when these are LeadFlow's own figures. */
+  delivered: boolean;
+  /** `sdk_sla` when upstream computed this, `local_wallclock` when LeadFlow did. */
+  source: SlaClockSource;
+  /** The first-response target the rate was judged against, in minutes. */
+  target_minutes: number | null;
+  /** Clocks that closed in the window. */
+  closed: number;
+  /** Of those, how many met their target. */
+  met: number;
+  /** Of those, how many missed it. */
+  breached: number;
+  /**
+   * met / closed, 0..1 to four decimals, null when nothing has closed.
+   *
+   * The complement of `conversion.breach_rate` when both come from the same
+   * clock, and deliberately NOT derived from it: when `sdk-sla` answers, the two
+   * are counted on different calendars and forcing one to be `1 - other` would
+   * manufacture agreement that does not exist.
+   */
+  attainment_rate: number | null;
+}
+
 export interface AnalyticsOverview {
   generated_at: string;
   filters: {
@@ -73,6 +163,8 @@ export interface AnalyticsOverview {
   funnel: AnalyticsFunnel;
   conversion: AnalyticsConversion;
   response_times: AnalyticsResponseTimes;
+  attainment: AnalyticsAttainment;
+  clock_provenance: AnalyticsClockProvenance;
   by_source: AnalyticsSourceBreakdown[];
   daily: AnalyticsDailyPoint[];
 }
@@ -102,6 +194,24 @@ interface DailyRow {
   captured: string;
   responded: string;
   breached: string;
+}
+
+interface ClockSourceRow {
+  clock_source: SlaClockSource | null;
+  closed: string;
+  breached: string;
+}
+
+/** One window's attainment as ProjexCloud `sdk-sla` reports it. */
+interface SdkAttainmentResult {
+  data?: {
+    attainment?: {
+      target_minutes?: number;
+      closed?: number;
+      met?: number;
+      breached?: number;
+    };
+  };
 }
 
 /**
@@ -134,6 +244,11 @@ function toNullableInt(value: string | null): number | null {
  * for triage. This is the analytical view: aggregate performance over a closed
  * historical window, with no per-lead rows at all. Neither is derivable from the
  * other, so they are computed independently rather than one wrapping the other.
+ *
+ * ProjexCloud contributes two things here and only two: the attainment block,
+ * which is a judgement against a target and a business calendar LeadFlow does
+ * not hold, and the provenance of the breach figures. The counts themselves stay
+ * local — see `AnalyticsAttainment` for why that split is deliberate.
  *
  * Every figure is aggregated IN POSTGRES rather than by reading rows and
  * summing them in Node. A dashboard over a year of captures would otherwise pull
@@ -170,10 +285,110 @@ export class AnalyticsService {
   }
 
   /**
+   * Which clock a verdict recorded at this instant would carry.
+   *
+   * Derived the same way `SlaMonitorService` derives it, from whether the
+   * gateway is configured, so the rollup and the monitor can never disagree
+   * about what the current clock is.
+   */
+  private static currentClockSource(): SlaClockSource {
+    return SdkGatewayClient.isConfigured() ? 'sdk_sla' : 'local_wallclock';
+  }
+
+  /**
+   * Ask `sdk-sla` how the window performed against its response targets.
+   *
+   * ONE call for the whole window, with the screen's own filters passed through
+   * so upstream aggregates exactly the population the rest of the rollup counts.
+   * A per-lead question would be the N+1 fan-out the read projection exists to
+   * prevent, which is why nothing else on this screen is asked of the gateway.
+   *
+   * POST, not GET, matching `SlaMonitorService.askMonitor`: the filter set is a
+   * structured body rather than four query parameters. No idempotency key —
+   * this reads, it does not record.
+   *
+   * Reporting degrades, it never fails. A dashboard that 500s because a third
+   * party is slow is worse than one showing locally-counted attainment with
+   * `delivered:false` against it, so every failure path returns the fallback.
+   *
+   * @param query    The window and filters the whole rollup is scoped to.
+   * @param fallback Locally-counted attainment, used unless upstream answers
+   *                 with a usable payload.
+   */
+  private static async askAttainment(
+    query: AnalyticsOverviewQuery,
+    fallback: AnalyticsAttainment
+  ): Promise<AnalyticsAttainment> {
+    if (!SdkGatewayClient.isConfigured()) {
+      return fallback;
+    }
+
+    const correlationId = randomUUID();
+
+    try {
+      const result = await SdkGatewayClient.call<SdkAttainmentResult>({
+        sdk: 'sdk-sla',
+        path: '/v1/response-clocks/attainment',
+        method: 'POST',
+        correlationId,
+        body: {
+          task: 'first_response',
+          subject_type: 'lead',
+          from: query.from.toISOString(),
+          to: query.to.toISOString(),
+          source: query.source ?? null,
+          owner_user_id: query.owner_user_id ?? null,
+        },
+      });
+
+      const attainment = result.delivered ? result.data?.data?.attainment : undefined;
+
+      // A payload without a closed count is unusable, not empty: `met` alone
+      // cannot be turned into a rate, and defaulting the denominator to zero
+      // would report 100% attainment for a window nobody measured. An answer
+      // that cannot be read is treated exactly like no answer.
+      if (!attainment || typeof attainment.closed !== 'number') {
+        return fallback;
+      }
+
+      const closed = Math.max(0, Math.round(attainment.closed));
+      const breached =
+        typeof attainment.breached === 'number' ? Math.max(0, Math.round(attainment.breached)) : 0;
+      // Trust `met` when upstream sends it, derive it when it does not. Clamped
+      // to the closed total either way: upstream counting on a calendar LeadFlow
+      // does not hold may legitimately disagree about a lead, but it can never
+      // meet more clocks than it closed, and a rate above 1 would be nonsense on
+      // the screen rather than an interesting discrepancy.
+      const met =
+        typeof attainment.met === 'number'
+          ? Math.min(closed, Math.max(0, Math.round(attainment.met)))
+          : Math.max(0, closed - breached);
+
+      return {
+        delivered: true,
+        source: 'sdk_sla',
+        target_minutes:
+          typeof attainment.target_minutes === 'number'
+            ? attainment.target_minutes
+            : fallback.target_minutes,
+        closed,
+        met,
+        breached: Math.min(closed, breached),
+        attainment_rate: rate(met, closed),
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[AnalyticsService] sdk-sla attainment unavailable (${correlationId}):`, message);
+      return fallback;
+    }
+  }
+
+  /**
    * Compute the analytics overview for a filtered window.
    *
    * @param query Validated bounds and filters.
    * @returns The funnel, conversion rates, response-time distribution, the
+   *          `sdk-sla` attainment block and its clock provenance, the
    *          per-source breakdown and the per-day series.
    */
   static async overview(query: AnalyticsOverviewQuery): Promise<AnalyticsOverview> {
@@ -238,11 +453,47 @@ export class AnalyticsService {
       params
     );
 
+    // Provenance of the breach figures, from the observation the SLA monitor
+    // wrote for each lead. A LEFT JOIN, and a separate query from the totals:
+    // joining it into the aggregate above would risk a lead with no observation
+    // silently dropping out of `captured`, which would corrupt every rate on the
+    // screen to answer a question about provenance.
+    //
+    // Restricted to CLOSED clocks so it lines up exactly with the denominator of
+    // breach_rate. Reporting provenance over a different population than the
+    // rate it qualifies would be worse than reporting none.
+    const byClockSource = await dataService.query<ClockSourceRow>(
+      `SELECT
+         m.clock_source                                                    AS clock_source,
+         COUNT(*)                                                          AS closed,
+         COUNT(*) FILTER (WHERE l.sla_breached)                            AS breached
+       FROM leads l
+       LEFT JOIN sla_metrics m ON m.subject_lead_id = l.id
+       WHERE ${where}
+         AND (l.first_response_at IS NOT NULL OR l.sla_breached)
+       GROUP BY m.clock_source
+       ORDER BY COUNT(*) DESC, m.clock_source ASC`,
+      params
+    );
+
     const captured = toInt(totals?.captured ?? '0');
     const routed = toInt(totals?.routed ?? '0');
     const responded = toInt(totals?.responded ?? '0');
     const breached = toInt(totals?.breached ?? '0');
     const closed = toInt(totals?.closed ?? '0');
+
+    // Counted locally first, so the gateway call has something to fall back to
+    // and so the fallback is never computed inside an error path where a second
+    // mistake could go unnoticed.
+    const attainment = await AnalyticsService.askAttainment(query, {
+      delivered: false,
+      source: 'local_wallclock',
+      target_minutes: SLA_WINDOW_MINUTES,
+      closed,
+      met: closed - breached,
+      breached,
+      attainment_rate: rate(closed - breached, closed),
+    });
 
     return {
       generated_at: new Date().toISOString(),
@@ -262,6 +513,21 @@ export class AnalyticsService {
         average_seconds: toNullableInt(totals?.average_seconds ?? null),
         median_seconds: toNullableInt(totals?.median_seconds ?? null),
         p90_seconds: toNullableInt(totals?.p90_seconds ?? null),
+      },
+      attainment,
+      clock_provenance: {
+        gateway_configured: SdkGatewayClient.isConfigured(),
+        current_clock_source: AnalyticsService.currentClockSource(),
+        by_clock_source: byClockSource.map((row) => ({
+          clock_source: row.clock_source,
+          closed: toInt(row.closed),
+          breached: toInt(row.breached),
+        })),
+        // Counted over ATTRIBUTED verdicts only. An unobserved clock is a gap in
+        // the record, not a third kind of clock, so it must not make a window
+        // that only ever used sdk-sla report itself as mixed.
+        mixed:
+          byClockSource.filter((row) => row.clock_source !== null).length > 1,
       },
       by_source: bySource.map((row) => ({
         source: row.source,
