@@ -335,6 +335,15 @@ export interface AnalyticsOverview {
   }[];
 }
 
+/** One PDP verdict as the evaluate endpoint returns it. */
+export interface PolicyDecisionResponse {
+  action: string;
+  effect: 'permit' | 'deny' | 'requires_approval';
+  reason: string;
+  obligations: { type: string; detail: string }[];
+  decision_ref: string;
+}
+
 export const api = {
   /** Create an account and receive a session token. */
   register: (payload: {
@@ -422,6 +431,24 @@ export const api = {
    * Only the fields present are written. Passing `source_channel: null`
    * explicitly turns the rule into a catch-all, so absence and null differ.
    */
+  /**
+   * Ask the policy decision point about a screen's whole action set at once.
+   *
+   * One call per screen rather than one per control: a screen gating six
+   * controls would otherwise spend six round trips before its first paint.
+   */
+  evaluatePermissions: (actions: { action: string; resourceType: string; resourceId?: string }[]) =>
+    request<{ batch_ref: string; decisions: PolicyDecisionResponse[] }>('/leadflow/authz/evaluate', {
+      method: 'POST',
+      body: {
+        actions: actions.map((entry) => ({
+          action: entry.action,
+          resource_type: entry.resourceType,
+          resource_id: entry.resourceId,
+        })),
+      },
+    }),
+
   updateRoutingRule: (
     ruleId: string,
     changes: {
