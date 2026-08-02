@@ -7,6 +7,7 @@ import routes from './routes';
 import { dataService } from './services/DataService';
 import { runMigrations } from './db/migrationRunner';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { platformSession } from './platform/auth';
 
 const app = express();
 
@@ -50,6 +51,12 @@ app.get('/health', async (_req, res) => {
   });
 });
 
+// Platform session verification runs BEFORE the routers, so a token that is
+// expired, from the wrong issuer or minted for another audience is refused
+// without any handler seeing it. Inert until PROJEXCLOUD_IDENTITY_URL is set,
+// and it exempts the auth-bootstrap and public-capture paths, which are how a
+// caller obtains a session in the first place.
+app.use('/api', platformSession);
 app.use('/api', routes);
 
 app.use(notFoundHandler);

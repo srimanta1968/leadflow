@@ -41,6 +41,35 @@ export interface AppConfig {
     tenantId: string;
     appId: string;
     timeoutMs: number;
+    /**
+     * ProjexCloud `sdk-identity`, the issuer of the session tokens this app
+     * verifies. Separate from the gateway block above because the two are
+     * different trust relationships: the gateway authenticates LeadFlow with an
+     * API key, whereas this verifies a token minted for an END USER.
+     */
+    identity: {
+      /**
+       * Base URL of the issuer. OIDC discovery hangs off this
+       * (`/.well-known/openid-configuration`). Empty disables verification and
+       * LeadFlow keeps using its own locally-issued tokens.
+       */
+      issuerUrl: string;
+      /**
+       * The `aud` every token must carry. NOT read from the discovery document —
+       * OIDC does not publish audience there, because it identifies the client
+       * rather than the issuer. Defaults to the app id, which is what the
+       * gateway scopes by.
+       */
+      audience: string;
+      /** How long a fetched key set is trusted before it is re-read. */
+      jwksTtlMs: number;
+      /**
+       * Seconds of clock skew tolerated on exp/nbf. Small on purpose: this is
+       * cover for imperfectly synced clocks, not a grace period for expired
+       * tokens.
+       */
+      clockToleranceSec: number;
+    };
   };
 }
 
@@ -100,5 +129,17 @@ export const config: AppConfig = {
     // unaffected.
     appId: process.env.PROJEXCLOUD_APP_ID || '',
     timeoutMs: parseInt(process.env.PROJEXCLOUD_TIMEOUT_MS || '8000', 10),
+    identity: {
+      issuerUrl: process.env.PROJEXCLOUD_IDENTITY_URL || '',
+      // Falls back to the app id: the gateway already scopes by it, so a
+      // deployment that has set one has effectively named its audience.
+      audience: process.env.PROJEXCLOUD_AUDIENCE || process.env.PROJEXCLOUD_APP_ID || '',
+      // Ten minutes. Long enough that a busy process is not re-reading the key
+      // set constantly, short enough that a retired key stops being accepted
+      // promptly — and an unknown kid forces an immediate re-read anyway, so a
+      // rotation is picked up without waiting for this to lapse.
+      jwksTtlMs: parseInt(process.env.PROJEXCLOUD_JWKS_TTL_MS || '600000', 10),
+      clockToleranceSec: parseInt(process.env.PROJEXCLOUD_CLOCK_TOLERANCE_SEC || '5', 10),
+    },
   },
 };
