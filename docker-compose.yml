@@ -6,7 +6,20 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:alpine  # Always pulls latest stable PostgreSQL version
+    # Pinned, never a floating tag. Matches the platform database container this
+    # project actually runs against: PostgreSQL 18 (leadflow_db is served by
+    # projexlight-postgres, PostgreSQL 18.4, alongside projexcloud_db).
+    #
+    # This previously read `postgres:alpine`, which was wrong twice over: it
+    # tracked "latest stable", so the major version moved on its own — and a new
+    # major pointed at an existing postgres_data volume does not migrate, it
+    # refuses to start with "database files are incompatible with server version"
+    # — and it was the plain postgres image, without the PostGIS and pgvector
+    # extensions the platform database provides.
+    #
+    # Upgrading is a deliberate edit here plus a dump/restore across the major
+    # version. Keep this in step with the generator's DB_IMAGE_PINS.
+    image: postgis/postgis:18-3.6
     container_name: leadflow_postgres
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
