@@ -171,5 +171,22 @@
         "message": "GET /api/analytics/overview was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
       }
     ]
+  },
+  "authz/evaluate-post.json": {
+    "hash": "58d7d9f5eb42fc54149d8a95b1e3a3f2e2722642c55a9c63afe25e3e6227d81e",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-02T21:32:45",
+    "route": [
+      "POST",
+      "/leadflow/authz/evaluate"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/authz/evaluate was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
   }
 }

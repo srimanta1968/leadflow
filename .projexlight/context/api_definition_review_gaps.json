@@ -1,0 +1,19 @@
+{
+  "updatedAt": "2026-08-02T21:32:45",
+  "scope": "authz",
+  "gaps": [
+    {
+      "file": "tests/api_definitions/authz/evaluate-post.json",
+      "rules": [
+        "CODE-MATCH"
+      ],
+      "findingsCount": 1
+    }
+  ],
+  "missingDefinitions": [],
+  "captureSyncIssues": 0,
+  "summary": {
+    "withFindings": 1,
+    "findingsCount": 1
+  }
+}

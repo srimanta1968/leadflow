@@ -1,28 +1,29 @@
 {
-  "generatedAt": "2026-08-02T20:31:17.728830Z",
-  "taskId": "03301d06-b218-4842-8140-92db07e81acb",
+  "generatedAt": "2026-08-02T21:19:17.596731Z",
+  "taskId": "2d5d24eb-f4d1-489d-8283-fd6c59100752",
   "gaps": [
     {
-      "criterionId": "03301d06-b218-4842-8140-92db07e81acb#AC2",
-      "criterion": "MFA and SSO paths both reach an authenticated session",
-      "verdict": "missing",
-      "gap": "NEITHER PATH CAN REACH A SESSION, because there is nothing to reach. Both depend on ProjexCloud sdk-identity - POST /api/mfa/challenge and /verify for the second factor, and the SSO redirect plus GET /api/userinfo for the federated path - and no issuer is reachable in this environment: PROJEXCLOUD_IDENTITY_URL is unset, the gateway is unconfigured, and the Verdaccio registry is down. What ships is the CLIENT half: MfaChallenge takes onVerify and onResend callbacks and drives the full interaction, with the code shape, formatting, leading-zero handling and failure behaviour asserted by 16 unit tests. It is not wired to a live challenge because there is no endpoint to wire it to, and the SSO redirect screen is not built at all rather than built against a guessed contract - the redirect target, state parameter and callback shape are the issuer's to define, and inventing them would produce code that looks finished and matches nothing. This closes when an sdk-identity instance exists: the same task should wire MfaChallenge to the real challenge/verify pair, add the SSO redirect and callback screens, and prove both with a Gherkin scenario that ends signed in.",
+      "criterionId": "2d5d24eb-f4d1-489d-8283-fd6c59100752#AC1",
+      "criterion": "All nine SOP roles provisioned as persona role facets and rebac templates",
+      "verdict": "partial",
+      "gap": "All nine are DEFINED and the provisioning call is real, built against the payload shape the SDK catalog publishes (app_id, name, permissions, tenant_id for POST /api/role-templates; role for POST /api/personas/:persona_id/role) rather than a guessed contract - the catalog resolves those endpoints now, which it did not earlier in this session. What has not happened is provisioning against a live tenant: no gateway is configured here, so provisionRoles returns nine skipped results and nothing reaches ProjexCloud. The create path is proven against a stubbed client - nine templates, one per role, each carrying only the unaided grants - but no template exists upstream. Closing this is running the boot once with PROJEXCLOUD_GATEWAY_URL set and confirming nine templates in the tenant.",
       "evidence": {
         "files": [
-          "client/src/features/auth/MfaChallenge.tsx",
-          "client/tests/unit/authFeature.test.ts"
+          "server/src/config/roles.ts",
+          "server/src/platform/identity/roleProvisioner.ts",
+          "server/tests/unit/roleProvisioning.test.ts"
         ]
       }
     },
     {
-      "criterionId": "03301d06-b218-4842-8140-92db07e81acb#AC4",
-      "criterion": "Keyboard-only completion of every auth flow",
+      "criterionId": "2d5d24eb-f4d1-489d-8283-fd6c59100752#AC4",
+      "criterion": "Business-unit assignment works for the North Dallas Sales example",
       "verdict": "partial",
-      "gap": "Built for it throughout and reasoned about explicitly, but not PROVEN by an executable artifact. Every control is a real focusable element: each step of the wizard is a genuine form whose submit advances it, so Enter moves forward from any field; Back and Send-a-new-code are <button type=button> rather than links with click handlers, so both Enter and Space activate them; the MFA field is deliberately ONE input rather than the mockup's six boxes, which would be a keyboard trap needing bespoke arrow, paste and backspace handling and would announce six unlabelled fields; autofocus lands on the first field of each step; and the step counter is aria-live so a change is announced rather than silently swapping under a keyboard user whose focus has not moved. None of that is asserted by a runner. The unit tests cover the logic beneath the screens, not focus order or tab traversal, and a real keyboard walk needs the Playwright/BDD runner, which cannot currently reach tests/features - the Test MCP container has no LeadFlow workspace mount. Closing this means a Gherkin scenario completing sign-in, MFA and signup using only navigate, fill, press and click steps, executed green.",
+      "gap": "assignPersonaToBusinessUnit is implemented and asserted for the named example - the test drives persona-42 into bu-north-dallas-sales and checks the sdk-persona call shape, an already-assigned persona is treated as success rather than failure so a re-run is safe, and a persona id containing a slash is URL-encoded rather than breaking the path. But it has never run against a real tenant, and the business unit itself does not exist: creating it needs sdk-tenant POST /api/tenants/:id/bus against a reachable gateway, and there is none. So the code path is proven and the actual North Dallas Sales unit is not provisioned. Closing this needs a live tenant: create the BU, assign a persona, and read back GET /api/personas/:persona_id/roles to confirm the scope took.",
       "evidence": {
         "files": [
-          "client/src/features/auth/MfaChallenge.tsx",
-          "client/src/features/auth/TenantSignupWizard.tsx"
+          "server/src/platform/identity/roleProvisioner.ts",
+          "server/tests/unit/roleProvisioning.test.ts"
         ]
       }
     }

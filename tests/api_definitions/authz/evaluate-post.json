@@ -1,0 +1,187 @@
+{
+  "name": "POST /api/leadflow/authz/evaluate - batched policy decisions for a screen",
+  "description": "Ask the policy decision point whether the signed-in caller may take each of a set of actions, and get one verdict per action in a single round trip. BATCHED BY DESIGN: a screen like the Capture Inbox decides whether to render a Route button, a Reassign control, a bulk export and an override, and asking separately would be four calls before the first paint, growing with every control added. The request carries an `actions` array and the response carries a `decisions` array in the SAME ORDER, so a caller can zip them positionally without matching on strings. An empty actions array is a 400 rather than an empty success: asking nothing is a caller bug, and answering it cheerfully hides the bug until a screen silently renders no controls. The array is capped at 50 - beyond that the screen is asking the wrong question. EFFECT is `permit`, `deny`, or `requires_approval`, and that third value is the point of this endpoint. SOP §28 does not say a Rep may never change offer terms; it says a Rep may not do it WITHOUT APPROVAL. Collapsing that into deny would delete the escalation path the business runs on, so the UI can use it to show a 'request approval' affordance instead of hiding the control. OBLIGATIONS are conditions attached to a permit that the caller MUST honour - for example a second-party approval reference, or an audit purpose that has to be supplied with the write. They are returned as a list per decision, and a permit carrying an unmet obligation is not a permit. DECISION REFERENCE: every verdict carries decision_ref, a stable id the caller quotes on the subsequent mutating call so the write and the authorisation that allowed it can be joined afterwards - which is what makes an audit answerable rather than a guess. Protected by the authenticate guard; the Authorization header is required. QA: depends on register and login, and needs no other fixture because it evaluates against the caller's own roles rather than a stored resource.",
+  "endpoint": "/api/leadflow/authz/evaluate",
+  "method": "POST",
+  "taskId": "a5844a5e-6b4f-4dac-86ac-241f68c9d405",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 48,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "a5844a5e-6b4f-4dac-86ac-241f68c9d405#AC3",
+    "a5844a5e-6b4f-4dac-86ac-241f68c9d405#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "effect": [
+      "permit",
+      "deny",
+      "requires_approval"
+    ],
+    "action": [
+      "lead.work_assigned",
+      "lead.reassign",
+      "lead.bulk_export",
+      "message.send_approved",
+      "message.publish_template",
+      "stage.update",
+      "next_action.create",
+      "meeting.book",
+      "offer.change_terms",
+      "audit.delete_event",
+      "suppression.override",
+      "exception.approve",
+      "routing.configure",
+      "import.commit",
+      "erasure.execute"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Evaluate a screen's action set in one call",
+      "coversCriterion": [
+        "a5844a5e-6b4f-4dac-86ac-241f68c9d405#AC3",
+        "a5844a5e-6b4f-4dac-86ac-241f68c9d405#AC4"
+      ],
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "actions": [
+          {
+            "action": "{{static:stage.update}}",
+            "resource_type": "{{static:lead}}"
+          },
+          {
+            "action": "{{static:offer.change_terms}}",
+            "resource_type": "{{static:lead}}"
+          },
+          {
+            "action": "{{static:lead.bulk_export}}",
+            "resource_type": "{{static:lead}}"
+          }
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Reject an empty action set rather than answering nothing",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|empty-actions",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "actions": []
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an action outside the permission vocabulary",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|unknown-action",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "actions": [
+          {
+            "action": "{{static:lead.do_whatever}}",
+            "resource_type": "{{static:lead}}"
+          }
+        ]
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject a batch larger than the cap",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|oversized-batch",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "actions": "{{static:__OVERSIZED_BATCH__}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated evaluation",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "payload": {
+        "actions": [
+          {
+            "action": "{{static:stage.update}}",
+            "resource_type": "{{static:lead}}"
+          }
+        ]
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "Reject a bearer token that fails verification",
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer not.a.valid.session.token"
+      },
+      "payload": {
+        "actions": [
+          {
+            "action": "{{static:stage.update}}",
+            "resource_type": "{{static:lead}}"
+          }
+        ]
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "actions must be a non-empty array of at most 50 known actions",
+      "when": "actions is absent, empty, larger than 50, or contains an action outside the permission vocabulary or an entry with no resource_type"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "the bearer token fails verification or has expired"
+    }
+  ],
+  "captureResponse": {
+    "authz.evaluate.response.data.batch_ref": "data.batch_ref"
+  }
+}

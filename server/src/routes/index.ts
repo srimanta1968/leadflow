@@ -7,6 +7,7 @@ import slaRoutes from './slaRoutes';
 import userRoutes from './userRoutes';
 import eventRoutes from './eventRoutes';
 import analyticsRoutes from './analyticsRoutes';
+import { authzRoutes } from '../platform/policy';
 
 /**
  * Root API router, mounted at `/api`.
@@ -25,5 +26,6 @@ router.use('/sla', slaRoutes);
 router.use('/users', userRoutes);
 router.use('/events', eventRoutes);
 router.use('/analytics', analyticsRoutes);
+router.use('/leadflow/authz', authzRoutes);
 
 export default router;
