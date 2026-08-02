@@ -1,17 +1,28 @@
 {
-  "generatedAt": "2026-08-02T20:09:55.411497Z",
-  "taskId": "1566868e-cc60-480a-87a5-e5309cbaed04",
+  "generatedAt": "2026-08-02T20:31:17.728830Z",
+  "taskId": "03301d06-b218-4842-8140-92db07e81acb",
   "gaps": [
     {
-      "criterionId": "1566868e-cc60-480a-87a5-e5309cbaed04#AC4",
-      "criterion": "No local password, session or credential table exists",
+      "criterionId": "03301d06-b218-4842-8140-92db07e81acb#AC2",
+      "criterion": "MFA and SSO paths both reach an authenticated session",
       "verdict": "missing",
-      "gap": "NOT DELIVERED, and deliberately not attempted in this task, because doing it here would have broken the running application rather than improved it. Current state, from the grep the acceptance clause asks for: there is NO session table and NO role table, so two thirds of the criterion already hold - but users.password_hash VARCHAR(255) NOT NULL exists (001_auth_projection.sql:13) and is written by AuthService with bcrypt, so local CREDENTIAL storage is real. Removing it is not a delete: users.id is the target of FIVE foreign-key columns across four tables (leads.owner_user_id, routing_rules.assigned_user_id, sla_metrics.responded_by_user_id, sla_alerts.recipient_user_id and acknowledged_by_user_id), and POST /api/auth/register plus POST /api/auth/login are the auth PRODUCER that essentially every api_definition in tests/api_definitions chains from via {{cache:auth.login.response.data.token}}. Dropping the table in this task would have cascaded into the whole test corpus and left the app unable to authenticate anyone, since no ProjexCloud issuer is reachable in this environment (PROJEXCLOUD_IDENTITY_URL is unset, and the gateway is unconfigured). The honest sequencing is: this task ships the verifier, a later task migrates the identity data and retires the local credential path once an issuer actually exists to migrate to. What IS in place makes that migration a switch rather than a rewrite - platformSession is mounted ahead of the routers and goes live the moment PROJEXCLOUD_IDENTITY_URL is set, leaving the local path in use until then.",
+      "gap": "NEITHER PATH CAN REACH A SESSION, because there is nothing to reach. Both depend on ProjexCloud sdk-identity - POST /api/mfa/challenge and /verify for the second factor, and the SSO redirect plus GET /api/userinfo for the federated path - and no issuer is reachable in this environment: PROJEXCLOUD_IDENTITY_URL is unset, the gateway is unconfigured, and the Verdaccio registry is down. What ships is the CLIENT half: MfaChallenge takes onVerify and onResend callbacks and drives the full interaction, with the code shape, formatting, leading-zero handling and failure behaviour asserted by 16 unit tests. It is not wired to a live challenge because there is no endpoint to wire it to, and the SSO redirect screen is not built at all rather than built against a guessed contract - the redirect target, state parameter and callback shape are the issuer's to define, and inventing them would produce code that looks finished and matches nothing. This closes when an sdk-identity instance exists: the same task should wire MfaChallenge to the real challenge/verify pair, add the SSO redirect and callback screens, and prove both with a Gherkin scenario that ends signed in.",
       "evidence": {
         "files": [
-          "server/src/db/migrations/001_auth_projection.sql",
-          "server/src/services/AuthService.ts",
-          "server/src/platform/auth/sessionMiddleware.ts"
+          "client/src/features/auth/MfaChallenge.tsx",
+          "client/tests/unit/authFeature.test.ts"
+        ]
+      }
+    },
+    {
+      "criterionId": "03301d06-b218-4842-8140-92db07e81acb#AC4",
+      "criterion": "Keyboard-only completion of every auth flow",
+      "verdict": "partial",
+      "gap": "Built for it throughout and reasoned about explicitly, but not PROVEN by an executable artifact. Every control is a real focusable element: each step of the wizard is a genuine form whose submit advances it, so Enter moves forward from any field; Back and Send-a-new-code are <button type=button> rather than links with click handlers, so both Enter and Space activate them; the MFA field is deliberately ONE input rather than the mockup's six boxes, which would be a keyboard trap needing bespoke arrow, paste and backspace handling and would announce six unlabelled fields; autofocus lands on the first field of each step; and the step counter is aria-live so a change is announced rather than silently swapping under a keyboard user whose focus has not moved. None of that is asserted by a runner. The unit tests cover the logic beneath the screens, not focus order or tab traversal, and a real keyboard walk needs the Playwright/BDD runner, which cannot currently reach tests/features - the Test MCP container has no LeadFlow workspace mount. Closing this means a Gherkin scenario completing sign-in, MFA and signup using only navigate, fill, press and click steps, executed green.",
+      "evidence": {
+        "files": [
+          "client/src/features/auth/MfaChallenge.tsx",
+          "client/src/features/auth/TenantSignupWizard.tsx"
         ]
       }
     }

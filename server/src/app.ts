@@ -8,6 +8,7 @@ import { dataService } from './services/DataService';
 import { runMigrations } from './db/migrationRunner';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { platformSession } from './platform/auth';
+import { provisionRoles } from './platform/identity';
 
 const app = express();
 
@@ -73,6 +74,19 @@ const PORT = config.port || 3000;
  */
 async function bootstrap(): Promise<void> {
   await runMigrations();
+
+  // Role provisioning is idempotent, so it runs on EVERY boot rather than once
+  // behind a flag: a flag would be a local record of upstream state, and it
+  // would be wrong the moment someone edited the tenant directly. Unlike
+  // migrations this is NOT fatal — the app serves fine against an identity
+  // provider that is temporarily unreachable, and refusing to boot would turn
+  // their outage into ours.
+  const roles = await provisionRoles();
+  if (roles.attempted) {
+    console.log(
+      `[app] roles provisioned: ${roles.created} created, ${roles.alreadyPresent} already present, ${roles.failed} failed`
+    );
+  }
 
   const server = app.listen(PORT, () => {
     console.log(`LeadFlow API listening on port ${PORT} (${config.nodeEnv})`);
