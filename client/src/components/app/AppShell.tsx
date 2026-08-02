@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from '../marketing/Logo';
 import { useSession } from '../../context/SessionContext';
+import { ProfileChip } from '../../features/auth';
 import { useToast } from '../feedback/ToastProvider';
 import { SUCCESS } from '../../content/messages';
 
@@ -48,9 +49,21 @@ export function AppShell() {
     navigate('/', { replace: true });
   }
 
-  const initials = user
-    ? `${user.first_name?.[0] ?? user.email[0]}${user.last_name?.[0] ?? ''}`.toUpperCase()
-    : '';
+  /**
+   * The identity the chip renders.
+   *
+   * The ACCOUNT REFERENCE — the `LUP-1001` half of the mockup's secondary line —
+   * is a ProjexCloud tenant concept and is not in the local session, so it shows
+   * an em dash until the platform session supplies one. Inventing a plausible
+   * reference would be worse than an obvious blank: an operator would quote it
+   * to support, who would find no such account.
+   */
+  const identity = {
+    name:
+      [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || 'Signed in',
+    role: user?.role ?? 'Member',
+    accountRef: '—',
+  };
 
   return (
     <div className="flex min-h-screen bg-bg">
@@ -92,21 +105,15 @@ export function AppShell() {
           )}
         </nav>
 
-        <div className="border-t border-line p-3">
-          <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue/20 text-xs font-bold text-blue">
-              {initials}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-semibold text-text">
-                {user?.first_name ?? user?.email ?? 'Signed in'}
-              </span>
-              <span className="block truncate text-[11px] text-soft">{user?.role}</span>
-            </span>
+        <div className="border-t border-line">
+          {/* The mockup's sidebottom identity block. Same component as the
+              topbar chip so the two cannot drift apart. */}
+          <ProfileChip identity={identity} variant="sidebar" />
+          <div className="p-3 pt-0">
+            <button type="button" onClick={handleSignOut} className="lf-btn-ghost w-full">
+              Sign out
+            </button>
           </div>
-          <button type="button" onClick={handleSignOut} className="lf-btn-ghost mt-1 w-full">
-            Sign out
-          </button>
         </div>
       </aside>
 

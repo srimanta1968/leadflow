@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Logo } from '../../components/marketing/Logo';
 import { Field, FormError } from '../../components/forms/Field';
+import { AuthCard } from '../../features/auth';
 import { useSession } from '../../context/SessionContext';
 import { FieldErrors, mapApiError, validateFields, validateRequiredText } from '../../utils/validation';
 
@@ -59,17 +59,26 @@ export default function SignIn() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-6 py-16">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <div className="inline-flex">
-            <Logo />
-          </div>
-          <h1 className="mt-7 text-2xl font-bold text-text">Sign in to LeadFlow</h1>
-          <p className="mt-2 text-sm text-muted">Your workspace, your leads, your clock.</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="lf-panel-raised p-8" noValidate>
+    <AuthCard
+      title="Sign in to LeadFlow"
+      subtitle="Your workspace, your leads, your clock."
+      footer={
+        <>
+          <p>
+            No account yet?{' '}
+            <Link to="/signup" className="font-semibold text-blue hover:text-blue/80">
+              Create one
+            </Link>
+          </p>
+          <p className="mt-3">
+            <Link to="/" className="text-soft hover:text-muted">
+              ← Back to leadflow.com
+            </Link>
+          </p>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} noValidate>
           <div className="grid gap-5">
             <Field id="signin-email" label="Work email" required error={fieldErrors.email}>
               {(wiring) => (
@@ -101,20 +110,7 @@ export default function SignIn() {
           <button type="submit" className="lf-btn-primary mt-7 w-full" disabled={submitting}>
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted">
-          No account yet?{' '}
-          <Link to="/signup" className="font-semibold text-blue hover:text-blue/80">
-            Create one
-          </Link>
-        </p>
-        <p className="mt-3 text-center text-sm">
-          <Link to="/" className="text-soft hover:text-muted">
-            ← Back to leadflow.com
-          </Link>
-        </p>
-      </div>
-    </div>
+      </form>
+    </AuthCard>
   );
 }
