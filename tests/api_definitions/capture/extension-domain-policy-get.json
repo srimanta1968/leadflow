@@ -1,0 +1,91 @@
+{
+  "name": "GET /api/leadflow/capture/extension/domain-policy - May we capture here?",
+  "description": "Asks whether the tenant's policy permits browser capture on a given domain, BEFORE the extension reads anything. The decision comes from sdk-policy, not from a local list, so a tenant can restrict a domain centrally and have it take effect everywhere without shipping a new extension build.\n\nA RESTRICTED DOMAIN IS ANSWERED, NOT HIDDEN. The response is 200 with allowed:false and a reason written for the person, not a 403. The operator has done nothing wrong by opening a page; refusing their whole session with an error would teach them the extension is broken rather than that this particular site is off limits. The reason is displayed, which is the criterion — a block that does not say so is indistinguishable from a bug.\n\nMANUAL ENTRY REMAINS PERMITTED on a restricted domain, and the response says so explicitly with manualEntryPermitted:true. Blocking automated reading of a page is a statement about scraping that page; it is not a statement that the operator may not type what they can see. Conflating the two would push people to a personal notebook, which is worse for everyone.\n\nFAILS CLOSED. When the policy cannot be reached the answer is allowed:false, because an unreachable policy is not permission — capturing from a page the tenant may have restricted, on the grounds that we could not ask, is precisely the outcome the policy exists to prevent.\n\nProtected by the authenticate guard; the Authorization header is required on this GET. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/capture/extension/domain-policy",
+  "method": "GET",
+  "taskId": "4691fc71-6138-4a33-b3d9-54be4f9d693c",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": ["4691fc71-6138-4a33-b3d9-54be4f9d693c#AC3"],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "captureResponse": {
+    "capture.domainPolicy.response.data.allowed": "data.allowed"
+  },
+  "testCases": [
+    {
+      "name": "An ordinary domain is permitted",
+      "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC3",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "domain": "{{static:example.com}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "allowed": true,
+          "manualEntryPermitted": true
+        }
+      }
+    },
+    {
+      "name": "A restricted domain is refused WITH a reason, and still allows manual entry",
+      "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC3",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "domain": "{{static:mail.google.com}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "allowed": false,
+          "manualEntryPermitted": true
+        }
+      }
+    },
+    {
+      "name": "Reject a request with no domain rather than assuming one",
+      "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC3",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {},
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated policy question",
+      "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC3",
+      "queryParams": {
+        "domain": "{{static:example.com}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "domain is required",
+      "when": "the domain query parameter is absent or blank. Not defaulted: a policy answer about an unnamed domain is meaningless, and answering 'allowed' to it would be the most dangerous default available."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    }
+  ]
+}

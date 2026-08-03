@@ -81,6 +81,21 @@ export const FAILURE: Record<string, Message> = {
     title: 'Your session has ended',
     detail: 'Sign in again to continue.',
   },
+  CONFIRMATION_REQUIRED: {
+    tone: 'error',
+    title: 'Confirm what will be sent',
+    // Names the safeguard rather than the rule. An operator who sees "capture
+    // must be confirmed" learns a hoop to jump through; one who sees that
+    // nothing leaves the page unreviewed learns what the product guarantees
+    // them — and is far more likely to actually read the preview.
+    detail: 'Nothing leaves the page until you have reviewed the transmission preview and approved it.',
+  },
+  FORBIDDEN_FIELD: {
+    tone: 'error',
+    title: 'That capture contained something it should not',
+    detail:
+      'Cookies, tokens and hidden fields are never read or sent. The capture was refused rather than cleaned up, so this can be investigated.',
+  },
   ORIGIN_CLASS_REQUIRED: {
     tone: 'error',
     title: 'Choose where this came from',

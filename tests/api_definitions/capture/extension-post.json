@@ -1,0 +1,185 @@
+{
+  "name": "POST /api/leadflow/capture/extension - Transmit a confirmed browser capture",
+  "description": "Receives a browser capture AFTER the operator has confirmed it in the preview. A create at a collection root, so it answers 201.\n\nTHE SERVER IS THE SECOND GUARD, NOT THE ONLY ONE. The extension is where the privacy rules are enforced first — it reads only the user's selection and never touches hidden DOM, cookies or credentials. But an endpoint that trusts its client is not a guardrail, so this refuses a payload that could not have come from a legitimate selection: `confirmed` must be true, and any field carrying a credential-shaped key is rejected outright rather than stripped. Stripping would accept the request and quietly discard evidence that the client is misbehaving; rejecting says so.\n\nNOTHING ARRIVES WITHOUT CONFIRMATION. `confirmed:false` is a 422, not a 400 — the payload is well-formed and the refusal is about consent rather than syntax. A capture the operator has not seen and approved is exactly the background harvesting this feature exists to make impossible.\n\nTHE SOURCE URL IS OPTIONAL AND OFF BY DEFAULT. It is transmitted only when `retainSourceUrl` is true, matching the checkbox. The transmission preview tells the operator which of the three classes each field falls into — visible selection always included, source URL only if checked, cookies and hidden DOM never — and this endpoint honours that table rather than re-deciding it.\n\nORIGIN IS ALWAYS USER_PROVIDED. A person selected this text and pressed a button; that is the strongest provenance claim available and it is not the caller's to override.\n\nEvery accepted transmission appends capture.created naming the acting persona and the domain. Protected by the authenticate guard. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/capture/extension",
+  "method": "POST",
+  "taskId": "4691fc71-6138-4a33-b3d9-54be4f9d693c",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC1",
+    "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC2",
+    "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC4"
+  ],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "quickAction": ["contact", "property", "lead"]
+  },
+  "captureResponse": {
+    "capture.extension.response.data.sourceRecordId": "data.sourceRecordId"
+  },
+  "testCases": [
+    {
+      "name": "A confirmed capture is accepted and recorded",
+      "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC2",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "selectedText": "Priya Raman, Raman Roofing Ltd, priya@ramanroofing.example",
+        "domain": "example.com",
+        "confirmed": true,
+        "retainSourceUrl": false,
+        "quickAction": "contact"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "originClass": "USER_PROVIDED",
+          "sourceUrlRetained": false,
+          "audited": true
+        }
+      }
+    },
+    {
+      "name": "The source URL is retained ONLY when the operator checked the box",
+      "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC1",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "selectedText": "Some selected text",
+        "domain": "example.com",
+        "sourceUrl": "https://example.com/team/priya",
+        "confirmed": true,
+        "retainSourceUrl": true,
+        "quickAction": "lead"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "sourceUrlRetained": true
+        }
+      }
+    },
+    {
+      "name": "REFUSE an unconfirmed capture - this is the background-harvesting guard",
+      "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC2",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "selectedText": "Text the operator never saw",
+        "domain": "example.com",
+        "confirmed": false,
+        "retainSourceUrl": false
+      },
+      "expectedStatus": 422,
+      "expectedError": {
+        "code": "CONFIRMATION_REQUIRED"
+      }
+    },
+    {
+      "name": "REFUSE a payload carrying a credential-shaped field",
+      "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC1",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "selectedText": "Looks ordinary",
+        "domain": "example.com",
+        "confirmed": true,
+        "retainSourceUrl": false,
+        "cookies": "session=abc123"
+      },
+      "expectedStatus": 422,
+      "expectedError": {
+        "code": "FORBIDDEN_FIELD"
+      }
+    },
+    {
+      "name": "REFUSE a password field, whatever else the payload looks like",
+      "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC1",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "selectedText": "Ordinary text",
+        "domain": "example.com",
+        "confirmed": true,
+        "retainSourceUrl": false,
+        "password": "hunter2"
+      },
+      "expectedStatus": 422,
+      "expectedError": {
+        "code": "FORBIDDEN_FIELD"
+      }
+    },
+    {
+      "name": "Reject a capture with no selected text - there is nothing to record",
+      "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC1",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "domain": "example.com",
+        "confirmed": true,
+        "retainSourceUrl": false
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated transmission",
+      "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC4",
+      "payload": {
+        "selectedText": "Anything",
+        "domain": "example.com",
+        "confirmed": true,
+        "retainSourceUrl": false
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "selectedText and domain are required; quickAction must be one of contact, property, lead",
+      "when": "the selection or the domain is missing, or quickAction is outside its vocabulary"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 422,
+      "code": "CONFIRMATION_REQUIRED",
+      "message": "A browser capture must be confirmed in the preview before it is transmitted",
+      "when": "confirmed is absent or false. 422 rather than 400 because the payload is well-formed and the refusal is about consent, not syntax."
+    },
+    {
+      "status": 422,
+      "code": "FORBIDDEN_FIELD",
+      "message": "This payload carries a field that must never leave the page",
+      "when": "the body contains a cookie, token, password or hidden-input field. Rejected rather than stripped: stripping would accept the request and silently discard the evidence that a client is sending what it must never read."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "Capture is restricted on this domain by tenant policy",
+      "when": "the tenant's policy blocks automated capture for the domain. Manual entry remains available — see the domain-policy endpoint."
+    }
+  ]
+}

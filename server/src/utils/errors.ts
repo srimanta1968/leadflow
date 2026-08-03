@@ -34,15 +34,6 @@ export const ErrorCodes = {
   RATE_LIMITED: 'RATE_LIMITED',
   UPSTREAM_UNAVAILABLE: 'UPSTREAM_UNAVAILABLE',
   /**
-   * The route exists but this deployment does not provide it — currently only
-   * local password auth, once ProjexCloud is the identity authority.
-   *
-   * Distinct from FORBIDDEN, which says the CALLER may not do it: retrying with
-   * a better credential fixes a 403 and can never fix this. Distinct from
-   * NOT_FOUND, which would tell a client the endpoint does not exist when the
-   * useful answer is that it exists and authentication happens elsewhere.
-   */
-  /**
    * A capture arrived with no usable origin class.
    *
    * 422, not 400, and its own code rather than VALIDATION_ERROR. The request is
@@ -54,6 +45,34 @@ export const ErrorCodes = {
    * told the guess is not acceptable, not that their syntax is off.
    */
   ORIGIN_CLASS_REQUIRED: 'ORIGIN_CLASS_REQUIRED',
+  /**
+   * A browser capture arrived without the operator confirming the preview.
+   *
+   * 422, not 400: the payload is well-formed and the refusal is about consent.
+   * A capture the operator never saw and approved is exactly the background
+   * harvesting this feature exists to make impossible, so the endpoint refuses
+   * it rather than trusting the client to have asked.
+   */
+  CONFIRMATION_REQUIRED: 'CONFIRMATION_REQUIRED',
+  /**
+   * A payload carried something that must never leave the page.
+   *
+   * Cookies, tokens, passwords, hidden inputs. REJECTED rather than stripped —
+   * stripping would accept the request and silently discard the one piece of
+   * evidence that a client is reading what it must not. A guardrail that
+   * quietly cleans up after a misbehaving client cannot tell you it is
+   * misbehaving.
+   */
+  FORBIDDEN_FIELD: 'FORBIDDEN_FIELD',
+  /**
+   * The route exists but this deployment does not provide it — currently only
+   * local password auth, once ProjexCloud is the identity authority.
+   *
+   * Distinct from FORBIDDEN, which says the CALLER may not do it: retrying with
+   * a better credential fixes a 403 and can never fix this. Distinct from
+   * NOT_FOUND, which would tell a client the endpoint does not exist when the
+   * useful answer is that it exists and authentication happens elsewhere.
+   */
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;

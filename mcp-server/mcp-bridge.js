@@ -1402,7 +1402,7 @@ const TOOLS = [
       },
       required: ['featureId']
     }
-  }
+  },
   {
     name: 'projexlight_get_defect_context',
     description: 'FIX THIS DEFECT (call this FIRST). Fetches a defect by UUID or short ID (e.g. DEF-123) and returns everything needed to fix it in ONE payload, so no follow-up lookups are needed: the defect itself; its originating task (description, acceptance_criteria, technical_requirements); the feature and scenario for the intended behaviour and BDD steps; the api_library rows for the endpoints involved, including route_file_path so you can open the right file; the raw failure material (failure log, expected vs actual result, per-environment test results) rather than a summary; what was already tried (defect history and comments); and any known defect patterns for this project. Read the warnings array — it reports anything that could not be resolved, such as a missing originating task.',
@@ -1434,7 +1434,7 @@ const TOOLS = [
       },
       required: ['defectId']
     }
-  },
+  }
 ];
 
 // Map MCP tool names to HTTP endpoints

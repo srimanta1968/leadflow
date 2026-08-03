@@ -58,6 +58,15 @@ export interface AppConfig {
      */
     rootTenantId: string;
     appId: string;
+    /**
+     * The sdk-policy policy evaluated for browser-capture domain restrictions.
+     *
+     * Its ABSENCE is meaningful: no policy id means the tenant has declared no
+     * domain restriction, so capture is permitted. Only when one IS configured
+     * does an unreachable policy engine fail closed — you cannot fail closed
+     * against a rule nobody wrote.
+     */
+    capturePolicyId: string;
     timeoutMs: number;
     /**
      * ProjexCloud `sdk-identity`, the issuer of the session tokens this app
@@ -156,6 +165,7 @@ export const config: AppConfig = {
     // entirely when empty, so a gateway that scopes by tenant alone is
     // unaffected.
     appId: process.env.PROJEXCLOUD_APP_ID || '',
+    capturePolicyId: process.env.PROJEXCLOUD_CAPTURE_POLICY_ID || '',
     timeoutMs: parseInt(process.env.PROJEXCLOUD_TIMEOUT_MS || '8000', 10),
     identity: {
       issuerUrl: process.env.PROJEXCLOUD_IDENTITY_URL || '',
