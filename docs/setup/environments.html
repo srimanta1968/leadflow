@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeadFlow — Environment Setup (dev, QA, prod)</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d24; --muted:#5b6472; --line:#e4e7ec;
+    --brand:#2f5bea; --brand-soft:#eaf0ff;
+    --ok:#1a7f47; --ok-bg:#e3f5ea; --partial:#9a6b00; --partial-bg:#fdf2d8;
+    --miss:#b42318; --miss-bg:#fdeceb; --accent:#6941c6; --accent-bg:#f2ecff;
+    --code-bg:#f2f4f7;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0f1218; --panel:#171b22; --ink:#e8eaed; --muted:#9aa4b2; --line:#272d38;
+      --brand:#7d9bff; --brand-soft:#1a2540;
+      --ok:#5cd598; --ok-bg:#123023; --partial:#f0c24b; --partial-bg:#332a12;
+      --miss:#ff8b80; --miss-bg:#3a1a17; --accent:#c3a6ff; --accent-bg:#241a3a;
+      --code-bg:#10141b;
+      --shadow:0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1218; --panel:#171b22; --ink:#e8eaed; --muted:#9aa4b2; --line:#272d38;
+    --brand:#7d9bff; --brand-soft:#1a2540;
+    --ok:#5cd598; --ok-bg:#123023; --partial:#f0c24b; --partial-bg:#332a12;
+    --miss:#ff8b80; --miss-bg:#3a1a17; --accent:#c3a6ff; --accent-bg:#241a3a;
+    --code-bg:#10141b;
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d24; --muted:#5b6472; --line:#e4e7ec;
+    --brand:#2f5bea; --brand-soft:#eaf0ff;
+    --ok:#1a7f47; --ok-bg:#e3f5ea; --partial:#9a6b00; --partial-bg:#fdf2d8;
+    --miss:#b42318; --miss-bg:#fdeceb; --accent:#6941c6; --accent-bg:#f2ecff;
+    --code-bg:#f2f4f7;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+  a{color:var(--brand)}
+  h1,h2,h3,h4{line-height:1.25;letter-spacing:-.01em}
+  h1{font-size:30px;margin:0 0 6px}
+  h2{font-size:22px;margin:48px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+  h3{font-size:17px;margin:28px 0 10px}
+  h4{font-size:15px;margin:20px 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:12px}
+  p{margin:10px 0}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:6px 0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;
+    background:var(--brand-soft);color:var(--ink);padding:1px 6px;border-radius:5px;
+    border:1px solid var(--line);word-break:break-word}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;overflow-x:auto;margin:12px 0;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.55}
+  pre code{background:none;border:none;padding:0;font-size:inherit}
+  .sub{color:var(--muted);font-size:14px}
+  header.doc{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:8px}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--brand);background:var(--brand-soft);padding:4px 10px;border-radius:999px;margin-bottom:12px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:14px;color:var(--muted);font-size:13px}
+  .meta b{color:var(--ink);font-weight:600}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;
+    box-shadow:var(--shadow);margin:16px 0}
+  .warn{border-left:5px solid var(--partial);background:var(--partial-bg)}
+  .stop{border-left:5px solid var(--miss);background:var(--miss-bg)}
+  .note{border-left:5px solid var(--brand);background:var(--brand-soft)}
+  .panel .big{font-size:16px;font-weight:700;margin:0 0 6px}
+
+  .tablewrap{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;font-size:14px;min-width:620px}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--brand-soft);font-weight:600;white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  td code{white-space:nowrap}
+
+  .pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;
+    border:1px solid transparent;white-space:nowrap}
+  .p-ok{color:var(--ok);background:var(--ok-bg)}
+  .p-part{color:var(--partial);background:var(--partial-bg)}
+  .p-miss{color:var(--miss);background:var(--miss-bg)}
+  .p-acc{color:var(--accent);background:var(--accent-bg)}
+
+  .toc{columns:2;column-gap:32px}
+  .toc a{display:block;padding:3px 0;text-decoration:none;break-inside:avoid}
+  .toc a:hover{text-decoration:underline}
+  @media (max-width:640px){.toc{columns:1}}
+  hr{border:none;border-top:1px solid var(--line);margin:34px 0}
+  .footnote{color:var(--muted);font-size:13px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <span class="kicker">Setup &amp; Operations</span>
+  <h1>LeadFlow — environment setup</h1>
+  <p class="sub">How to stand up and run LeadFlow in development, QA and production.</p>
+  <div class="meta">
+    <span><b>Stack</b> Express + TypeScript · React + Vite · PostgreSQL 18 (PostGIS)</span>
+    <span><b>Node</b> ≥ 20</span>
+    <span><b>Last verified</b> 2 Aug 2026</span>
+  </div>
+</header>
+
+<div class="panel warn">
+  <p class="big">Read this before trusting the production section</p>
+  <p><b>Only development is fully realised today.</b> QA runs, but shares the development database
+  by default. Production has no deployment pipeline, no container image for the app, no process
+  manager and no CI — the production section below describes what the code <i>supports</i> and what
+  you would have to supply yourself, and the <a href="#gaps">Known gaps</a> section lists exactly
+  what is missing. Nothing here is a description of a running production system, because there
+  isn't one yet.</p>
+</div>
+
+<h2 id="toc">Contents</h2>
+<div class="panel toc">
+  <a href="#parts">1. What the system is made of</a>
+  <a href="#prereq">2. Prerequisites</a>
+  <a href="#matrix">3. The three environments at a glance</a>
+  <a href="#dev">4. Development</a>
+  <a href="#qa">5. QA and testing</a>
+  <a href="#prod">6. Production</a>
+  <a href="#envvars">7. Environment variable reference</a>
+  <a href="#projexcloud">8. ProjexCloud gateway &amp; identity</a>
+  <a href="#tenancy">9. Tenancy: root vs app</a>
+  <a href="#gaps">10. Known gaps before production</a>
+  <a href="#trouble">11. Troubleshooting</a>
+</div>
+
+<h2 id="parts">1. What the system is made of</h2>
+
+<div class="tablewrap">
+<table>
+<thead><tr><th>Part</th><th>Where</th><th>Port</th><th>Needed in prod?</th></tr></thead>
+<tbody>
+<tr>
+  <td><b>API</b><br><span class="sub">Express + TypeScript</span></td>
+  <td><code>server/</code></td>
+  <td><code>3010</code></td>
+  <td><span class="pill p-ok">Yes</span></td>
+</tr>
+<tr>
+  <td><b>Web client</b><br><span class="sub">React + Vite</span></td>
+  <td><code>client/</code></td>
+  <td><code>5173</code> (dev only)</td>
+  <td><span class="pill p-ok">Yes</span> — as static files, see below</td>
+</tr>
+<tr>
+  <td><b>PostgreSQL</b><br><span class="sub">PostGIS 18-3.6</span></td>
+  <td><code>docker-compose.yml</code></td>
+  <td><code>5432</code></td>
+  <td><span class="pill p-ok">Yes</span></td>
+</tr>
+<tr>
+  <td><b>ProjexCloud gateway</b><br><span class="sub">every horizontal capability</span></td>
+  <td>external</td>
+  <td>—</td>
+  <td><span class="pill p-part">Degrades</span> — see §8</td>
+</tr>
+<tr>
+  <td><b>ProjexLight MCP</b><br><span class="sub">code review &amp; schema sync agent</span></td>
+  <td><code>docker-compose.yml</code></td>
+  <td><code>8766</code></td>
+  <td><span class="pill p-miss">No</span> — build-time tooling only</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="panel note">
+  <p class="big">The MCP server is not part of the application</p>
+  <p>It sits in the same <code>docker-compose.yml</code> as the database, which makes it look like a
+  runtime dependency. It is not: it is the ProjexLight development agent that reviews code and syncs
+  schema, and it mounts the whole repository at <code>/workspace</code>. <b>Never deploy it
+  alongside the app</b> — it would put your source tree on a production host for no benefit.</p>
+</div>
+
+<h2 id="prereq">2. Prerequisites</h2>
+<ul>
+  <li><b>Node ≥ 20</b> — enforced by <code>engines</code> in the root <code>package.json</code>.</li>
+  <li><b>Docker + Docker Compose</b> — for PostgreSQL. If you have your own PostgreSQL 18 with
+      PostGIS and pgvector, you can point at that instead and skip Compose entirely.</li>
+  <li><b>Ports free:</b> <code>3010</code>, <code>5173</code>, <code>5432</code>. Both dev ports are
+      checked before startup and both fail loudly rather than drifting — see §11.</li>
+</ul>
+
+<h2 id="matrix">3. The three environments at a glance</h2>
+
+<div class="tablewrap">
+<table>
+<thead><tr><th></th><th>Development</th><th>QA</th><th>Production</th></tr></thead>
+<tbody>
+<tr><th>Status</th>
+  <td><span class="pill p-ok">Working</span></td>
+  <td><span class="pill p-part">Works, shares dev DB</span></td>
+  <td><span class="pill p-miss">Not yet stood up</span></td></tr>
+<tr><th><code>NODE_ENV</code></th><td><code>development</code></td><td><code>test</code></td><td><code>production</code></td></tr>
+<tr><th>Start with</th><td><code>npm run dev</code></td><td><code>npm test</code></td><td><code>npm run build</code> then <code>npm start</code></td></tr>
+<tr><th>API runs as</th><td><code>ts-node-dev</code>, hot reload</td><td>in-process (supertest)</td><td><code>node dist/app.js</code></td></tr>
+<tr><th>Client</th><td>Vite dev server, proxies <code>/api</code></td><td>Vite dev server (BDD suite drives it)</td><td>Static build — <b>you must serve it</b></td></tr>
+<tr><th>Database</th><td>Compose container</td><td><b>same as dev unless overridden</b></td><td>Managed PostgreSQL 18</td></tr>
+<tr><th>Migrations</th><td>at boot</td><td>at suite start</td><td>at boot</td></tr>
+<tr><th>Identity</th><td>local passwords</td><td>local passwords</td><td>ProjexCloud <span class="pill p-part">planned</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="dev">4. Development</h2>
+
+<h3>4.1 First run</h3>
+<pre><code># 1. Install everything (root, server, client)
+npm run install:all
+
+# 2. Environment files — three of them, one per workspace
+cp .env.example .env
+cp server/.env.example server/.env
+cp client/.env.example client/.env
+
+# 3. Start PostgreSQL
+docker-compose up -d postgres
+
+# 4. Start both dev servers
+npm run dev</code></pre>
+
+<p>That gives you the API on <a href="http://localhost:3010">localhost:3010</a> and the app on
+<a href="http://localhost:5173">localhost:5173</a>. Check the API came up healthily:</p>
+
+<pre><code>curl http://localhost:3010/health
+# {"status":"ok","database":"up","timestamp":"..."}</code></pre>
+
+<p><code>/health</code> is public by design and returns <b>503</b> with
+<code>"database":"down"</code> when PostgreSQL is unreachable, so it is a real readiness probe
+rather than a liveness stub.</p>
+
+<h3>4.2 What happens on boot</h3>
+<p>Three things run before the server accepts a request, in this order:</p>
+<ol>
+  <li><b>Migrations</b> (<code>server/src/db/migrations/*.sql</code>, filename order, one transaction
+      each, recorded in <code>_leadflow_migrations</code>). <b>Fatal if they fail</b> — serving
+      against an unknown schema is worse than not serving. Nobody creates tables by hand.</li>
+  <li><b>Consent purposes</b> registered upstream. Idempotent, <b>not</b> fatal.</li>
+  <li><b>Role provisioning</b> upstream. Idempotent, <b>not</b> fatal.</li>
+</ol>
+<p>The last two run on <i>every</i> boot rather than once behind a flag, because a flag would be a
+local record of upstream state and would be wrong the moment someone edited the tenant directly.
+They are non-fatal on purpose: the app serves fine against an identity provider that is temporarily
+unreachable, and refusing to boot would turn their outage into ours.</p>
+
+<h3>4.3 Pointing at a different SDK gateway</h3>
+<pre><code>npm run dev:sdk-cloud    # https://cloud.projexlight.com
+npm run dev:sdk-local    # http://localhost:3500</code></pre>
+<p>A shell-provided value wins because <code>dotenv</code> never overwrites an existing
+<code>process.env</code> entry, so these need no file edits. Note the local gateway used during
+recent testing was <code>http://localhost:4000</code> — check which port yours is on rather than
+trusting the script name.</p>
+
+<h2 id="qa">5. QA and testing</h2>
+
+<div class="panel stop">
+  <p class="big">The test suite runs against a real database — and migrates it</p>
+  <p><code>server/tests/setup.ts</code> calls <code>runMigrations()</code> in <code>beforeAll</code>.
+  With no override, <b>that is your development database</b>. The suite also writes and deletes rows.
+  Before running the suite against anything you care about, point <code>DB_NAME</code> somewhere
+  else. There is no separate QA database provisioned for you.</p>
+  <p class="footnote">This is deliberate in one respect: migrating from the suite means the tests
+  also prove the migration runner works, rather than assuming it. It is only the shared target that
+  is a problem.</p>
+</div>
+
+<h3>5.1 Running the suites</h3>
+<pre><code>npm test              # server (Jest) then client (Vitest)
+npm run test:server   # Jest only  — 229 tests / 14 suites
+npm run test:client   # Vitest only
+npm run typecheck     # tsc --noEmit, both workspaces
+npm run lint          # eslint, both workspaces</code></pre>
+
+<h3>5.2 An isolated QA database</h3>
+<p>The cheapest isolation is a second database in the same container:</p>
+<pre><code>docker-compose exec postgres createdb -U postgres leadflow_qa
+
+# Windows PowerShell
+$env:DB_NAME = "leadflow_qa"; npm run test:server
+
+# bash
+DB_NAME=leadflow_qa npm run test:server</code></pre>
+<p>Migrations self-provision it on the first run, so there is nothing else to seed.</p>
+
+<h3>5.3 The BDD / UI suite</h3>
+<p>Feature files live in <code>tests/features/</code> (<code>lead-capture-from-web-forms</code>,
+<code>ai-lead-routing</code>, <code>sla-management</code>, <code>basic-analytics-dashboard</code>) and
+are driven by the ProjexLight runner from <i>inside a container</i>. Two consequences that are easy
+to trip over:</p>
+<ul>
+  <li>The Vite dev server binds all interfaces and explicitly allows
+      <code>host.docker.internal</code>. Without that entry every scenario fails on its first
+      navigate step with a plain <code>403 Blocked request</code> — while a <code>curl</code>
+      pre-flight from the same container still passes, because it is a 403 response rather than a
+      refused connection.</li>
+  <li>Port <code>5173</code> is pinned with <code>strictPort</code>. It must not drift, because
+      <code>tests/config/test-config.json</code> and the CORS allow-list in
+      <code>server/src/app.ts</code> both hard-code it.</li>
+</ul>
+<div class="panel note">
+  <p><b>Scenario authoring trap.</b> A <code>Background:</code> block placed above the first
+  <code>Scenario:</code> does not execute. A suite written that way runs every scenario signed out,
+  and looks like it passed. Use the <code>@login:default</code> tag instead.</p>
+</div>
+
+<h2 id="prod">6. Production</h2>
+
+<h3>6.1 Build and run</h3>
+<pre><code>npm run install:all
+npm run build     # tsc + copy migrations → server/dist ; vite build → client/dist
+npm start         # node dist/app.js</code></pre>
+
+<p>The build step copies the <code>.sql</code> migration files into <code>dist/db/migrations</code>.
+If that copy is ever skipped, the runner falls back to the source path so the app still boots rather
+than silently applying nothing — but a deployment that ships <code>dist</code> without
+<code>src</code> would then have no migrations at all. Ship both, or verify the copy.</p>
+
+<div class="panel stop">
+  <p class="big">The API does not serve the client</p>
+  <p>There is no <code>express.static</code> anywhere in <code>server/src</code>. <code>npm start</code>
+  gives you the API alone. You must serve <code>client/dist</code> yourself — nginx, a CDN, or any
+  static host — and set <code>CORS_ORIGIN</code> to wherever you serve it from, or every request from
+  the app will be blocked by CORS.</p>
+</div>
+
+<h3>6.2 What must change from the defaults</h3>
+<div class="tablewrap">
+<table>
+<thead><tr><th>Variable</th><th>Default</th><th>Why it must change</th></tr></thead>
+<tbody>
+<tr><td><code>NODE_ENV</code></td><td><code>development</code></td><td>Selects production behaviour throughout.</td></tr>
+<tr><td><code>JWT_SECRET</code></td><td><code>your_jwt_secret_key_change_this_in_production</code></td>
+    <td><span class="pill p-miss">Critical</span> Nothing in the code stops the app booting with this placeholder. Anyone who has read this repo can mint a valid session token. See <a href="#gaps">§10</a>.</td></tr>
+<tr><td><code>DB_PASSWORD</code></td><td><code>postgres</code></td><td>Compose default.</td></tr>
+<tr><td><code>DB_SSL</code></td><td><code>false</code></td><td>Set <code>true</code> for any managed database — but read the caveat in §10 first.</td></tr>
+<tr><td><code>CORS_ORIGIN</code></td><td>localhost origins</td><td>Must name the real client origin or the app cannot call its own API.</td></tr>
+<tr><td><code>LOG_LEVEL</code> / <code>LOG_FORMAT</code></td><td><code>debug</code> / <code>dev</code></td><td><code>dev</code> format is human-coloured and not machine-parseable. Use <code>combined</code>.</td></tr>
+<tr><td><code>BCRYPT_ROUNDS</code></td><td><code>10</code></td><td>Fine, but moot once ProjexCloud owns identity.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>6.3 The database</h3>
+<p>PostgreSQL <b>18</b> with PostGIS and pgvector — matching <code>postgis/postgis:18-3.6</code>, the
+image the Compose file pins. The pin is deliberate and must not be relaxed to a floating tag:</p>
+<div class="panel warn">
+  <p>This previously read <code>postgres:alpine</code>, which was wrong twice over. It tracked
+  "latest stable", so the major version moved on its own — and <b>a new major pointed at an existing
+  data volume does not migrate</b>, it refuses to start with <i>"database files are incompatible
+  with server version"</i>. It was also the plain <code>postgres</code> image, without the PostGIS
+  and pgvector extensions the platform database provides.</p>
+  <p>Upgrading a major version is a deliberate edit to the Compose file <b>plus a dump/restore</b>.
+  Keep it in step with the generator's <code>DB_IMAGE_PINS</code>.</p>
+</div>
+
+<h3>6.4 Process management</h3>
+<p><code>npm start</code> runs one Node process in the foreground. It handles <code>SIGTERM</code> and
+<code>SIGINT</code> by draining in-flight requests and closing the connection pool before exiting, so
+it behaves correctly under systemd, Docker or Kubernetes. It does <b>not</b> restart itself, cluster,
+or write logs anywhere but stdout — supply that from outside.</p>
+<p>Use <code>GET /health</code> as the readiness probe. It returns 503 while the database is
+unreachable, which is what you want a load balancer to act on.</p>
+
+<h2 id="envvars">7. Environment variable reference</h2>
+
+<p>Three files, and it matters which is which:</p>
+<div class="tablewrap">
+<table>
+<thead><tr><th>File</th><th>Read by</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><code>server/.env</code></td><td>the API</td><td>The one that matters. Everything below unless marked otherwise.</td></tr>
+<tr><td><code>client/.env</code></td><td>Vite, at build time</td><td>Only <code>VITE_</code>-prefixed vars, and they are <b>baked into the bundle</b> — never put a secret here.</td></tr>
+<tr><td><code>.env</code> (root)</td><td>Docker Compose</td><td>Mainly <code>DB_*</code> for the container. Overlaps with <code>server/.env</code>; keep them in step.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>Application</h4>
+<div class="tablewrap">
+<table>
+<thead><tr><th>Variable</th><th>Default</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>PORT</code></td><td><code>3010</code></td><td>Not 3000: on a machine also running the ProjexCloud dev stack, 3000/3001/3002/3099/3100/3200 are taken. Change it and you must move <code>VITE_API_TARGET</code> with it, or <code>/api</code> resolves to nothing.</td></tr>
+<tr><td><code>BODY_PARSER_LIMIT</code></td><td><code>10mb</code></td><td></td></tr>
+<tr><td><code>RATE_LIMIT_WINDOW_MS</code></td><td><code>900000</code></td><td>15 minutes.</td></tr>
+<tr><td><code>RATE_LIMIT_MAX_REQUESTS</code></td><td><code>100</code></td><td>Per window, per IP — but applied to the <b>public lead-capture route only</b> (<code>publicLeadRoutes.ts</code>), not globally. Authenticated routes are unthrottled.</td></tr>
+<tr><td><code>API_PREFIX</code>, <code>TRUST_PROXY</code>, <code>API_VERSION</code></td><td>—</td>
+    <td><span class="pill p-miss">Inert</span> Present in <code>.env.example</code> but <b>read nowhere in the code</b>. Setting them does nothing. See §10.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>Database</h4>
+<div class="tablewrap">
+<table>
+<thead><tr><th>Variable</th><th>Default</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>DB_HOST</code> / <code>DB_PORT</code></td><td><code>localhost</code> / <code>5432</code></td><td></td></tr>
+<tr><td><code>DB_NAME</code></td><td><code>leadflow_db</code></td><td>Override this for QA — see §5.2.</td></tr>
+<tr><td><code>DB_USER</code> / <code>DB_PASSWORD</code></td><td><code>postgres</code> / <code>postgres</code></td><td>Compose defaults.</td></tr>
+<tr><td><code>DB_SSL</code></td><td><code>false</code></td><td>See the caveat in §10.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>Client</h4>
+<div class="tablewrap">
+<table>
+<thead><tr><th>Variable</th><th>Default</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>VITE_API_URL</code></td><td><code>http://localhost:3010/api</code></td><td>Baked in at build time.</td></tr>
+<tr><td><code>VITE_API_TARGET</code></td><td><code>http://localhost:3010</code></td><td>Dev proxy target only. Must agree with <code>PORT</code>.</td></tr>
+<tr><td><code>VITE_PORT</code></td><td><code>5173</code></td><td>Pinned; do not let it drift.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="projexcloud">8. ProjexCloud gateway &amp; identity</h2>
+
+<p>LeadFlow owns no horizontal capability of its own — contact, consent, assignment, SLA, sequence
+and audit state all live behind the gateway. Two <i>separate</i> trust relationships, easy to
+conflate:</p>
+<ul>
+  <li><b>The gateway</b> (<code>PROJEXCLOUD_GATEWAY_URL</code>) authenticates
+      <i>LeadFlow-the-application</i> with an application credential.</li>
+  <li><b>Identity</b> (<code>PROJEXCLOUD_IDENTITY_URL</code>) issues the session tokens LeadFlow
+      <i>verifies</i> for end users.</li>
+</ul>
+
+<h3>8.1 Degrade-to-local</h3>
+<div class="panel warn">
+  <p><b>Both URL and key must be non-empty</b> for the gateway to be used at all. While either is
+  blank every caller takes its documented local fallback: SLA verdicts come from the wall clock
+  instead of the business calendar, routing falls back to rule-match then round-robin, and alerts
+  are raised but stay <code>state=pending</code>. That degradation is deliberate and loses nothing —
+  but it is not the real thing.</p>
+  <p><b>Do not put a placeholder in the key.</b> A non-empty fake flips <code>isConfigured()</code>
+  to true and turns every SDK call into a 502 <code>UPSTREAM_UNAVAILABLE</code> instead of a clean
+  fallback.</p>
+</div>
+
+<h3>8.2 Credentials — three traps, all verified against a live gateway</h3>
+<div class="tablewrap">
+<table>
+<thead><tr><th>What you send</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td><code>Authorization: Bearer &lt;tenant JWT&gt;</code></td><td><span class="pill p-ok">200</span></td></tr>
+<tr><td><code>Authorization: Bearer &lt;pk_test_ key&gt;</code></td><td><span class="pill p-part">403</span> recognised, not authorised</td></tr>
+<tr><td><code>x-api-key: &lt;key&gt;</code></td><td><span class="pill p-miss">401</span> header not recognised — <b>there is no such header</b></td></tr>
+</tbody>
+</table>
+</div>
+<ol>
+  <li><b>The SDK name is not a URL segment.</b> <code>{base}/api/source-records</code> → 200;
+      <code>{base}/sdk-source-record/api/source-records</code> → 404. The gateway serves every SDK's
+      routes under one flat namespace and works out which SDK owns a path itself.</li>
+  <li><b>A <code>pk_</code> key is not a bearer credential.</b> It is the <code>client_secret</code>
+      for <code>POST /api/auth/token</code>. The client exchanges it automatically and caches the
+      resulting token until 60s before expiry.</li>
+  <li><b>The exchange is necessary but not sufficient.</b> The token names a synthetic persona that
+      starts with <b>no role grants</b>, and authority resolves from the persona at request time —
+      so calls keep returning 403 until someone runs
+      <code>POST /api/personas/{persona_id}/roles</code>. A valid key plus a clean exchange plus 403
+      is an <i>ungranted persona</i>, not a broken key.</li>
+</ol>
+
+<div class="panel note">
+  <p><b>The tenant-scoping trap</b>, if you are pasting a JWT into the config: the token from
+  <code>POST /api/auth/login</code> carries <code>tenant_id: null</code> and every tenant-scoped route
+  refuses it. The token from <code>POST /api/auth/signup-tenant</code> carries the tenant. Two
+  identities, and only one of them works.</p>
+</div>
+
+<h3>8.3 Local vs cloud credentials</h3>
+<p>Each target has its <b>own</b> key — a cloud key will not authenticate against a local gateway or
+vice versa. Keep two files and switch between them; <code>server/.gitignore</code> ignores
+<code>.env.*</code> so neither is committed. <code>docs/projexcloud-env.example.md</code> is the
+committed template and holds no values.</p>
+
+<h2 id="tenancy">9. Tenancy: root vs app</h2>
+
+<p>A ProjexCloud tenant row has a <code>NOT NULL app_id</code>, so <b>one tenant row belongs to
+exactly one app</b>. A customer running several apps is a <i>root</i> tenant with a <i>child</i>
+tenant per app.</p>
+
+<div class="tablewrap">
+<table>
+<thead><tr><th>Scoped to</th><th>Concerns</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td><b>App</b> (child)<br><code>PROJEXCLOUD_TENANT_ID</code></td>
+    <td>leads, routing, SLA, consent, audit</td>
+    <td>A lead captured in LeadFlow must not be visible to the customer's other product. That isolation is the point of the split — and an app-scoped audit chain stops one app's operator reading another's activity.</td></tr>
+<tr><td><b>Customer</b> (root)<br><code>PROJEXCLOUD_ROOT_TENANT_ID</code></td>
+    <td>billing, org chart, cross-app reporting</td>
+    <td>The customer is the payer and the employer once, however many apps. Scope billing to the app and one customer becomes several payers.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><b>Leave <code>PROJEXCLOUD_ROOT_TENANT_ID</code> empty while a customer owns one app.</b> Root and
+child are the same row, and the code falls back correctly. Set it the moment there are two.</p>
+
+<div class="panel warn">
+  <p><b>Why this is configured before it is needed.</b> Today the two collapse and nothing breaks.
+  The moment a second app is sold, every <code>tenant_id</code> already written is ambiguous —
+  customer or app? — and no later code can recover which was meant. Deciding now costs a config
+  field; deciding later means migrating every tenant-scoped row against data whose meaning has to be
+  guessed.</p>
+  <p><b>Current state:</b> <span class="pill p-part">Modelled, not enforced.</span>
+  <code>server/src/platform/tenancy/tenantHierarchy.ts</code> encodes the split and is covered by
+  tests, but the request handlers do not call <code>tenantIdFor()</code> yet. It is a recorded,
+  testable decision — not yet an enforced boundary at the call sites.</p>
+</div>
+
+<h2 id="gaps">10. Known gaps before production</h2>
+
+<div class="tablewrap">
+<table>
+<thead><tr><th>Gap</th><th>Severity</th><th>Detail</th></tr></thead>
+<tbody>
+<tr>
+  <td><b><code>JWT_SECRET</code> has no guard</b></td>
+  <td><span class="pill p-miss">Critical</span></td>
+  <td>The app boots happily with the placeholder from <code>.env.example</code>. Anyone who has read this repository can then mint a valid session token. Nothing in the code refuses to start.</td>
+</tr>
+<tr>
+  <td><b>TLS certificates are not verified</b></td>
+  <td><span class="pill p-miss">Critical</span></td>
+  <td><code>DB_SSL=true</code> sets <code>rejectUnauthorized: false</code> in <code>DataService.ts</code>. That encrypts the connection but accepts <i>any</i> certificate, so it does not authenticate the server — no protection against an interposed one.</td>
+</tr>
+<tr>
+  <td><b>No <code>trust proxy</code>, and rate limiting is capture-only</b></td>
+  <td><span class="pill p-part">High</span></td>
+  <td>Two problems that compound. <code>TRUST_PROXY</code> exists in <code>.env.example</code> but is read nowhere, so behind a load balancer Express sees the proxy's IP for every request — and <code>express-rate-limit</code> keys on IP, so the limiter treats all traffic as one client. It is also applied to the public lead-capture route alone; every authenticated route is unthrottled. Both need code changes, not configuration.</td>
+</tr>
+<tr>
+  <td><b>Tests share the development database</b></td>
+  <td><span class="pill p-part">High</span></td>
+  <td>The suite migrates and writes to whatever <code>DB_NAME</code> points at. See §5.2.</td>
+</tr>
+<tr>
+  <td><b>Local password authentication still exists</b></td>
+  <td><span class="pill p-part">High</span></td>
+  <td>ProjexCloud's guide says not to keep a parallel users/roles/sessions store. LeadFlow still has <code>users.password_hash</code>. <b>Mitigated:</b> setting <code>PROJEXCLOUD_IDENTITY_URL</code> now disables local password auth with 501, so the two stores cannot both be answering. The table is dropped only once personas are provisioned for existing users.</td>
+</tr>
+<tr>
+  <td><b>Identity keys on <code>users.id</code>, not <code>persona_id</code></b></td>
+  <td><span class="pill p-part">Medium</span></td>
+  <td>Migration <code>007</code> adds the persona columns alongside the user ones, nullable. Dual-write, backfill, read-switch and drop are still to come — steps that need a reachable tenant.</td>
+</tr>
+<tr>
+  <td><b>No deployment pipeline</b></td>
+  <td><span class="pill p-part">Medium</span></td>
+  <td>No CI (<code>.github/workflows</code> does not exist), no application container image, no process manager config, no secret management. All must be supplied.</td>
+</tr>
+<tr>
+  <td><b>No static hosting for the client</b></td>
+  <td><span class="pill p-part">Medium</span></td>
+  <td>See §6.1 — the API does not serve <code>client/dist</code>.</td>
+</tr>
+<tr>
+  <td><b>Four services still send <code>/v1</code> paths</b></td>
+  <td><span class="pill p-part">Low</span></td>
+  <td><code>SlaMonitorService</code>, <code>LeadCaptureService</code>, <code>RoutingService</code>, <code>SlaAlertService</code>. <code>/v1/source-records</code> 404s against the real gateway; the catalog path is <code>/api</code>. Currently invisible because each wraps the call in degrade-to-local.</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="trouble">11. Troubleshooting</h2>
+
+<h3>Port already in use</h3>
+<p><code>npm run dev</code> refuses to start if either port is taken — reported once, clearly, by the
+<code>predev</code> hook, rather than a raw <code>EADDRINUSE</code> stack trace repeating every few
+seconds under <code>ts-node-dev --respawn</code>. Almost always a dev server from an earlier session.</p>
+<pre><code># Windows
+netstat -ano | findstr :3010
+taskkill /PID &lt;pid&gt; /F
+
+# macOS / Linux
+lsof -ti tcp:3010 | xargs kill
+
+# Or move both together — they must agree
+PORT=3011 VITE_API_TARGET=http://localhost:3011 npm run dev</code></pre>
+
+<h3>PostgreSQL 5432 clash</h3>
+<p>Usually a local PostgreSQL service. Set <code>DB_PORT=5433</code> in the root <code>.env</code>
+(replace the line, do not append), then <code>docker-compose down &amp;&amp; docker-compose up -d</code>.</p>
+
+<h3>"database files are incompatible with server version"</h3>
+<p>The image's major version changed under an existing volume. PostgreSQL does not auto-migrate
+majors. Either restore the previous pinned image, or dump on the old version and restore on the new.
+<code>docker-compose down -v</code> would fix it by deleting all data — only acceptable on a
+throwaway dev volume.</p>
+
+<h3>Every ProjexCloud call returns 403</h3>
+<p>Work down §8.2 in order: is the credential a <code>pk_</code> key (needs exchange, which the client
+now does), is <code>PROJEXCLOUD_APP_ID</code> set (it is the <code>client_id</code> for that exchange),
+and <b>has the persona been granted a role</b>. The third is the one that is almost always missing.</p>
+
+<h3>Every ProjexCloud call returns 404</h3>
+<p>Check the path does not include the SDK name as a segment, and that it starts <code>/api</code>
+rather than <code>/v1</code>.</p>
+
+<h3>The gateway seems configured but nothing reaches it</h3>
+<p>Check both <code>PROJEXCLOUD_GATEWAY_URL</code> and <code>PROJEXCLOUD_API_KEY</code> are non-empty.
+Either being blank silently routes everything to the local fallback, which looks like working
+software.</p>
+
+<h3>Every BDD scenario fails on its first navigate step</h3>
+<p><code>host.docker.internal</code> is missing from <code>allowedHosts</code> in
+<code>client/vite.config.ts</code>, or the dev server drifted off port 5173.</p>
+
+<hr>
+<p class="footnote">Source of truth for anything not covered here:
+<code>server/.env.example</code> (annotated), <code>docker-compose.yml</code>,
+<code>mcp-server/data/AGENTS.md</code> (the ProjexCloud auth rules), and
+<code>docs/LeadFlow_Architecture_and_SDK_Decision.md</code>.</p>
+
+</div>
+</body>
+</html>
