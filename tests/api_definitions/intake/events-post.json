@@ -1,0 +1,125 @@
+{
+  "name": "POST /api/leadflow/intake/events - The normalized signal envelope",
+  "description": "First-party intake for our own connectors and for partners holding an API key. Takes a normalized signal — platform, sourceEventId, occurredAt, campaign/ad/creative/UTM, rawPayload, permissionFields, transcript, contactHints — and turns it into exactly one lead, task, message or payment.\n\nTHE IDEMPOTENCY KEY IS platform + sourceEventId, and it is the SOP's explicit go-live requirement. A source event id is only unique within the platform that minted it — two providers will eventually both use '1' — so either half alone would collide across integrations and suppress a real signal as a duplicate.\n\nA REPLAY ANSWERS 200, NOT 201. Nothing was created, and telling an honest sender 201 would report a second lead they did not make. A genuinely new signal answers 201.\n\nTHE RAW EVENT IS ARCHIVED BEFORE IT IS JUDGED. A rejected signal still leaves its row with the rejection reason, because 'the event never arrived' and 'the event arrived and we discarded it' are different incidents and must not look alike from the outside. Note this is the OPPOSITE ordering to the offline sync ledger, deliberately: that records an outcome, this records an arrival, and an arrival is a fact the moment the bytes land.\n\nA DOWNSTREAM OUTAGE DEFERS, IT DOES NOT REJECT. The signal was good and the platform did nothing wrong; losing it because one of our dependencies was restarting would be our fault presented as theirs. Deferred events go to the outage queue and are drained by backfill-by-event-id, replayed from the archived payload rather than asking the provider to resend — by the time an outage is fixed their retry window has usually closed, and the archive is the only copy left.\n\nProtected by the authenticate guard. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/intake/events",
+  "method": "POST",
+  "taskId": "117d407a-1ec5-4da9-9f35-fd213e290554",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "117d407a-1ec5-4da9-9f35-fd213e290554#AC1",
+    "117d407a-1ec5-4da9-9f35-fd213e290554#AC2",
+    "117d407a-1ec5-4da9-9f35-fd213e290554#AC4"
+  ],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "platform": [
+      "web_form",
+      "meta_lead_ads",
+      "google_lsa",
+      "facebook",
+      "instagram",
+      "whatsapp",
+      "phone",
+      "csv_import",
+      "partner_api"
+    ],
+    "signalKind": ["lead", "task", "message", "payment"]
+  },
+  "captureResponse": {
+    "intake.events.response.data.leadId": "data.leadId",
+    "intake.events.response.data.sourceEventId": "data.sourceEventId"
+  },
+  "testCases": [
+    {
+      "name": "A new signal is accepted and becomes a lead",
+      "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "platform": "web_form",
+        "sourceEventId": "{{dynamic:uuid}}",
+        "signalKind": "lead",
+        "occurredAt": "{{dynamic:pastdate}}",
+        "rawPayload": { "name": "Priya Raman", "email": "priya@example.test" },
+        "contactHints": { "email": "priya@example.test" }
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": { "outcome": "accepted", "archived": true, "replay": false }
+      }
+    },
+    {
+      "name": "Reject a signal with no sourceEventId - it cannot be made replay-safe",
+      "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC2",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "platform": "web_form",
+        "signalKind": "lead",
+        "rawPayload": { "name": "No id" }
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "outcome": "rejected", "archived": true }
+      }
+    },
+    {
+      "name": "A REJECTED signal is still archived",
+      "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC2",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "platform": "{{static:carrier_pigeon}}",
+        "sourceEventId": "{{dynamic:uuid}}",
+        "signalKind": "lead",
+        "rawPayload": { "note": "unknown platform" }
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "outcome": "rejected", "archived": true }
+      }
+    },
+    {
+      "name": "Reject an unknown signal kind rather than guessing",
+      "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC2",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "platform": "web_form",
+        "sourceEventId": "{{dynamic:uuid}}",
+        "signalKind": "{{static:telepathy}}",
+        "rawPayload": {}
+      },
+      "expectedStatus": 200,
+      "expectedResponse": { "success": true, "data": { "outcome": "rejected" } }
+    },
+    {
+      "name": "Reject an unauthenticated intake",
+      "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC1",
+      "payload": {
+        "platform": "web_form",
+        "sourceEventId": "{{dynamic:uuid}}",
+        "signalKind": "lead",
+        "rawPayload": {}
+      },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "You do not hold the permission to submit intake signals",
+      "when": "the caller's roles do not grant lead.work_assigned"
+    }
+  ]
+}

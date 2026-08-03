@@ -1,0 +1,81 @@
+{
+  "name": "POST /api/leadflow/intake/webhooks/:platform - Per-provider receiver",
+  "description": "The receiver a platform posts to directly. Authenticated by HMAC-SHA256 over the RAW body rather than by a bearer token — a provider has no LeadFlow session and cannot be given one, which is why requiresAuth is false here and true on the sibling /events route.\n\nANSWERS 200 FOR ALMOST EVERYTHING, AND THAT IS DELIBERATE. Providers retry on any non-2xx, so returning 4xx for a payload we have permanently refused makes them redeliver it on a schedule we do not control, indefinitely. A rejected signal is archived and answered 200.\n\nTHE ONE EXCEPTION IS A BAD SIGNATURE, which MUST be non-2xx. It is the only response that tells a sender their secret is wrong; swallowing it with 200 would leave a misconfigured integration looking healthy while nothing at all lands. Unsigned, wrongly-signed, and a platform with no configured secret are all 401 — and all three are ARCHIVED FIRST, because a refused webhook that leaves no trace is indistinguishable from one that never arrived.\n\nAN UNCONFIGURED PLATFORM IS REFUSED, NOT WAVED THROUGH. Accepting from a platform we hold no secret for would mean anything posted to /intake/webhooks/anything lands. An unconfigured integration should be a 401 somebody notices, not an open door nobody does.\n\nThe digest is computed over the exact bytes received. Re-serialising parsed JSON reorders keys and changes whitespace, so a signature checked against the re-encoded form fails for perfectly valid payloads — intermittently, depending on the sender's key order, which is a miserable thing to diagnose. The comparison is constant-time: a plain equality check leaks through timing how many leading bytes of a guess were right.\n\nThe failure message is IDENTICAL for a wrong signature and a length mismatch, so a caller cannot use the difference to narrow their search.",
+  "endpoint": "/api/leadflow/intake/webhooks/:platform",
+  "method": "POST",
+  "taskId": "117d407a-1ec5-4da9-9f35-fd213e290554",
+  "requiresAuth": false,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "117d407a-1ec5-4da9-9f35-fd213e290554#AC3",
+    "117d407a-1ec5-4da9-9f35-fd213e290554#AC2"
+  ],
+  "dependsOn": [],
+  "fieldEnums": {
+    "platform": [
+      "web_form",
+      "meta_lead_ads",
+      "google_lsa",
+      "facebook",
+      "instagram",
+      "whatsapp",
+      "phone",
+      "csv_import",
+      "partner_api"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Reject an UNSIGNED webhook",
+      "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC3",
+      "pathParams": { "platform": "{{static:meta_lead_ads}}" },
+      "payload": {
+        "sourceEventId": "{{dynamic:uuid}}",
+        "signalKind": "lead",
+        "rawPayload": { "name": "Unsigned" }
+      },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    },
+    {
+      "name": "Reject a WRONGLY-signed webhook",
+      "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC3",
+      "pathParams": { "platform": "{{static:meta_lead_ads}}" },
+      "headers": {
+        "x-signature": "{{static:0000000000000000000000000000000000000000000000000000000000000000}}"
+      },
+      "payload": {
+        "sourceEventId": "{{dynamic:uuid}}",
+        "signalKind": "lead",
+        "rawPayload": { "name": "Wrong sig" }
+      },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    },
+    {
+      "name": "Reject a platform with no configured secret rather than waving it through",
+      "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC3",
+      "pathParams": { "platform": "{{static:not_a_platform}}" },
+      "headers": { "x-signature": "{{static:abc123}}" },
+      "payload": { "sourceEventId": "{{dynamic:uuid}}", "rawPayload": {} },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "platform is required in the path",
+      "when": "the path parameter is empty"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "The signature did not match the payload",
+      "when": "the request is unsigned, wrongly signed, or from a platform with no configured signing secret. The message is identical for a wrong signature and a length mismatch so a caller cannot narrow their search."
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+import { Response } from 'express';
+import { PERMISSIONS } from '../../config/roles';
+import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
+import { governed, GovernedRequest } from '../../platform/policy/governed';
+import { AppError, ErrorCodes } from '../../utils/errors';
+import { IntakeService, IntakeSignal } from './intakeService';
+import { verifySignature } from './signatureVerifier';
+
+/** A request that may carry the raw body the signature was computed over. */
+type WebhookRequest = GovernedRequest & { rawBody?: string };
+
+export class IntakeController {
+  /**
+   * POST /api/leadflow/intake/events — the normalized signal envelope.
+   *
+   * A create at a collection root, so 201 (MUST-54). Authenticated: this is the
+   * first-party path used by our own connectors and by partners holding an API
+   * key, as distinct from the webhook receiver below, which is authenticated by
+   * signature instead.
+   */
+  static events = governed(
+    {
+      action: PERMISSIONS.LEAD_WORK_ASSIGNED,
+      event: AUDIT_EVENTS.CAPTURE_CREATED,
+      purpose: 'lead_management',
+      resourceType: 'intake_event',
+      metadata: (req) => ({
+        platform: (req.body as { platform?: string })?.platform ?? null,
+        source_event_id: (req.body as { sourceEventId?: string })?.sourceEventId ?? null,
+        channel: 'intake_events',
+      }),
+      obligations: {
+        own_record_only: {
+          kind: 'defer',
+          because: 'an intake signal has no owner until it becomes a lead',
+        },
+      },
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const result = await IntakeService.accept(
+        (req.body ?? {}) as Partial<IntakeSignal>,
+        // Not signature-authenticated: this path is behind the bearer guard, so
+        // the caller is already established. Recorded as such rather than
+        // claiming a verification that never happened.
+        'verified'
+      );
+
+      // 201 for a genuinely new signal; 200 for a replay or a deferral, because
+      // nothing was created. A replay answering 201 would tell an honest sender
+      // they had just made a second lead.
+      res.status(result.outcome === 'accepted' && !result.replay ? 201 : 200).json({
+        success: true,
+        data: result,
+      });
+    }
+  );
+
+  /**
+   * POST /api/leadflow/intake/webhooks/:platform — the per-provider receiver.
+   *
+   * Answers 200 whatever the verdict, EXCEPT for a failed signature. Providers
+   * retry on any non-2xx, so returning 4xx for a payload we have permanently
+   * refused makes them redeliver it on a schedule we do not control, forever.
+   * A bad signature is the one case that MUST be non-2xx: it is the only signal
+   * that tells a sender their secret is wrong, and swallowing it with 200 would
+   * leave a misconfigured integration looking healthy while nothing lands.
+   *
+   * NOT `governed`: there is no session here. The caller is a machine
+   * authenticated by HMAC, and gating this on a persona's permissions would
+   * require a persona that no webhook has.
+   */
+  static async webhook(req: WebhookRequest, res: Response): Promise<void> {
+    const platform = String(req.params.platform ?? '');
+    if (platform.length === 0) {
+      throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'platform is required in the path');
+    }
+
+    // The RAW bytes, not a re-serialisation. Re-encoding parsed JSON reorders
+    // keys and changes whitespace, so the digest would differ from the sender's
+    // for payloads that are perfectly valid — an intermittent failure that
+    // depends on their key order.
+    const rawBody = req.rawBody ?? JSON.stringify(req.body ?? {});
+    const provided =
+      (req.headers['x-signature'] as string | undefined) ??
+      (req.headers['x-hub-signature-256'] as string | undefined);
+
+    const verification = verifySignature(platform, rawBody, provided);
+
+    if (!verification.ok) {
+      // ARCHIVED EVEN THOUGH IT IS REFUSED. A rejected webhook that leaves no
+      // trace is indistinguishable from one that never arrived, and during an
+      // incident that difference is the whole investigation.
+      await IntakeService.accept(
+        {
+          platform,
+          sourceEventId: String(
+            (req.body as { sourceEventId?: string })?.sourceEventId ?? `unsigned:${Date.now()}`
+          ),
+          rawPayload: (req.body ?? {}) as Record<string, unknown>,
+        },
+        verification.state
+      );
+
+      throw new AppError(401, ErrorCodes.UNAUTHENTICATED, verification.detail);
+    }
+
+    const result = await IntakeService.accept(
+      {
+        ...((req.body ?? {}) as Partial<IntakeSignal>),
+        platform,
+      },
+      verification.state
+    );
+
+    res.status(200).json({ success: true, data: result });
+  }
+
+  /**
+   * POST /api/leadflow/intake/backfill — drain the outage queue.
+   *
+   * A command, so 200. Gated on `data.configure`: replaying a backlog of events
+   * is an operational act with real consequences, and a rep working their own
+   * leads has no business triggering it.
+   */
+  static backfill = governed(
+    {
+      action: PERMISSIONS.DATA_CONFIGURE,
+      event: AUDIT_EVENTS.IMPORT_RUN_COMMITTED,
+      purpose: 'service_operation',
+      resourceType: 'intake_outage_queue',
+      metadata: (req) => ({
+        blocked_on: (req.body as { blockedOn?: string })?.blockedOn ?? 'all',
+      }),
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const blockedOn = (req.body as { blockedOn?: string })?.blockedOn;
+      const result = await IntakeService.backfill(blockedOn);
+      res.status(200).json({ success: true, data: result });
+    }
+  );
+}

@@ -41,7 +41,22 @@ app.use(
   })
 );
 app.use(morgan(config.logFormat));
-app.use(express.json({ limit: config.bodyLimit }));
+// The raw body is kept alongside the parsed one so webhook signatures can be
+// verified against the EXACT bytes the sender signed. Re-serialising the parsed
+// object reorders keys and changes whitespace, so a digest computed over it
+// differs from the sender's for payloads that are perfectly valid — and it
+// fails only for some senders, depending on their key order, which makes it a
+// miserable thing to diagnose.
+app.use(
+  express.json({
+    limit: config.bodyLimit,
+    verify: (req, _res, buffer) => {
+      if (buffer && buffer.length > 0) {
+        (req as express.Request & { rawBody?: string }).rawBody = buffer.toString('utf8');
+      }
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 
 /** Liveness and database readiness. Public by design. */

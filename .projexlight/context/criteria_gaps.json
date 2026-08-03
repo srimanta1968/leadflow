@@ -1,20 +1,16 @@
 {
-  "generatedAt": "2026-08-03T22:12:21.894552Z",
-  "taskId": "4691fc71-6138-4a33-b3d9-54be4f9d693c",
+  "generatedAt": "2026-08-03T22:57:12.915550Z",
+  "taskId": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65",
   "gaps": [
     {
-      "criterionId": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC4",
-      "criterion": "Every transmission writes an audit entry",
-      "verdict": "partial",
-      "gap": "The entry is emitted and asserted in-process: a test proves capture.created is appended naming the domain, the source-URL retention choice and channel browser_extension, and a second proves NO entry is appended when the domain policy refuses, since a write that did not happen must not be recorded. But it cannot LAND upstream. ProjexCloud rejects it with UnregisteredEventType - capture.created, like all 32 LeadFlow event names, is absent from EVENT_TYPE_REGISTRY, a closed code constant in packages/contracts that a consuming app has no endpoint or documented path to extend. Same blocker as bd5ea1b4#AC4 and 7b9e97d6#AC4, recorded as defect 6 in docs/projexcloud-defects.md. appendAuditEntry never throws by design so no capture fails, but the chain stays empty.",
+      "criterionId": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC3",
+      "criterion": "Device permission prompts handled through hdk-permissions",
+      "verdict": "missing",
+      "gap": "NOT IMPLEMENTED, and deliberately not stubbed. LeadFlow's client is a React/Vite WEB app with no device layer: there is no camera, contacts or microphone permission to request, no native shell to request it from, and hdk-permissions is a ProjexCloud HDK for a mobile runtime that this project does not have. Writing a permissions module here would produce a wrapper with nothing on the other side and a test that asserts the wrapper calls itself - coverage that proves the criterion is met when nothing about it is. The criterion belongs to the mobile shell (Apple CNContact / Android contact selection, hdk-camera for cards, microphone for voice notes), which is out of this repo. The DATA those paths produce is fully supported: captureKind carries contact, business_card and voice_note, and a voice note with no name and only a property reference is accepted and tested. What is absent is the device-side prompt, not the capture path.",
       "evidence": {
-        "apiDefinitions": [
-          "tests/api_definitions/capture/extension-post.json"
-        ],
         "files": [
-          "server/src/features/capture/extensionCaptureController.ts",
-          "server/tests/unit/extensionCapture.test.ts",
-          "docs/projexcloud-defects.md"
+          "client/src/features/capture/offlineQueue.ts",
+          "server/src/features/capture/syncBatchService.ts"
         ]
       }
     }
