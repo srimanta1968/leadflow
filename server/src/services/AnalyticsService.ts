@@ -4,6 +4,7 @@ import { SdkGatewayClient } from './projexcloud/SdkGatewayClient';
 import { SLA_WINDOW_MINUTES } from './RoutingService';
 import { AnalyticsOverviewQuery } from '../validators/analyticsValidators';
 import { LeadSourceChannel, SlaClockSource } from '../types';
+import { currentTenantContext, tenantIdFor } from '../platform/tenancy/tenantHierarchy';
 
 /** Counts of leads reaching each stage of the capture-to-response funnel. */
 export interface AnalyticsFunnel {
@@ -326,19 +327,34 @@ export class AnalyticsService {
     const correlationId = randomUUID();
 
     try {
+      // GET with query parameters, not POST with a body. Verified against the
+      // running gateway rather than assumed:
+      //   POST /api/sla/attainment                    -> 404
+      //   GET  /api/sla/attainment?tenant_id&from&to  -> 200
+      // The previous form was BOTH the wrong path (/v1/response-clocks/...)
+      // and the wrong method, so it could never have returned anything.
+      const params = new URLSearchParams({
+        // Required, and app-scoped: attainment for THIS app's leads, not the
+        // customer's other products.
+        tenant_id: tenantIdFor(currentTenantContext(), 'sla'),
+        from: query.from.toISOString(),
+        to: query.to.toISOString(),
+      });
+      // Omitted entirely when absent rather than sent empty — an empty filter
+      // reads upstream as "match nothing" and would report a clean window as a
+      // window with no data.
+      if (query.source) {
+        params.set('source', query.source);
+      }
+      if (query.owner_user_id) {
+        params.set('owner_user_id', query.owner_user_id);
+      }
+
       const result = await SdkGatewayClient.call<SdkAttainmentResult>({
         sdk: 'sdk-sla',
-        path: '/v1/response-clocks/attainment',
-        method: 'POST',
+        path: `/api/sla/attainment?${params.toString()}`,
+        method: 'GET',
         correlationId,
-        body: {
-          task: 'first_response',
-          subject_type: 'lead',
-          from: query.from.toISOString(),
-          to: query.to.toISOString(),
-          source: query.source ?? null,
-          owner_user_id: query.owner_user_id ?? null,
-        },
       });
 
       const attainment = result.delivered ? result.data?.data?.attainment : undefined;

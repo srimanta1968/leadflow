@@ -5,6 +5,7 @@ import { DEFAULT_FIRST_RESPONSE_MINUTES, SlaPolicyService } from './SlaPolicySer
 import { AppError, ErrorCodes } from '../utils/errors';
 import { eventStream } from './EventStream';
 import { LeadSourceChannel, RoutingDecision, RoutingMethod, RoutingRule } from '../types';
+import { currentTenantContext, tenantIdFor } from '../platform/tenancy/tenantHierarchy';
 
 /**
  * Minutes a lead owner has to make a valid human first response when NO SLA
@@ -109,11 +110,33 @@ export class RoutingService {
     try {
       const result = await SdkGatewayClient.call<SdkAssignmentResult>({
         sdk: 'sdk-assignment',
-        path: '/v1/assign-by-task',
+        // `/api/assignment/route`, NOT `/api/assignment/assign-by-task`.
+        // assign-by-task is GEOGRAPHIC dispatch: it requires location {lat,lng}
+        // and scores candidates by proximity with persona_locations and
+        // fallback_radius_km — it is for sending a technician to a site. A
+        // LeadFlow lead carries no geography at all, and routing here is
+        // rule-match then least-loaded round-robin, so that endpoint could never
+        // have worked and would have 400d on the missing location forever.
+        //
+        // STILL BLOCKED, and honestly so: /api/assignment/route requires
+        // `candidate_persona_ids`, a non-empty array of ProjexCloud PERSONA ids.
+        // LeadFlow's users have no personas yet (migration 007 adds the columns;
+        // the backfill needs a provisioned tenant), so this call answers
+        // 400 until that lands and the documented local fallback — rule match,
+        // then round robin — continues to carry routing. That fallback is not a
+        // degradation of this call; it is what routes every lead today.
+        path: '/api/assignment/route',
         method: 'POST',
         idempotencyKey: lead.id,
         correlationId,
         body: {
+          // Both REQUIRED by sdk-assignment; the call 400s without them.
+          tenant_id: tenantIdFor(currentTenantContext(), 'routing'),
+          // The subject being routed, as the SDK addresses it. Derived from the
+          // lead rather than generated, so a retry routes the SAME subject
+          // instead of creating a second one — the idempotency key above only
+          // protects against a duplicate REQUEST, not a duplicate subject.
+          subject_ref: `lead:${lead.id}`,
           subject_type: 'lead',
           subject_id: lead.id,
           task: 'first_response',

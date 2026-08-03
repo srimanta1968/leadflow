@@ -164,7 +164,7 @@ export class SlaAlertService {
     try {
       const result = await SdkGatewayClient.call({
         sdk: 'sdk-notification',
-        path: '/v1/notifications',
+        path: '/api/notifications/send',
         method: 'POST',
         // The alert id, so a retry after a timeout cannot deliver twice upstream.
         idempotencyKey: row.id,

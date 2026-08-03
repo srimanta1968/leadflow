@@ -453,15 +453,29 @@ describe('AnalyticsService.overview sdk-sla attainment', () => {
     // lead, and not an unfiltered question whose answer covers a different
     // population than every other number on the screen.
     expect(call).toHaveBeenCalledTimes(1);
-    expect(call.mock.calls[0][0]).toMatchObject({
-      sdk: 'sdk-sla',
-      method: 'POST',
-      body: {
-        from: WINDOW_FROM.toISOString(),
-        to: WINDOW_TO.toISOString(),
-        source: 'web_form',
-      },
-    });
+
+    // GET with query parameters. Verified against the running gateway:
+    //   POST /api/sla/attainment                   -> 404
+    //   GET  /api/sla/attainment?tenant_id&from&to -> 200
+    // The previous assertion pinned POST with a body, which matched the code
+    // and matched nothing the gateway serves — the call had never once
+    // succeeded, and the test could not have told us.
+    const sent = call.mock.calls[0][0] as { sdk: string; method: string; path: string };
+    expect(sent.sdk).toBe('sdk-sla');
+    expect(sent.method).toBe('GET');
+
+    const [route, queryString] = sent.path.split('?');
+    expect(route).toBe('/api/sla/attainment');
+
+    const params = new URLSearchParams(queryString);
+    // The screen's own filters, so upstream aggregates exactly the population
+    // every other number on the page counts — not one call per lead, and not an
+    // unfiltered question about a different population.
+    expect(params.get('from')).toBe(WINDOW_FROM.toISOString());
+    expect(params.get('to')).toBe(WINDOW_TO.toISOString());
+    expect(params.get('source')).toBe('web_form');
+    // Required by the endpoint, and app-scoped rather than customer-scoped.
+    expect(params.get('tenant_id')).not.toBeNull();
     // The local counts are untouched by the upstream answer: the two are
     // different measurements and the rollup must not blend them.
     expect(overview.funnel.breached).toBe(1);

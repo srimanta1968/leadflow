@@ -5,6 +5,7 @@ import { RoutingService } from './RoutingService';
 import { eventStream } from './EventStream';
 import { AppError, ErrorCodes } from '../utils/errors';
 import { LeadCaptureInput, LeadRecord, LeadOriginClass } from '../types';
+import { currentTenantContext, tenantIdFor } from '../platform/tenancy/tenantHierarchy';
 
 interface LeadRow {
   id: string;
@@ -104,11 +105,35 @@ export class LeadCaptureService {
     try {
       const result = await SdkGatewayClient.call({
         sdk: 'sdk-lead-capture',
-        path: '/v1/captures',
+        path: '/api/source-records',
         method: 'POST',
         idempotencyKey: row.id,
         correlationId,
         body: {
+          // REQUIRED by sdk-source-record, and app-scoped: a capture belongs to
+          // this app, not to the customer's other products.
+          tenant_id: tenantIdFor(currentTenantContext(), 'lead'),
+          // REQUIRED. Which system the record came FROM — LeadFlow, as the
+          // capture surface. Distinct from `source_channel` below, which is how
+          // the PERSON reached us; conflating them would lose the difference
+          // between "a web form on our site" and "our CRM told us".
+          source_system: 'leadflow',
+          // REQUIRED. The immutable proof of why this record exists — the raw
+          // submission as received, before any parsing. The trust ladder is
+          // built on it: a record whose provenance cannot be shown is
+          // quarantined rather than promoted.
+          raw_evidence: {
+            source: input.source,
+            captured_at: row.created_at.toISOString(),
+            submission: {
+              name: input.name,
+              email: input.email,
+              phone: input.phone ?? null,
+              company: input.company ?? null,
+              message: input.message ?? null,
+            },
+            utm: input.utm ?? {},
+          },
           external_id: row.id,
           origin_class: originClass,
           source_channel: input.source,

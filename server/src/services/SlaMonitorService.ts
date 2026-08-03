@@ -17,6 +17,7 @@ import {
   SlaSweepResult,
 } from '../types';
 import { SlaEvaluateInput, SlaStatusQuery } from '../validators/slaValidators';
+import { currentTenantContext, tenantIdFor } from '../platform/tenancy/tenantHierarchy';
 
 /**
  * Fraction of the response window that must elapse before a lead is at risk.
@@ -292,11 +293,14 @@ export class SlaMonitorService {
     try {
       const result = await SdkGatewayClient.call<SdkEvaluateResult>({
         sdk: 'sdk-sla',
-        path: '/v1/response-clocks/evaluate',
+        path: '/api/sla/breach-scan',
         method: 'POST',
         idempotencyKey: correlationId,
         correlationId,
         body: {
+          // REQUIRED by sdk-sla; the scan 400s without it. App-scoped, so a
+          // sweep never reaches a sibling app's clocks.
+          tenant_id: tenantIdFor(currentTenantContext(), 'sla'),
           task: 'first_response',
           default_target_minutes: SLA_WINDOW_MINUTES,
           subjects: rows.map((row) => ({
