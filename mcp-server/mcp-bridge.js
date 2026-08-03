@@ -1403,12 +1403,47 @@ const TOOLS = [
       required: ['featureId']
     }
   }
+  {
+    name: 'projexlight_get_defect_context',
+    description: 'FIX THIS DEFECT (call this FIRST). Fetches a defect by UUID or short ID (e.g. DEF-123) and returns everything needed to fix it in ONE payload, so no follow-up lookups are needed: the defect itself; its originating task (description, acceptance_criteria, technical_requirements); the feature and scenario for the intended behaviour and BDD steps; the api_library rows for the endpoints involved, including route_file_path so you can open the right file; the raw failure material (failure log, expected vs actual result, per-environment test results) rather than a summary; what was already tried (defect history and comments); and any known defect patterns for this project. Read the warnings array — it reports anything that could not be resolved, such as a missing originating task.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        defectId: { type: 'string', description: 'Defect UUID or short ID such as DEF-123' },
+        projectPath: { type: 'string', description: 'Project root path' }
+      },
+      required: ['defectId']
+    }
+  },
+  {
+    name: 'projexlight_resolve_defect_for_qa',
+    description: 'CLOSE A DEFECT FOR QA (call after the fix is implemented). Records what changed (files, commit, notes) and moves the defect to status=resolved, meaning fixed and awaiting QA. It CANNOT mark a defect verified or closed: the fixer does not get to declare its own fix tested, so that transition belongs to QA alone. Passing any status other than resolved is rejected.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        defectId: { type: 'string', description: 'Defect UUID or short ID such as DEF-123' },
+        filesChanged: {
+          type: 'array',
+          description: 'Paths of the files changed by the fix',
+          items: { type: 'string' }
+        },
+        commit: { type: 'string', description: 'Commit SHA of the fix, if committed' },
+        notes: { type: 'string', description: 'What was changed and why' },
+        resolutionType: { type: 'string', description: 'Optional resolution type; defaults to fixed' },
+        projectPath: { type: 'string', description: 'Project root path' }
+      },
+      required: ['defectId']
+    }
+  },
 ];
 
 // Map MCP tool names to HTTP endpoints
 // These paths match the Docker MCP server routes (without /mcp/ prefix)
 // The Docker server handles forwarding to the backend API if needed
 const TOOL_ENDPOINTS = {
+  // Defect Fix Tools - fetch a defect with full context, then close it for QA
+  'projexlight_get_defect_context': { method: 'POST', path: '/api/defect/context' },
+  'projexlight_resolve_defect_for_qa': { method: 'POST', path: '/api/defect/resolve' },
   'projexlight_init_session': { method: 'POST', path: '/api/instruction/init' },
   'projexlight_get_instruction': { method: 'POST', path: '/api/instruction/get' },
   'projexlight_get_sdk_api': { method: 'POST', path: '/api/sdk/api' },

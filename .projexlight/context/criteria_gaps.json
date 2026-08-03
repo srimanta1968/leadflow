@@ -1,17 +1,20 @@
 {
-  "generatedAt": "2026-08-03T21:02:16.992621Z",
-  "taskId": "528209d9-97e7-4cb4-b3bc-57ac642d835c",
+  "generatedAt": "2026-08-03T21:34:29.219149Z",
+  "taskId": "7b9e97d6-7838-42be-adbb-4239c1224520",
   "gaps": [
     {
-      "criterionId": "528209d9-97e7-4cb4-b3bc-57ac642d835c#AC1",
-      "criterion": "All four modes match the mockup layout and copy",
+      "criterionId": "7b9e97d6-7838-42be-adbb-4239c1224520#AC4",
+      "criterion": "Promotion is audited and reversible",
       "verdict": "partial",
-      "gap": "All four modes (Smart Paste, Manual, Business Card, Browser Capture) render with the mockup's copy, and the shared footer carries the Data Origin Class radio with all eight values, Visibility, Record Owner, the search-after-capture toggle, the 'Third-party is not converted by relabeling' callout, the capture_id/raw evidence/classification/audit footer line, and Cancel / Save P0 Draft / Save & Resolve. Structure and copy are asserted by tests over the component source. What is NOT proven is visual fidelity to the mockup: the client has vitest only, with no jsdom or testing-library, so nothing renders the component and no Gherkin scenario executes it \u2014 the Test MCP has no LeadFlow workspace mount, which is the same blocker already recorded against every other UI scenario in this project. Manual layout fields from the mockup (First/Display Name, Last/Legal Suffix, separate Phone/Email/Organization/Address inputs) are collapsed into one raw-input textarea plus the relationship select, because the capture endpoint stores raw evidence verbatim rather than parsed fields; splitting them client-side would fabricate structure the evidence does not have.",
+      "gap": "Reversible is fully covered: reversalRef is produced with the promotion and surfaced in the modal, asserted server-side and client-side. Audited is emitted and asserted in-process - a test proves capture.promoted is appended naming the acting persona and the corrected fields - but it cannot LAND upstream. ProjexCloud rejects it with UnregisteredEventType because capture.promoted, like all 32 LeadFlow event names, is absent from EVENT_TYPE_REGISTRY, a closed code constant in packages/contracts that a consuming app has no endpoint or documented path to extend. Same blocker as bd5ea1b4#AC4, recorded as defect 6 in docs/projexcloud-defects.md. appendAuditEntry never throws by design so nothing fails, but the chain stays empty.",
       "evidence": {
+        "apiDefinitions": [
+          "tests/api_definitions/capture/resolve-post.json"
+        ],
         "files": [
-          "client/src/components/app/QuickContactModal.tsx",
-          "client/src/content/captureOriginClasses.ts",
-          "client/tests/unit/quickContactModal.test.ts"
+          "server/src/features/capture/resolveCaptureController.ts",
+          "server/tests/unit/resolveCapture.test.ts",
+          "docs/projexcloud-defects.md"
         ]
       }
     }
