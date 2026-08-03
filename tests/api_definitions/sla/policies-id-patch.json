@@ -9,7 +9,11 @@
   "testability": "auto",
   "priority": 17,
   "expectedStatus": 200,
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/sla/policies"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/sla/policies"
+  ],
   "fieldEnums": {
     "source_channel": [
       "web_form",

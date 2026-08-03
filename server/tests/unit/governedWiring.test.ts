@@ -56,7 +56,13 @@ describe('the local role bridge', () => {
     // Without this, every locally-authenticated caller matches no rule and is
     // denied — default-deny firing on a vocabulary mismatch rather than on a
     // real absence of authority.
-    expect(rolesFor(asRole('admin'))).toEqual(['revenue_operations', 'sales_manager']);
+    expect(rolesFor(asRole('admin'))).toEqual([
+      'revenue_operations',
+      'sales_manager',
+      // The local admin worked leads too, and recording a first response is
+      // lead.work_assigned — which only a Rep holds.
+      'sales_rep',
+    ]);
     expect(rolesFor(asRole('manager'))).toEqual(['sales_manager']);
     expect(rolesFor(asRole('user'))).toEqual(['sales_rep']);
   });

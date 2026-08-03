@@ -1,4 +1,5 @@
 import { AnalyticsService } from '../../src/services/AnalyticsService';
+import { config } from '../../src/config/env';
 import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
 import { validateAnalyticsOverviewQuery } from '../../src/validators/analyticsValidators';
 import { AppError } from '../../src/utils/errors';
@@ -313,13 +314,31 @@ describe('AnalyticsService.overview clock provenance', () => {
   });
 
   it('states the clock a verdict recorded right now would carry', async () => {
-    const overview = await AnalyticsService.overview({ from: WINDOW_FROM, to: WINDOW_TO });
+    // CONTROLS the gateway config rather than reading whatever the developer's
+    // .env happens to hold. The pair is the assertion — the reported clock must
+    // FOLLOW from whether the gateway is configured, never be stated
+    // independently of it — and that pairing is exactly what an ambient-config
+    // assertion cannot check: hardcoding `false` passes for the right reason on
+    // one machine and the wrong reason on the next.
+    const url = config.projexCloud.gatewayUrl;
+    const key = config.projexCloud.apiKey;
 
-    // The test environment configures no gateway, so the monitor would fall back.
-    // Asserted as the PAIR it is: the reported clock must follow from whether the
-    // gateway is configured, never be stated independently of it.
-    expect(overview.clock_provenance.gateway_configured).toBe(false);
-    expect(overview.clock_provenance.current_clock_source).toBe('local_wallclock');
+    try {
+      config.projexCloud.gatewayUrl = '';
+      config.projexCloud.apiKey = '';
+      const fellBack = await AnalyticsService.overview({ from: WINDOW_FROM, to: WINDOW_TO });
+      expect(fellBack.clock_provenance.gateway_configured).toBe(false);
+      expect(fellBack.clock_provenance.current_clock_source).toBe('local_wallclock');
+
+      config.projexCloud.gatewayUrl = 'http://gateway.test';
+      config.projexCloud.apiKey = 'test-credential';
+      const upstream = await AnalyticsService.overview({ from: WINDOW_FROM, to: WINDOW_TO });
+      expect(upstream.clock_provenance.gateway_configured).toBe(true);
+      expect(upstream.clock_provenance.current_clock_source).toBe('sdk_sla');
+    } finally {
+      config.projexCloud.gatewayUrl = url;
+      config.projexCloud.apiKey = key;
+    }
   });
 
   it('narrows provenance with the same filters as the rest of the rollup', async () => {

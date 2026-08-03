@@ -15,15 +15,33 @@
     "POST /api/leads"
   ],
   "fieldEnums": {
-    "state": ["on_track", "at_risk", "breached", "met"],
-    "clock_source": ["sdk_sla", "local_wallclock"],
-    "breach_reason": ["no_response_in_window", "responded_after_due"],
-    "kind": ["owner_warning", "manager_breach"]
+    "state": [
+      "on_track",
+      "at_risk",
+      "breached",
+      "met"
+    ],
+    "clock_source": [
+      "sdk_sla",
+      "local_wallclock"
+    ],
+    "breach_reason": [
+      "no_response_in_window",
+      "responded_after_due"
+    ],
+    "kind": [
+      "owner_warning",
+      "manager_breach"
+    ]
   },
   "statusTransitions": {
     "entity": "lead",
     "field": "sla_state",
-    "flow": ["on_track", "at_risk", "breached"],
+    "flow": [
+      "on_track",
+      "at_risk",
+      "breached"
+    ],
     "transitions": [
       {
         "from": "on_track",

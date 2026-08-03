@@ -9,10 +9,21 @@
   "testability": "auto",
   "priority": 64,
   "expectedStatus": 200,
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "fieldEnums": {
-    "state": ["pending", "delivered", "acknowledged", "failed"],
-    "channel": ["projexcloud", "in_app"]
+    "state": [
+      "pending",
+      "delivered",
+      "acknowledged",
+      "failed"
+    ],
+    "channel": [
+      "projexcloud",
+      "in_app"
+    ]
   },
   "captureResponse": {
     "sla-alerts.dispatch.response.data.attempted": "data.attempted"

@@ -9,7 +9,11 @@
   "testability": "auto",
   "priority": 23,
   "expectedStatus": 200,
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/routing-rules"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/routing-rules"
+  ],
   "fieldEnums": {
     "source_channel": [
       "web_form",
@@ -31,7 +35,10 @@
   "statusTransitions": {
     "entity": "routing_rule",
     "field": "is_active",
-    "flow": ["active", "retired"],
+    "flow": [
+      "active",
+      "retired"
+    ],
     "transitions": [
       {
         "from": "active",

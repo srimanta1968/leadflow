@@ -1,0 +1,10 @@
+{
+  "completed": [],
+  "script_dependencies": {
+    "sla_retire_conflicting_policies.py": []
+  },
+  "last_run": null,
+  "test_user_id": "",
+  "tenant_id": "",
+  "_note": "completed[] tracks run-once *.sql seeds. sla_retire_conflicting_policies.py is deliberately NOT listed there: it is cleanup rather than a seed, and it has to run on EVERY pass. The runner executes *.py/*.js each run and skips *.sql, which is also why this is a .py — the Test MCP has no database access to a deployed host, so an HTTP-based script is the only kind that works against staging as well as localhost."
+}

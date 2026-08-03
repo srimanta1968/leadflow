@@ -9,14 +9,26 @@
   "testability": "auto",
   "priority": 31,
   "expectedStatus": 200,
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/leads"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads"
+  ],
   "fieldEnums": {
-    "routing_method": ["sdk_assignment", "rule_match", "round_robin", "manual"]
+    "routing_method": [
+      "sdk_assignment",
+      "rule_match",
+      "round_robin",
+      "manual"
+    ]
   },
   "statusTransitions": {
     "entity": "lead",
     "field": "ownership",
-    "flow": ["assigned", "reassigned"],
+    "flow": [
+      "assigned",
+      "reassigned"
+    ],
     "transitions": [
       {
         "from": "assigned",

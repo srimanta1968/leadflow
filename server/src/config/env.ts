@@ -35,6 +35,15 @@ export interface AppConfig {
     maxRequests: number;
   };
   bodyLimit: string;
+  /**
+   * A privileged account seeded in non-production environments so the API
+   * contract suite has a caller who holds the governed roles. Inert unless both
+   * values are set, and refused outright when NODE_ENV is production.
+   */
+  devSeed: {
+    adminEmail: string;
+    adminPassword: string;
+  };
   projexCloud: {
     gatewayUrl: string;
     apiKey: string;
@@ -124,6 +133,11 @@ export const config: AppConfig = {
 
   // Body parser
   bodyLimit: process.env.BODY_PARSER_LIMIT || '10mb',
+
+  devSeed: {
+    adminEmail: process.env.DEV_ADMIN_EMAIL || '',
+    adminPassword: process.env.DEV_ADMIN_PASSWORD || '',
+  },
 
   // ProjexCloud SDK gateway — the source of every horizontal capability.
   // When gatewayUrl/apiKey are unset the gateway client reports itself

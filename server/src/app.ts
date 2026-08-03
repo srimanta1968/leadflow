@@ -6,6 +6,7 @@ import { config } from './config/env';
 import routes from './routes';
 import { dataService } from './services/DataService';
 import { runMigrations } from './db/migrationRunner';
+import { seedDevAdmin } from './db/devSeed';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { platformSession } from './platform/auth';
 import { provisionRoles } from './platform/identity';
@@ -75,6 +76,16 @@ const PORT = config.port || 3000;
  */
 async function bootstrap(): Promise<void> {
   await runMigrations();
+
+  // Non-production only, and inert unless credentials are configured. Gives the
+  // API contract suite a caller holding the governed roles, so it can test the
+  // permit path of routing and SLA rather than only the refusal.
+  const seed = await seedDevAdmin();
+  if (seed.attempted) {
+    console.log(`[app] dev admin ${seed.created ? 'created' : 'already present'}`);
+  } else if (config.nodeEnv !== 'production') {
+    console.log(`[app] dev admin not seeded: ${seed.skipped}`);
+  }
 
   // Role provisioning is idempotent, so it runs on EVERY boot rather than once
   // behind a flag: a flag would be a local record of upstream state, and it

@@ -9,9 +9,18 @@
   "testability": "auto",
   "priority": 32,
   "expectedStatus": 200,
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/leads"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads"
+  ],
   "fieldEnums": {
-    "routing_method": ["sdk_assignment", "rule_match", "round_robin", "manual"]
+    "routing_method": [
+      "sdk_assignment",
+      "rule_match",
+      "round_robin",
+      "manual"
+    ]
   },
   "captureResponse": {
     "leads.route-unowned.response.data.routed": "data.routed"

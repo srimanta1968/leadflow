@@ -63,12 +63,17 @@ export interface GovernedSpec {
  * see `AuthService.assertLocalCredentialsPermitted`. A platform session carries
  * real persona grants and never reaches this function.
  *
- * `admin` maps to two SOP roles because the local `admin` genuinely did both
- * jobs: configuring routing and reassigning leads. Splitting it here would take
- * away authority the app already granted, which is a migration, not a bridge.
+ * `admin` maps to THREE SOP roles because the local `admin` was unrestricted in
+ * this app: it configured routing, reassigned leads AND worked them. Dropping
+ * any of the three would take away authority the app already granted, which is a
+ * migration rather than a bridge — and it showed up immediately as `admin`
+ * being refused `POST /api/leads/:id/first-response`, since recording a response
+ * is `lead.work_assigned`, which only a Rep holds. A Sales Manager is genuinely
+ * not a Rep under SOP §28; the mistake was expecting one SOP role to stand in
+ * for a local superuser.
  */
 const LOCAL_ROLE_BRIDGE: Record<string, string[]> = {
-  admin: ['revenue_operations', 'sales_manager'],
+  admin: ['revenue_operations', 'sales_manager', 'sales_rep'],
   manager: ['sales_manager'],
   user: ['sales_rep'],
 };
