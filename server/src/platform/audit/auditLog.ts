@@ -1,7 +1,18 @@
 import { randomUUID } from 'crypto';
-import { config } from '../../config/env';
 import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { currentTenantContext, tenantIdFor } from '../tenancy/tenantHierarchy';
 import { AuditEventName } from './vocabulary';
+
+/**
+ * The tenant an audit entry belongs to.
+ *
+ * APP-scoped, not customer-scoped, and that is a deliberate choice: a ledger
+ * shared across a customer's apps would let one app's operator read another
+ * app's activity. The chain follows the records it describes.
+ */
+function auditTenantId(): string {
+  return tenantIdFor(currentTenantContext(), 'audit');
+}
 
 /**
  * Everything a governed action must state about itself.
@@ -81,7 +92,7 @@ export async function appendAuditEntry(entry: AuditEntry): Promise<AuditAppendRe
       idempotencyKey: entry.idempotencyRef,
       correlationId: entry.causationId,
       body: {
-        tenant_id: config.projexCloud.tenantId,
+        tenant_id: auditTenantId(),
         event_type: entry.event,
         actor_id: entry.actor,
         persona_role: entry.personaRole,
@@ -145,7 +156,7 @@ export async function verifyAuditChain(): Promise<ChainVerificationResult> {
       path: '/api/audit/verify',
       method: 'POST',
       correlationId,
-      body: { tenant_id: config.projexCloud.tenantId },
+      body: { tenant_id: auditTenantId() },
     });
 
     const intact = result.data?.data?.intact === true;
@@ -175,7 +186,7 @@ async function openChainIncident(detail: string, correlationId: string): Promise
       idempotencyKey: `audit-chain:${correlationId}`,
       correlationId,
       body: {
-        tenant_id: config.projexCloud.tenantId,
+        tenant_id: auditTenantId(),
         kind: 'audit_chain_mismatch',
         severity: 'critical',
         summary: 'LeadFlow audit chain failed verification',

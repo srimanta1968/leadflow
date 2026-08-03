@@ -17,6 +17,18 @@ export const ErrorCodes = {
   UNAUTHENTICATED: 'UNAUTHENTICATED',
   INVALID_TOKEN: 'INVALID_TOKEN',
   FORBIDDEN: 'FORBIDDEN',
+  /**
+   * The caller MAY take this action, but not alone — a second party must sign
+   * off first.
+   *
+   * Distinct from FORBIDDEN, and the distinction is the entire reason the policy
+   * model has three effects rather than two. SOP §28's wording is "cannot do
+   * without approval", which is an escalation path, not a prohibition. A client
+   * that reads this as FORBIDDEN tells the user they may not do something they
+   * may in fact do, and people who are told that reliably find a way around the
+   * product instead of through it.
+   */
+  APPROVAL_REQUIRED: 'APPROVAL_REQUIRED',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
   RATE_LIMITED: 'RATE_LIMITED',
