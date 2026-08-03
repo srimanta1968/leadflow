@@ -27,16 +27,28 @@ function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
 }
 
 describe('the audit vocabulary', () => {
-  it('holds all nineteen governed events from the Audit Timeline', () => {
-    expect(allAuditEventNames()).toHaveLength(19);
+  it('holds every governed event from the Audit Timeline', () => {
+    // Hardcoded so that EXTENDING the vocabulary is a deliberate act: adding a
+    // name fails this until someone updates the count, which is the moment to
+    // ask whether the new name duplicates one already here.
+    //
+    // 19 originally; 13 added when the routing and SLA handlers were brought
+    // under `governed` — the ledger could describe what happened to a lead's
+    // data but not who decided who would work it.
+    expect(allAuditEventNames()).toHaveLength(32);
     expect(isAuditEventName('capture.created')).toBe(true);
     expect(isAuditEventName('sla.breached')).toBe(true);
+    expect(isAuditEventName('lead.routed')).toBe(true);
+    expect(isAuditEventName('sla.policy.updated')).toBe(true);
   });
 
   it('rejects a plausible-looking name that is not canonical', () => {
     // The failure this vocabulary exists to prevent: three spellings of one
-    // event, none of them queryable together.
-    expect(isAuditEventName('lead.routed')).toBe(false);
+    // event, none of them queryable together. Each of these is a near-miss for a
+    // name that IS canonical.
+    expect(isAuditEventName('lead.route')).toBe(false);
+    expect(isAuditEventName('routing.applied')).toBe(false);
+    expect(isAuditEventName('sla.policy.update')).toBe(false);
     expect(isAuditEventName('capture.create')).toBe(false);
     expect(isAuditEventName('Capture.Created')).toBe(false);
   });

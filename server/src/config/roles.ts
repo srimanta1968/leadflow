@@ -87,6 +87,22 @@ export const PERMISSIONS = {
   DSAR_FULFIL: 'dsar.fulfil',
   ERASURE_EXECUTE: 'erasure.execute',
   CAMPAIGN_CONFIGURE: 'campaign.configure',
+
+  /**
+   * Define, change or retire an SLA response target.
+   *
+   * ELABORATION. §28 names no owner for response-time targets. It is granted
+   * alongside `routing.configure` because both configure how work reaches a
+   * person, and gated behind approval for a Manager because loosening the target
+   * you are measured against is the one change nobody should make alone.
+   */
+  SLA_CONFIGURE: 'sla.configure',
+  /** ELABORATION. Running the monitoring sweep — an operational act, not a config change. */
+  SLA_EVALUATE: 'sla.evaluate',
+  /** ELABORATION. Clearing YOUR OWN escalations. Scoped by obligation, not by role alone. */
+  SLA_ALERT_ACKNOWLEDGE: 'sla.alert_acknowledge',
+  /** ELABORATION. Retrying undelivered notifications — plumbing, so it sits with RevOps. */
+  SLA_ALERT_DISPATCH: 'sla.alert_dispatch',
 } as const;
 
 /**
@@ -107,6 +123,7 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
       PERMISSIONS.STAGE_UPDATE,
       PERMISSIONS.NEXT_ACTION_CREATE,
       PERMISSIONS.MEETING_BOOK,
+      PERMISSIONS.SLA_ALERT_ACKNOWLEDGE,
     ],
     requiresApproval: [
       PERMISSIONS.OFFER_CHANGE_TERMS,
@@ -127,6 +144,7 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
       PERMISSIONS.STAGE_UPDATE,
       PERMISSIONS.NEXT_ACTION_CREATE,
       PERMISSIONS.MEETING_BOOK,
+      PERMISSIONS.SLA_ALERT_ACKNOWLEDGE,
     ],
     requiresApproval: [
       PERMISSIONS.OFFER_CHANGE_TERMS,
@@ -148,11 +166,16 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
       PERMISSIONS.CALL_REVIEW,
       PERMISSIONS.DASHBOARD_VIEW_TEAM,
       PERMISSIONS.RECORD_RETURN_INCOMPLETE,
+      PERMISSIONS.SLA_EVALUATE,
+      PERMISSIONS.SLA_ALERT_ACKNOWLEDGE,
     ],
     requiresApproval: [
       PERMISSIONS.COMPLIANCE_RULE_CHANGE,
       PERMISSIONS.PAYMENT_STATE_CHANGE,
       PERMISSIONS.AUTOMATION_PUBLISH,
+      // Loosening the target you are measured against is the one change nobody
+      // should be able to make alone.
+      PERMISSIONS.SLA_CONFIGURE,
     ],
     sopBasis:
       'SOP §28 "Manager" row. The SOP says these three may not be changed "alone", which is an approval requirement rather than a prohibition.',
@@ -169,6 +192,9 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
       PERMISSIONS.DASHBOARD_VIEW_TEAM,
       PERMISSIONS.INTEGRATION_CONFIGURE,
       PERMISSIONS.RECONCILIATION_RUN,
+      PERMISSIONS.SLA_CONFIGURE,
+      PERMISSIONS.SLA_EVALUATE,
+      PERMISSIONS.SLA_ALERT_DISPATCH,
     ],
     requiresApproval: [
       PERMISSIONS.PRODUCT_CLAIM_APPROVE,

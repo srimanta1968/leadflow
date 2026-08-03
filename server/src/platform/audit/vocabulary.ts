@@ -32,6 +32,29 @@ export const AUDIT_EVENTS = {
   PAYMENT_VERIFIED: 'payment.verified',
   HANDOFF_ACCEPTED: 'handoff.accepted',
   SLA_BREACHED: 'sla.breached',
+
+  // Routing and assignment. Added because the ledger could describe what
+  // happened TO a lead's data but not who decided who would work it — which is
+  // the question asked first when a lead is missed, and the one the audit
+  // timeline could not previously answer.
+  LEAD_ROUTED: 'lead.routed',
+  LEAD_ASSIGNED: 'lead.assigned',
+  LEAD_BULK_ROUTED: 'lead.bulk_routed',
+  ROUTING_RULE_CREATED: 'routing.rule.created',
+  ROUTING_RULE_UPDATED: 'routing.rule.updated',
+  ROUTING_RULE_RETIRED: 'routing.rule.retired',
+
+  // SLA. `sla.breached` already recorded the OUTCOME; these record the human
+  // acts around it. Separate names rather than one `sla.policy.changed` with a
+  // verb in the metadata, because "when was this target last loosened" should be
+  // answerable by querying an event name, not by parsing a payload.
+  SLA_POLICY_CREATED: 'sla.policy.created',
+  SLA_POLICY_UPDATED: 'sla.policy.updated',
+  SLA_POLICY_RETIRED: 'sla.policy.retired',
+  SLA_FIRST_RESPONSE_RECORDED: 'sla.first_response.recorded',
+  SLA_SWEEP_RUN: 'sla.sweep.run',
+  SLA_ALERT_ACKNOWLEDGED: 'sla.alert.acknowledged',
+  SLA_ALERT_DISPATCHED: 'sla.alert.dispatched',
 } as const;
 
 /** Any name in the vocabulary. Nothing else is appendable. */

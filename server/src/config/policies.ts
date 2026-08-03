@@ -75,6 +75,21 @@ export const POLICY_OVERRIDES: PolicyRule[] = [
     ],
   },
   {
+    action: PERMISSIONS.SLA_ALERT_ACKNOWLEDGE,
+    roles: ['sales_rep', 'backup_rep', 'sales_manager'],
+    effect: 'permit',
+    reason: 'An escalation is cleared by the person it was raised against.',
+    obligations: [
+      {
+        type: 'own_record_only',
+        // Without this the grant reads "may acknowledge alerts" full stop, and
+        // one manager could quietly clear another's escalation — which is not a
+        // permission question but a way to make a breach disappear.
+        detail: 'Caller may acknowledge only alerts addressed to them.',
+      },
+    ],
+  },
+  {
     action: PERMISSIONS.SUPPRESSION_OVERRIDE,
     roles: ['privacy_officer'],
     effect: 'permit',

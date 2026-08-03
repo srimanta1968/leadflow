@@ -47,12 +47,54 @@ export interface GovernedSpec {
   metadata?: (req: GovernedRequest) => Record<string, unknown>;
 }
 
-/** The caller's roles, failing closed to none. */
-function rolesFor(req: GovernedRequest): string[] {
+/**
+ * Local `users.role` values, mapped onto the SOP role keys the policy bundle
+ * speaks.
+ *
+ * TWO VOCABULARIES EXIST, and they do not overlap. The local projection stores
+ * `admin` / `manager` / `user`; `config/roles.ts` defines nine SOP actors, none
+ * of them named that. Without this bridge every locally-authenticated caller
+ * would match no rule and be denied — default-deny doing exactly what it should,
+ * against a vocabulary mismatch rather than a real absence of authority.
+ *
+ * A BRIDGE, NOT A ROLE MODEL. It exists only while local authentication does,
+ * and it is deliberately narrow: it grants what the local role already implied
+ * in this app and nothing more. It disappears with the local `users` table —
+ * see `AuthService.assertLocalCredentialsPermitted`. A platform session carries
+ * real persona grants and never reaches this function.
+ *
+ * `admin` maps to two SOP roles because the local `admin` genuinely did both
+ * jobs: configuring routing and reassigning leads. Splitting it here would take
+ * away authority the app already granted, which is a migration, not a bridge.
+ */
+const LOCAL_ROLE_BRIDGE: Record<string, string[]> = {
+  admin: ['revenue_operations', 'sales_manager'],
+  manager: ['sales_manager'],
+  user: ['sales_rep'],
+};
+
+/**
+ * The caller's roles, failing closed to none.
+ *
+ * A platform session wins outright: its roles come from persona grants resolved
+ * upstream at request time, which is the authority. The local session is
+ * consulted only when there is no platform session at all.
+ */
+export function rolesFor(req: GovernedRequest): string[] {
   if (req.platformSession?.roles.length) {
     return req.platformSession.roles;
   }
-  return req.session?.role ? [req.session.role] : [];
+
+  const local = req.session?.role;
+  if (!local) {
+    return [];
+  }
+
+  // An unmapped local role yields NOTHING rather than itself. Passing it
+  // through would make an unrecognised value indistinguishable from a real SOP
+  // role that simply holds no grants — and if someone later adds an SOP role
+  // whose name collides with a local one, pass-through would silently grant it.
+  return LOCAL_ROLE_BRIDGE[local] ?? [];
 }
 
 /** Who to record as the actor, preferring the platform persona. */
