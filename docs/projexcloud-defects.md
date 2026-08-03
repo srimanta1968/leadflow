@@ -195,6 +195,13 @@ refuse.
 
 ## 6. LeadFlow's audit events cannot be appended — none are in EVENT_TYPE_REGISTRY
 
+> **Written up as a task for the ProjexCloud agent:**
+> `docs/projexcloud-task-event-registry.md` — with the measured counts
+> (294/294 registry entries versioned, 0/32 LeadFlow events registered),
+> the four options considered, and the recommended tenant-scoped
+> registration endpoint. Same class as TK-4138: platform-level, blocks
+> every vertical.
+
 **Severity: high.** Every governed action LeadFlow records is rejected by
 `POST /api/audit/append`, so the tamper-evident chain is empty while the app
 reports the actions as recorded.
