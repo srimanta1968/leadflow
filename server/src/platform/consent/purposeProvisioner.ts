@@ -66,12 +66,34 @@ export async function provisionConsentPurposes(
         path: '/api/consents/purposes',
         method: 'POST',
         idempotencyKey: `consent-purpose:${purpose.key}`,
+        // Field names are sdk-consent's, not LeadFlow's. The previous payload
+        // sent {key, label, service_necessary} and was rejected 400 on every
+        // boot with "purpose_id is required, app_id is required, legal_basis
+        // must be one of ...". Nothing surfaced it because provisioning is
+        // non-fatal by design, so six failures scrolled past at every start and
+        // the app served happily with no purposes registered upstream.
         body: {
           tenant_id: config.projexCloud.tenantId,
-          key: purpose.key,
-          label: purpose.label,
+          // Their `purpose_id` is our `key` — the stable identifier a receipt
+          // is recorded against, not a generated id.
+          purpose_id: purpose.key,
+          // REQUIRED, and it is the tenant's app row rather than the API-key
+          // application registration. Posting the application_id here fails the
+          // same way it does on role templates.
+          app_id: config.projexCloud.appId,
           description: purpose.description,
-          service_necessary: purpose.serviceNecessary,
+          // The real modelling point. `serviceNecessary` says the purpose is
+          // needed to deliver something the person asked for, which under GDPR
+          // Art.6 is CONTRACT — performance of a contract with the data subject
+          // — not consent. Sending 'consent' for all six would misstate the
+          // lawful basis for the ones a person cannot meaningfully refuse
+          // without losing the service, and the basis is what a regulator asks
+          // for first. `label` has no field here; it lives in the UI.
+          legal_basis: purpose.serviceNecessary ? 'contract' : 'consent',
+          // Empty means no jurisdiction-specific defaults, which is correct
+          // until LeadFlow operates somewhere that needs them. Sent explicitly
+          // because the validator rejects a non-array.
+          default_jurisdictions: [],
         },
       });
       summary.created += 1;
