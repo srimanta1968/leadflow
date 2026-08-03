@@ -1,39 +1,27 @@
 {
-  "generatedAt": "2026-08-02T22:26:32.768897Z",
-  "taskId": "71afa1d4-75b7-429a-bfc3-75d1345535fd",
+  "generatedAt": "2026-08-02T22:49:57.568445Z",
+  "taskId": "32b5cb32-890f-44f1-8509-6ed447e534cb",
   "gaps": [
     {
-      "criterionId": "71afa1d4-75b7-429a-bfc3-75d1345535fd#AC2",
-      "criterion": "Reconciliation returns zero discrepancies after an erasure",
+      "criterionId": "32b5cb32-890f-44f1-8509-6ed447e534cb#AC3",
+      "criterion": "Key rotation works without downtime",
       "verdict": "partial",
-      "gap": "The reconciliation LOGIC is built and asserted in both directions that matter - zero discrepancies when every actionable surface is proved, and the skipped surface named when one is not - and it deliberately walks PLAN to PROOFS, because checking that every proof matches a surface always passes and would never catch the case that matters. A zero-row proof counts as a real proof, since nothing to erase is a valid outcome. What does not exist is the EXECUTION that produces those proofs: nothing runs the redactions, so reconcileErasure has only ever been given proofs a test constructed. The criterion says 'after an erasure', and no erasure can yet be performed - sdk-data-rights plan-executions and the local redaction statements are both unwritten. Closing it needs the execution to run the surfaces in erasureExecutionOrder, emit a proof per surface, and reconcile against a real run.",
+      "gap": "rotateVaultKey calls sdk-vault POST /api/vault/keys/:key_id/rotate with a date-stamped idempotency key so a re-run in the same day cannot double-rotate, and the no-downtime property is REAL but it belongs to sdk-vault, not to this code: the SDK re-wraps under the new key while the previous one can still decrypt, exactly as the JWKS rotation in platform/auth keeps the outgoing key serving requests already in flight. LeadFlow cannot demonstrate that without a live vault. What is missing locally is a test proving a value encrypted before a rotation still decrypts after it, which needs a real key lifecycle - a stub would only assert that a stub was called. Also unbuilt: sdk-api-keys issuance, rotation and revoke for partner and extension access, which the task names alongside vault rotation and which nothing in LeadFlow calls.",
       "evidence": {
         "files": [
-          "server/src/platform/dataRights/erasurePlan.ts",
-          "server/tests/unit/erasurePlan.test.ts"
+          "server/src/platform/secrets/piiVault.ts"
         ]
       }
     },
     {
-      "criterionId": "71afa1d4-75b7-429a-bfc3-75d1345535fd#AC3",
-      "criterion": "Certificate includes shred proofs for encrypted PII",
-      "verdict": "missing",
-      "gap": "NOT BUILT, and it would have been dishonest to claim otherwise by adding a crypto_shred entry to the plan with nothing behind it. The ShredProof type carries an optional keyRef for a destroyed vault key, but no surface in LeadFlow currently uses crypto_shred as its method, because LeadFlow stores no encrypted PII: leads and users hold plaintext columns, and there is no envelope encryption and no vault key to destroy. So the criterion is unmeetable as stated until either PII is moved behind sdk-vault or the criterion is rescoped to the redaction proofs this schema can actually produce. Both are real options and the choice is a design decision rather than a coding one - which is why it is recorded here rather than resolved by inventing a key reference that points at nothing.",
+      "criterionId": "32b5cb32-890f-44f1-8509-6ed447e534cb#AC4",
+      "criterion": "Credential registry screen never renders a secret value",
+      "verdict": "partial",
+      "gap": "The DATA the screen would render is provably safe: providerRegistryView returns a boolean configured flag rather than a masked string, and a test sets a real-looking ref then asserts the serialised view does not contain it. The masking decision is deliberate - sk_live_****4821 still leaks the prefix and the last four, enough to confirm a guess and reveal the product tier. But there is NO SCREEN: no component, no route, and no health or last-rotation display, all of which the task asks for. So the criterion is satisfied in the only place it can currently be violated and unproven where a person would actually see it. Closing it needs the registry screen, wired to this view function, plus a Gherkin step asserting no secret-shaped string appears in the rendered page.",
       "evidence": {
         "files": [
-          "server/src/config/erasureSurfaces.ts",
-          "server/src/platform/dataRights/erasurePlan.ts"
-        ]
-      }
-    },
-    {
-      "criterionId": "71afa1d4-75b7-429a-bfc3-75d1345535fd#AC4",
-      "criterion": "Residency is recorded for every person and pool",
-      "verdict": "missing",
-      "gap": "NOT BUILT. sdk-data-rights publishes GET /api/data-rights/residency/:person_id and POST /api/data-rights/residency/touch, and nothing in LeadFlow calls either, so no residency is recorded for any person or pool. This was left rather than half-built because residency is only meaningful once there is somewhere to record it against - the touch call needs a person id from a live tenant, and no gateway is reachable here, so an implementation would be untestable beyond asserting that a stub was called. Closing it needs the touch on every capture and link, a read on the Contact 360 panel, and a reconciliation that a person with no residency record is a discrepancy rather than a blank.",
-      "evidence": {
-        "files": [
-          "server/src/platform/dataRights/erasurePlan.ts"
+          "server/src/config/providers.ts",
+          "server/tests/unit/secretCustody.test.ts"
         ]
       }
     }

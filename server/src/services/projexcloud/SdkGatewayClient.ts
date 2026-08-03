@@ -58,7 +58,21 @@ export class SdkGatewayClient {
       return { delivered: false, status: null, data: null };
     }
 
-    const url = `${config.projexCloud.gatewayUrl.replace(/\/$/, '')}/${options.sdk}${options.path}`;
+    // The SDK name is NOT a URL segment. The gateway exposes every SDK's routes
+    // under one flat namespace and decides which SDK serves a path itself, so
+    // `sdk` here is documentation of who owns the endpoint — used in errors and
+    // logs — rather than part of the address.
+    //
+    // Verified against the local gateway rather than assumed:
+    //   {base}/api/source-records                 -> 200
+    //   {base}/sdk-source-record/api/source-records -> 404
+    //   {base}/sdk-source-record/v1/source-records  -> 404
+    //
+    // The previous form inserted `/${options.sdk}` and produced the second of
+    // those, so every ProjexCloud call this app has ever made returned 404 and
+    // was swallowed by the callers' degrade-to-local paths — which is exactly
+    // why nobody noticed.
+    const url = `${config.projexCloud.gatewayUrl.replace(/\/$/, '')}${options.path}`;
     const controller = new AbortController();
     const timeout = setTimeout(
       () => controller.abort(),
@@ -73,9 +87,24 @@ export class SdkGatewayClient {
     // JWT is deliberately NOT forwarded — it is minted by LeadFlow's own auth for
     // LeadFlow's own routes, the gateway is not its audience, and passing a
     // user-bearer token to a third party widens its blast radius for no gain.
+    // `Authorization: Bearer`, not `x-api-key`. Verified against the local
+    // gateway rather than assumed:
+    //   Authorization: Bearer <tenant JWT>  -> 200
+    //   Authorization: Bearer <pk_live key> -> 403  (recognised, not authorised)
+    //   x-api-key: <key>                    -> 401  (header not recognised)
+    //
+    // So the configured credential must be a token the gateway ACCEPTS: a
+    // tenant-scoped JWT, or a key exchanged for one via POST /api/auth/token.
+    // A bare pk_live_ key sent directly is refused — it is the client_secret
+    // for that exchange, not a bearer credential.
+    //
+    // NOTE the tenant-scoping trap: the token from POST /api/auth/login carries
+    // tenant_id: null and is refused by tenant-scoped routes, while the token
+    // from POST /api/auth/signup-tenant carries the tenant. Two identities, and
+    // only one of them works here.
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'x-api-key': config.projexCloud.apiKey,
+      Authorization: `Bearer ${config.projexCloud.apiKey}`,
     };
     // Scope headers are sent only when configured, because an empty header is
     // worse than an absent one: a gateway that reads `x-tenant-id: ''` may

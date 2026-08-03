@@ -58,3 +58,8 @@ coverage/
 *.sqlite3
 data/
 
+
+# Every environment file variant. Credentials live here and must never be
+# committed; .env.example is the committed template.
+.env.*
+!.env.example

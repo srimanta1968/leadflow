@@ -8,6 +8,7 @@ import userRoutes from './userRoutes';
 import eventRoutes from './eventRoutes';
 import analyticsRoutes from './analyticsRoutes';
 import { authzRoutes } from '../platform/policy';
+import { captureRoutes } from '../features/capture';
 
 /**
  * Root API router, mounted at `/api`.
@@ -27,5 +28,6 @@ router.use('/users', userRoutes);
 router.use('/events', eventRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/leadflow/authz', authzRoutes);
+router.use('/leadflow/capture', captureRoutes);
 
 export default router;

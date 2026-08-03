@@ -1,0 +1,161 @@
+{
+  "name": "GET /api/leadflow/capture/inbox - composed capture inbox for the triage screen",
+  "description": "One call that assembles everything the Capture Inbox renders: the six headline counts and a page of rows, each row carrying its trust state, the evidence it rests on, a plain-language explanation, its age, its origin class, and the actions the CALLER may actually take on it. COMPOSED ON PURPOSE. The screen needs source records from sdk-source-record and at-risk clocks from sdk-sla; asking separately would be two round trips before the first paint, and the counts would be computed from two reads taken at different instants, so the headline numbers could disagree with the rows beneath them. THIS IS NOT GET /api/leads. That returns the lead projection - the routed, owned, SLA-tracked record an operator works. This returns the pre-projection trust ladder: captures that have not yet become leads, sitting at P0 through P4, awaiting normalization, promotion or a linking decision. A capture appears here BEFORE it is a lead and stops appearing once it has been linked. AVAILABLE ACTIONS are computed from the trust state AND the caller's policy verdict, intersected. A P0 capture can technically be normalized, but a Sales Rep may not promote one, so a Rep sees normalize and not promote while a Data Steward sees both. The screen therefore never renders an action that would be refused on click, which is the difference between a UI that teaches its rules and one that lets people discover them by failing. CURSOR PAGINATION, not offset. The inbox is a live queue that grows while it is being read, and an offset page-two skips whatever arrived above it; the cursor is the last row's (created_at, source_record_id) pair, so a concurrent insert cannot shift the window or duplicate a row across pages. FILTERS narrow by trust_state and origin_class, both from the closed vocabularies below. DEGRADATION: when ProjexCloud is unreachable the endpoint answers 200 with empty items, zeroed counts and upstream_available false, rather than 502 - a triage screen that shows nothing and says why is more useful than an error page, and the operator can still reach every other screen. QA: depends on register, login, and a captured lead so the window is not empty.",
+  "endpoint": "/api/leadflow/capture/inbox",
+  "method": "GET",
+  "taskId": "8c6ed254-1cfb-4489-87ce-acd02652c569",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 49,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "8c6ed254-1cfb-4489-87ce-acd02652c569#AC2",
+    "8c6ed254-1cfb-4489-87ce-acd02652c569#AC3",
+    "8c6ed254-1cfb-4489-87ce-acd02652c569#AC4"
+  ],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/leads"],
+  "fieldEnums": {
+    "trustState": ["P0_CAPTURED", "P1_NORMALIZED", "P2_CANDIDATE", "P3_LINKED", "P4_DIRECT"],
+    "originClass": [
+      "USER_PROVIDED",
+      "FIRST_PARTY_DIRECT",
+      "TENANT_FIRST_PARTY_CRM",
+      "USER_AUTHORIZED_CONTACT_STORE",
+      "PUBLIC_RECORD",
+      "LICENSED_THIRD_PARTY",
+      "PARTNER_PROVIDED",
+      "UNKNOWN_QUARANTINED"
+    ],
+    "availableActions": [
+      "source_record.normalize",
+      "source_record.promote",
+      "identity.link.verify",
+      "suppression.apply"
+    ]
+  },
+  "captureResponse": {
+    "capture.inbox.response.data.cursor": "data.next_cursor"
+  },
+  "testCases": [
+    {
+      "name": "Read the composed inbox",
+      "coversCriterion": [
+        "8c6ed254-1cfb-4489-87ce-acd02652c569#AC2",
+        "8c6ed254-1cfb-4489-87ce-acd02652c569#AC4"
+      ],
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "limit": "{{static:25}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Reject a limit above the cap",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|limit-too-large",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "limit": "{{static:5000}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject a trust state outside the ladder",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|unknown-trust-state",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "trust_state": "{{static:P9_ASCENDED}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an origin class outside the vocabulary",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|unknown-origin-class",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "origin_class": "{{static:HEARSAY}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject a malformed cursor rather than silently restarting the page",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|malformed-cursor",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "cursor": "{{static:not-a-cursor}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated read",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "Reject a bearer token that fails verification",
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer not.a.valid.session.token"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "limit must be between 1 and 200; trust_state, origin_class and cursor must be well formed",
+      "when": "limit is outside 1..200, trust_state or origin_class is outside its vocabulary, or cursor is not a decodable cursor"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, or present without a Bearer token"
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

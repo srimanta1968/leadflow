@@ -626,14 +626,51 @@ const TOOLS = [
           type: 'object',
           description: 'Contents of epics.json',
           properties: {
-            epics: { type: 'array', items: { type: 'object' } }
+            epics: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                    temp_id: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                  // Validated on every item by the server; a missing value rejects
+                  // the ENTIRE import — see server.py _validate_acceptance_criteria.
+                  acceptance_criteria: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'REQUIRED. Testable acceptance criteria, one observable outcome per entry, each at least 10 characters. The server REJECTS the whole import when this is missing or when an entry is too short to verify.'
+                  }
+                },
+                required: ['temp_id', 'title', 'description', 'acceptance_criteria']
+              }
+            }
           }
         },
         features: {
           type: 'object',
           description: 'Contents of features.json',
           properties: {
-            features: { type: 'array', items: { type: 'object' } }
+            features: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                    temp_id: { type: 'string' },
+                    epic_temp_id: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                  // Validated on every item by the server; a missing value rejects
+                  // the ENTIRE import — see server.py _validate_acceptance_criteria.
+                  acceptance_criteria: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'REQUIRED. Testable acceptance criteria, one observable outcome per entry, each at least 10 characters. The server REJECTS the whole import when this is missing or when an entry is too short to verify.'
+                  }
+                },
+                required: ['temp_id', 'title', 'description', 'acceptance_criteria']
+              }
+            }
           }
         },
         scenarios: {
@@ -663,8 +700,16 @@ const TOOLS = [
               title: { type: 'string' },
               description: { type: 'string' },
               source_module: { type: 'string' }
+,
+              // The server validates this on EVERY item and rejects the whole import
+              // when it is absent — see server.py _validate_acceptance_criteria.
+              acceptance_criteria: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'REQUIRED. Testable acceptance criteria, one observable outcome per entry, each at least 10 characters. The server REJECTS the whole import when this is missing or when an entry is too short to verify.'
+              }
             },
-            required: ['temp_id', 'title', 'description']
+            required: ['temp_id', 'title', 'description', 'acceptance_criteria']
           }
         }
       },
@@ -688,8 +733,16 @@ const TOOLS = [
               title: { type: 'string' },
               description: { type: 'string' },
               source_feature_file: { type: 'string' }
+,
+              // The server validates this on EVERY item and rejects the whole import
+              // when it is absent — see server.py _validate_acceptance_criteria.
+              acceptance_criteria: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'REQUIRED. Testable acceptance criteria, one observable outcome per entry, each at least 10 characters. The server REJECTS the whole import when this is missing or when an entry is too short to verify.'
+              }
             },
-            required: ['temp_id', 'epic_temp_id', 'title', 'description']
+            required: ['temp_id', 'epic_temp_id', 'title', 'description', 'acceptance_criteria']
           }
         },
         epic_id_mapping: {
@@ -1503,7 +1556,14 @@ function makeHttpRequest(method, path, body = null) {
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve(json);
           } else {
-            reject(new Error(json.error || json.message || `HTTP ${res.statusCode}`));
+            // FastAPI raises HTTPException as {"detail": ...}, so omitting `detail` here
+            // collapsed a precise validation message ("acceptance criteria missing on
+            // 3 feature(s): ...") into a bare "HTTP 400" and hid the cause entirely.
+            // detail may also be a list (Pydantic), hence the join.
+            const detail = Array.isArray(json.detail)
+              ? json.detail.map((d) => (typeof d === 'string' ? d : JSON.stringify(d))).join('; ')
+              : json.detail;
+            reject(new Error(detail || json.error || json.message || `HTTP ${res.statusCode}`));
           }
         } catch (e) {
           if (res.statusCode >= 200 && res.statusCode < 300) {
