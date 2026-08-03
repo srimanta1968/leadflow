@@ -81,6 +81,29 @@ export const FAILURE: Record<string, Message> = {
     title: 'Your session has ended',
     detail: 'Sign in again to continue.',
   },
+  ORIGIN_CLASS_REQUIRED: {
+    tone: 'error',
+    title: 'Choose where this came from',
+    // Says WHY rather than restating the rule. An operator told only "origin
+    // class is required" reaches for whichever option clears the error; told
+    // that the choice governs what may be done with the record, they pick the
+    // true one. The claim is the point, not the field.
+    detail:
+      'Every capture records how we obtained the data. That claim decides what may be done with it, so it cannot be guessed for you.',
+  },
+  APPROVAL_REQUIRED: {
+    tone: 'error',
+    // NOT a refusal, and it must not read like one. The action is open to this
+    // person; it needs a second pair of eyes. Told "you cannot do this", people
+    // find a way around the product instead of through it.
+    title: 'This needs a second approval',
+    detail: 'You may make this change, but someone else has to sign it off first.',
+  },
+  NOT_IMPLEMENTED: {
+    tone: 'error',
+    title: 'Not available in this deployment',
+    detail: 'Sign in through your organisation’s identity provider instead.',
+  },
   INVALID_TOKEN: {
     tone: 'error',
     title: 'Your session has expired',

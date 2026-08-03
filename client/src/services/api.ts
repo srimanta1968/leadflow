@@ -344,6 +344,41 @@ export interface PolicyDecisionResponse {
   decision_ref: string;
 }
 
+
+/** What the Quick Contact modal sends. */
+export interface QuickCapturePayload {
+  mode: 'manual' | 'assisted';
+  /** Exactly what the operator pasted or typed. Never trimmed client-side. */
+  rawInput: string;
+  parsedProposal?: Record<string, unknown> | null;
+  /** Required. No default — see the note on `api.quickCapture`. */
+  originClass: string;
+  visibility?: string;
+  recordOwnerPersonaId?: string | null;
+  relationshipHint?: string;
+  note?: string | null;
+  searchAfterCapture?: boolean;
+  evidenceBlobRef?: string | null;
+}
+
+/** What the capture endpoint returns. */
+export interface QuickCaptureResult {
+  sourceRecordId: string;
+  trustState: string;
+  originClass: string;
+  /** Echoed verbatim, so the operator can confirm what was stored. */
+  rawInput: string;
+  evidenceStored: boolean;
+  resolution: {
+    attempted: boolean;
+    autoLinked: boolean;
+    personId: string | null;
+    candidateCaseRef: string | null;
+    explanation: string;
+  };
+  proposal: Record<string, unknown> | null;
+}
+
 export const api = {
   /** Create an account and receive a session token. */
   register: (payload: {
@@ -365,6 +400,22 @@ export const api = {
   /** Submit the public marketing form. Deliberately unauthenticated. */
   submitPublicLead: (payload: LeadCapturePayload) =>
     request<CaptureResult>('/public/leads', { method: 'POST', body: payload, authenticated: false }),
+
+  /**
+   * Capture a contact in one call from the Quick Contact modal.
+   *
+   * DISTINCT from `captureLead`. That writes a LEAD to LeadFlow's projection;
+   * this creates a provisional P0 SOURCE RECORD with the raw input kept as
+   * immutable evidence, which is what the trust ladder reads. The two take
+   * different origin vocabularies for that reason — see
+   * `content/captureOriginClasses.ts`.
+   *
+   * `originClass` is deliberately REQUIRED with no default: the server answers
+   * 422 without it rather than guessing, and the modal must not paper over that
+   * by choosing one.
+   */
+  quickCapture: (payload: QuickCapturePayload) =>
+    request<QuickCaptureResult>('/leadflow/capture/quick', { method: 'POST', body: payload }),
 
   /** Capture a lead as an authenticated operator. */
   captureLead: (payload: LeadCapturePayload) =>

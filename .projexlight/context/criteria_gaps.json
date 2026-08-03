@@ -1,20 +1,17 @@
 {
-  "generatedAt": "2026-08-03T20:24:23.527340Z",
-  "taskId": "bd5ea1b4-9393-42d3-b7f9-5f922f20405d",
+  "generatedAt": "2026-08-03T21:02:16.992621Z",
+  "taskId": "528209d9-97e7-4cb4-b3bc-57ac642d835c",
   "gaps": [
     {
-      "criterionId": "bd5ea1b4-9393-42d3-b7f9-5f922f20405d#AC4",
-      "criterion": "capture.created audit event emitted with actor and origin",
+      "criterionId": "528209d9-97e7-4cb4-b3bc-57ac642d835c#AC1",
+      "criterion": "All four modes match the mockup layout and copy",
       "verdict": "partial",
-      "gap": "The event is emitted with actor, persona role and origin class, and the append body was corrected to sdk-audit's real shape (pool_index/event_type/payload, actor_kind 'human'). But it cannot LAND: ProjexCloud rejects it with UnregisteredEventType because 'capture.created' is absent from EVENT_TYPE_REGISTRY, a closed code constant in packages/contracts/src/events.ts that a consuming app has no endpoint or path to extend. All 32 LeadFlow event names are affected, and the registry convention is versioned ('.v1') where LeadFlow's are not. appendAuditEntry never throws by design, so nothing fails - but the chain stays empty and nightly verification has nothing to verify. Recorded as defect 6 in docs/projexcloud-defects.md. Emission is verifiable in-process; upstream persistence is blocked on ProjexCloud.",
+      "gap": "All four modes (Smart Paste, Manual, Business Card, Browser Capture) render with the mockup's copy, and the shared footer carries the Data Origin Class radio with all eight values, Visibility, Record Owner, the search-after-capture toggle, the 'Third-party is not converted by relabeling' callout, the capture_id/raw evidence/classification/audit footer line, and Cancel / Save P0 Draft / Save & Resolve. Structure and copy are asserted by tests over the component source. What is NOT proven is visual fidelity to the mockup: the client has vitest only, with no jsdom or testing-library, so nothing renders the component and no Gherkin scenario executes it \u2014 the Test MCP has no LeadFlow workspace mount, which is the same blocker already recorded against every other UI scenario in this project. Manual layout fields from the mockup (First/Display Name, Last/Legal Suffix, separate Phone/Email/Organization/Address inputs) are collapsed into one raw-input textarea plus the relationship select, because the capture endpoint stores raw evidence verbatim rather than parsed fields; splitting them client-side would fabricate structure the evidence does not have.",
       "evidence": {
-        "apiDefinitions": [
-          "tests/api_definitions/capture/quick-post.json"
-        ],
         "files": [
-          "server/src/features/capture/quickCaptureController.ts",
-          "server/src/platform/audit/auditLog.ts",
-          "docs/projexcloud-defects.md"
+          "client/src/components/app/QuickContactModal.tsx",
+          "client/src/content/captureOriginClasses.ts",
+          "client/tests/unit/quickContactModal.test.ts"
         ]
       }
     }
