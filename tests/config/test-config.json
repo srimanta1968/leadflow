@@ -6,7 +6,7 @@
   },
   "environments": {
     "dev": {
-      "_status": "discovered from client/vite.config.ts server.port=5173 and server/.env.example PORT=3010. baseUrl is the UI origin (5173) because the UI runner drives a browser against it; apiUrl is the Express origin (3010) that the api_definition runner calls. Pointing baseUrl at 3010 makes every UI step land on the JSON API and 404.",
+      "_status": "Host-run tools: localhost. The containerised Test MCP runner CANNOT reach these — use environment 'dev_container' for that, which is the same servers under host.docker.internal. discovered from client/vite.config.ts server.port=5173 and server/.env.example PORT=3010. baseUrl is the UI origin (5173) because the UI runner drives a browser against it; apiUrl is the Express origin (3010) that the api_definition runner calls. Pointing baseUrl at 3010 makes every UI step land on the JSON API and 404.",
       "baseUrl": "http://localhost:5173",
       "apiUrl": "http://localhost:3010/api",
       "variables": {
@@ -16,6 +16,22 @@
       "portals": {
         "leadflow": {
           "url": "http://localhost:5173",
+          "authRealm": "leadflow"
+        }
+      }
+    },
+    "dev_container": {
+      "_status": "FOR THE CONTAINERISED TEST MCP RUNNER. Same machine and same servers as 'dev' — only the hostname differs, and it has to. Verified on this machine: from INSIDE projexlight-test-mcp, host.docker.internal:5173 and :3010 both answer 200 while localhost does not resolve to the host at all; from the HOST the reverse is true, host.docker.internal does not resolve. The two are mutually exclusive, which is why this is a separate environment rather than an edit to 'dev' — changing 'dev' would fix the container runner and break every host-run tool.",
+      "baseUrl": "http://host.docker.internal:5173",
+      "apiUrl": "http://host.docker.internal:3010/api",
+      "_port_note": "5173 is the Vite app and 3010 is the Express API — NOT 3000/5000. Port 3000 on this machine serves ProjexCloud's Next.js app and answers 200, so pointing the UI runner there does not fail fast: it loads someone else's application and every step fails with a confusing 'element not found'. Port 5000 is not listening at all. Confirmed by title: :3000 is 'ProjexCloud', :5173 is 'LeadFlow — The AI Revenue Operating System'.",
+      "variables": {
+        "test_password": "LeadFlow!Test2026",
+        "_test_password_note": "Shared by the register and login api_definitions. A password is never returned in a response, so login cannot capture it from register and both must reference this one value. Declared per environment, not globally: a password is secret-shaped, and a global would apply this dev value to every environment."
+      },
+      "portals": {
+        "leadflow": {
+          "url": "http://host.docker.internal:5173",
           "authRealm": "leadflow"
         }
       }

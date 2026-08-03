@@ -4,6 +4,9 @@
 export { CaptureInboxController } from './inboxController';
 export { QuickCaptureController } from './quickCaptureController';
 export { QuickCaptureService } from './quickCaptureService';
+export { ResolveCaptureController } from './resolveCaptureController';
+export { ResolveCaptureService, railNodeFor, RESOLVE_STAGES } from './resolveCaptureService';
+export type { ResolveStage, RailNode, ResolveResult, OrganizationCandidate } from './resolveCaptureService';
 export { validateQuickCapture, CAPTURE_MODES, CAPTURE_VISIBILITIES, RELATIONSHIP_HINTS } from './quickCaptureValidator';
 export type { QuickCaptureInput, CaptureMode, CaptureVisibility, RelationshipHint } from './quickCaptureValidator';
 export {

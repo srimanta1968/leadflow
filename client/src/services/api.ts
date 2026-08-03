@@ -379,6 +379,30 @@ export interface QuickCaptureResult {
   proposal: Record<string, unknown> | null;
 }
 
+
+/** What resolving a capture returns. */
+export interface ResolveCaptureResult {
+  captureId: string;
+  /** Read back from the record after the operation — never assumed. */
+  trustState: string;
+  rail: { reachedNode: string; fromUpstream: boolean };
+  normalized: Record<string, string>;
+  /** Which fields the steward overrode. */
+  correctedFields: string[];
+  organizationCandidate: {
+    organizationId: string | null;
+    name: string | null;
+    rationale: string;
+    /** Always false. A candidate is proposed, never merged. */
+    merged: false;
+    proposedRelationship: 'REPRESENTS';
+    relationshipState: 'proposed';
+  } | null;
+  /** Handle a retraction quotes. A promotion with no way back is a merge. */
+  reversalRef: string | null;
+  reversible: boolean;
+}
+
 export const api = {
   /** Create an account and receive a session token. */
   register: (payload: {
@@ -414,6 +438,21 @@ export const api = {
    * 422 without it rather than guessing, and the modal must not paper over that
    * by choosing one.
    */
+  /**
+   * Advance a capture one governed step.
+   *
+   * `stage` has NO default — the server refuses a missing one rather than
+   * guessing which half of a promotion the steward meant.
+   */
+  resolveCapture: (
+    captureId: string,
+    payload: { stage: 'normalize' | 'search'; corrections?: Record<string, string> }
+  ) =>
+    request<ResolveCaptureResult>(`/leadflow/capture/${encodeURIComponent(captureId)}/resolve`, {
+      method: 'POST',
+      body: payload,
+    }),
+
   quickCapture: (payload: QuickCapturePayload) =>
     request<QuickCaptureResult>('/leadflow/capture/quick', { method: 'POST', body: payload }),
 

@@ -1,0 +1,203 @@
+{
+  "name": "POST /api/leadflow/capture/:id/resolve - Normalize, search and propose",
+  "description": "Moves a captured source record up the trust ladder under a steward's decision. Orchestrates sdk-source-record normalize then promote, sdk-identity-resolver resolve, sdk-empi candidate links, and sdk-rebac for a PROPOSED relationship. A command against an existing record, so it answers 200 rather than 201.\n\nTHE RAIL REPORTS THE RECORD'S REAL STATE, NEVER THE UI'S GUESS. The response carries trustState read back from the source record after the operation, plus the node the record has actually reached. A screen that advanced its own rail optimistically would show P2 for a record still sitting at P0 upstream, and the steward would make a governed decision against a picture that is not true.\n\nCORRECTIONS BEAT THE PARSE. Any field the steward edits is sent as `corrections` and OVERRIDES the assistant's proposal for that field. The parse is a suggestion; the steward is the authority. Corrections are recorded distinctly from the original proposal so an audit can show what the machine said AND what the human changed it to — collapsing them would erase the reviewer's contribution, which is the only part with accountability attached.\n\nAN ORGANIZATION CANDIDATE PROPOSES A RELATIONSHIP, NEVER A MERGE. When the search finds an organization sharing a domain or phone prefix, the response offers a PROPOSED `REPRESENTS` relationship for review. It does not merge the person into the organization and does not link them automatically. Merging two records is far harder to undo than proposing an edge, and a shared domain is evidence of association, not identity.\n\nPROMOTION IS AUDITED AND REVERSIBLE. Every promotion appends capture.promoted naming the acting persona, and the response returns `reversalRef` — the handle a later retraction quotes. A promotion with no way back is a merge in disguise.\n\nQA: depends on register, login and a quick capture to produce a source record id.",
+  "endpoint": "/api/leadflow/capture/:id/resolve",
+  "method": "POST",
+  "taskId": "7b9e97d6-7838-42be-adbb-4239c1224520",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "7b9e97d6-7838-42be-adbb-4239c1224520#AC1",
+    "7b9e97d6-7838-42be-adbb-4239c1224520#AC2",
+    "7b9e97d6-7838-42be-adbb-4239c1224520#AC3",
+    "7b9e97d6-7838-42be-adbb-4239c1224520#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/capture/quick"
+  ],
+  "fieldEnums": {
+    "stage": ["normalize", "search"],
+    "trustState": ["P0_CAPTURED", "P1_NORMALIZED", "P2_CANDIDATE", "P3_LINKED", "P4_DIRECT"]
+  },
+  "captureResponse": {
+    "capture.resolve.response.data.trustState": "data.trustState",
+    "capture.resolve.response.data.reversalRef": "data.reversalRef"
+  },
+  "testCases": [
+    {
+      "name": "Save P1 - normalize the record and report the state it actually reached",
+      "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC1",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
+      },
+      "payload": {
+        "stage": "normalize",
+        "corrections": {
+          "full_name": "Priya Raman",
+          "email": "priya@ramanroofing.example"
+        }
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "rail": {
+            "reachedNode": "P1"
+          }
+        }
+      }
+    },
+    {
+      "name": "A steward correction overrides the assistant's proposal for that field",
+      "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC2",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
+      },
+      "payload": {
+        "stage": "normalize",
+        "corrections": {
+          "full_name": "Priyanka Raman-Shah",
+          "phone": "+44 7700 900999"
+        }
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "normalized": {
+            "full_name": "Priyanka Raman-Shah"
+          },
+          "correctedFields": ["full_name", "phone"]
+        }
+      }
+    },
+    {
+      "name": "Search & Create Candidates proposes a relationship, never a merge",
+      "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC3",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
+      },
+      "payload": {
+        "stage": "search"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "organizationCandidate": {
+            "merged": false,
+            "proposedRelationship": "REPRESENTS",
+            "relationshipState": "proposed"
+          }
+        }
+      }
+    },
+    {
+      "name": "A promotion returns the handle a retraction would quote",
+      "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC4",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
+      },
+      "payload": {
+        "stage": "normalize"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "reversible": true
+        }
+      }
+    },
+    {
+      "name": "Reject an unknown stage rather than guessing which one was meant",
+      "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC1",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
+      },
+      "payload": {
+        "stage": "{{static:promote_everything}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject a capture id that is not a UUID",
+      "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC1",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{static:not-a-uuid}}"
+      },
+      "payload": {
+        "stage": "normalize"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated resolve",
+      "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC4",
+      "pathParams": {
+        "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
+      },
+      "payload": {
+        "stage": "normalize"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "id must be a UUID; stage must be one of normalize, search; corrections must be an object",
+      "when": "the path id is not a UUID, stage is absent or outside its vocabulary, or corrections is not an object"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "Promoting a source record is a Data Steward decision",
+      "when": "the caller does not hold source_record.promote. Adjudicating a promotion is the steward's defining act, so a rep working their own leads is correctly refused."
+    },
+    {
+      "status": 502,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "message": "A ProjexCloud SDK required by this resolution is unavailable",
+      "when": "a configured gateway fails. NOT raised when the gateway is unconfigured — that is the documented local fallback."
+    }
+  ]
+}
