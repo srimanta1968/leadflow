@@ -21,6 +21,16 @@ export const ErrorCodes = {
   CONFLICT: 'CONFLICT',
   RATE_LIMITED: 'RATE_LIMITED',
   UPSTREAM_UNAVAILABLE: 'UPSTREAM_UNAVAILABLE',
+  /**
+   * The route exists but this deployment does not provide it — currently only
+   * local password auth, once ProjexCloud is the identity authority.
+   *
+   * Distinct from FORBIDDEN, which says the CALLER may not do it: retrying with
+   * a better credential fixes a 403 and can never fix this. Distinct from
+   * NOT_FOUND, which would tell a client the endpoint does not exist when the
+   * useful answer is that it exists and authentication happens elsewhere.
+   */
+  NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 

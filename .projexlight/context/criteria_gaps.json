@@ -1,27 +1,16 @@
 {
-  "generatedAt": "2026-08-02T22:49:57.568445Z",
-  "taskId": "32b5cb32-890f-44f1-8509-6ed447e534cb",
+  "generatedAt": "2026-08-03T01:38:48.020598Z",
+  "taskId": "8c6ed254-1cfb-4489-87ce-acd02652c569",
   "gaps": [
     {
-      "criterionId": "32b5cb32-890f-44f1-8509-6ed447e534cb#AC3",
-      "criterion": "Key rotation works without downtime",
+      "criterionId": "8c6ed254-1cfb-4489-87ce-acd02652c569#AC3",
+      "criterion": "Cursor pagination stable under concurrent inserts",
       "verdict": "partial",
-      "gap": "rotateVaultKey calls sdk-vault POST /api/vault/keys/:key_id/rotate with a date-stamped idempotency key so a re-run in the same day cannot double-rotate, and the no-downtime property is REAL but it belongs to sdk-vault, not to this code: the SDK re-wraps under the new key while the previous one can still decrypt, exactly as the JWKS rotation in platform/auth keeps the outgoing key serving requests already in flight. LeadFlow cannot demonstrate that without a live vault. What is missing locally is a test proving a value encrypted before a rotation still decrypts after it, which needs a real key lifecycle - a stub would only assert that a stub was called. Also unbuilt: sdk-api-keys issuance, rotation and revoke for partner and extension access, which the task names alongside vault rotation and which nothing in LeadFlow calls.",
+      "gap": "The cursor is correct by construction and asserted: it is a composite of created_at AND source_record_id, because captures arrive in bursts and two sharing a millisecond would otherwise be skipped or duplicated depending on the comparison operator; it round-trips, survives an id containing the separator, and a malformed cursor is a 400 rather than a silent restart at page one, which in a queue means re-serving rows an operator already triaged. Writing that test found a real bug - I split on the LAST separator when the timestamp is the part that cannot contain a pipe, so it must be the first. What is NOT proven is stability UNDER CONCURRENT INSERTS, which is what the criterion actually says: no test inserts rows between two page reads and asserts nothing is skipped or repeated. That needs the upstream list endpoint to accept the cursor and a live source-record store to insert into between calls - both now possible against the local gateway, which they were not when this was written.",
       "evidence": {
         "files": [
-          "server/src/platform/secrets/piiVault.ts"
-        ]
-      }
-    },
-    {
-      "criterionId": "32b5cb32-890f-44f1-8509-6ed447e534cb#AC4",
-      "criterion": "Credential registry screen never renders a secret value",
-      "verdict": "partial",
-      "gap": "The DATA the screen would render is provably safe: providerRegistryView returns a boolean configured flag rather than a masked string, and a test sets a real-looking ref then asserts the serialised view does not contain it. The masking decision is deliberate - sk_live_****4821 still leaks the prefix and the last four, enough to confirm a guess and reveal the product tier. But there is NO SCREEN: no component, no route, and no health or last-rotation display, all of which the task asks for. So the criterion is satisfied in the only place it can currently be violated and unproven where a person would actually see it. Closing it needs the registry screen, wired to this view function, plus a Gherkin step asserting no secret-shaped string appears in the rendered page.",
-      "evidence": {
-        "files": [
-          "server/src/config/providers.ts",
-          "server/tests/unit/secretCustody.test.ts"
+          "server/src/features/capture/inboxQuery.ts",
+          "server/tests/unit/captureInbox.test.ts"
         ]
       }
     }

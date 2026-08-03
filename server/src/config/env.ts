@@ -39,6 +39,15 @@ export interface AppConfig {
     gatewayUrl: string;
     apiKey: string;
     tenantId: string;
+    /**
+     * The CUSTOMER, once they own more than one app.
+     *
+     * `tenantId` above is app-scoped — a ProjexCloud tenant row has a NOT NULL
+     * app_id, so it belongs to exactly one app. A customer running two apps is
+     * a root tenant with a child tenant per app. Empty while there is one app,
+     * where root and child are the same row.
+     */
+    rootTenantId: string;
     appId: string;
     timeoutMs: number;
     /**
@@ -123,6 +132,11 @@ export const config: AppConfig = {
     gatewayUrl: process.env.PROJEXCLOUD_GATEWAY_URL || '',
     apiKey: process.env.PROJEXCLOUD_API_KEY || '',
     tenantId: process.env.PROJEXCLOUD_TENANT_ID || '',
+    // Left empty until a customer has a second app. Deliberately NOT defaulted
+    // to tenantId here — the fallback belongs in resolveTenantContext, where it
+    // is one decision with a comment rather than a value that silently looks
+    // like it was configured.
+    rootTenantId: process.env.PROJEXCLOUD_ROOT_TENANT_ID || '',
     // Optional second scope dimension, for a gateway that hosts more than one
     // application under a tenant. Empty by default, and the header is omitted
     // entirely when empty, so a gateway that scopes by tenant alone is

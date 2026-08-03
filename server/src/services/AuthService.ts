@@ -14,8 +14,48 @@ import { AuthResult, LoginInput, PublicUser, RegisterInput, UserRow } from '../t
  * its API contract tests have a working token producer. When the identity spine
  * lands, `register`/`login` delegate to ProjexCloud and keep writing the same
  * projection — callers and the token shape are unchanged.
+ *
+ * That handover is enforced, not merely intended: configuring an identity issuer
+ * turns local password auth OFF (see `assertLocalCredentialsPermitted`), so the
+ * two stores cannot both be answering at once. Reads of the projection —
+ * `getById` — stay available either way, because a projection is exactly what it
+ * is meant to be once the credentials are gone.
  */
 export class AuthService {
+  /**
+   * Refuse to act as a credential store once ProjexCloud identity is live.
+   *
+   * ProjexCloud's rule (mcp-server/data/AGENTS.md): "Do NOT build your own
+   * users/roles/sessions tables — a parallel table breaks tenant isolation and
+   * the audit chain." LeadFlow has one, and it exists for a defensible reason:
+   * something has to mint a token before the identity spine is reachable, and
+   * every api_definition in the project chains from an auth producer.
+   *
+   * The danger is not the table existing — it is the table STAYING AUTHORITATIVE
+   * after the real authority arrives. Two credential stores that both answer
+   * "yes" is how a revoked user keeps working: revocation happens in ProjexCloud
+   * and the local hash never hears about it. So the moment an issuer is
+   * configured, local password auth stops, and this becomes a projection that is
+   * only ever written from verified platform claims.
+   *
+   * The guard is the enforceable half of that migration. Dropping the table is
+   * the last step and needs personas provisioned for every existing user; this
+   * needs nothing, and it is what keeps the two stores from diverging in the
+   * meantime.
+   *
+   * @throws AppError(501 NOT_IMPLEMENTED) when an identity issuer is configured.
+   */
+  private static assertLocalCredentialsPermitted(): void {
+    if (!config.projexCloud.identity.issuerUrl) {
+      return;
+    }
+    throw new AppError(
+      501,
+      ErrorCodes.NOT_IMPLEMENTED,
+      'Local password authentication is disabled: ProjexCloud is the identity authority for this deployment'
+    );
+  }
+
   /** Strip the password hash and normalise timestamps for API responses. */
   private static toPublicUser(row: UserRow): PublicUser {
     return {
@@ -75,6 +115,8 @@ export class AuthService {
    * @throws AppError(409 EMAIL_ALREADY_EXISTS | USERNAME_ALREADY_EXISTS)
    */
   static async register(input: RegisterInput): Promise<AuthResult> {
+    AuthService.assertLocalCredentialsPermitted();
+
     const existingEmail = await dataService.queryOne<UserRow>(
       'SELECT * FROM users WHERE email = $1',
       [input.email]
@@ -144,6 +186,8 @@ export class AuthService {
    * @throws AppError(403 ACCOUNT_INACTIVE) when the account is disabled.
    */
   static async login(input: LoginInput): Promise<AuthResult> {
+    AuthService.assertLocalCredentialsPermitted();
+
     const user = await dataService.queryOne<UserRow>('SELECT * FROM users WHERE email = $1', [
       input.email,
     ]);

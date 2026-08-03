@@ -41,10 +41,126 @@ export interface SdkCallResult<T> {
  * local fallback (see `LeadCaptureService`). A configured-but-failing gateway
  * is a real error and surfaces as UPSTREAM_UNAVAILABLE.
  */
+/** A machine token obtained by exchanging an API key. */
+interface MachineToken {
+  accessToken: string;
+  /** Epoch milliseconds. */
+  expiresAt: number;
+}
+
+/**
+ * How early a token is treated as expired.
+ *
+ * Refreshing exactly at expiry loses the race against a request already in
+ * flight: the token is valid when we check and rejected by the time the gateway
+ * reads it. Sixty seconds is comfortably longer than any single call.
+ */
+const TOKEN_SKEW_MS = 60_000;
+
 export class SdkGatewayClient {
   /** True when a gateway URL and API key are both present in the environment. */
   static isConfigured(): boolean {
     return Boolean(config.projexCloud.gatewayUrl && config.projexCloud.apiKey);
+  }
+
+  private static machineToken: MachineToken | null = null;
+  /** De-duplicates concurrent exchanges so a cold start trades ONE key. */
+  private static exchangeInFlight: Promise<string | null> | null = null;
+
+  /** Drop the cached machine token. Exposed for tests and forced re-auth. */
+  static resetCredential(): void {
+    SdkGatewayClient.machineToken = null;
+    SdkGatewayClient.exchangeInFlight = null;
+  }
+
+  /**
+   * The bearer value to send.
+   *
+   * A `pk_live_`/`pk_test_` API KEY is not a bearer credential — the gateway
+   * answers 403 when one is sent directly. It is the `client_secret` for a
+   * client-credentials exchange, which returns a short-lived token carrying the
+   * tenant, the app and a synthetic service persona.
+   *
+   * Verified against the live gateway:
+   *   Authorization: Bearer <tenant JWT>        -> 200
+   *   Authorization: Bearer <pk_test_ key>      -> 403
+   *   POST /api/auth/token {client_credentials} -> access_token  (actor kind: service)
+   *
+   * Anything that is NOT pk_-prefixed is assumed to already be a token and is
+   * passed through, so a deployment configured with a tenant JWT keeps working.
+   *
+   * EXCHANGING IS NOT ENOUGH ON ITS OWN. The synthetic persona the token names
+   * starts with no grants, and authority is resolved from the persona at request
+   * time rather than from the credential — so a freshly exchanged token still
+   * gets 403 until that persona is granted a role template. That grant is
+   * provisioning, not something this client can do for itself.
+   */
+  private static async bearerValue(): Promise<string | null> {
+    const configured = config.projexCloud.apiKey;
+
+    if (!configured.startsWith('pk_live_') && !configured.startsWith('pk_test_')) {
+      return configured;
+    }
+
+    const cached = SdkGatewayClient.machineToken;
+    if (cached && Date.now() < cached.expiresAt - TOKEN_SKEW_MS) {
+      return cached.accessToken;
+    }
+
+    if (SdkGatewayClient.exchangeInFlight) {
+      return SdkGatewayClient.exchangeInFlight;
+    }
+
+    SdkGatewayClient.exchangeInFlight = SdkGatewayClient.exchangeKey(configured).finally(() => {
+      SdkGatewayClient.exchangeInFlight = null;
+    });
+
+    return SdkGatewayClient.exchangeInFlight;
+  }
+
+  /** Trade the API key for a short-lived machine token. */
+  private static async exchangeKey(apiKey: string): Promise<string | null> {
+    const url = `${config.projexCloud.gatewayUrl.replace(/\/$/, '')}/api/auth/token`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), config.projexCloud.timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grant_type: 'client_credentials',
+          // The application owns the key, so the application id is the client.
+          client_id: config.projexCloud.appId,
+          client_secret: apiKey,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        console.error(`[SdkGatewayClient] key exchange returned ${response.status}`);
+        return null;
+      }
+
+      const body = (await response.json()) as { access_token?: string; expires_in?: number };
+      if (!body.access_token) {
+        return null;
+      }
+
+      SdkGatewayClient.machineToken = {
+        accessToken: body.access_token,
+        // Default an hour when the gateway does not say; the skew above means a
+        // wrong guess costs an extra exchange rather than a failed request.
+        expiresAt: Date.now() + (body.expires_in ?? 3600) * 1000,
+      };
+      return body.access_token;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[SdkGatewayClient] key exchange failed:', message);
+      return null;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   /**
@@ -102,9 +218,18 @@ export class SdkGatewayClient {
     // tenant_id: null and is refused by tenant-scoped routes, while the token
     // from POST /api/auth/signup-tenant carries the tenant. Two identities, and
     // only one of them works here.
+    const bearer = await SdkGatewayClient.bearerValue();
+    if (!bearer) {
+      throw new AppError(
+        502,
+        ErrorCodes.UPSTREAM_UNAVAILABLE,
+        'Could not obtain a ProjexCloud credential'
+      );
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.projexCloud.apiKey}`,
+      Authorization: `Bearer ${bearer}`,
     };
     // Scope headers are sent only when configured, because an empty header is
     // worse than an absent one: a gateway that reads `x-tenant-id: ''` may
