@@ -5,6 +5,7 @@ import { CaptureInboxController } from './inboxController';
 import { QuickCaptureController } from './quickCaptureController';
 import { ResolveCaptureController } from './resolveCaptureController';
 import { ExtensionCaptureController } from './extensionCaptureController';
+import { SyncBatchController } from './syncBatchController';
 
 // @governance-tracked
 // Definition: tests/api_definitions/capture/inbox-get.json
@@ -12,6 +13,7 @@ import { ExtensionCaptureController } from './extensionCaptureController';
 // Definition: tests/api_definitions/capture/resolve-post.json
 // Definition: tests/api_definitions/capture/extension-post.json
 // Definition: tests/api_definitions/capture/extension-domain-policy-get.json
+// Definition: tests/api_definitions/capture/sync-batch-post.json
 
 /**
  * The capture triage surface.
@@ -31,6 +33,7 @@ router.post('/quick', asyncHandler(QuickCaptureController.quick));
 // 'extension' to :id and never reach this handler.
 router.get('/extension/domain-policy', asyncHandler(ExtensionCaptureController.domainPolicy));
 router.post('/extension', asyncHandler(ExtensionCaptureController.capture));
+router.post('/sync-batch', asyncHandler(SyncBatchController.sync));
 router.post('/:id/resolve', asyncHandler(ResolveCaptureController.resolve));
 
 export default router;

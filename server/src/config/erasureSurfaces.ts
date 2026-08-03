@@ -8,10 +8,13 @@
  * relying on it has no way to know.
  *
  * Enumerated from the actual migrations rather than from memory. Verified
- * against server/src/db/migrations: the schema holds exactly six tables —
- * leads, users, routing_rules, sla_metrics, sla_alerts and sla_policies — and
- * each is classified below, including the ones that hold NOTHING, because
- * "we checked and it is clean" and "we forgot it existed" must not look alike.
+ * against server/src/db/migrations: the schema holds leads, users,
+ * routing_rules, sla_metrics, sla_alerts, sla_policies and
+ * offline_capture_sync — and each is classified below, including the ones that
+ * hold NOTHING, because "we checked and it is clean" and "we forgot it
+ * existed" must not look alike. `erasurePlan.test.ts` reads the live schema and
+ * fails if a table is added without a decision here, which is how this list
+ * stays true rather than merely starting true.
  */
 
 /** How a surface is cleared. */
@@ -97,6 +100,13 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
     personalColumns: [],
     rationale:
       'The analytics saved view lives in the operator\'s own browser localStorage, not on the server, and holds filter selections — which can include an owner_user_id. It is out of reach of a server-side erasure and belongs to the operator\'s device rather than the tenant. Flagged so it is a known limit of the certificate rather than an unexamined one.',
+  },
+  {
+    surface: 'offline_capture_sync',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'The idempotency ledger for offline sync. Holds a device-generated capture id, the source record id it produced, the capture kind and two timestamps — no name, no contact point, no captured content. The evidence itself lives in the source record, which is where erasure acts. AND THE ROW MUST BE KEPT, not merely left alone: if an erasure deleted it, a device still holding that capture in its queue would sync again, the server would see an id it has never seen, and it would create a NEW source record for the person just erased. Retaining the row is what makes the erasure stick — the replay answers duplicate and creates nothing. Deleting it would quietly undo the erasure through the most ordinary action in the system, a phone reconnecting.',
   },
 ];
 

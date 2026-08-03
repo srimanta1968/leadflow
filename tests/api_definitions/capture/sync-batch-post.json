@@ -1,0 +1,241 @@
+{
+  "name": "POST /api/leadflow/capture/sync-batch - Drain the offline queue",
+  "description": "Accepts a batch of captures made while the device was offline and creates one P0 source record per distinct client-generated id. A command against a collection, so it answers 200 with a per-item outcome rather than 201 — a batch where three items are new and two are replays has no single created/not-created answer, and forcing one would hide exactly the case this endpoint exists to handle.\n\nIDEMPOTENT ON THE CLIENT ID, AND THAT IS THE WHOLE DESIGN. The client mints `clientCaptureId` at capture time, offline, before the server has ever heard of the record. Re-sending the same id returns the SAME sourceRecordId with `duplicate: true` and creates nothing. This is what makes the acceptance case work: capture five contacts offline, force-quit mid-sync, reconnect and sync again, and you have five records rather than seven — the retry cannot know which of its items landed, so the server has to be the one that knows.\n\nDUPLICATES ARE REPORTED, NOT SILENTLY SWALLOWED. Each item comes back with its own status, so a client can mark exactly the items that are now durable and retry only what genuinely failed. A batch that answered with one aggregate would force the client to re-send everything on any partial failure, which is how a queue that retries turns into a queue that multiplies.\n\nA PARTIAL FAILURE IS NOT A FAILED BATCH. One bad item returns its own error and the rest still land. Rejecting the whole batch would mean a single malformed capture — a voice note with an unparseable reference, say — blocks every other capture on that device indefinitely, and the operator has no way to find or remove it.\n\nA VOICE NOTE WITH NO NAME IS VALID. A field rep standing outside a property records 'leak above the kitchen, 42 Bridge Road' and there is no person yet. The record is a real P0 carrying the property reference; requiring a name would either lose the capture or invite a fabricated one.\n\nProtected by the authenticate guard. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/capture/sync-batch",
+  "method": "POST",
+  "taskId": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC1",
+    "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC2",
+    "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC4"
+  ],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "captureKind": ["contact", "business_card", "voice_note"]
+  },
+  "captureResponse": {
+    "capture.syncBatch.response.data.accepted": "data.accepted"
+  },
+  "testCases": [
+    {
+      "name": "Five offline captures produce five records",
+      "coversCriterion": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC1",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "items": [
+          {
+            "clientCaptureId": "off-batch-a-1",
+            "captureKind": "contact",
+            "rawInput": "Priya Raman, priya@example.test",
+            "originClass": "USER_PROVIDED",
+            "capturedAt": "{{dynamic:pastdate}}"
+          },
+          {
+            "clientCaptureId": "off-batch-a-2",
+            "captureKind": "contact",
+            "rawInput": "Sam Okafor, sam@example.test",
+            "originClass": "USER_PROVIDED",
+            "capturedAt": "{{dynamic:pastdate}}"
+          },
+          {
+            "clientCaptureId": "off-batch-a-3",
+            "captureKind": "business_card",
+            "rawInput": "Card: Ada Lovelace, Analytical Engines Ltd",
+            "originClass": "USER_PROVIDED",
+            "capturedAt": "{{dynamic:pastdate}}"
+          },
+          {
+            "clientCaptureId": "off-batch-a-4",
+            "captureKind": "voice_note",
+            "rawInput": "Leak above the kitchen at 42 Bridge Road",
+            "propertyReference": "42 Bridge Road",
+            "originClass": "USER_PROVIDED",
+            "capturedAt": "{{dynamic:pastdate}}"
+          },
+          {
+            "clientCaptureId": "off-batch-a-5",
+            "captureKind": "contact",
+            "rawInput": "Jo Bell, jo@example.test",
+            "originClass": "USER_PROVIDED",
+            "capturedAt": "{{dynamic:pastdate}}"
+          }
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "accepted": 5,
+          "duplicates": 0,
+          "failed": 0
+        }
+      }
+    },
+    {
+      "name": "Re-syncing the SAME batch creates nothing and reports every item duplicate",
+      "coversCriterion": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC2",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "items": [
+          {
+            "clientCaptureId": "off-batch-a-1",
+            "captureKind": "contact",
+            "rawInput": "Priya Raman, priya@example.test",
+            "originClass": "USER_PROVIDED",
+            "capturedAt": "{{dynamic:pastdate}}"
+          },
+          {
+            "clientCaptureId": "off-batch-a-2",
+            "captureKind": "contact",
+            "rawInput": "Sam Okafor, sam@example.test",
+            "originClass": "USER_PROVIDED",
+            "capturedAt": "{{dynamic:pastdate}}"
+          }
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "accepted": 0,
+          "duplicates": 2
+        }
+      }
+    },
+    {
+      "name": "A voice note with NO name is a valid P0 carrying the property reference",
+      "coversCriterion": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC4",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "items": [
+          {
+            "clientCaptureId": "{{dynamic:uuid}}",
+            "captureKind": "voice_note",
+            "rawInput": "Owner wants a quote for the flat roof, no name given",
+            "propertyReference": "17 Mill Lane",
+            "originClass": "USER_PROVIDED",
+            "capturedAt": "{{dynamic:pastdate}}"
+          }
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "accepted": 1,
+          "failed": 0
+        }
+      }
+    },
+    {
+      "name": "One bad item fails alone - the rest of the batch still lands",
+      "coversCriterion": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC1",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "items": [
+          {
+            "clientCaptureId": "{{dynamic:uuid}}",
+            "captureKind": "contact",
+            "rawInput": "Valid capture",
+            "originClass": "USER_PROVIDED",
+            "capturedAt": "{{dynamic:pastdate}}"
+          },
+          {
+            "clientCaptureId": "",
+            "captureKind": "contact",
+            "rawInput": "Missing its client id",
+            "originClass": "USER_PROVIDED",
+            "capturedAt": "{{dynamic:pastdate}}"
+          }
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "accepted": 1,
+          "failed": 1
+        }
+      }
+    },
+    {
+      "name": "Reject an empty batch rather than answering nothing",
+      "coversCriterion": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC2",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "items": []
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject a batch larger than the cap",
+      "coversCriterion": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC2",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "items": "{{static:__OVERSIZED__}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated sync",
+      "coversCriterion": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC1",
+      "payload": {
+        "items": [
+          {
+            "clientCaptureId": "{{dynamic:uuid}}",
+            "captureKind": "contact",
+            "rawInput": "Anything",
+            "originClass": "USER_PROVIDED",
+            "capturedAt": "{{dynamic:pastdate}}"
+          }
+        ]
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "items must be a non-empty array of at most 200 entries",
+      "when": "items is absent, empty, not an array, or longer than the cap. An empty batch is a client bug — a queue with nothing in it should not be syncing — and answering it cheerfully hides that."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 422,
+      "code": "ORIGIN_CLASS_REQUIRED",
+      "message": "Each queued capture must carry the origin class recorded when it was taken",
+      "when": "an item has no usable originClass. Reported per item rather than failing the batch — the origin class is recorded on the device at capture time, so a missing one is a defect in one queued item, not in the sync."
+    }
+  ]
+}

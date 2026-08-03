@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-08-03T21:34:29.219149Z",
-  "taskId": "7b9e97d6-7838-42be-adbb-4239c1224520",
+  "generatedAt": "2026-08-03T22:12:21.894552Z",
+  "taskId": "4691fc71-6138-4a33-b3d9-54be4f9d693c",
   "gaps": [
     {
-      "criterionId": "7b9e97d6-7838-42be-adbb-4239c1224520#AC4",
-      "criterion": "Promotion is audited and reversible",
+      "criterionId": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC4",
+      "criterion": "Every transmission writes an audit entry",
       "verdict": "partial",
-      "gap": "Reversible is fully covered: reversalRef is produced with the promotion and surfaced in the modal, asserted server-side and client-side. Audited is emitted and asserted in-process - a test proves capture.promoted is appended naming the acting persona and the corrected fields - but it cannot LAND upstream. ProjexCloud rejects it with UnregisteredEventType because capture.promoted, like all 32 LeadFlow event names, is absent from EVENT_TYPE_REGISTRY, a closed code constant in packages/contracts that a consuming app has no endpoint or documented path to extend. Same blocker as bd5ea1b4#AC4, recorded as defect 6 in docs/projexcloud-defects.md. appendAuditEntry never throws by design so nothing fails, but the chain stays empty.",
+      "gap": "The entry is emitted and asserted in-process: a test proves capture.created is appended naming the domain, the source-URL retention choice and channel browser_extension, and a second proves NO entry is appended when the domain policy refuses, since a write that did not happen must not be recorded. But it cannot LAND upstream. ProjexCloud rejects it with UnregisteredEventType - capture.created, like all 32 LeadFlow event names, is absent from EVENT_TYPE_REGISTRY, a closed code constant in packages/contracts that a consuming app has no endpoint or documented path to extend. Same blocker as bd5ea1b4#AC4 and 7b9e97d6#AC4, recorded as defect 6 in docs/projexcloud-defects.md. appendAuditEntry never throws by design so no capture fails, but the chain stays empty.",
       "evidence": {
         "apiDefinitions": [
-          "tests/api_definitions/capture/resolve-post.json"
+          "tests/api_definitions/capture/extension-post.json"
         ],
         "files": [
-          "server/src/features/capture/resolveCaptureController.ts",
-          "server/tests/unit/resolveCapture.test.ts",
+          "server/src/features/capture/extensionCaptureController.ts",
+          "server/tests/unit/extensionCapture.test.ts",
           "docs/projexcloud-defects.md"
         ]
       }

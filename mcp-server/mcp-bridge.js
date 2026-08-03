@@ -1434,6 +1434,37 @@ const TOOLS = [
       },
       required: ['defectId']
     }
+  },
+  {
+    name: 'projexlight_delete_api_library_entries',
+    description: 'DELETE api_library ROWS AND EVICT THEIR TEST-CACHE ENTRIES IN ONE OPERATION. Use this instead of deleting rows by hand: a hand-deleted row leaves .mcp-cache/api_test_cache.json still holding a tested_apis entry for that METHOD:endpoint, so the classifier never sees the definition as changed and the endpoint is never re-registered — it disappears from the catalog permanently and no re-run brings it back. projectId is REQUIRED and is never inferred, because a delete that guesses its project would remove another tenant catalog entry. Start with dryRun=true to see exactly what matches. The deleted rows are backed up under .mcp-cache/deleted_api_library/ before anything is removed. A row whose api_definition file still exists is REFUSED unless force=true, because that combination means the definition should be re-registered rather than deleted.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'string', description: 'REQUIRED. Explicit project UUID to delete from. Never inferred.' },
+        apis: {
+          type: 'array',
+          description: 'Rows to delete, matched pairwise on method + endpoint',
+          items: {
+            type: 'object',
+            properties: {
+              method: { type: 'string', description: 'HTTP method, e.g. GET' },
+              endpoint: { type: 'string', description: 'Endpoint path, e.g. /api/keys/:key_id/rotate' }
+            },
+            required: ['method', 'endpoint']
+          }
+        },
+        ids: {
+          type: 'array',
+          description: 'api_library row ids to delete',
+          items: { type: 'string' }
+        },
+        dryRun: { type: 'boolean', description: 'List what would be deleted and write nothing. Run this first.' },
+        force: { type: 'boolean', description: 'Allow deleting a row whose api_definition file still exists. Off by default on purpose.' },
+        projectPath: { type: 'string', description: 'Project root path (locates .mcp-cache and tests/api_definitions)' }
+      },
+      required: ['projectId']
+    }
   }
 ];
 
@@ -1441,6 +1472,8 @@ const TOOLS = [
 // These paths match the Docker MCP server routes (without /mcp/ prefix)
 // The Docker server handles forwarding to the backend API if needed
 const TOOL_ENDPOINTS = {
+  // API Library Delete - removes the row AND its .mcp-cache entry together
+  'projexlight_delete_api_library_entries': { method: 'POST', path: '/api/api-library/delete' },
   // Defect Fix Tools - fetch a defect with full context, then close it for QA
   'projexlight_get_defect_context': { method: 'POST', path: '/api/defect/context' },
   'projexlight_resolve_defect_for_qa': { method: 'POST', path: '/api/defect/resolve' },
