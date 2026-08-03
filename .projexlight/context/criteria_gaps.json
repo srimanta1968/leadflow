@@ -1,16 +1,20 @@
 {
-  "generatedAt": "2026-08-03T01:38:48.020598Z",
-  "taskId": "8c6ed254-1cfb-4489-87ce-acd02652c569",
+  "generatedAt": "2026-08-03T20:24:23.527340Z",
+  "taskId": "bd5ea1b4-9393-42d3-b7f9-5f922f20405d",
   "gaps": [
     {
-      "criterionId": "8c6ed254-1cfb-4489-87ce-acd02652c569#AC3",
-      "criterion": "Cursor pagination stable under concurrent inserts",
+      "criterionId": "bd5ea1b4-9393-42d3-b7f9-5f922f20405d#AC4",
+      "criterion": "capture.created audit event emitted with actor and origin",
       "verdict": "partial",
-      "gap": "The cursor is correct by construction and asserted: it is a composite of created_at AND source_record_id, because captures arrive in bursts and two sharing a millisecond would otherwise be skipped or duplicated depending on the comparison operator; it round-trips, survives an id containing the separator, and a malformed cursor is a 400 rather than a silent restart at page one, which in a queue means re-serving rows an operator already triaged. Writing that test found a real bug - I split on the LAST separator when the timestamp is the part that cannot contain a pipe, so it must be the first. What is NOT proven is stability UNDER CONCURRENT INSERTS, which is what the criterion actually says: no test inserts rows between two page reads and asserts nothing is skipped or repeated. That needs the upstream list endpoint to accept the cursor and a live source-record store to insert into between calls - both now possible against the local gateway, which they were not when this was written.",
+      "gap": "The event is emitted with actor, persona role and origin class, and the append body was corrected to sdk-audit's real shape (pool_index/event_type/payload, actor_kind 'human'). But it cannot LAND: ProjexCloud rejects it with UnregisteredEventType because 'capture.created' is absent from EVENT_TYPE_REGISTRY, a closed code constant in packages/contracts/src/events.ts that a consuming app has no endpoint or path to extend. All 32 LeadFlow event names are affected, and the registry convention is versioned ('.v1') where LeadFlow's are not. appendAuditEntry never throws by design, so nothing fails - but the chain stays empty and nightly verification has nothing to verify. Recorded as defect 6 in docs/projexcloud-defects.md. Emission is verifiable in-process; upstream persistence is blocked on ProjexCloud.",
       "evidence": {
+        "apiDefinitions": [
+          "tests/api_definitions/capture/quick-post.json"
+        ],
         "files": [
-          "server/src/features/capture/inboxQuery.ts",
-          "server/tests/unit/captureInbox.test.ts"
+          "server/src/features/capture/quickCaptureController.ts",
+          "server/src/platform/audit/auditLog.ts",
+          "docs/projexcloud-defects.md"
         ]
       }
     }

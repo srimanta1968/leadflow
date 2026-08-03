@@ -190,3 +190,56 @@ Fixed to send `purpose_id`, `app_id`, `description`, `legal_basis` and
 person asked for is Art.6 performance-of-contract, and calling it consent would
 misstate the lawful basis for exactly the purposes a person cannot meaningfully
 refuse.
+
+---
+
+## 6. LeadFlow's audit events cannot be appended — none are in EVENT_TYPE_REGISTRY
+
+**Severity: high.** Every governed action LeadFlow records is rejected by
+`POST /api/audit/append`, so the tamper-evident chain is empty while the app
+reports the actions as recorded.
+
+```
+POST /api/audit/append {... "event_type":"capture.created" ...}
+-> 400 {"error":"UnregisteredEventType",
+        "details":["Unregistered event_type: capture.created. Add it to EVENT_TYPE_REGISTRY first."]}
+```
+
+`EVENT_TYPE_REGISTRY` (`packages/contracts/src/events.ts:53`) is a closed code
+constant, and Opinionated Constraint OC-2 requires producers to reject anything
+absent from it. That is a defensible design — an audit vocabulary anyone can
+extend at the call site is unqueryable within a release, which is exactly why
+LeadFlow keeps its own closed vocabulary too. The problem is that a consuming
+app has **no way to register its own event types**: the registry ships in the
+contracts package, so LeadFlow cannot add to it, and there is no registration
+endpoint.
+
+LeadFlow currently has 32 canonical event names
+(`server/src/platform/audit/vocabulary.ts`) — `capture.created`, `lead.routed`,
+`sla.policy.updated` and so on. None are registered, so none can be appended.
+
+Two things are needed, and they are separable:
+
+1. **A way for a tenant app to register its event types.** Either an endpoint
+   (`POST /api/audit/event-types`) scoped to the tenant, or a documented
+   contribution path into the contracts package. Without one, every vertical
+   built on ProjexCloud hits this wall the first time it appends.
+2. **Naming.** The registry convention is `<domain>.<entity>.<verb>.v<N>` —
+   versioned, e.g. `tenant.bu.created.v1`. LeadFlow's names carry no version.
+   If apps are expected to match the convention, say so in `AGENTS.md`; the
+   version suffix is a schema-evolution decision an app should not discover from
+   a 400.
+
+Until then LeadFlow's `appendAuditEntry` degrades exactly as designed — it never
+throws, logs loudly, and reports `delivered: false` — so no governed action
+fails because of it. But the ledger stays empty, and the nightly chain
+verification has nothing to verify.
+
+### Also fixed on the LeadFlow side while finding this
+
+The append body was the wrong shape entirely — flat, with the stamps at the top
+level. sdk-audit wants `pool_index`, `event_type`, `payload`, and an
+`actor_kind` from `human | service | agent` ('person' is rejected). Corrected in
+`server/src/platform/audit/auditLog.ts`. That was ours, and it was hidden by the
+same never-throws design: three separate 400s, none of which failed anything.
+

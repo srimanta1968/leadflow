@@ -91,20 +91,39 @@ export async function appendAuditEntry(entry: AuditEntry): Promise<AuditAppendRe
       // The act's own key, so a retried append lands once.
       idempotencyKey: entry.idempotencyRef,
       correlationId: entry.causationId,
+      // sdk-audit's shape, not LeadFlow's. The previous body was flat and was
+      // rejected 400 with "pool_index is required, payload is required" on every
+      // append — and because this function never throws by design, every one of
+      // those failures was a console line nobody read. The ledger was empty
+      // while the app reported governed actions as recorded.
       body: {
-        tenant_id: auditTenantId(),
+        // The chain this entry belongs to, and what `verify` walks. Scoped to
+        // the app tenant so one app's operator cannot read another's activity.
+        pool_index: auditTenantId(),
         event_type: entry.event,
-        actor_id: entry.actor,
-        persona_role: entry.personaRole,
-        purpose: entry.purpose,
-        decision_ref: entry.decisionRef,
-        evidence_ref: entry.evidenceRef,
-        causation_id: entry.causationId,
-        idempotency_ref: entry.idempotencyRef,
-        entry_ref: entryRef,
-        subject_id: entry.subjectId ?? null,
-        subject_type: entry.subjectType ?? null,
-        metadata: entry.metadata ?? {},
+        tenant_id: auditTenantId(),
+        // The seven stamps travel inside `payload`, which is the SDK's opaque
+        // body. They stay REQUIRED on AuditEntry — the point was never which
+        // envelope carries them, it is that no governed action can omit them.
+        payload: {
+          actor_id: entry.actor,
+          persona_role: entry.personaRole,
+          purpose: entry.purpose,
+          decision_ref: entry.decisionRef,
+          evidence_ref: entry.evidenceRef,
+          causation_id: entry.causationId,
+          idempotency_ref: entry.idempotencyRef,
+          entry_ref: entryRef,
+          metadata: entry.metadata ?? {},
+        },
+        // 'human' rather than 'service' or 'agent'. These entries record what a
+        // PERSON did through LeadFlow; even a scheduled sweep is attributed to
+        // the persona that configured it, so 'service' would lose the human who
+        // is actually answerable. The vocabulary is sdk-audit's — human,
+        // service, agent — and 'person' is rejected.
+        actor_kind: 'human',
+        subject_kind: entry.subjectType ?? undefined,
+        subject_id: entry.subjectId ?? undefined,
       },
     });
 
@@ -156,7 +175,8 @@ export async function verifyAuditChain(): Promise<ChainVerificationResult> {
       path: '/api/audit/verify',
       method: 'POST',
       correlationId,
-      body: { tenant_id: auditTenantId() },
+      // `verify` walks one pool; it is the same pool the appends above write to.
+      body: { pool_index: auditTenantId(), tenant_id: auditTenantId() },
     });
 
     const intact = result.data?.data?.intact === true;

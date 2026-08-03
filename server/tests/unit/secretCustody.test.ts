@@ -168,9 +168,11 @@ describe('revealing PII', () => {
       unknown
     >;
     expect(body.event_type).toBe('pii.revealed');
-    expect(body.actor_id).toBe('person:ada');
-    expect(body.purpose).toBe('inspection_estimate');
-    expect(body.persona_role).toBe('data_steward');
+    // The stamps sit inside sdk-audit's `payload` envelope.
+    const payload = body.payload as Record<string, unknown>;
+    expect(payload.actor_id).toBe('person:ada');
+    expect(payload.purpose).toBe('inspection_estimate');
+    expect(payload.persona_role).toBe('data_steward');
   });
 
   it('still records the look when decryption then fails', async () => {

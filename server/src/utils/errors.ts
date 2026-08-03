@@ -42,6 +42,18 @@ export const ErrorCodes = {
    * NOT_FOUND, which would tell a client the endpoint does not exist when the
    * useful answer is that it exists and authentication happens elsewhere.
    */
+  /**
+   * A capture arrived with no usable origin class.
+   *
+   * 422, not 400, and its own code rather than VALIDATION_ERROR. The request is
+   * well-formed; what it lacks is provenance, and provenance is the one thing
+   * this system refuses to infer. Origin class decides where a record sits on
+   * the trust ladder, so defaulting it would write a claim nobody made —
+   * USER_PROVIDED promotes untrusted data, UNKNOWN_QUARANTINED looks cautious
+   * while still fabricating the fact. A caller who guessed a value needs to be
+   * told the guess is not acceptable, not that their syntax is off.
+   */
+  ORIGIN_CLASS_REQUIRED: 'ORIGIN_CLASS_REQUIRED',
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;

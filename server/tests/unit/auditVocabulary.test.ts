@@ -128,9 +128,14 @@ describe('appending an entry', () => {
 
     expect(call.mock.calls[0][0]).toMatchObject({ sdk: 'sdk-audit', idempotencyKey: 'act-42' });
     const body = call.mock.calls[0][0].body as Record<string, unknown>;
+    // event_type and pool_index are sdk-audit's envelope; the seven stamps
+    // travel inside `payload`. Which envelope carries them was never the point
+    // — the point is that a governed action cannot omit any of them.
     expect(body.event_type).toBe('capture.created');
-    expect(body.decision_ref).toBe('pdp_1');
-    expect(body.causation_id).toBe('cause-1');
+    expect(body.pool_index).toBeTruthy();
+    const payload = body.payload as Record<string, unknown>;
+    expect(payload.decision_ref).toBe('pdp_1');
+    expect(payload.causation_id).toBe('cause-1');
   });
 
   it('never throws when the ledger is unreachable', async () => {
