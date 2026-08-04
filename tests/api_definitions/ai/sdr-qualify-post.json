@@ -54,7 +54,7 @@
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
       "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
       "payload": {
-        "leadId": "{{static:00000000-0000-0000-0000-000000000000}}",
+        "leadId": "{{var:absent_uuid}}",
         "channel": "email"
       },
       "expectedStatus": 404,

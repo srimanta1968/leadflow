@@ -73,6 +73,25 @@ export const AUDIT_EVENTS = {
   // to process this call" from "nobody ever asked", and only the first is
   // evidence that the consent gate is doing its job.
   AI_COACH_REFUSED_NO_CONSENT: 'ai.coach.refused_no_consent',
+
+  // The AI foundation. `ai.draft.*` above names a DRAFT specifically, which was
+  // right while the only consequential output was a message; the review gate
+  // accepts scores, summaries, next actions and offer-term changes too, so it
+  // needs names that are not about drafts. It also names the REJECTION, which
+  // the draft pair never did — and "how often does a human turn the machine
+  // down" is the single most useful number about an AI feature.
+  AI_PROPOSAL_PROPOSED: 'ai.proposal.proposed',
+  AI_PROPOSAL_DECIDED: 'ai.proposal.decided',
+  AI_RUN_STARTED: 'ai.run.started',
+  // The scope an agent was granted, recorded so it outlives the token. A token
+  // expires in fifteen minutes; "what was this agent allowed to touch" is asked
+  // months later.
+  AI_CAPABILITY_TOKEN_ISSUED: 'ai.capability_token.issued',
+  AI_CAPABILITY_TOKEN_REVOKED: 'ai.capability_token.revoked',
+  // Pulling the switch is itself a governed act, and the entry carries how many
+  // runs it caught. An emergency stop nobody can reconstruct afterwards leaves
+  // the review with no answer to "what was running when we pulled it".
+  AI_KILL_SWITCH_ENGAGED: 'ai.kill_switch.engaged',
 } as const;
 
 /** Any name in the vocabulary. Nothing else is appendable. */

@@ -14,6 +14,9 @@
     "POST /api/auth/login",
     "POST /api/leadflow/ai/sdr/qualify"
   ],
+  "captureResponse": {
+    "ai.sdrAcceptance.response.data.proposal.id": "data.proposal.id"
+  },
   "testCases": [
     {
       "name": "A rep accepts the draft and it becomes sendable",
@@ -42,7 +45,7 @@
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
       "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{static:00000000-0000-0000-0000-000000000000}}" },
+      "pathParams": { "id": "{{var:absent_uuid}}" },
       "payload": { "acceptedAsWritten": true },
       "expectedStatus": 404,
       "expectedError": { "code": "NOT_FOUND" }

@@ -34,7 +34,7 @@
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
       "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "callId": "{{static:00000000-0000-0000-0000-000000000000}}" },
+      "pathParams": { "callId": "{{var:absent_uuid}}" },
       "expectedStatus": 403,
       "expectedError": { "code": "RECORDING_CONSENT_MISSING" }
     },

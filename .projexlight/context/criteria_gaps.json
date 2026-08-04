@@ -1,21 +1,48 @@
 {
-  "generatedAt": "2026-08-04T04:35:14.027411Z",
-  "taskId": "bdaec986-d033-4fcd-b201-07b81f13b1fc",
+  "generatedAt": "2026-08-04T22:21:12.020273Z",
+  "taskId": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5",
   "gaps": [
     {
-      "criterionId": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4",
-      "criterion": "Failed gate creates a manager-visible integrity exception",
+      "criterionId": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC2",
+      "criterion": "Every completion carries consent, budget, redaction and trace records",
       "verdict": "partial",
-      "gap": "The manager-visible half is real and proven: evaluateActivationGate writes activation_state='blocked' locally BEFORE any SDK call, listIntegrityExceptions serves the queue off a partial index, and both are exercised by passing integration tests. The UNVERIFIED half is the upstream exception: raiseIntegrityException posts to sdk-incident and returns null when the gateway is unconfigured, and that call has never executed against a live gateway, so per MUST-56 it is unverified rather than working. Separately, tests/api_definitions/leads/integrity-exceptions-get.json has never been run by the API runner because the LeadFlow dev server on 3010 is down \u2014 the definition exists but has produced no result. Closing this needs one API-runner pass with the dev server up, plus one run with PROJEXCLOUD_* configured to confirm an incident is actually raised.",
+      "gap": "The four controls are enforced in aiGateway.complete() in a fixed order AND at the schema level: ai_completion_controls_ck refuses to INSERT a row with outcome='completed' that cannot name its consent basis, budget reservation and redaction result, so a future caller bypassing the service layer gets a constraint violation rather than an unaccountable completion. That constraint is proven by an executing test. WHAT IS UNPROVEN is the SUCCESS path. This environment has no sdk-ai-gateway (tests/setup.ts pins the gateway config empty, and no PROJEXCLOUD_GATEWAY_URL is set), so the only branches that have ever executed are the four refusals and the gateway-not-configured branch. settleTokens against real provider usage, upstream_completion_id capture, and the outcome='completed' row itself have never run end to end. There is also no api_definition, and that is deliberate rather than an omission: complete() has no HTTP surface \u2014 this task's only new endpoints are propose and decide \u2014 so MUST-67 puts the evidence in the unit/integration suite. Closing this needs one run against a live sdk-ai-gateway.",
       "evidence": {
-        "apiDefinitions": [
-          "tests/api_definitions/leads/integrity-exceptions-get.json",
-          "tests/api_definitions/leads/id-activation-gate-get.json"
-        ],
         "files": [
-          "server/src/features/intake/activationGate.ts",
-          "server/src/controllers/LeadController.ts",
-          "server/tests/integration/canonicalDedupe.test.ts"
+          "server/src/platform/ai/aiGateway.ts",
+          "server/src/platform/ai/activityLedger.ts",
+          "server/src/platform/ai/aiBudget.ts",
+          "server/src/platform/ai/redaction.ts",
+          "server/src/platform/ai/aiConsent.ts",
+          "server/src/db/migrations/013_ai_foundation.sql",
+          "server/tests/integration/aiFoundation.test.ts"
+        ]
+      }
+    },
+    {
+      "criterionId": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC3",
+      "criterion": "Capability tokens scope each agent to the minimum necessary access",
+      "verdict": "partial",
+      "gap": "The MINTING CEILING is real and proven: config/aiAgents.ts is the only place an agent's reach is declared, mintCapabilityToken refuses any scope not on the agent (403 AI_CAPABILITY_NOT_DECLARED), narrowing below the registry is allowed, tokens are per-run with a TTL rather than per-agent, the row stores the scope and never the credential, and every live token is revoked when the run ends. Six executing tests cover that. WHAT IS UNPROVEN is that the token actually SCOPES ACCESS, because nothing consumes it here: without sdk-agent-runtime the upstream mint returns no credential, secret is null, and no agent presents a token to any resource server. So today the criterion is proven as a constraint on what LeadFlow will ISSUE, not as an access control anything ENFORCES. Closing it needs a live sdk-agent-runtime plus one call that is refused for lacking a capability.",
+      "evidence": {
+        "files": [
+          "server/src/config/aiAgents.ts",
+          "server/src/platform/ai/agentRuntime.ts",
+          "server/src/db/migrations/013_ai_foundation.sql",
+          "server/tests/integration/aiFoundation.test.ts"
+        ]
+      }
+    },
+    {
+      "criterionId": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC4",
+      "criterion": "Global kill switch halts all agent runs immediately",
+      "verdict": "partial",
+      "gap": "The LOCAL half is complete and proven, deliberately without any remote dependency: haltAllRuns marks every running row halted and revokes every live capability token using this database alone \u2014 revoking the tokens is what makes it immediate, since marking rows stops nothing \u2014 and both entry points refuse while engaged (startRun and complete, each returning 503 AI_HALTED, with the refusal written to the activity ledger and no budget spent). Seven executing tests cover that, including one that asserts the halt works with SdkGatewayClient.isConfigured() false. TWO HONEST LIMITS ON 'GLOBAL' AND 'IMMEDIATELY'. First, propagation to sdk-feature-flags has never executed: engageKillSwitch's upstream POST is unreachable here, so every test observes propagated:false, and a second LeadFlow process would not learn of the halt. Second, by design a remote read is cached for AI_KILL_SWITCH_TTL_MS (default 5s), so across a fleet the halt is bounded by one cache window rather than instantaneous \u2014 the process where the switch was pulled stops in the same tick, others within the TTL. Closing this needs a configured AI_KILL_SWITCH_FLAG_ID against a live sdk-feature-flags and a two-process observation.",
+      "evidence": {
+        "files": [
+          "server/src/platform/ai/killSwitch.ts",
+          "server/src/platform/ai/agentRuntime.ts",
+          "server/tests/integration/aiFoundation.test.ts"
         ]
       }
     }

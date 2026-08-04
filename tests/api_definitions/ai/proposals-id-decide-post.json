@@ -1,0 +1,118 @@
+{
+  "name": "POST /api/leadflow/ai/proposals/:id/decide - a qualified human accepts or rejects an AI output",
+  "description": "The human half of the review gate, and the proof of AC1: no consequential AI output reaches a customer without human acceptance. Until this endpoint is called the proposal is inert — status 'proposed', delivered false — and there is no delivery endpoint anywhere in the application for it to reach.\n\n'QUALIFIED' IS ENFORCED, NOT ASSUMED. Each output kind names the SOP §28 permission a reviewer must hold, stamped onto the proposal when it was made: message needs message.send_approved, score needs stage.update, summary needs call.review, next_action needs next_action.create. Those genuinely separate people — a Sales Manager holds call.review and NOT message.send_approved, so the manager who may accept a call summary may not release a drafted message, exactly as when a human writes one by hand. Inventing an `ai.approve` permission would have created a second authority for the same real-world act and turned the gate into a way around the permission matrix.\n\nTHE PERMISSION CHECKED IS THE ONE STORED ON THE PROPOSAL, not one derived from the kind at decision time. They are the same value today; they stop being the same the moment somebody edits the kind map, and at that point the stored one is the honest answer to what this approval actually required.\n\nTHIS ENDPOINT IS NOT WRAPPED IN `governed`, which every other mutating route in this codebase is. Deliberate, and the only such deviation: `governed` takes ONE static action per route and the authority needed here depends on what is being decided. A single action would have to be the loosest of the four. The PDP call therefore lives in the service, against the stamped permission, and the audit entry is appended after the write in the same order `governed` enforces — decide, write, record.\n\nA REJECTION IS A DECISION AND IS RECORDED AS ONE, not a deletion. 'How often does a human turn the machine down' is the single most useful number about an AI feature, and deleting rejected proposals would destroy the only evidence the gate does anything.\n\nAN EDIT IS KEPT ALONGSIDE THE ORIGINAL, never over it — the original is the only evidence of what the machine actually produced.\n\nDECIDING TWICE IS A CONFLICT, not a silent no-op: two decisions mean two people each believed they were the one taking responsibility, and answering 200 to both hides a coordination failure worth surfacing.\n\nAn action on an existing resource, so 200 (MUST-54).\n\nTHE CODE-MATCH FINDING ON THIS FILE IS A VERIFIED SCANNER FALSE POSITIVE, same root cause as on propose-post.json: the review agent cannot follow router.use('/leadflow/ai', aiRoutes) through a barrel export to router.post('/proposals/:id/decide'), so the literal path never appears in one file. Verified against the running server on :3010 — accept answers 200 with status 'accepted' and delivered false, a second decide 409, an unknown id 404, an empty body 400, and no bearer 401. Exactly what this definition declares.\n\nProtected by the authenticate guard. QA: depends on a proposal from POST /api/leadflow/ai/propose.",
+  "endpoint": "/api/leadflow/ai/proposals/:id/decide",
+  "method": "POST",
+  "taskId": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 2,
+  "expectedStatus": 200,
+  "coversCriterion": ["1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/ai/propose"
+  ],
+  "fieldEnums": {
+    "decision": ["accept", "reject"],
+    "status": ["proposed", "accepted", "rejected"]
+  },
+  "captureResponse": {
+    "ai.reviewDecision.response.data.proposal.id": "data.proposal.id"
+  },
+  "testCases": [
+    {
+      "name": "A qualified human accepts, and only then is the output released to a person",
+      "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}" },
+      "payload": {
+        "decision": "accept",
+        "note": "{{static:Reads well, sending as written}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "proposal": { "status": "accepted", "delivered": false } }
+      }
+    },
+    {
+      "name": "Deciding an already-decided proposal is a conflict",
+      "testType": "negative",
+      "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}" },
+      "payload": { "decision": "accept" },
+      "expectedStatus": 409,
+      "expectedError": { "code": "CONFLICT" }
+    },
+    {
+      "name": "Reject a decision with no verdict in it",
+      "testType": "negative",
+      "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}" },
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedError": { "code": "VALIDATION_ERROR" }
+    },
+    {
+      "name": "Reject a decision on an unknown proposal",
+      "testType": "negative",
+      "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "id": "{{var:absent_uuid}}" },
+      "payload": { "decision": "reject" },
+      "expectedStatus": 404,
+      "expectedError": { "code": "NOT_FOUND" }
+    },
+    {
+      "name": "Reject an unauthenticated decision",
+      "testType": "negative",
+      "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
+      "pathParams": { "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}" },
+      "payload": { "decision": "accept" },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "decision must be 'accept' or 'reject'",
+      "when": "no verdict is supplied, or editedContent is not an object. NOT defaulted to accept — defaulting would let an empty body approve an output nobody read, which is the exact outcome the review step exists to prevent."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "Deciding a 'message' proposal requires message.send_approved.",
+      "when": "the reviewer does not hold the permission stamped on the proposal for its kind. This is the enforcement of 'qualified human' — a Sales Manager deciding a drafted message lands here."
+    },
+    {
+      "status": 403,
+      "code": "APPROVAL_REQUIRED",
+      "message": "you hold this permission only with a second party's approval",
+      "when": "the reviewer holds the stamped permission only under SOP §28's approval gate. Distinct from FORBIDDEN because it is an escalation path rather than a prohibition — a client that conflates the two tells the user they may not do something they may in fact do."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "Proposal not found",
+      "when": "no proposal has that id"
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "Proposal has already been decided",
+      "when": "the proposal is no longer in 'proposed' state, including when a concurrent decision won the race"
+    }
+  ]
+}

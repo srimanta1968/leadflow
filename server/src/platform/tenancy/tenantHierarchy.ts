@@ -90,6 +90,7 @@ export function tenantIdFor(
     | 'sla'
     | 'audit'
     | 'consent'
+    | 'ai_budget'
     | 'billing'
     | 'org_chart'
     | 'cross_app_report'
@@ -101,6 +102,13 @@ export function tenantIdFor(
     case 'routing':
     case 'sla':
     case 'consent':
+      return context.appTenantId;
+
+    // AI spend is APP-scoped even though it ends up on one invoice, and it is
+    // named here rather than left to the default so the choice is visible. A
+    // customer-scoped AI allowance means one app's runaway loop halts the
+    // others, and the operator of the halted app cannot see who spent it.
+    case 'ai_budget':
       return context.appTenantId;
 
     // The audit chain follows the record it describes, so it is app-scoped too:

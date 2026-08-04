@@ -108,6 +108,60 @@ export const ErrorCodes = {
    * case this protects against.
    */
   RECORDING_CONSENT_MISSING: 'RECORDING_CONSENT_MISSING',
+  /**
+   * The global AI kill switch is engaged, so nothing may be generated.
+   *
+   * 503, not 403. The caller is not unauthorised — the capability is switched
+   * off for everyone — and a client told 403 will offer the user a route to
+   * getting permission for something no permission can currently unlock.
+   */
+  AI_HALTED: 'AI_HALTED',
+  /**
+   * The tenant's AI token allowance for this period is spent.
+   *
+   * 429 and its own code rather than RATE_LIMITED: the two look alike to a
+   * client and are not alike at all. A rate limit clears in seconds by waiting;
+   * this one clears when somebody raises the budget or the month turns, and a
+   * client that retries with backoff will simply keep failing.
+   */
+  AI_BUDGET_EXHAUSTED: 'AI_BUDGET_EXHAUSTED',
+  /**
+   * A completion was attempted with no verifiable consent basis.
+   *
+   * Distinct from RECORDING_CONSENT_MISSING, which is specifically about
+   * processing the content of a recorded call. This one covers every completion:
+   * a live receipt permitting us to process this person's data FOR THIS PURPOSE.
+   * Collapsing the two would leave a caller unable to tell whether to attach a
+   * recording basis or a purpose receipt.
+   */
+  AI_CONSENT_BASIS_MISSING: 'AI_CONSENT_BASIS_MISSING',
+  /**
+   * A capability token was requested for a scope the agent is not registered
+   * with.
+   *
+   * 403, because it is a refusal to widen an agent's reach. The fix is an edit
+   * to `config/aiAgents.ts` — a reviewable act — never a wider token minted at
+   * the call site.
+   */
+  AI_CAPABILITY_NOT_DECLARED: 'AI_CAPABILITY_NOT_DECLARED',
+  /**
+   * A prompt template outside the versioned library was requested.
+   *
+   * 422 and the sibling of RESEARCH_SOURCE_NOT_PERMITTED: the payload is
+   * well-formed and the refusal is about policy. An unapproved prompt is
+   * unapproved copy, and answering it would make the library advisory.
+   */
+  PROMPT_TEMPLATE_NOT_PERMITTED: 'PROMPT_TEMPLATE_NOT_PERMITTED',
+  /**
+   * A proposal cited a completion that is not accounted for in the AI activity
+   * ledger, or one that was refused rather than completed.
+   *
+   * 422: the request is well-formed, and what it lacks is the accountability
+   * record. Output claiming a refused completion's reference is output produced
+   * outside the four controls, wearing the identity of an attempt that was
+   * stopped.
+   */
+  AI_COMPLETION_NOT_ACCOUNTED: 'AI_COMPLETION_NOT_ACCOUNTED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 

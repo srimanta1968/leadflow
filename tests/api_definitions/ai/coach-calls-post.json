@@ -1,6 +1,6 @@
 {
   "name": "POST /api/leadflow/ai/coach/calls - register a call and its recording consent basis",
-  "description": "Registers a call for coaching and records the lawful basis under which it was recorded (AC4). The basis is captured HERE, at the moment of recording, because that is the only moment it can be captured honestly — a basis reconstructed later is a guess about what the prospect was told.\n\nTHE BASIS IS REQUIRED, NEVER DEFAULTED. A call submitted without one is refused with 422 RECORDING_CONSENT_MISSING rather than stored with a null basis to be filled in later. The SOP requires calls to 'follow calling-hour, DNC, and recording-consent rules', and a row with a blank basis is indistinguishable, a month on, from one where consent was genuinely obtained and simply not written down.\n\nRegistering a call NEVER stores transcript content. Only the identifiers, the basis and the pointer to sdk-conversation are held locally, so a call whose consent is later revoked has no content here to purge.\n\nA create at a collection root, so 201 (MUST-54).\n\nProtected by the authenticate guard and governed by call.review. QA: depends on register and login.",
+  "description": "Registers a call for coaching and records the lawful basis under which it was recorded (AC4). The basis is captured HERE, at the moment of recording, because that is the only moment it can be captured honestly — a basis reconstructed later is a guess about what the prospect was told.\n\nTHE BASIS IS REQUIRED, NEVER DEFAULTED. A call submitted without one is refused with 422 RECORDING_CONSENT_MISSING rather than stored with a null basis to be filled in later. The SOP requires calls to 'follow calling-hour, DNC, and recording-consent rules', and a row with a blank basis is indistinguishable, a month on, from one where consent was genuinely obtained and simply not written down.\n\nRegistering a call NEVER stores transcript content. Only the identifiers, the basis and the pointer to sdk-conversation are held locally, so a call whose consent is later revoked has no content here to purge.\n\nA create at a collection root, so 201 (MUST-54).\n\nNOTE ON externalCallId. It is the TELEPHONY PROVIDER'S OWN identifier for the call — an opaque VARCHAR(255) with a unique index, not a foreign key to anything LeadFlow holds — so it takes a dynamic text placeholder rather than a cache reference. It was a dynamic uuid, which MUST-36's name heuristic flagged as an unresolved foreign key on the strength of the 'Id' suffix. There is no producing endpoint to cache from: the id originates outside this system, and real providers issue opaque strings rather than UUIDs, so text is also the more faithful shape.\n\nProtected by the authenticate guard and governed by call.review. QA: depends on register and login.",
   "endpoint": "/api/leadflow/ai/coach/calls",
   "method": "POST",
   "taskId": "74a0891b-3892-4e93-aad4-450bfd776afa",
@@ -19,7 +19,7 @@
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
       "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
       "payload": {
-        "externalCallId": "{{dynamic:uuid}}",
+        "externalCallId": "{{dynamic:text}}",
         "repEmail": "{{dynamic:email}}",
         "occurredAt": "{{dynamic:pastdatetime}}",
         "recordingConsentBasisRef": "{{dynamic:uuid}}",
@@ -34,7 +34,7 @@
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
       "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
       "payload": {
-        "externalCallId": "{{dynamic:uuid}}",
+        "externalCallId": "{{dynamic:text}}",
         "repEmail": "{{dynamic:email}}",
         "occurredAt": "{{dynamic:pastdatetime}}"
       },
@@ -46,7 +46,7 @@
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
       "payload": {
-        "externalCallId": "{{dynamic:uuid}}",
+        "externalCallId": "{{dynamic:text}}",
         "repEmail": "{{dynamic:email}}",
         "occurredAt": "{{dynamic:pastdatetime}}",
         "recordingConsentBasisRef": "{{dynamic:uuid}}",

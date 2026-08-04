@@ -1,165 +1,77 @@
 {
-  "auth/login-post.json": {
-    "hash": "f281fd928f258e98db2bd8cddb749a38ef8e07b967e0c9fe33831a1ef240821e",
-    "status": "findings",
-    "findingsCount": 2,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "auth/me-get.json": {
-    "hash": "2d5a3a09def29d97b95688a0812d76dd3abd4fc792003c224570efa0d6f72ed6",
+  "ai/coach-calls-post.json": {
+    "hash": "4b6cc2f8df3be21351cb88fec0565fb541257d26d47083861329960ef8038449",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
+    "verifiedAt": "2026-08-04T22:07:38",
+    "route": [
+      "POST",
+      "/leadflow/ai/coach/calls"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/ai/coach/calls was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
   },
-  "auth/register-post.json": {
-    "hash": "0300e7e73901df4942d7f7d0ecf0d4561de8f6b9a73dacccd2144e4232c13b62",
-    "status": "findings",
-    "findingsCount": 3,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "events/stream-get.json": {
-    "hash": "5790afd67889279cf1f01a0df6d89cb9ed5671fbf462b46e7701d1a64a24dea0",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "leads/id-assign-post.json": {
-    "hash": "67040182fd3b64d0f33b358f894d01c55c97fe9a4b9b0edb3a444070311aee9c",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "leads/id-first-response-post.json": {
-    "hash": "03561faace88a83de83c2d95c6228d8798d373599d355719462aff959b7eeff4",
-    "status": "findings",
-    "findingsCount": 2,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "leads/id-get.json": {
-    "hash": "43bde750d440d57d66d3994dcbacaaf9f0c88c1315b3c94d4da050d9236d6ed3",
+  "ai/coach-scorecard-callid-get.json": {
+    "hash": "3800315f882a06320b3f83d6a31e147c30f0b1d4c00f614b73592408eaa12608",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
+    "verifiedAt": "2026-08-04T21:41:39",
+    "route": [
+      "GET",
+      "/leadflow/ai/coach/scorecard/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/ai/coach/scorecard/:callId was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
   },
-  "leads/id-route-post.json": {
-    "hash": "1a52040f1e1b95e800339619538b3fba2dca4c5acf436a554c2e6c3497fdee20",
-    "status": "findings",
-    "findingsCount": 2,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "leads/leads-get.json": {
-    "hash": "3a70fd32d119eb149a7bdfa04e7849e4f42670188d7d79b276575717bfb66f6a",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "leads/leads-post.json": {
-    "hash": "6a85446a83c5b05a881b7ab6369efe321d47c08891b9e714212ff339ff5c06e3",
-    "status": "clean",
-    "findingsCount": 0,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "leads/route-unowned-post.json": {
-    "hash": "2df6126867174ab5a05647bf814cbc61b059e62c452fbd7f0e2223cca204f53e",
+  "ai/sdr-proposals-id-accept-post.json": {
+    "hash": "20fa134f979678bb4bc037d6900ab2d957495e36d62378c78e03f78e1888d21f",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
+    "verifiedAt": "2026-08-04T21:41:39",
+    "route": [
+      "POST",
+      "/leadflow/ai/sdr/proposals/:p/accept"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/ai/sdr/proposals/:id/accept was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
   },
-  "public/leads-post.json": {
-    "hash": "da80a6c5a7e01227a03ac8e1c89d058b68282821941e174620f1745c9264a75b",
+  "ai/sdr-qualify-post.json": {
+    "hash": "b80c6819dd3020f6c0e5b73ee488361fb6bcdb5f1419c953e556d2a70cf360a4",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "routing-rules/id-delete.json": {
-    "hash": "24904bdc8dcffadf80ef2f0fc9db8f99cb7f2cd26e9f48eb02bc492f34899f6e",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "routing-rules/id-patch.json": {
-    "hash": "ab79fac2fc5fce1d20230d4d492e9749f5a94533c3692a8f38f4fad8c29d8437",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "routing-rules/routing-rules-get.json": {
-    "hash": "5fabeaa9cee6fc8497fe7f2a70eb483f67ff4a5264af8dcfac4862bc49591060",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "routing-rules/routing-rules-post.json": {
-    "hash": "b9991dad8edc2e0e68f7a5b40ad8873c44d5fb515fa0c572cab29b6d065498a9",
-    "status": "findings",
-    "findingsCount": 2,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "sla/alerts-acknowledge-post.json": {
-    "hash": "5767fb75e477d0be5d3ea565967f496f9cabfb7c3ef0b0e619643a0c02e9df36",
-    "status": "findings",
-    "findingsCount": 3,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "sla/alerts-dispatch-post.json": {
-    "hash": "8e2cf1eec7260f3becf0c9dddc476455ebfb1c692454ab8c5565c04aa0ea1ea0",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "sla/alerts-get.json": {
-    "hash": "739639041c70d3f5df3aabcc91f00d16ab4b8e5714aaf9ee32b8dd25747c3530",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "sla/evaluate-post.json": {
-    "hash": "c1a2d84fe00ca39fbf98377395a6d43e96964f023f0b72fa3645e284432ac99d",
-    "status": "findings",
-    "findingsCount": 3,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "sla/policies-get.json": {
-    "hash": "3c331ed3837424339d680ed342877f6be313b100f21b88eb21b15d22d99d286e",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "sla/policies-id-delete.json": {
-    "hash": "3cc9e349b8bb0bcd71b58674ec9ecb85eb039e5aab1b731121a11a5c25d96a40",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "sla/policies-id-patch.json": {
-    "hash": "624e557cabfb92aed49165524d34f55e23d77f8b5ab799ad18729b840548511b",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "sla/policies-post.json": {
-    "hash": "a4100c6e012d8efe50e612253f55d2718a08f47d7e1e35d020ebc4f4670037ed",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "sla/status-get.json": {
-    "hash": "76529014109a8026db9810d073f76ee09b764dcdc9667082a6b224ff8a4a9ed1",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
-  },
-  "users/users-get.json": {
-    "hash": "2164543561701fa019e2b161beef6c581d0f5ada53302057349dc6682cc87616",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-07-30T18:24:36"
+    "verifiedAt": "2026-08-04T21:41:39",
+    "route": [
+      "POST",
+      "/leadflow/ai/sdr/qualify"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/ai/sdr/qualify was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
   },
   "analytics/overview-get.json": {
     "hash": "0edf98ae53cc46180d703fe8fbe7a7973dd6fc87eeece70c74f77a25bb55cf14",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-02T17:33:08",
+    "verifiedAt": "2026-08-04T07:15:24",
     "route": [
       "GET",
       "/analytics/overview"
@@ -172,11 +84,62 @@
       }
     ]
   },
-  "authz/evaluate-post.json": {
-    "hash": "e6d8b1791dd940aeff049db46f6d1cca40a49ef12a824da8ce3291a084c267fd",
+  "auth/login-post.json": {
+    "hash": "73bf3aa850e4bf843176d5697c24b065c7e4dd481c5521730407bfa14fcd7e5b",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-03T21:35:08",
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/auth/login"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/auth/login was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "auth/me-get.json": {
+    "hash": "2d5a3a09def29d97b95688a0812d76dd3abd4fc792003c224570efa0d6f72ed6",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "GET",
+      "/auth/me"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/auth/me was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "auth/register-post.json": {
+    "hash": "0300e7e73901df4942d7f7d0ecf0d4561de8f6b9a73dacccd2144e4232c13b62",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/auth/register"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/auth/register was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "authz/evaluate-post.json": {
+    "hash": "69c6bc7b31a953777581f1c30fae99333b82c4ef116ca384339130bf16c1a8b0",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
     "route": [
       "POST",
       "/leadflow/authz/evaluate"
@@ -186,6 +149,765 @@
         "rule": "CODE-MATCH",
         "severity": "low",
         "message": "POST /api/leadflow/authz/evaluate was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "capture/extension-domain-policy-get.json": {
+    "hash": "fb06dd68cf9fca59aeb881aa099a834dd17b82f5c0d645e134395e9f5638d419",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "GET",
+      "/leadflow/capture/extension/domain-policy"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/capture/extension/domain-policy was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "capture/extension-post.json": {
+    "hash": "8bdcf91fe7445edda23b46801b0625a632c96281f8675204a3c2496b01e9723c",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/leadflow/capture/extension"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/capture/extension was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "capture/inbox-get.json": {
+    "hash": "209cf2ca93aaaaa314bebef1a505ea7141740f276f56c9d58ae47a10c8377cfd",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "GET",
+      "/leadflow/capture/inbox"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/capture/inbox was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "capture/quick-post.json": {
+    "hash": "7b7a2e82697695e1d2ec5e880cf53755bf4684773f5e4511ececb7d337d60075",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/leadflow/capture/quick"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/capture/quick was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "capture/resolve-post.json": {
+    "hash": "2d640cc321978a155c54fbbcb00664c8e279fe8e8b6efd7884a36e05582572a8",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/leadflow/capture/:p/resolve"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/capture/:id/resolve was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[5].pathParams.id' (pathParams) uses '{{static:not-a-uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "capture/sync-batch-post.json": {
+    "hash": "b25ca30986fe11dc772cfdd18296feec4150aa153d965ece26bca2211c22c85e",
+    "status": "findings",
+    "findingsCount": 4,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/leadflow/capture/sync-batch"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/capture/sync-batch was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[2].payload.items[0].clientCaptureId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[3].payload.items[0].clientCaptureId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[6].payload.items[0].clientCaptureId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "events/stream-get.json": {
+    "hash": "f35f731bb666f7937b8f6bd96146f95cc4c11fa7a79498a5264a7bc11a347ce4",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "GET",
+      "/events/stream"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/events/stream was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-34",
+        "severity": "medium",
+        "message": "testability is manual/skip \u2014 new definitions must ship testability:auto (manual is decided after execution)."
+      }
+    ]
+  },
+  "intake/adapters-get.json": {
+    "hash": "0681ed0db4f723a9add079150f417f4ca33cf5307febbb1ab02bc9e542a42de1",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "GET",
+      "/leadflow/intake/adapters"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/intake/adapters was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "intake/adapters-launch-evidence-get.json": {
+    "hash": "f7773643b9f7ccd4bc5cd9d6c195b36925d36b3a10ab9d1bef800085cf2e11bf",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "GET",
+      "/leadflow/intake/adapters/:p/launch-evidence"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/intake/adapters/:key/launch-evidence was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "intake/classify-post.json": {
+    "hash": "2934dcf39b4cf55977509b0124185790b314b6961bd5ff7b1f3aaa62d3062cbb",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/leadflow/intake/classify"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/intake/classify was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "intake/events-post.json": {
+    "hash": "3724f79b34dd08111fc611fb6428b6d87ac030c224a63aa9daa8bc7653113801",
+    "status": "findings",
+    "findingsCount": 5,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/leadflow/intake/events"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/intake/events was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[0].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[2].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[3].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[4].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "intake/webhooks-platform-post.json": {
+    "hash": "ed9d236ec34261171191e0a703195ca7441532fd5064dd6aee8f90375eb80fc9",
+    "status": "findings",
+    "findingsCount": 7,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/leadflow/intake/webhooks/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/intake/webhooks/:platform was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[0].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[1].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-38",
+        "severity": "high",
+        "message": "header 'x-signature' (testCases[1]) uses {static:...} \u2014 use {cache:...}/{var:...}/{baseUrl}/{dynamic:...}."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[2].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-38",
+        "severity": "high",
+        "message": "header 'x-signature' (testCases[2]) uses {static:...} \u2014 use {cache:...}/{var:...}/{baseUrl}/{dynamic:...}."
+      },
+      {
+        "rule": "MUST-14",
+        "severity": "medium",
+        "message": "POST endpoint has no captureResponse \u2014 capture created ids so dependents can {{cache:...}} them."
+      }
+    ]
+  },
+  "leads/id-activation-gate-get.json": {
+    "hash": "ff5075d3b316be9f708fd05e93fd941c1c5ffcd88aa08ddd611231870a58abd8",
+    "status": "findings",
+    "findingsCount": 3,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "GET",
+      "/leads/:p/activation-gate"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leads/:id/activation-gate was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[2].pathParams.id' (pathParams) uses '{{static:00000000-0000-0000-0000-000000000000}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[3].pathParams.id' (pathParams) uses '{{static:not-a-uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "leads/id-assign-post.json": {
+    "hash": "458dc48f3785e82d4c1e08809aad87d90c5bb2885964bb857922786ab97aed78",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/leads/:p/assign"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leads/:id/assign was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "leads/id-first-response-post.json": {
+    "hash": "03561faace88a83de83c2d95c6228d8798d373599d355719462aff959b7eeff4",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/leads/:p/first-response"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leads/:id/first-response was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[2].pathParams.id' (pathParams) uses '{{static:not-a-uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "leads/id-get.json": {
+    "hash": "43bde750d440d57d66d3994dcbacaaf9f0c88c1315b3c94d4da050d9236d6ed3",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "GET",
+      "/leads/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leads/:id was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "leads/id-route-post.json": {
+    "hash": "3a3b39458a4e3091814f6d7341a68575243990cafec187b811cf9932643f4c6b",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/leads/:p/route"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leads/:id/route was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[1].pathParams.id' (pathParams) uses '{{static:not-a-uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "leads/integrity-exceptions-get.json": {
+    "hash": "5855b81d26aa3d3843af6e24e365dc2466a77fa5c94b54ebb8b11201caf9a275",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "GET",
+      "/leads/integrity-exceptions"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leads/integrity-exceptions was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "leads/leads-get.json": {
+    "hash": "3a70fd32d119eb149a7bdfa04e7849e4f42670188d7d79b276575717bfb66f6a",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "GET",
+      "/leads"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leads was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "leads/leads-post.json": {
+    "hash": "6a85446a83c5b05a881b7ab6369efe321d47c08891b9e714212ff339ff5c06e3",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-04T06:35:00",
+    "route": [
+      "POST",
+      "/leads"
+    ]
+  },
+  "leads/route-unowned-post.json": {
+    "hash": "b40be6653008b10f384eeeae66bf0817d9769b4d46a49cff202a2e8a801f4b3a",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/leads/route-unowned"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leads/route-unowned was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "public/leads-post.json": {
+    "hash": "da80a6c5a7e01227a03ac8e1c89d058b68282821941e174620f1745c9264a75b",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "POST",
+      "/public/leads"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/public/leads was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "routing-rules/id-delete.json": {
+    "hash": "96edf595d3125b61b7c46616a153fa4be8b38babc01967a80b915e0e51063d2d",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:24",
+    "route": [
+      "DELETE",
+      "/routing-rules/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "DELETE /api/routing-rules/:id was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "routing-rules/id-patch.json": {
+    "hash": "7c02c63d7667a6f10c4a6408bdfde296e259dfa2aff9c7d653e393d706b03e76",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "PATCH",
+      "/routing-rules/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "PATCH /api/routing-rules/:id was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "routing-rules/routing-rules-get.json": {
+    "hash": "5fabeaa9cee6fc8497fe7f2a70eb483f67ff4a5264af8dcfac4862bc49591060",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "GET",
+      "/routing-rules"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/routing-rules was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "routing-rules/routing-rules-post.json": {
+    "hash": "33aff9ee270863e949d339400145cdea85f2e03e350aaab6ea89bc36fefee786",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "POST",
+      "/routing-rules"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/routing-rules was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[2].payload.assigned_user_id' (payload) uses '{{static:not-a-uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "sla/alerts-acknowledge-post.json": {
+    "hash": "5767fb75e477d0be5d3ea565967f496f9cabfb7c3ef0b0e619643a0c02e9df36",
+    "status": "findings",
+    "findingsCount": 3,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "POST",
+      "/sla/alerts/acknowledge"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/sla/alerts/acknowledge was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[1].payload.lead_id' (payload) uses '{{static:not-a-uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn. It references 'leads' \u2014 create + make-usable that resource first."
+      },
+      {
+        "rule": "MUST-44",
+        "severity": "high",
+        "message": "Build the COMPLETE prerequisite chain in dependsOn (the list of APIs QA must call first). FKs to trace: lead_id -> leads. For EACH: add the CREATE endpoint, any PUBLISH/ACTIVATE/APPROVE endpoint that makes the row usable, and any SUB-RESOURCE it needs (e.g. rates), in order; set each FK value to {cache:...} from its producer. Do NOT mark manual \u2014 build the chain (a NOT NULL FK to a non-seeded row is the #1 cause of 500s)."
+      }
+    ]
+  },
+  "sla/alerts-dispatch-post.json": {
+    "hash": "d165d391d1449497cfd9892c2445a7b6d4a7a889e8d397c675e482ae5a4d242f",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "POST",
+      "/sla/alerts/dispatch"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/sla/alerts/dispatch was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "sla/alerts-get.json": {
+    "hash": "739639041c70d3f5df3aabcc91f00d16ab4b8e5714aaf9ee32b8dd25747c3530",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "GET",
+      "/sla/alerts"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/sla/alerts was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "sla/evaluate-post.json": {
+    "hash": "6027272800a62deb645d2f78afa617b11792a0989af9c942e9ef1c8ca1a364f0",
+    "status": "findings",
+    "findingsCount": 3,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "POST",
+      "/sla/evaluate"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/sla/evaluate was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[1].payload.lead_id' (payload) uses '{{static:not-a-uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn. It references 'leads' \u2014 create + make-usable that resource first."
+      },
+      {
+        "rule": "MUST-44",
+        "severity": "high",
+        "message": "Build the COMPLETE prerequisite chain in dependsOn (the list of APIs QA must call first). FKs to trace: lead_id -> leads. For EACH: add the CREATE endpoint, any PUBLISH/ACTIVATE/APPROVE endpoint that makes the row usable, and any SUB-RESOURCE it needs (e.g. rates), in order; set each FK value to {cache:...} from its producer. Do NOT mark manual \u2014 build the chain (a NOT NULL FK to a non-seeded row is the #1 cause of 500s)."
+      }
+    ]
+  },
+  "sla/policies-get.json": {
+    "hash": "3c331ed3837424339d680ed342877f6be313b100f21b88eb21b15d22d99d286e",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "GET",
+      "/sla/policies"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/sla/policies was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "sla/policies-id-delete.json": {
+    "hash": "ea3e26bdd8cb9e333c9fb066b011ce2add6af04da0df77a4ff1617eb0354d619",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "DELETE",
+      "/sla/policies/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "DELETE /api/sla/policies/:id was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "sla/policies-id-patch.json": {
+    "hash": "9689a0beaf32d1949f51e1261322355a2224f4a988a07e7266e49dd0567053e5",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "PATCH",
+      "/sla/policies/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "PATCH /api/sla/policies/:id was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "sla/policies-post.json": {
+    "hash": "cb1cad703f97f640c273209bb9bfd094fa0cff127c25d6ced07006988e80189c",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "POST",
+      "/sla/policies"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/sla/policies was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "sla/status-get.json": {
+    "hash": "76529014109a8026db9810d073f76ee09b764dcdc9667082a6b224ff8a4a9ed1",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "GET",
+      "/sla/status"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/sla/status was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "users/users-get.json": {
+    "hash": "2164543561701fa019e2b161beef6c581d0f5ada53302057349dc6682cc87616",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T07:15:25",
+    "route": [
+      "GET",
+      "/users"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/users was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "ai/proposals-id-decide-post.json": {
+    "hash": "85eba8bda3b8036b480637f2504c2b79a16e4f71c08b93e4d086e97f5f8d9fd0",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T21:40:50",
+    "route": [
+      "POST",
+      "/leadflow/ai/proposals/:p/decide"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/ai/proposals/:id/decide was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "ai/propose-post.json": {
+    "hash": "ffa2576156fc193d2bfc5589d7cfd4396c677c2753037fee13c6ee76d327d3e6",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-04T21:40:50",
+    "route": [
+      "POST",
+      "/leadflow/ai/propose"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/ai/propose was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
       }
     ]
   }

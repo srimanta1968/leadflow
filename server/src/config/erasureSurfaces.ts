@@ -11,7 +11,8 @@
  * against server/src/db/migrations: the schema holds leads, users,
  * routing_rules, sla_metrics, sla_alerts, sla_policies, offline_capture_sync,
  * intake_event, intake_outage_queue, lead_source_event, ai_sdr_proposal,
- * ai_research_fact, ai_coach_call and ai_coach_scorecard — and each is
+ * ai_research_fact, ai_coach_call, ai_coach_scorecard, ai_proposal,
+ * ai_completion, ai_agent_run, ai_capability_token and ai_budget — and each is
  * classified below, including the ones that
  * hold NOTHING, because "we checked and it is clean" and "we forgot it
  * existed" must not look alike. `erasurePlan.test.ts` reads the live schema and
@@ -158,6 +159,41 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
     personalColumns: ['keep_behaviour', 'change_behaviour', 'practice_assignment'],
     rationale:
       'Coaching output about a named rep. The three free-text columns describe an identifiable person’s performance and go. The dimension scores are kept — they are the aggregate the team’s coaching trend is built from, and they carry no name once the call row is redacted. consent_verification is KEPT and this is the important one: it records HOW the recording basis was verified when the scorecard was produced, and it is the only durable evidence that this call was lawfully processed. Destroying it during an erasure would remove the proof of compliance at exactly the moment somebody is exercising a privacy right — the record of a privacy control must outlive the data it protected.',
+  },
+  {
+    surface: 'ai_proposal',
+    method: 'redact',
+    personalColumns: ['content', 'edited_content', 'decision_note'],
+    rationale:
+      'The human-review gate holds whatever an agent proposed — a drafted message, a qualification score with its reasoning, a call summary — and all three are documents ABOUT a person, usually naming them. content and edited_content go together, and the reviewer note goes with them because a note explaining why a draft was rejected routinely quotes the draft. REDACTED, NOT DELETED, and the reason is the same one that keeps ai_sdr_proposal: what must survive is that a proposal existed, which agent made it, WHICH AUTHORITY A HUMAN NEEDED TO ACCEPT IT, and whether one did. That quartet is the evidence that no consequential output reached anybody without human acceptance, and it is exactly what an automated-decision request asks to see. Deleting the row would erase the proof of the control along with the data it controlled. Note the columns are JSONB, and nulling a JSONB column is a perfectly ordinary UPDATE — the erasure does not need to know their shape.',
+  },
+  {
+    surface: 'ai_completion',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'The AI activity ledger, and it holds NO prompt and NO output text — by design, not by omission. It records the four controls (a consent receipt REFERENCE, a budget reservation reference, which redaction rules fired and how many spans each removed, and a trace id) plus the agent, template version and outcome. The redaction record is counts only: storing what was redacted would make this the one table holding the personal data every other layer removed. So there is nothing here to erase, and the row must be KEPT — it is the evidence that a given completion happened under a consent basis, which is precisely what somebody exercising a privacy right is entitled to be shown. The generated content lives on ai_proposal, which is where erasure acts.',
+  },
+  {
+    surface: 'ai_agent_run',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'Operational record of a run: agent key, upstream run id, status, trace id, who started it and when. started_by is a persona or user identifier, not a personal value — the operator themselves is cleared through the users surface. Kept so that "what was running when we pulled the kill switch" stays answerable after an incident.',
+  },
+  {
+    surface: 'ai_capability_token',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'Scope and lifecycle of the capability tokens issued to agents. Holds the capability list, the upstream token id and the timestamps — never the credential and never anything about a data subject. Listed explicitly so adding a column here forces a decision rather than creating a quiet gap.',
+  },
+  {
+    surface: 'ai_budget',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'Per-tenant token allowance and spend for a period. Counters and a tenant id; nothing about a person. Kept for the same reason a bill is kept.',
   },
 ];
 

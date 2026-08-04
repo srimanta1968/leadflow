@@ -1,0 +1,125 @@
+{
+  "name": "POST /api/leadflow/ai/propose - record a consequential AI output for human review",
+  "description": "The general human-review gate (AC1). SOP §21 permits AI to 'suggest messages, scores, summaries, and next actions' and requires that 'a qualified human reviews consequential outputs'. This endpoint is where any agent puts such an output, and what it creates is a PROPOSAL: status 'proposed', delivered false, waiting on a person.\n\nWHY A GENERAL GATE AND NOT ONE PER MODULE. The SDR pair (POST /api/leadflow/ai/sdr/qualify and .../proposals/:id/accept) implements the same rule for drafted messages alone. With the rule implemented per module the guarantee holds only for the modules that remembered, and the module written next year is the one that forgets. Every new agent proposes here instead.\n\nTHERE IS NO DELIVERY ENDPOINT ANYWHERE, and `delivered: false` on every response is present so a test can assert it. What stops a machine from releasing an output is not a flag it must not set — it is that no code exists to release one. The ai_proposal table has no delivery column for the same reason.\n\nTHE AGENT REGISTRY BOUNDS WHAT EACH AGENT MAY PROPOSE (config/aiAgents.ts). An agent registered to suggest next actions cannot propose a message and thereby have it reviewed under the message authority — otherwise any agent could reach any authority just by asking. A kind the agent is not registered for is a 400.\n\nA COMPLETION REFERENCE, WHEN SUPPLIED, MUST BE ACCOUNTED FOR. `completionId` names a row in the AI activity ledger, and the endpoint refuses one that does not exist or that was REFUSED rather than completed (AI_COMPLETION_NOT_ACCOUNTED). Output citing a refused completion is output produced outside the four controls, wearing the reference of an attempt that was stopped.\n\nA create at a collection root that leaves behind an addressable resource, so 201 (MUST-54).\n\nTHE CODE-MATCH FINDING ON THIS FILE IS A VERIFIED SCANNER FALSE POSITIVE, recorded here so the next reader does not re-investigate it and does not 'fix' a correct definition to satisfy a scanner. The review agent cannot follow the two-level mount: routes/index.ts does router.use('/leadflow/ai', aiRoutes) through a barrel export and aiRoutes does router.post('/propose'), so the literal path never appears in one file. Same root cause as the note on authz/evaluate-post.json. Verified against the running server on :3010 rather than argued — authenticated POST answers 201, an unregistered agent 400, an agent proposing a kind it is not registered for 400, a completionId absent from the ledger 422 AI_COMPLETION_NOT_ACCOUNTED, and no bearer 401. Exactly what this definition declares.\n\nProtected by the authenticate guard and governed by lead.work_assigned — asking a machine for a suggestion is part of working a lead; DECIDING one is a different authority and lives on the decide endpoint. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/ai/propose",
+  "method": "POST",
+  "taskId": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 201,
+  "coversCriterion": ["1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1"],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "kind": ["message", "score", "summary", "next_action"],
+    "status": ["proposed", "accepted", "rejected"],
+    "agentKey": ["sdr_first_touch", "sales_coach", "next_action_planner"]
+  },
+  "captureResponse": {
+    "ai.reviewProposal.response.data.proposal.id": "data.proposal.id"
+  },
+  "testCases": [
+    {
+      "name": "A consequential output is recorded as a proposal, never as something delivered",
+      "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "agentKey": "sdr_first_touch",
+        "kind": "message",
+        "content": {
+          "subject": "{{static:We received your request}}",
+          "body": "{{static:Thanks for reaching out. I will call you shortly.}}"
+        }
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "proposal": {
+            "status": "proposed",
+            "delivered": false,
+            "requiredPermission": "message.send_approved"
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject a kind the agent is not registered to propose",
+      "testType": "negative",
+      "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "agentKey": "next_action_planner",
+        "kind": "message",
+        "content": { "body": "{{static:Let me send this myself}}" }
+      },
+      "expectedStatus": 400,
+      "expectedError": { "code": "VALIDATION_ERROR" }
+    },
+    {
+      "name": "Reject an agent that is not in the registry",
+      "testType": "negative",
+      "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "agentKey": "{{static:unregistered_agent}}",
+        "kind": "summary",
+        "content": { "text": "{{static:A summary from nowhere}}" }
+      },
+      "expectedStatus": 400,
+      "expectedError": { "code": "VALIDATION_ERROR" }
+    },
+    {
+      "name": "Reject a proposal citing a completion the activity ledger does not hold",
+      "testType": "negative",
+      "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "agentKey": "sales_coach",
+        "kind": "summary",
+        "content": { "text": "{{static:Call went well}}" },
+        "completionId": "{{var:absent_uuid}}"
+      },
+      "expectedStatus": 422,
+      "expectedError": { "code": "AI_COMPLETION_NOT_ACCOUNTED" }
+    },
+    {
+      "name": "Reject an unauthenticated proposal",
+      "testType": "negative",
+      "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
+      "payload": {
+        "agentKey": "sdr_first_touch",
+        "kind": "message",
+        "content": { "body": "{{static:Unauthenticated draft}}" }
+      },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "agentKey is required; kind must be one of: message, score, summary, next_action",
+      "when": "the payload is malformed, the agent is not in the registry, or the agent is not registered to propose that kind. The last is a policy refusal expressed as a validation error because the caller named an agent/kind pair that does not exist in the registry — there is nothing to authorise."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold lead.work_assigned"
+    },
+    {
+      "status": 422,
+      "code": "AI_COMPLETION_NOT_ACCOUNTED",
+      "message": "The named completion is not in the activity ledger.",
+      "when": "completionId names no ledger row, or names one whose outcome is a refusal rather than 'completed'. Output citing a refused completion is output produced outside the four controls, wearing the reference of an attempt that was stopped."
+    }
+  ]
+}

@@ -2,7 +2,9 @@
   "_status": "Dev URLs discovered from client/vite.config.ts (server.port 5173, /api proxied to :3010) and server/.env.example (PORT=3010). QA, staging and production hostnames still NEED INPUT.",
   "activeEnvironment": "dev",
   "variables": {
-    "_note": "Global variables are for values that are genuinely the SAME in every environment. Anything secret-shaped belongs in environments[<env>].variables so a dev secret can never be carried into staging or production (MUST-46)."
+    "_note": "Global variables are for values that are genuinely the SAME in every environment. Anything secret-shaped belongs in environments[<env>].variables so a dev secret can never be carried into staging or production (MUST-46).",
+    "absent_uuid": "00000000-0000-0000-0000-000000000000",
+    "_absent_uuid_note": "A syntactically valid UUID that NO record has, for the negative test cases that assert 404. It cannot come from {{cache:...}} the way MUST-36 asks for a foreign key, because the whole point is that no producer created it — a cached id would exist and the endpoint would answer 200 or 409 instead of the 404 under test. Global rather than per-environment because the nil UUID is absent in every environment by construction, and it is not secret-shaped."
   },
   "environments": {
     "dev": {

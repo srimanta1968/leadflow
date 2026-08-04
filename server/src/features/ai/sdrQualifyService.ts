@@ -4,6 +4,7 @@ import {
   researchSourceByKey,
   partitionRequestedSources,
 } from '../../config/researchSources';
+import { promptTemplateVersion } from '../../config/promptTemplates';
 import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
 import { AppError, ErrorCodes } from '../../utils/errors';
 import { assertOfferTruth } from './offerTruth';
@@ -61,8 +62,15 @@ export interface SdrProposal {
   templateVersion: string;
 }
 
-/** The approved first-touch template this module renders from. */
-export const TEMPLATE_VERSION = 'sop-v3.0-email1';
+/**
+ * The approved first-touch template this module renders from.
+ *
+ * READ FROM THE VERSIONED LIBRARY rather than typed here. It was a literal until
+ * the library existed, and a second copy of a version string is a second thing
+ * to forget: the day somebody publishes a new first-touch template, the copy
+ * that does not get updated is the one stamped onto every proposal.
+ */
+export const TEMPLATE_VERSION = promptTemplateVersion('sdr_first_touch');
 
 /**
  * The qualification criteria.

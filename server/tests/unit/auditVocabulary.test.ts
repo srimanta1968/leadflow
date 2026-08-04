@@ -42,7 +42,12 @@ describe('the audit vocabulary', () => {
     // `ai.draft.accepted` is a person taking responsibility for it. One
     // combined name would leave the only question anybody asks after a bad
     // send — did a human read this — unanswerable.
-    expect(allAuditEventNames()).toHaveLength(38);
+    //
+    // 6 more for the AI foundation. `ai.draft.*` names a DRAFT, which was right
+    // while the only consequential output was a message; the review gate takes
+    // scores, summaries, next actions and offer-term changes too, and it names
+    // the REJECTION, which the draft pair never did.
+    expect(allAuditEventNames()).toHaveLength(44);
     expect(isAuditEventName('capture.created')).toBe(true);
     expect(isAuditEventName('sla.breached')).toBe(true);
     expect(isAuditEventName('lead.routed')).toBe(true);
@@ -52,6 +57,10 @@ describe('the audit vocabulary', () => {
     // declined to process this call" from "nobody ever asked", and only the
     // first is evidence the consent gate is working.
     expect(isAuditEventName('ai.coach.refused_no_consent')).toBe(true);
+    // A rejection and an acceptance are the same event name with a different
+    // outcome in the metadata; pulling the kill switch is its own.
+    expect(isAuditEventName('ai.proposal.decided')).toBe(true);
+    expect(isAuditEventName('ai.kill_switch.engaged')).toBe(true);
   });
 
   it('rejects a plausible-looking name that is not canonical', () => {

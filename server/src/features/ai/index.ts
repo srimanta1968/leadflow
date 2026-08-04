@@ -7,6 +7,7 @@
  */
 export { default as aiRoutes } from './aiRoutes';
 export { AiCoachController, AiSdrController } from './aiController';
+export { AiReviewGateController } from './reviewGateController';
 export { qualifyLead, acceptProposal, TEMPLATE_VERSION } from './sdrQualifyService';
 export type { SdrProposal, SdrChannel, ScoreComponent, ResearchFact } from './sdrQualifyService';
 export { registerCall, scoreCall, mapObjection } from './coachScorecardService';
