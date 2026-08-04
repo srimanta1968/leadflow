@@ -1,0 +1,82 @@
+{
+  "name": "GET /api/leadflow/intake/adapters/:key/launch-evidence - SOP §29 packet",
+  "description": "The launch-evidence packet for one source integration, as SOP §29 requires before a channel goes live. A read, so 200.\n\nDERIVED FROM THE ADAPTER DECLARATION THE RUNTIME USES, not written separately. A packet typed out per integration drifts from the adapter it describes, and the drift always favours looking ready — so this generates from `config/sourceAdapters.ts`, the same source the intake validator reads. The packet therefore cannot claim a field set the adapter does not capture.\n\nWHAT IT ATTESTS, AND WHAT IT DOES NOT. Every item is computed from what is DECLARED, so a green packet proves the integration was SPECIFIED completely: required fields, permission fields, attribution that must reach closed-won, a named failure-queue owner with a basis, a manual fallback, and a derivable idempotency key. It is NOT a production test result. Each item carries the artefact that satisfies it, so a green packet cannot be mistaken for a successful end-to-end run — 'we tested it' is not evidence and does not appear.\n\nAN EMPTY PERMISSION LIST IS SATISFIED, not failed. Some channels genuinely need none — an inbound phone call carries its own basis for the call itself — and failing them would push somebody to invent a permission field to clear the check, which is worse than an honest empty list.\n\nAN UNKNOWN ADAPTER IS 404, not an empty packet. An empty packet reads as 'nothing to evidence' when the truth is 'no such integration', and somebody would sign it off.\n\nProtected by the authenticate guard — the Authorization header is required on this GET. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/intake/adapters/:key/launch-evidence",
+  "method": "GET",
+  "taskId": "3048538d-a5da-4311-bbd5-63d773a0844b",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 2,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "3048538d-a5da-4311-bbd5-63d773a0844b#AC3",
+    "3048538d-a5da-4311-bbd5-63d773a0844b#AC2"
+  ],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "key": [
+      "meta_lead_ads",
+      "linkedin",
+      "google_lsa",
+      "tiktok",
+      "web_form",
+      "chat_handoff",
+      "phone",
+      "email",
+      "referral"
+    ]
+  },
+  "captureResponse": {
+    "intake.launchEvidence.response.data.readyToLaunch": "data.readyToLaunch"
+  },
+  "testCases": [
+    {
+      "name": "Produces a complete packet for a paid-social adapter",
+      "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC3",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "key": "{{static:meta_lead_ads}}" },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "adapter": "meta_lead_ads", "readyToLaunch": true }
+      }
+    },
+    {
+      "name": "Produces a packet for a channel that needs no permission fields",
+      "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC3",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "key": "{{static:phone}}" },
+      "expectedStatus": 200,
+      "expectedResponse": { "success": true, "data": { "readyToLaunch": true } }
+    },
+    {
+      "name": "404 for an adapter that does not exist, not an empty packet",
+      "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC3",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "key": "{{static:carrier_pigeon}}" },
+      "expectedStatus": 404,
+      "expectedError": { "code": "NOT_FOUND" }
+    },
+    {
+      "name": "Reject an unauthenticated read",
+      "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC3",
+      "pathParams": { "key": "{{static:meta_lead_ads}}" },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No source adapter with that key",
+      "when": "the key names no configured adapter. Deliberately not an empty packet — that reads as 'nothing to evidence' when the truth is 'no such integration', and it would get signed off."
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "GET /api/leadflow/intake/adapters - Every configured source",
+  "description": "Lists every inbound source LeadFlow accepts, with the field set each one must capture, its permission fields, the attribution that must reach closed-won, its named failure-queue owner and its manual fallback. A read, so 200.\n\nRETURNS THE DECLARATION THE RUNTIME USES, not a separate description of it. An operator asking 'what does the Meta adapter need' gets the same answer the intake validator enforces, so the documentation and the behaviour cannot disagree — the failure this avoids is a doc page that says a field is captured when the adapter stopped capturing it two releases ago.\n\nThe adapter keys here are the SAME values the intake platform vocabulary accepts. Those two lists were originally written separately and drifted immediately: seven configured adapters named platforms the validator rejected, so they were configuration that could never fire and looked complete in every review. The vocabulary is now derived from this registry.\n\nEvery adapter carries a failure-queue owner as a ROLE rather than a person — people change and the queue does not — with a basis so an invented owner is visible as an elaboration rather than passing for SOP text. Every adapter carries a manual fallback, and it is never 'wait': a channel whose fallback is waiting loses leads a person could have typed in ninety seconds.\n\nProtected by the authenticate guard — the Authorization header is required on this GET. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/intake/adapters",
+  "method": "GET",
+  "taskId": "3048538d-a5da-4311-bbd5-63d773a0844b",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 2,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "3048538d-a5da-4311-bbd5-63d773a0844b#AC1",
+    "3048538d-a5da-4311-bbd5-63d773a0844b#AC2"
+  ],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "captureResponse": {
+    "intake.adapters.response.data.total": "data.total"
+  },
+  "testCases": [
+    {
+      "name": "Lists every configured adapter with its full declaration",
+      "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "expectedStatus": 200,
+      "expectedResponse": { "success": true, "data": { "total": 9 } }
+    },
+    {
+      "name": "Reject an unauthenticated read",
+      "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC2",
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    }
+  ]
+}

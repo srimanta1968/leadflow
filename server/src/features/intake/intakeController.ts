@@ -3,6 +3,7 @@ import { PERMISSIONS } from '../../config/roles';
 import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
 import { governed, GovernedRequest } from '../../platform/policy/governed';
 import { AppError, ErrorCodes } from '../../utils/errors';
+import { SOURCE_ADAPTERS, launchEvidenceFor } from '../../config/sourceAdapters';
 import { IntakeService, IntakeSignal } from './intakeService';
 import { verifySignature } from './signatureVerifier';
 
@@ -113,6 +114,52 @@ export class IntakeController {
     );
 
     res.status(200).json({ success: true, data: result });
+  }
+
+  /**
+   * GET /api/leadflow/intake/adapters — every configured source.
+   *
+   * A read, so 200. Returns the declaration the runtime uses rather than a
+   * separate description of it: an operator asking "what does the Meta adapter
+   * need" gets the same answer the validator enforces, so the two cannot
+   * disagree.
+   */
+  static async adapters(_req: GovernedRequest, res: Response): Promise<void> {
+    res.status(200).json({
+      success: true,
+      data: {
+        adapters: SOURCE_ADAPTERS.map((adapter) => ({
+          key: adapter.key,
+          label: adapter.label,
+          requiredFields: adapter.requiredFields,
+          permissionFields: adapter.permissionFields,
+          attributionFields: adapter.attributionFields,
+          failureQueue: adapter.failureQueue,
+          manualFallback: adapter.manualFallback,
+        })),
+        total: SOURCE_ADAPTERS.length,
+      },
+    });
+  }
+
+  /**
+   * GET /api/leadflow/intake/adapters/:key/launch-evidence
+   *
+   * The SOP §29 launch-evidence packet for one integration. 404 for an unknown
+   * adapter rather than an empty packet — an empty packet reads as "nothing to
+   * evidence" when the truth is "no such integration", and somebody would sign
+   * it off.
+   *
+   * The packet attests that the integration is SPECIFIED completely. It is not
+   * a production test result, and every item says what satisfies it so a green
+   * packet cannot be mistaken for a successful end-to-end run.
+   */
+  static async launchEvidence(req: GovernedRequest, res: Response): Promise<void> {
+    const packet = launchEvidenceFor(String(req.params.key ?? ''));
+    if (!packet) {
+      throw new AppError(404, ErrorCodes.NOT_FOUND, `No source adapter '${req.params.key}'`);
+    }
+    res.status(200).json({ success: true, data: packet });
   }
 
   /**

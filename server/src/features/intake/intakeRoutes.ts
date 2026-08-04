@@ -6,6 +6,8 @@ import { IntakeController } from './intakeController';
 // @governance-tracked
 // Definition: tests/api_definitions/intake/events-post.json
 // Definition: tests/api_definitions/intake/webhooks-platform-post.json
+// Definition: tests/api_definitions/intake/adapters-get.json
+// Definition: tests/api_definitions/intake/adapters-launch-evidence-get.json
 
 /**
  * Universal intake.
@@ -28,6 +30,12 @@ const router: Router = Router();
 
 router.post('/events', authenticate, asyncHandler(IntakeController.events));
 router.post('/backfill', authenticate, asyncHandler(IntakeController.backfill));
+router.get('/adapters', authenticate, asyncHandler(IntakeController.adapters));
+router.get(
+  '/adapters/:key/launch-evidence',
+  authenticate,
+  asyncHandler(IntakeController.launchEvidence)
+);
 
 // Deliberately NOT behind `authenticate` — see above. Its guard is the
 // signature check inside the handler, which runs before anything is processed.
