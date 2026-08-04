@@ -55,6 +55,24 @@ export const AUDIT_EVENTS = {
   SLA_SWEEP_RUN: 'sla.sweep.run',
   SLA_ALERT_ACKNOWLEDGED: 'sla.alert.acknowledged',
   SLA_ALERT_DISPATCHED: 'sla.alert.dispatched',
+
+  // AI agent modules. The SOP allows AI to suggest and requires a qualified
+  // human to review consequential outputs, so the ledger must be able to
+  // separate the two: `ai.draft.proposed` is a machine act and
+  // `ai.draft.accepted` is a person taking responsibility for it. One combined
+  // name would make the only question anybody asks after a bad send — did a
+  // human read this — unanswerable.
+  AI_DRAFT_PROPOSED: 'ai.draft.proposed',
+  AI_DRAFT_ACCEPTED: 'ai.draft.accepted',
+  // Recorded per proposal, naming the sources used. "Where did this claim about
+  // the prospect come from" is asked about a specific draft, months later.
+  AI_RESEARCH_PERFORMED: 'ai.research.performed',
+  AI_CALL_REGISTERED: 'ai.call.registered',
+  AI_COACH_SCORED: 'ai.coach.scored',
+  // A refusal is an event too. An absent entry cannot distinguish "we declined
+  // to process this call" from "nobody ever asked", and only the first is
+  // evidence that the consent gate is doing its job.
+  AI_COACH_REFUSED_NO_CONSENT: 'ai.coach.refused_no_consent',
 } as const;
 
 /** Any name in the vocabulary. Nothing else is appendable. */

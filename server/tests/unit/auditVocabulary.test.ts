@@ -35,11 +35,23 @@ describe('the audit vocabulary', () => {
     // 19 originally; 13 added when the routing and SLA handlers were brought
     // under `governed` — the ledger could describe what happened to a lead's
     // data but not who decided who would work it.
-    expect(allAuditEventNames()).toHaveLength(32);
+    //
+    // 6 more for the AI agent modules. The SOP allows AI to suggest and
+    // requires a qualified human to review consequential outputs, so the ledger
+    // has to separate the two: `ai.draft.proposed` is a machine act and
+    // `ai.draft.accepted` is a person taking responsibility for it. One
+    // combined name would leave the only question anybody asks after a bad
+    // send — did a human read this — unanswerable.
+    expect(allAuditEventNames()).toHaveLength(38);
     expect(isAuditEventName('capture.created')).toBe(true);
     expect(isAuditEventName('sla.breached')).toBe(true);
     expect(isAuditEventName('lead.routed')).toBe(true);
     expect(isAuditEventName('sla.policy.updated')).toBe(true);
+    expect(isAuditEventName('ai.draft.proposed')).toBe(true);
+    // A refusal is an event too: an absent entry cannot distinguish "we
+    // declined to process this call" from "nobody ever asked", and only the
+    // first is evidence the consent gate is working.
+    expect(isAuditEventName('ai.coach.refused_no_consent')).toBe(true);
   });
 
   it('rejects a plausible-looking name that is not canonical', () => {

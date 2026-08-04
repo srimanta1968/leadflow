@@ -1,0 +1,92 @@
+{
+  "name": "POST /api/leadflow/ai/sdr/proposals/:id/accept - a rep accepts an AI draft",
+  "description": "The human review step that makes an AI draft sendable (AC1). Until a rep calls this, the proposal is inert: qualify writes status 'proposed' and there is no send path anywhere in the module.\n\nTHIS ENDPOINT IS THE PROOF OF AC1. The criterion is that drafts are proposals requiring rep acceptance before send, and the executable form of that claim is a proposal that starts un-sendable and a separate, separately-permissioned act that changes it. Acceptance carries message.send_approved, NOT the lead.work_assigned that qualifying carries — deliberately, because deciding a message may go to a prospect is a different authority from asking for a draft, and one rep may hold the first without the second.\n\nAN ACTION ON AN EXISTING RESOURCE, so 200 rather than 201 (MUST-54): nothing addressable is created, the proposal's state changes.\n\nEDITS ARE FIRST-CLASS. The rep may accept the draft as written or supply an edited body, and the edit is stored ALONGSIDE the original rather than over it. Overwriting would destroy the only evidence of what the model actually produced, which is exactly the record needed to tell whether the drafts are getting better or worse.\n\nTHE EDITED BODY IS RE-CHECKED against offer truth. Human review is the control AC1 asks for, but a rep editing under time pressure can introduce the very promise the constraints exist to prevent — and an unapproved discount is no more approved for having been typed by a person.\n\nACCEPTING TWICE IS A CONFLICT, not a silent no-op. A second acceptance means two people believed they were the one releasing the message, and answering 200 to both hides a coordination failure worth surfacing.\n\nProtected by the authenticate guard. QA: depends on a qualified proposal.",
+  "endpoint": "/api/leadflow/ai/sdr/proposals/:id/accept",
+  "method": "POST",
+  "taskId": "74a0891b-3892-4e93-aad4-450bfd776afa",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 2,
+  "expectedStatus": 200,
+  "coversCriterion": ["74a0891b-3892-4e93-aad4-450bfd776afa#AC1"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/ai/sdr/qualify"
+  ],
+  "testCases": [
+    {
+      "name": "A rep accepts the draft and it becomes sendable",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "id": "{{cache:ai.sdrProposal.response.data.proposal.id}}" },
+      "payload": { "acceptedAsWritten": true },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "proposal": { "status": "accepted" } }
+      }
+    },
+    {
+      "name": "Accepting an already-accepted proposal is a conflict",
+      "testType": "negative",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "id": "{{cache:ai.sdrProposal.response.data.proposal.id}}" },
+      "payload": { "acceptedAsWritten": true },
+      "expectedStatus": 409,
+      "expectedError": { "code": "CONFLICT" }
+    },
+    {
+      "name": "Reject acceptance of an unknown proposal",
+      "testType": "negative",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "id": "{{static:00000000-0000-0000-0000-000000000000}}" },
+      "payload": { "acceptedAsWritten": true },
+      "expectedStatus": 404,
+      "expectedError": { "code": "NOT_FOUND" }
+    },
+    {
+      "name": "Reject an unauthenticated acceptance",
+      "testType": "negative",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
+      "pathParams": { "id": "{{cache:ai.sdrProposal.response.data.proposal.id}}" },
+      "payload": { "acceptedAsWritten": true },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "Supply acceptedAsWritten: true or an editedBody",
+      "when": "neither an acceptance nor an edit is supplied. Not defaulted to accept-as-written — defaulting would let an empty body release a message nobody read, which is the exact outcome the human-review step exists to prevent."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "Proposal not found",
+      "when": "no proposal has that id"
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "Proposal has already been decided",
+      "when": "the proposal is no longer in 'proposed' state"
+    },
+    {
+      "status": 422,
+      "code": "OFFER_TRUTH_VIOLATION",
+      "message": "Edited draft violates the approved offer-truth constraints",
+      "when": "a rep's edit introduces a roadmap date, an unapproved discount or a promised result. An unapproved discount is no more approved for having been typed by a person."
+    }
+  ]
+}

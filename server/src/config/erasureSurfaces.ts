@@ -10,7 +10,9 @@
  * Enumerated from the actual migrations rather than from memory. Verified
  * against server/src/db/migrations: the schema holds leads, users,
  * routing_rules, sla_metrics, sla_alerts, sla_policies, offline_capture_sync,
- * intake_event, intake_outage_queue and lead_source_event — and each is classified below, including the ones that
+ * intake_event, intake_outage_queue, lead_source_event, ai_sdr_proposal,
+ * ai_research_fact, ai_coach_call and ai_coach_scorecard — and each is
+ * classified below, including the ones that
  * hold NOTHING, because "we checked and it is clean" and "we forgot it
  * existed" must not look alike. `erasurePlan.test.ts` reads the live schema and
  * fails if a table is added without a decision here, which is how this list
@@ -128,6 +130,34 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
     personalColumns: [],
     rationale:
       'One row per source event that contributed to a canonical lead. Holds a lead id, the platform, the event id that platform issued, which dedupe key matched, and a consent snapshot — no name, email, phone or handle. The person is identified only through lead_id, which the leads surface redacts. KEPT rather than cleared, and consent is the reason: the snapshot is the proof of what was permitted at the moment each signal arrived, including a revocation, and erasing it would destroy the evidence that the erasure itself was honoured. SOP §03 is explicit that a merge preserves every source event and consent record; erasure does not get to undo that, because the record of a privacy action must outlive the data it acted on.',
+  },
+  {
+    surface: 'ai_sdr_proposal',
+    method: 'redact',
+    personalColumns: ['draft_subject', 'draft_body', 'edited_body'],
+    rationale:
+      'A drafted first touch is a document ABOUT a person and usually addressed to them by name — the draft body is as much a subject surface as the lead row it was written from. Redacted, not deleted, because ai_research_fact hangs off the proposal id and the score attribution is the record of how this person was judged, which an automated-decision request is entitled to see. Nulling the three copy columns removes what was going to be said to them while leaving that a proposal existed, what it scored and whether a human accepted it. The edited body is redacted alongside the original: a rep rewrite is no less about the person for having been typed by hand.',
+  },
+  {
+    surface: 'ai_research_fact',
+    method: 'redact',
+    personalColumns: ['fact_value'],
+    rationale:
+      'Every fact the research step gathered, one row each. fact_value is the personal data — a name, a role, a headcount attached to an identifiable person — so it is nulled. The SOURCE KEY AND TIMESTAMP ARE KEPT, deliberately: "we looked this person up at an approved data partner on this date" is the record that answers where their data came from, and it is precisely what a subject access request asks for. Erasing the provenance along with the fact would leave us unable to answer the question the erasure request itself is usually attached to.',
+  },
+  {
+    surface: 'ai_coach_call',
+    method: 'redact',
+    personalColumns: ['rep_email'],
+    rationale:
+      'Operators are data subjects too, and a rep leaving may exercise the same right a prospect does. rep_email is the only personal column — no transcript content is stored here by design, only identifiers, the recording basis and the pointer to sdk-conversation, so a revoked recording consent has no local content to purge. The consent basis reference is KEPT: it is a pointer into the consent service, not the consent itself, and it is the evidence that the call was lawfully recorded. Redacted rather than deleted because ai_coach_scorecard references the call id, and deleting it would take the coaching record with it.',
+  },
+  {
+    surface: 'ai_coach_scorecard',
+    method: 'redact',
+    personalColumns: ['keep_behaviour', 'change_behaviour', 'practice_assignment'],
+    rationale:
+      'Coaching output about a named rep. The three free-text columns describe an identifiable person’s performance and go. The dimension scores are kept — they are the aggregate the team’s coaching trend is built from, and they carry no name once the call row is redacted. consent_verification is KEPT and this is the important one: it records HOW the recording basis was verified when the scorecard was produced, and it is the only durable evidence that this call was lawfully processed. Destroying it during an erasure would remove the proof of compliance at exactly the moment somebody is exercising a privacy right — the record of a privacy control must outlive the data it protected.',
   },
 ];
 

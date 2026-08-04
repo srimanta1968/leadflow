@@ -74,6 +74,40 @@ export const ErrorCodes = {
    * useful answer is that it exists and authentication happens elsewhere.
    */
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
+  /**
+   * A research source outside the permitted registry was requested.
+   *
+   * 422, not 400: the payload is well-formed and the refusal is about policy.
+   * REFUSED rather than skipped — a silently dropped source produces a proposal
+   * that looks fully researched while missing exactly the thing the rep would
+   * have wanted to know, and the draft gives no sign either way.
+   */
+  RESEARCH_SOURCE_NOT_PERMITTED: 'RESEARCH_SOURCE_NOT_PERMITTED',
+  /**
+   * A draft said something the approved offer does not support.
+   *
+   * A roadmap date, an unapproved discount, a promised result, a price outside
+   * the approved offer version. REJECTED rather than quietly edited: a silently
+   * corrected draft teaches nobody that the generator is producing unusable
+   * copy, and the next one will do it again.
+   */
+  OFFER_TRUTH_VIOLATION: 'OFFER_TRUTH_VIOLATION',
+  /**
+   * Call content was requested without a verified recording consent basis.
+   *
+   * 422 when registering a call without one, 403 when reading a scorecard —
+   * the first is a malformed intent the caller can fix, the second is a refusal
+   * to act on data we hold.
+   *
+   * Failing closed is right HERE and is not a general rule. Where a policy is
+   * merely unreachable, denying invents a restriction nobody wrote (see the
+   * capture domain policy, which needed an explicit configured id for exactly
+   * that reason). Here the restriction IS written — the SOP requires
+   * recording-consent rules to be followed — so an unverifiable basis means
+   * processing must not proceed. A revocation we cannot see is precisely the
+   * case this protects against.
+   */
+  RECORDING_CONSENT_MISSING: 'RECORDING_CONSENT_MISSING',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 

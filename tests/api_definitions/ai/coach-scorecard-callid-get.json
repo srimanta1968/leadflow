@@ -1,0 +1,70 @@
+{
+  "name": "GET /api/leadflow/ai/coach/scorecard/:callId - AI Sales Coach scorecard",
+  "description": "Scores a call against the SOP coaching scorecard (AC3) and returns one behaviour to keep, one to change and one practice assignment, per the SOP's biweekly individual coaching cadence.\n\nTHE TEN DIMENSIONS ARE THE SOP's, VERBATIM AND IN ORDER: opening/context, agenda contract, question quality, listening, problem/impact depth, tailored demo, feature-status honesty, objection diagnosis, clear ask, scheduled NEXT. The criterion says 'exactly', so the registry is asserted against that list rather than described by it. Note the SOP says 'listening', not 'listening ratio' — the ratio is one way to measure the dimension, not the dimension, and a scorecard that renames a dimension stops matching the paper form the manager is coaching from.\n\nCONSENT IS VERIFIED BEFORE ANY CALL CONTENT IS TOUCHED (AC4) — before the transcript is fetched, not after. The check is the first thing the handler does, so there is no code path that reads content and then decides whether it was allowed to.\n\nENTITLEMENT PRECEDES EXISTENCE. An unknown call id and a call with no verified basis both answer 403, and there is deliberately no 404: distinguishing them would let anyone enumerate which call ids exist by reading the status code. The cost is that a typo'd id reports 'not permitted' rather than 'not found', which is the right trade — the message says both cases are possible.\n\nFAILING CLOSED IS CORRECT HERE, and that is not a general rule. Where a policy is merely unreachable, denying invents a restriction nobody wrote. Here the restriction IS written — the SOP requires recording-consent rules to be followed — so an unverifiable basis means processing must not proceed. A revocation we cannot see is precisely the case this protects against.\n\nObjections detected in the call are mapped to the APPROVED LACE responses (Listen, Acknowledge, Clarify, Execute a next step) from the SOP objection library. The coach never invents a response: an unrecognised objection is reported as unmapped so a human handles it, because an invented rebuttal is how an unapproved claim reaches a prospect wearing the authority of the SOP.\n\nProtected by the authenticate guard and governed by call.review. QA: depends on a registered call.",
+  "endpoint": "/api/leadflow/ai/coach/scorecard/:callId",
+  "method": "GET",
+  "taskId": "74a0891b-3892-4e93-aad4-450bfd776afa",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 4,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "74a0891b-3892-4e93-aad4-450bfd776afa#AC3",
+    "74a0891b-3892-4e93-aad4-450bfd776afa#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/ai/coach/calls"
+  ],
+  "testCases": [
+    {
+      "name": "A registered call with a verified basis returns the ten SOP dimensions",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC3",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "callId": "{{cache:ai.coachCall.response.data.call.id}}" },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "scorecard": { "dimensionCount": 10 } }
+      }
+    },
+    {
+      "name": "Refuse to score a call with no verified recording basis",
+      "testType": "negative",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "callId": "{{static:00000000-0000-0000-0000-000000000000}}" },
+      "expectedStatus": 403,
+      "expectedError": { "code": "RECORDING_CONSENT_MISSING" }
+    },
+    {
+      "name": "Reject an unauthenticated scorecard read",
+      "testType": "negative",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
+      "pathParams": { "callId": "{{cache:ai.coachCall.response.data.call.id}}" },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "callId must be a UUID",
+      "when": "the path callId is not a UUID"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 403,
+      "code": "RECORDING_CONSENT_MISSING",
+      "message": "No verified recording consent basis for this call, or the call is not registered",
+      "when": "the call has no recorded basis, the basis cannot be verified upstream, or no such call exists. Deliberately one answer for all three so call ids cannot be enumerated by status code."
+    }
+  ]
+}

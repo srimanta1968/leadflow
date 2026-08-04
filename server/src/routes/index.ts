@@ -10,6 +10,7 @@ import analyticsRoutes from './analyticsRoutes';
 import { authzRoutes } from '../platform/policy';
 import { intakeRoutes } from '../features/intake';
 import { captureRoutes } from '../features/capture';
+import { aiRoutes } from '../features/ai';
 
 /**
  * Root API router, mounted at `/api`.
@@ -31,5 +32,6 @@ router.use('/analytics', analyticsRoutes);
 router.use('/leadflow/authz', authzRoutes);
 router.use('/leadflow/intake', intakeRoutes);
 router.use('/leadflow/capture', captureRoutes);
+router.use('/leadflow/ai', aiRoutes);
 
 export default router;

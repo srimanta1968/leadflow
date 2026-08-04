@@ -1,0 +1,79 @@
+{
+  "name": "POST /api/leadflow/ai/coach/calls - register a call and its recording consent basis",
+  "description": "Registers a call for coaching and records the lawful basis under which it was recorded (AC4). The basis is captured HERE, at the moment of recording, because that is the only moment it can be captured honestly — a basis reconstructed later is a guess about what the prospect was told.\n\nTHE BASIS IS REQUIRED, NEVER DEFAULTED. A call submitted without one is refused with 422 RECORDING_CONSENT_MISSING rather than stored with a null basis to be filled in later. The SOP requires calls to 'follow calling-hour, DNC, and recording-consent rules', and a row with a blank basis is indistinguishable, a month on, from one where consent was genuinely obtained and simply not written down.\n\nRegistering a call NEVER stores transcript content. Only the identifiers, the basis and the pointer to sdk-conversation are held locally, so a call whose consent is later revoked has no content here to purge.\n\nA create at a collection root, so 201 (MUST-54).\n\nProtected by the authenticate guard and governed by call.review. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/ai/coach/calls",
+  "method": "POST",
+  "taskId": "74a0891b-3892-4e93-aad4-450bfd776afa",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 3,
+  "expectedStatus": 201,
+  "coversCriterion": ["74a0891b-3892-4e93-aad4-450bfd776afa#AC4"],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "captureResponse": {
+    "ai.coachCall.response.data.call.id": "data.call.id"
+  },
+  "testCases": [
+    {
+      "name": "Register a call with a recorded consent basis",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "externalCallId": "{{dynamic:uuid}}",
+        "repEmail": "{{dynamic:email}}",
+        "occurredAt": "{{dynamic:pastdatetime}}",
+        "recordingConsentBasisRef": "{{dynamic:uuid}}",
+        "recordingConsentCapturedAt": "{{dynamic:pastdatetime}}"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": { "success": true, "data": { "call": { "hasRecordingBasis": true } } }
+    },
+    {
+      "name": "Refuse a call with no recording consent basis",
+      "testType": "negative",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "externalCallId": "{{dynamic:uuid}}",
+        "repEmail": "{{dynamic:email}}",
+        "occurredAt": "{{dynamic:pastdatetime}}"
+      },
+      "expectedStatus": 422,
+      "expectedError": { "code": "RECORDING_CONSENT_MISSING" }
+    },
+    {
+      "name": "Reject an unauthenticated registration",
+      "testType": "negative",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
+      "payload": {
+        "externalCallId": "{{dynamic:uuid}}",
+        "repEmail": "{{dynamic:email}}",
+        "occurredAt": "{{dynamic:pastdatetime}}",
+        "recordingConsentBasisRef": "{{dynamic:uuid}}",
+        "recordingConsentCapturedAt": "{{dynamic:pastdatetime}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "externalCallId, repEmail and occurredAt are required",
+      "when": "the payload is malformed"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 422,
+      "code": "RECORDING_CONSENT_MISSING",
+      "message": "A recording consent basis is required before a call may be registered",
+      "when": "recordingConsentBasisRef or recordingConsentCapturedAt is absent"
+    }
+  ]
+}

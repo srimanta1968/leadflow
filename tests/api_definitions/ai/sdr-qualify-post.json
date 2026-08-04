@@ -1,0 +1,119 @@
+{
+  "name": "POST /api/leadflow/ai/sdr/qualify - AI SDR qualifies a lead and PROPOSES a first touch",
+  "description": "Qualifies an inbound lead against the configured criteria, researches the company from PERMITTED SOURCES ONLY with provenance recorded, and drafts a first-touch email or SMS in the approved template voice with the offer-truth constraints applied.\n\nEVERYTHING IT RETURNS IS A PROPOSAL (AC1). The SOP is explicit: 'AI may suggest messages, scores, summaries, and next actions; a qualified human reviews consequential outputs.' So this endpoint has NO send path at all — not a guarded one, not a flagged one. It writes a proposal row with status 'proposed' and stops. Sending requires POST /api/leadflow/ai/sdr/proposals/:id/accept, a separately governed action carrying message.send_approved. An autonomous send is not prevented by a check here; it is prevented by there being no code that sends.\n\nTHE SCORE IS COMPUTED LOCALLY AND DETERMINISTICALLY, with per-feature attribution — every point traced to the criterion that awarded it. A score a rep cannot interrogate is a number they will either over-trust or ignore, and both are worse than no score. Determinism also means the same lead scores the same twice, which an LLM cannot promise.\n\nRESEARCH USES A CLOSED REGISTRY OF PERMITTED SOURCES (AC2). Any source not in the registry is refused with RESEARCH_SOURCE_NOT_PERMITTED — refused, not skipped, because silently dropping a source produces a proposal that looks fully researched while missing the thing the rep would have wanted to know. Every fact carries the source it came from, when it was retrieved, and whether that source cost a data credit.\n\nOFFER TRUTH IS ENFORCED ON THE DRAFT, not assumed. The SOP permits 'only approved price, terms, feature status, claims, and scarcity'. A draft promising a roadmap date, offering an unapproved discount, or promising a result is REJECTED with OFFER_TRUTH_VIOLATION rather than quietly edited: a silently corrected draft teaches nobody that the generator is producing unusable copy.\n\nProtected by the authenticate guard and governed by lead.work_assigned. QA: depends on register, login and a captured lead.",
+  "endpoint": "/api/leadflow/ai/sdr/qualify",
+  "method": "POST",
+  "taskId": "74a0891b-3892-4e93-aad4-450bfd776afa",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
+    "74a0891b-3892-4e93-aad4-450bfd776afa#AC2"
+  ],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/leads"],
+  "fieldEnums": {
+    "status": ["proposed", "accepted", "rejected"],
+    "channel": ["email", "sms"]
+  },
+  "captureResponse": {
+    "ai.sdrProposal.response.data.proposal.id": "data.proposal.id"
+  },
+  "testCases": [
+    {
+      "name": "Qualifying a lead returns a PROPOSAL, never a sent message",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "leadId": "{{cache:leads.create.response.data.lead.id}}",
+        "channel": "email"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": { "proposal": { "status": "proposed", "sent": false } }
+      }
+    },
+    {
+      "name": "Reject a research source outside the permitted registry",
+      "testType": "negative",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC2",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "leadId": "{{cache:leads.create.response.data.lead.id}}",
+        "channel": "email",
+        "researchSources": ["scraped_social_profile"]
+      },
+      "expectedStatus": 422,
+      "expectedError": { "code": "RESEARCH_SOURCE_NOT_PERMITTED" }
+    },
+    {
+      "name": "Reject an unknown lead",
+      "testType": "negative",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "leadId": "{{static:00000000-0000-0000-0000-000000000000}}",
+        "channel": "email"
+      },
+      "expectedStatus": 404,
+      "expectedError": { "code": "NOT_FOUND" }
+    },
+    {
+      "name": "Reject a channel that is not email or sms",
+      "testType": "negative",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": {
+        "leadId": "{{cache:leads.create.response.data.lead.id}}",
+        "channel": "carrier_pigeon"
+      },
+      "expectedStatus": 400,
+      "expectedError": { "code": "VALIDATION_ERROR" }
+    },
+    {
+      "name": "Reject an unauthenticated qualification",
+      "testType": "negative",
+      "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
+      "payload": {
+        "leadId": "{{cache:leads.create.response.data.lead.id}}",
+        "channel": "email"
+      },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "leadId must be a UUID; channel must be one of: email, sms",
+      "when": "the payload is malformed"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "Lead not found",
+      "when": "no lead has that id"
+    },
+    {
+      "status": 422,
+      "code": "RESEARCH_SOURCE_NOT_PERMITTED",
+      "message": "Research source is not in the permitted registry",
+      "when": "a requested research source is not registered. REFUSED rather than skipped: a silently dropped source produces a proposal that looks fully researched while missing what the rep would most want to know."
+    },
+    {
+      "status": 422,
+      "code": "OFFER_TRUTH_VIOLATION",
+      "message": "Draft violates the approved offer-truth constraints",
+      "when": "a generated draft promises a roadmap date, an unapproved discount, a guaranteed result, or a price outside the approved offer version. Rejected rather than edited — a silently corrected draft teaches nobody that the generator is producing unusable copy."
+    }
+  ]
+}
