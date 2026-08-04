@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { adapterKeys } from '../../config/sourceAdapters';
+import { applyAttribution, extractAttribution } from './attribution';
 import { dataService } from '../../services/DataService';
 import { currentTenantContext, tenantIdFor } from '../../platform/tenancy/tenantHierarchy';
 import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
@@ -240,15 +241,50 @@ export class IntakeService {
     }
   }
 
-  /** Assert the raw event upstream. */
+  /**
+   * Turn the signal into a lead, and assert the raw event upstream.
+   *
+   * CREATES THE LOCAL LEAD ROW. Without it there is nothing for attribution to
+   * live on and nothing for routing, SLA or the closed-won report to reference
+   * — intake would produce a source record upstream and a synthetic id here
+   * that pointed at no row, so "attribution survives from intake to closed-won"
+   * would be a mechanism nothing used.
+   *
+   * Attribution is applied in the SAME call, immediately after the insert,
+   * rather than left to a caller. Four paths create leads and only some carry
+   * attribution; making each remember eleven fields means the one that forgets
+   * produces a lead that reports as organic forever.
+   */
   private static async process(signal: IntakeSignal, tenantId: string | null): Promise<string> {
-    // A REAL uuid, because intake_event.lead_id is a UUID column. A composite
-    // like `intake_<platform>_<eventId>` reads nicely and is not a uuid, so the
-    // insert threw, the catch treated it as a downstream outage, and every
-    // signal came back `deferred` — a schema mismatch wearing an outage's
-    // clothes. The platform and source event id are already columns on the same
-    // row, so nothing is lost for tracing.
-    const leadId = randomUUID();
+    const hints = (signal.contactHints ?? {}) as Record<string, unknown>;
+    const raw = (signal.rawPayload ?? {}) as Record<string, unknown>;
+    const readString = (...keys: string[]): string | null => {
+      for (const source of [hints, raw]) {
+        for (const key of keys) {
+          const value = source[key];
+          if (typeof value === 'string' && value.trim().length > 0) {
+            return value.trim();
+          }
+        }
+      }
+      return null;
+    };
+
+    // The lead row the rest of the product hangs off. Name and email may both
+    // be absent — a phone signal or a voice note often has neither — and that
+    // is fine: the row exists, the evidence is upstream, and a person fills the
+    // gaps. Refusing to create it would lose the lead entirely.
+    const row = await dataService.queryOne<{ id: string }>(
+      `INSERT INTO leads (name, email, source) VALUES ($1, $2, $3) RETURNING id`,
+      [readString('full_name', 'name'), readString('email'), signal.platform]
+    );
+    const leadId = row?.id ?? randomUUID();
+
+    // Applied here so no call site has to remember eleven fields.
+    await applyAttribution(
+      leadId,
+      extractAttribution(signal.platform, signal.sourceEventId, raw, signal.campaign)
+    );
 
     if (SdkGatewayClient.isConfigured()) {
       await SdkGatewayClient.call({

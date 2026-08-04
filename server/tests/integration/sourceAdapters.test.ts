@@ -9,7 +9,7 @@ import {
   extractAttribution,
   readAttribution,
 } from '../../src/features/intake/attribution';
-import { INTAKE_PLATFORMS } from '../../src/features/intake/intakeService';
+import { INTAKE_PLATFORMS, IntakeService } from '../../src/features/intake/intakeService';
 import { dataService } from '../../src/services/DataService';
 
 /**
@@ -277,5 +277,60 @@ describe('attribution survives to closed-won', () => {
     // A silent no-op against a wrong id would look identical to a successful
     // write, and the campaign would quietly go missing.
     expect(updated).toBe(0);
+  });
+});
+
+describe('attribution travels the WHOLE way — intake to the lead', () => {
+  it('an intake signal produces a lead carrying its campaign', async () => {
+    // The end-to-end claim AC4 actually makes. Until this was wired, extract
+    // and apply existed and were unit-tested while NOTHING called them: intake
+    // returned a synthetic id pointing at no row, so attribution had nowhere to
+    // live and the criterion was a mechanism nobody used.
+    const eventId = `attr-e2e-${Date.now()}`;
+    const result = await IntakeService.accept({
+      platform: 'meta_lead_ads',
+      sourceEventId: eventId,
+      signalKind: 'lead',
+      occurredAt: new Date().toISOString(),
+      rawPayload: { full_name: 'ATTR-TEST E2E', email: 'e2e@example.test', fbclid: 'fb-e2e' },
+      contactHints: { email: 'e2e@example.test' },
+      campaign: { campaign_id: 'c-e2e', ad_id: 'a-e2e' },
+      permissionFields: null,
+      transcript: null,
+    });
+
+    expect(result.outcome).toBe('accepted');
+    expect(result.leadId).toBeTruthy();
+    created.push(result.leadId as string);
+
+    const attribution = await readAttribution(result.leadId as string);
+    expect(attribution?.campaignId).toBe('c-e2e');
+    expect(attribution?.adId).toBe('a-e2e');
+    expect(attribution?.clickId).toBe('fb-e2e');
+    expect(attribution?.platform).toBe('meta_lead_ads');
+    // The join back to the raw evidence, so a disputed attribution is settled
+    // against what the platform actually sent.
+    expect(attribution?.sourceEventId).toBe(eventId);
+  });
+
+  it('creates the lead even when the signal carries no name or email', async () => {
+    // A phone signal or a voice note often has neither. Refusing to create the
+    // row would lose the lead entirely; the evidence is upstream and a person
+    // fills the gaps.
+    const result = await IntakeService.accept({
+      platform: 'phone',
+      sourceEventId: `attr-noname-${Date.now()}`,
+      signalKind: 'lead',
+      occurredAt: new Date().toISOString(),
+      rawPayload: { tracking_number: '+441134960000' },
+      contactHints: null,
+      campaign: null,
+      permissionFields: null,
+      transcript: null,
+    });
+
+    expect(result.outcome).toBe('accepted');
+    expect(result.leadId).toBeTruthy();
+    created.push(result.leadId as string);
   });
 });
