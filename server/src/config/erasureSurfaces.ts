@@ -42,9 +42,9 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
   {
     surface: 'leads',
     method: 'redact',
-    personalColumns: ['name', 'email', 'phone', 'company', 'message', 'utm'],
+    personalColumns: ['name', 'email'],
     rationale:
-      'The primary subject surface. REDACTED rather than deleted: sla_metrics, sla_alerts and every routing decision reference the lead id, and deleting the row would either cascade away the compliance record or break the FK. Nulling the personal columns removes the person while leaving the fact that a lead existed and was handled, which is what an SLA audit needs.',
+      'The primary subject surface, and it holds LESS than it looks. The local projection stores name, email and source only — phone, company, message and utm are accepted by the capture validator and asserted upstream, never inserted here. This list previously named all six, and the four phantom columns would have made erasure fail with "column does not exist" at the exact moment somebody exercised their erasure right, on a path nobody walks in normal use. `erasurePlan.test.ts` now checks every named column against the live schema so it cannot drift again. The fields held upstream are cleared through the source record, which is a different surface and not this list. REDACTED rather than deleted: sla_metrics, sla_alerts and every routing decision reference the lead id, and deleting the row would either cascade away the compliance record or break the FK. Nulling the personal columns removes the person while leaving the fact that a lead existed and was handled, which is what an SLA audit needs.',
   },
   {
     surface: 'users',

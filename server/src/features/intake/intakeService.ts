@@ -1,18 +1,30 @@
 import { randomUUID } from 'crypto';
+import { adapterKeys } from '../../config/sourceAdapters';
 import { dataService } from '../../services/DataService';
 import { currentTenantContext, tenantIdFor } from '../../platform/tenancy/tenantHierarchy';
 import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
 import { SignatureState } from './signatureVerifier';
 
-/** Platforms whose signals LeadFlow accepts. */
+/**
+ * Platforms whose signals LeadFlow accepts.
+ *
+ * DERIVED FROM THE ADAPTER REGISTRY, not typed out beside it. The two lists
+ * were written separately and drifted immediately: seven configured adapters —
+ * linkedin, tiktok, chat_handoff, email, referral among them — named platforms
+ * this validator rejected, so they were configuration that could never fire and
+ * looked complete in every review. A hand-maintained second list is a second
+ * thing to forget, and this one failed on its first day.
+ *
+ * The extras below are channels intake accepts that have no adapter of their
+ * own: facebook and instagram arrive through the Meta adapter but platforms
+ * label them separately, and csv_import, whatsapp and partner_api are ingress
+ * routes rather than integrations.
+ */
 export const INTAKE_PLATFORMS = [
-  'web_form',
-  'meta_lead_ads',
-  'google_lsa',
+  ...adapterKeys(),
   'facebook',
   'instagram',
   'whatsapp',
-  'phone',
   'csv_import',
   'partner_api',
 ] as const;

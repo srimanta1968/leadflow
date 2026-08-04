@@ -5,5 +5,7 @@ export { IntakeController } from './intakeController';
 export { IntakeService, INTAKE_PLATFORMS, SIGNAL_KINDS } from './intakeService';
 export type { IntakeSignal, IntakePlatform, SignalKind, IntakeResult } from './intakeService';
 export { verifySignature, signPayload } from './signatureVerifier';
+export { extractAttribution, applyAttribution, readAttribution, EMPTY_ATTRIBUTION } from './attribution';
+export type { Attribution } from './attribution';
 export type { SignatureState, VerificationResult } from './signatureVerifier';
 export { default as intakeRoutes } from './intakeRoutes';

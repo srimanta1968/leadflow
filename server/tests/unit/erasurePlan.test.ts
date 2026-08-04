@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { dataService } from '../../src/services/DataService';
 import {
   ERASURE_SURFACES,
   actionableSurfaces,
@@ -128,5 +129,52 @@ describe('reconciliation', () => {
       empty,
     ]);
     expect(certificate.complete).toBe(true);
+  });
+});
+
+describe('every named personal column actually exists', () => {
+  /**
+   * THE GAP THIS CLOSES. The suite already checks that every TABLE is
+   * classified, and that a `redact` surface names at least one column — but
+   * never that the named columns are real. `leads` declared phone, company,
+   * message and utm; the table has none of them.
+   *
+   * That is not cosmetic. Erasure issues `UPDATE leads SET phone = NULL, ...`,
+   * which fails with "column does not exist" — at the exact moment somebody is
+   * exercising their erasure right, on a path nobody exercises in normal use.
+   * The certificate would have been unobtainable and the failure would surface
+   * as a 500 during a data-subject request.
+   */
+  it('names only columns the live schema defines', async () => {
+    const rows = await dataService.query<{ table_name: string; column_name: string }>(
+      `SELECT table_name, column_name
+         FROM information_schema.columns
+        WHERE table_schema = 'public'`,
+      []
+    );
+
+    const columnsByTable = new Map<string, Set<string>>();
+    for (const row of rows) {
+      if (!columnsByTable.has(row.table_name)) {
+        columnsByTable.set(row.table_name, new Set());
+      }
+      columnsByTable.get(row.table_name)?.add(row.column_name);
+    }
+
+    const phantom: string[] = [];
+    for (const surface of ERASURE_SURFACES) {
+      const actual = columnsByTable.get(surface.surface);
+      if (!actual) {
+        // Table coverage is asserted elsewhere; skip rather than double-report.
+        continue;
+      }
+      for (const column of surface.personalColumns) {
+        if (!actual.has(column)) {
+          phantom.push(`${surface.surface}.${column}`);
+        }
+      }
+    }
+
+    expect(phantom).toEqual([]);
   });
 });
