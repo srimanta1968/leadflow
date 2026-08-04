@@ -19,6 +19,20 @@
 -- "no campaign" and "campaign unknown" indistinguishable in exactly the report
 -- this exists to serve.
 
+-- FIRST-RUN NOTE, observed rather than predicted. `ALTER TABLE leads ADD COLUMN`
+-- takes an ACCESS EXCLUSIVE lock, and the jest suites run in parallel workers
+-- against ONE database, each calling runMigrations() in beforeAll. On the run
+-- that first applies this file, four suites failed — routing, slaMonitor,
+-- slaPolicy and platformAuth — every one of which passed in isolation. They were
+-- blocked on the lock, not broken.
+--
+-- It is a one-time cost: the migration is recorded in _leadflow_migrations and
+-- skipped thereafter, and the very next full run was green. Recorded because the
+-- next person to ALTER a hot table will see the same thing and reasonably
+-- conclude they broke something. Against a live database this is the same
+-- consideration at a larger scale — an ADD COLUMN without a default is fast in
+-- modern PostgreSQL, but the lock is still exclusive for its duration.
+
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS attribution_platform   VARCHAR(64);
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS attribution_campaign_id VARCHAR(255);
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS attribution_ad_id       VARCHAR(255);
