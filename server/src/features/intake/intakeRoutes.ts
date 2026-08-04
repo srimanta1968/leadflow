@@ -6,6 +6,7 @@ import { IntakeController } from './intakeController';
 // @governance-tracked
 // Definition: tests/api_definitions/intake/events-post.json
 // Definition: tests/api_definitions/intake/webhooks-platform-post.json
+// Definition: tests/api_definitions/intake/classify-post.json
 // Definition: tests/api_definitions/intake/adapters-get.json
 // Definition: tests/api_definitions/intake/adapters-launch-evidence-get.json
 
@@ -30,6 +31,7 @@ const router: Router = Router();
 
 router.post('/events', authenticate, asyncHandler(IntakeController.events));
 router.post('/backfill', authenticate, asyncHandler(IntakeController.backfill));
+router.post('/classify', authenticate, asyncHandler(IntakeController.classify));
 router.get('/adapters', authenticate, asyncHandler(IntakeController.adapters));
 router.get(
   '/adapters/:key/launch-evidence',

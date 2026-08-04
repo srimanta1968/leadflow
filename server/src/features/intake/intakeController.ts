@@ -6,6 +6,7 @@ import { AppError, ErrorCodes } from '../../utils/errors';
 import { SOURCE_ADAPTERS, launchEvidenceFor } from '../../config/sourceAdapters';
 import { IntakeService, IntakeSignal } from './intakeService';
 import { verifySignature } from './signatureVerifier';
+import { classifySignal, knownSignalKinds } from './signalPolicy';
 
 /** A request that may carry the raw body the signature was computed over. */
 type WebhookRequest = GovernedRequest & { rawBody?: string };
@@ -115,6 +116,62 @@ export class IntakeController {
 
     res.status(200).json({ success: true, data: result });
   }
+
+  /**
+   * POST /api/leadflow/intake/classify — the SOP §03 decision for one signal.
+   *
+   * A read-shaped question about a signal rather than a create, so 200: nothing
+   * is stored, and answering 201 would suggest the classification itself made a
+   * record.
+   *
+   * Returns the decision WITH its reasoning. A classification with no stated
+   * basis is unauditable — six months on, nobody can say why a comment became a
+   * lead and an impression did not without re-reading the code as it was that
+   * day.
+   */
+  static classify = governed(
+    {
+      action: PERMISSIONS.LEAD_WORK_ASSIGNED,
+      event: AUDIT_EVENTS.CAPTURE_NORMALIZED,
+      purpose: 'lead_management',
+      resourceType: 'intake_signal',
+      metadata: (req) => ({
+        signal_kind: (req.body as { signalKind?: string })?.signalKind ?? null,
+        identifiable: (req.body as { identifiable?: boolean })?.identifiable === true,
+      }),
+      obligations: {
+        own_record_only: {
+          kind: 'defer',
+          because: 'a classification decides whether a record exists at all, so there is no owner yet',
+        },
+      },
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const body = (req.body ?? {}) as {
+        signalKind?: string;
+        identifiable?: boolean;
+        existingLeadId?: string | null;
+      };
+
+      if (typeof body.signalKind !== 'string' || body.signalKind.trim().length === 0) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          `signalKind is required and should be one of: ${knownSignalKinds().slice(0, 8).join(', ')}...`
+        );
+      }
+
+      const classification = classifySignal(body.signalKind, {
+        // Defaults to FALSE. An unstated identifiable flag must not be read as
+        // "yes" — that would turn an anonymous comment into a lead on the
+        // strength of a missing field.
+        identifiable: body.identifiable === true,
+        existingLeadId: body.existingLeadId ?? null,
+      });
+
+      res.status(200).json({ success: true, data: classification });
+    }
+  );
 
   /**
    * GET /api/leadflow/intake/adapters — every configured source.

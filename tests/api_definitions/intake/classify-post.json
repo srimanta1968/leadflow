@@ -1,0 +1,161 @@
+{
+  "name": "POST /api/leadflow/intake/classify - Create, merge or no-record",
+  "description": "Applies SOP §03's signal table to one signal and returns the decision WITH its reasoning. A question about a signal rather than a create, so 200 — nothing is stored, and 201 would suggest the classification itself made a record.\n\nONE TABLE, NOT SCATTERED CONDITIONALS. The same question — does this signal become a sales record, and if so how — is asked by the webhook receiver, the social connector, the chat handoff and the checkout hook. Answered separately in each, the four drift, and the one that drifts is the one nobody re-reads.\n\nTHE REASON IS RETURNED, NOT JUST THE VERDICT. A classification with no stated basis is unauditable: six months on nobody can say why a comment became a lead and an impression did not without re-reading the code as it was that day. Every rule carries a reason and the response quotes it, along with the rule key so the table row is traceable from the outcome.\n\nANONYMOUS ENGAGEMENT CREATES NOTHING — no record, and no identity. A like, a view, an impression or an anonymous visit is not a sales signal, and the response reports createsRecord and mayInferIdentity as separate falses because they are different refusals. Retargeting still happens against the anonymous audience, which needs no identity. This holds EVEN IF the viewer is identifiable: knowing who browsed a page does not make browsing a sales signal, or every logged-in visit would manufacture a lead.\n\nAN INTERESTED COMMENT NEEDS AN IDENTIFIABLE PERSON. 'Interested' from a named account is a lead; the same word from an account we cannot resolve is not, and the gap between them is never closed by inventing an identity. The refusal names the rule that WOULD have applied, because 'this would have been a lead if we could tell who it was' is the useful fact.\n\nCHECKOUT-STARTED IS THE ONLY HIGHEST PRIORITY in the table. Someone who tried to pay and was stopped outranks every other signal, and the window in which help is useful is hours. The rule is ordered before the general web rules so it cannot be absorbed and silently demoted.\n\nAN UNKNOWN SIGNAL DEFAULTS TO NO_RECORD. A signal the table does not describe is one nobody has decided about; guessing CREATE would let an unreviewed event type manufacture leads and identities.\n\nProtected by the authenticate guard. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/intake/classify",
+  "method": "POST",
+  "taskId": "ef327d9d-9a69-48de-9db5-06531c0d03e7",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC1",
+    "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC2",
+    "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC3",
+    "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC4"
+  ],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "signalKind": [
+      "website_lead_form",
+      "social_lead_form",
+      "lead_form",
+      "demo_request",
+      "dm",
+      "chat",
+      "inbound_call",
+      "referral",
+      "comment_interested",
+      "checkout_started",
+      "cart_abandoned",
+      "license_purchase_completed",
+      "pricing_revisit",
+      "like",
+      "view",
+      "impression",
+      "page_view"
+    ],
+    "decision": ["CREATE", "MERGE", "NO_RECORD", "CLOSED_WON"],
+    "priority": ["highest", "high", "normal", "none"]
+  },
+  "captureResponse": {
+    "intake.classify.response.data.decision": "data.decision",
+    "intake.classify.response.data.ruleKey": "data.ruleKey"
+  },
+  "testCases": [
+    {
+      "name": "A lead form CREATES, at high priority, with the SLA clock",
+      "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": { "signalKind": "website_lead_form", "identifiable": true },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "decision": "CREATE", "priority": "high", "ruleKey": "lead_form" }
+      }
+    },
+    {
+      "name": "An anonymous page view creates NO record and NO identity",
+      "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC2",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": { "signalKind": "page_view", "identifiable": false },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "decision": "NO_RECORD", "createsRecord": false, "mayInferIdentity": false }
+      }
+    },
+    {
+      "name": "An identifiable viewer STILL creates no record",
+      "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC2",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": { "signalKind": "impression", "identifiable": true },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "decision": "NO_RECORD", "mayInferIdentity": false }
+      }
+    },
+    {
+      "name": "A known contact revisiting pricing MERGES and pauses nurture",
+      "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC3",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": { "signalKind": "pricing_revisit", "identifiable": true },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "decision": "MERGE", "priority": "high", "ruleKey": "known_contact_revisit" }
+      }
+    },
+    {
+      "name": "Checkout started is the HIGHEST priority",
+      "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC4",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": { "signalKind": "checkout_started", "identifiable": false },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "decision": "CREATE", "priority": "highest", "ruleKey": "checkout_started" }
+      }
+    },
+    {
+      "name": "An unidentifiable interested comment is refused, not invented",
+      "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC2",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": { "signalKind": "comment_interested", "identifiable": false },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "decision": "NO_RECORD", "ruleKey": "interested_comment" }
+      }
+    },
+    {
+      "name": "A completed purchase goes to CLOSED WON, not to a lead",
+      "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": { "signalKind": "license_purchase_completed", "identifiable": true },
+      "expectedStatus": 200,
+      "expectedResponse": { "success": true, "data": { "decision": "CLOSED_WON" } }
+    },
+    {
+      "name": "An unknown signal kind defaults to NO_RECORD",
+      "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC2",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": { "signalKind": "{{static:some_new_event}}", "identifiable": true },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "decision": "NO_RECORD", "ruleKey": "unmatched" }
+      }
+    },
+    {
+      "name": "Reject a request with no signal kind",
+      "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "payload": { "identifiable": true },
+      "expectedStatus": 400,
+      "expectedError": { "code": "VALIDATION_ERROR" }
+    },
+    {
+      "name": "Reject an unauthenticated classification",
+      "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC1",
+      "payload": { "signalKind": "lead_form", "identifiable": true },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "signalKind is required",
+      "when": "signalKind is absent or blank. An UNKNOWN kind is not an error — it classifies as NO_RECORD, which is the safe default; a MISSING one is a caller bug, because the question cannot be asked without it."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    }
+  ]
+}
