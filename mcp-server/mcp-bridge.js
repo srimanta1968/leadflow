@@ -1175,13 +1175,17 @@ const TOOLS = [
   },
   {
     name: 'projexlight_get_task',
-    description: 'Get a task by its ID with full details.',
+    description: 'Get a task by UUID OR short ID (e.g. TK-4141) with full details. Short IDs are unique per TENANT, not per project: the sequence runs across every project a tenant owns rather than restarting in each, so no project filter is needed to resolve one. They are NOT unique across tenants (TK-1 exists in 11 of them), so the resolving credential decides the answer — pass projectPath so it resolves to the project you mean, otherwise the same short ID can name a different task.',
     inputSchema: {
       type: 'object',
       properties: {
         taskId: {
           type: 'string',
-          description: 'UUID of the task to retrieve'
+          description: 'Task UUID, or short ID such as TK-4141'
+        },
+        projectPath: {
+          type: 'string',
+          description: 'Project root path. Determines which tenant the short ID is resolved against.'
         }
       },
       required: ['taskId']

@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-08-04T01:08:56.955498Z",
+  "taskId": "ef327d9d-9a69-48de-9db5-06531c0d03e7",
+  "gaps": [
+    {
+      "criterionId": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC3",
+      "criterion": "A known contact revisiting pricing merges, rescores and pauses nurture",
+      "verdict": "partial",
+      "gap": "The DECISION is complete and tested end to end: pricing_revisit from an identifiable contact classifies as MERGE at high priority, and the action set names merge_into_existing_record, rescore, pause_generic_nurture and create_urgent_owner_task. Verified live. What is NOT built is the EXECUTION of those actions - nothing yet performs the merge, calls sdk-lead-scoring to rescore, or tells sdk-sequence to pause the nurture. The task is scoped as a policy engine ('ONE explicit configurable decision rather than scattered conditionals') and its endpoint returns the decision plus reasoning, so deciding is the deliverable; but a reader of the criterion could reasonably expect the pause to actually happen. Executing them needs sdk-lead-scoring and sdk-sequence wiring that is not in this task, and stubbing it would produce a call site that reports success while nothing paused - worse than the honest gap, because a nurture sequence still running at somebody actively evaluating is exactly what the criterion exists to prevent.",
+      "evidence": {
+        "apiDefinitions": [
+          "tests/api_definitions/intake/classify-post.json"
+        ],
+        "files": [
+          "server/src/features/intake/signalPolicy.ts",
+          "server/tests/unit/signalPolicy.test.ts"
+        ]
+      }
+    }
+  ]
+}

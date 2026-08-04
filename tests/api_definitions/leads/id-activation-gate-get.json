@@ -1,0 +1,95 @@
+{
+  "name": "GET /api/leads/:id/activation-gate - May this record be worked?",
+  "description": "Evaluates SOP §03's required-field gate for one lead and names EVERY missing field. A read, so 200 — including when the answer is no. A blocked record is not an error the caller caused, and a 4xx would make an integrity screen look broken while it is doing exactly its job.\n\nACTIVATION, NOT CREATION. The record is created the moment a signal arrives; refusing to store it until it is complete would lose the lead, which is the opposite of the point. This gate governs whether it may be WORKED — assigned, sequenced, counted in the pipeline.\n\nEVERY MISSING FIELD IS NAMED, never just the first. A gate that stops at the first failure turns completing a record into a guessing game: the operator fills one field, resubmits, and is told about the next — six round trips for six fields. Each entry also carries WHY the field is required and the alternatives that would each have satisfied it, so the operator knows their options rather than only their obligation.\n\nONE-OF REQUIREMENTS ARE ONE REQUIREMENT. 'Usable phone, email or social id' is met by any of the three; listing them separately would block a perfectly contactable record for lacking two channels it never needed. Same for name-or-company, and for the campaign, which an organic web form legitimately has none of.\n\nEVALUATING MAKES THE RECORD VISIBLE. The verdict writes activation_state, and the manager's integrity queue is an indexed read over that column rather than a re-evaluation of every lead. The marker is written locally BEFORE the incident SDK is called, so a blocked record stays in the queue even if raising the exception fails upstream — a silently incomplete record is the worse outcome by far, sitting in the pipeline looking like every other lead while being unworkable.\n\nProtected by the authenticate guard — the Authorization header is required on this GET. QA: depends on register, login and a captured lead so there is a record to gate.",
+  "endpoint": "/api/leads/:id/activation-gate",
+  "method": "GET",
+  "taskId": "bdaec986-d033-4fcd-b201-07b81f13b1fc",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC3",
+    "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads"
+  ],
+  "fieldEnums": {
+    "state": ["active", "blocked"],
+    "group": [
+      "identity_and_source",
+      "ownership_and_lifecycle",
+      "communication_and_commercial"
+    ]
+  },
+  "captureResponse": {
+    "leads.activationGate.response.data.state": "data.state"
+  },
+  "testCases": [
+    {
+      "name": "A freshly captured lead is BLOCKED and every gap is named",
+      "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC3",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "id": "{{cache:leads.create.response.data.lead.id}}" },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "state": "blocked" }
+      }
+    },
+    {
+      "name": "Blocking marks the record, which is what puts it in the manager queue",
+      "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "id": "{{cache:leads.create.response.data.lead.id}}" },
+      "expectedStatus": 200,
+      "expectedResponse": { "success": true, "data": { "state": "blocked" } }
+    },
+    {
+      "name": "404 for a lead that does not exist",
+      "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC3",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "id": "{{static:00000000-0000-0000-0000-000000000000}}" },
+      "expectedStatus": 404,
+      "expectedError": { "code": "NOT_FOUND" }
+    },
+    {
+      "name": "Reject an id that is not a UUID",
+      "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC3",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "pathParams": { "id": "{{static:not-a-uuid}}" },
+      "expectedStatus": 400,
+      "expectedError": { "code": "VALIDATION_ERROR" }
+    },
+    {
+      "name": "Reject an unauthenticated read",
+      "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4",
+      "pathParams": { "id": "{{cache:leads.create.response.data.lead.id}}" },
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "id must be a UUID",
+      "when": "the path id is not a UUID"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "Lead not found",
+      "when": "no lead has that id. Distinct from a BLOCKED verdict, which is a 200 — 'this record cannot be worked yet' and 'this record does not exist' are different answers and a client acts on them differently."
+    }
+  ]
+}

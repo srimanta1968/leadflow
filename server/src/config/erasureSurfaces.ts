@@ -10,7 +10,7 @@
  * Enumerated from the actual migrations rather than from memory. Verified
  * against server/src/db/migrations: the schema holds leads, users,
  * routing_rules, sla_metrics, sla_alerts, sla_policies, offline_capture_sync,
- * intake_event and intake_outage_queue — and each is classified below, including the ones that
+ * intake_event, intake_outage_queue and lead_source_event — and each is classified below, including the ones that
  * hold NOTHING, because "we checked and it is clean" and "we forgot it
  * existed" must not look alike. `erasurePlan.test.ts` reads the live schema and
  * fails if a table is added without a decision here, which is how this list
@@ -42,9 +42,9 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
   {
     surface: 'leads',
     method: 'redact',
-    personalColumns: ['name', 'email'],
+    personalColumns: ['name', 'email', 'canonical_email', 'canonical_phone', 'canonical_social_id'],
     rationale:
-      'The primary subject surface, and it holds LESS than it looks. The local projection stores name, email and source only — phone, company, message and utm are accepted by the capture validator and asserted upstream, never inserted here. This list previously named all six, and the four phantom columns would have made erasure fail with "column does not exist" at the exact moment somebody exercised their erasure right, on a path nobody walks in normal use. `erasurePlan.test.ts` now checks every named column against the live schema so it cannot drift again. The fields held upstream are cleared through the source record, which is a different surface and not this list. REDACTED rather than deleted: sla_metrics, sla_alerts and every routing decision reference the lead id, and deleting the row would either cascade away the compliance record or break the FK. Nulling the personal columns removes the person while leaving the fact that a lead existed and was handled, which is what an SLA audit needs.',
+      'The primary subject surface, and it holds LESS than it looks. The local projection stores name, email and source only — phone, company, message and utm are accepted by the capture validator and asserted upstream, never inserted here. This list previously named all six, and the four phantom columns would have made erasure fail with "column does not exist" at the exact moment somebody exercised their erasure right, on a path nobody walks in normal use. `erasurePlan.test.ts` now checks every named column against the live schema so it cannot drift again. The fields held upstream are cleared through the source record, which is a different surface and not this list. The canonical_* columns are NORMALISED COPIES of the same personal data, added for dedupe, and they must be redacted too — leaving them would keep the email and phone in the very table designed to be probed on every inbound signal. Doing so also stops an erased person being deduped against, which is correct: a later signal from them starts a fresh record rather than resurrecting the one they asked to be erased. REDACTED rather than deleted: sla_metrics, sla_alerts and every routing decision reference the lead id, and deleting the row would either cascade away the compliance record or break the FK. Nulling the personal columns removes the person while leaving the fact that a lead existed and was handled, which is what an SLA audit needs.',
   },
   {
     surface: 'users',
@@ -121,6 +121,13 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
     personalColumns: [],
     rationale:
       'Holds a platform, a source event id, which dependency was down, an attempt count and timestamps. No payload and no personal data — the content it refers to lives in intake_event, which is where erasure acts. Kept rather than cleared so the record of a delay survives: "this event sat queued for four hours during an outage" is exactly what gets asked afterwards, and a draining backfill would in any case find a redacted payload and create nothing.',
+  },
+  {
+    surface: 'lead_source_event',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'One row per source event that contributed to a canonical lead. Holds a lead id, the platform, the event id that platform issued, which dedupe key matched, and a consent snapshot — no name, email, phone or handle. The person is identified only through lead_id, which the leads surface redacts. KEPT rather than cleared, and consent is the reason: the snapshot is the proof of what was permitted at the moment each signal arrived, including a revocation, and erasing it would destroy the evidence that the erasure itself was honoured. SOP §03 is explicit that a merge preserves every source event and consent record; erasure does not get to undo that, because the record of a privacy action must outlive the data it acted on.',
   },
 ];
 

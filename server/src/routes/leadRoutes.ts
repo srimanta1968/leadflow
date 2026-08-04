@@ -18,6 +18,9 @@ router.use(authenticate);
 
 router.post('/', asyncHandler(LeadController.capture));
 router.get('/', asyncHandler(LeadController.list));
+// Registered BEFORE '/:id' so Express does not match 'activation-gate'
+// as part of the id segment.
+router.get('/:id/activation-gate', asyncHandler(LeadController.activationGate));
 router.get('/:id', asyncHandler(LeadController.getById));
 
 // Routing and assignment are commands against a lead, so they live under the
