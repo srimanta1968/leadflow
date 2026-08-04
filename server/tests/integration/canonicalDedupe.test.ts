@@ -9,7 +9,11 @@ import {
   normalisePhone,
   normaliseSocialId,
 } from '../../src/features/intake/canonicalDedupe';
-import { REQUIRED_FIELDS, evaluateActivationGate } from '../../src/features/intake/activationGate';
+import {
+  REQUIRED_FIELDS,
+  evaluateActivationGate,
+  listIntegrityExceptions,
+} from '../../src/features/intake/activationGate';
 import { dataService } from '../../src/services/DataService';
 
 /**
@@ -281,6 +285,25 @@ describe('the activation gate', () => {
     // silently incomplete record is the worse outcome, sitting in the pipeline
     // looking like every other lead while being unworkable.
     expect(row?.activation_state).toBe('blocked');
+  });
+
+  it('puts the blocked record in the MANAGER QUEUE', async () => {
+    const created = await dedupeAndRecord(signal({ email: `queue.${Date.now()}@example.test` }));
+    await evaluateActivationGate(created.leadId);
+
+    const queue = await listIntegrityExceptions(200);
+    // A marker nobody can list is not visible. The criterion is that a failed
+    // gate becomes a manager's problem, so the queue is the thing that has to
+    // contain it — not the column.
+    expect(queue.some((entry) => entry.leadId === created.leadId)).toBe(true);
+  });
+
+  it('clamps an absurd limit instead of scanning the table', async () => {
+    // A queue endpoint is exactly where an unbounded limit gets passed, and the
+    // whole point of the indexed read is that the screen does not get slower as
+    // the problem gets worse.
+    const queue = await listIntegrityExceptions(100000);
+    expect(queue.length).toBeLessThanOrEqual(200);
   });
 
   it('returns null for a lead that does not exist', async () => {

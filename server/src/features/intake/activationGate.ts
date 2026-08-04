@@ -232,3 +232,54 @@ async function raiseIntegrityException(
     return null;
   }
 }
+
+export interface IntegrityException {
+  leadId: string;
+  name: string | null;
+  source: string | null;
+  checkedAt: Date | null;
+  ownerUserId: string | null;
+}
+
+/**
+ * The manager's integrity queue: records that failed the gate.
+ *
+ * THIS is what makes a blocked record manager-VISIBLE. The criterion is that a
+ * failed gate becomes somebody's problem rather than silently incomplete, and a
+ * marker nobody can list is not visible — a silently incomplete record sits in
+ * the pipeline looking like every other lead while being unworkable.
+ *
+ * An indexed read over activation_state, not a re-evaluation of every lead:
+ * re-running the gate across the table to build the queue would make the screen
+ * slower the worse the problem got, which is precisely backwards.
+ *
+ * Ordered by MOST RECENTLY CHECKED first, matching the partial index. Not by
+ * severity — the count of missing fields is not stored, and sorting on it would
+ * mean computing the gate for every blocked row, which is the scan this column
+ * exists to avoid.
+ */
+export async function listIntegrityExceptions(limit = 50): Promise<IntegrityException[]> {
+  const bounded = Math.min(Math.max(Math.trunc(limit) || 50, 1), 200);
+  const rows = await dataService.query<{
+    id: string;
+    name: string | null;
+    source: string | null;
+    activation_checked_at: Date | null;
+    owner_user_id: string | null;
+  }>(
+    `SELECT id, name, source, activation_checked_at, owner_user_id
+       FROM leads
+      WHERE activation_state = 'blocked'
+      ORDER BY activation_checked_at DESC NULLS LAST
+      LIMIT $1`,
+    [bounded]
+  );
+
+  return rows.map((row) => ({
+    leadId: row.id,
+    name: row.name,
+    source: row.source,
+    checkedAt: row.activation_checked_at,
+    ownerUserId: row.owner_user_id,
+  }));
+}

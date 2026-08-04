@@ -18,6 +18,8 @@ router.use(authenticate);
 
 router.post('/', asyncHandler(LeadController.capture));
 router.get('/', asyncHandler(LeadController.list));
+// Static before parameterised, or 'integrity-exceptions' binds to :id.
+router.get('/integrity-exceptions', asyncHandler(LeadController.integrityExceptions));
 // Registered BEFORE '/:id' so Express does not match 'activation-gate'
 // as part of the id segment.
 router.get('/:id/activation-gate', asyncHandler(LeadController.activationGate));

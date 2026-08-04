@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { LeadCaptureService } from '../services/LeadCaptureService';
 import { validateLeadCapture } from '../validators/leadValidators';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { evaluateActivationGate } from '../features/intake/activationGate';
+import { evaluateActivationGate, listIntegrityExceptions } from '../features/intake/activationGate';
 import { AppError } from '../utils/errors';
 import { validateUuidParam } from '../validators/routingValidators';
 
@@ -25,6 +25,40 @@ export class LeadController {
     const offset = req.query.offset ? parseInt(String(req.query.offset), 10) : 0;
     const result = await LeadCaptureService.list(limit, offset);
     res.status(200).json({ success: true, data: result });
+  }
+
+  /**
+   * GET /api/leads/integrity-exceptions — the manager's blocked queue.
+   *
+   * The criterion is that a failed gate becomes MANAGER-VISIBLE rather than
+   * silently incomplete, and a marker nobody can list is not visible. This is
+   * the surface that makes it so.
+   *
+   * An indexed read over activation_state rather than a re-evaluation of every
+   * lead: re-running the gate across the table to build a queue would make the
+   * screen slower the worse the problem got, which is precisely backwards.
+   *
+   * Worst first — most missing fields at the top — because a manager working
+   * down the list should meet the records furthest from activation first. They
+   * are the ones most likely to be structurally broken rather than one field
+   * short.
+   */
+  static async integrityExceptions(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const exceptions = await listIntegrityExceptions(
+      parseInt(String(req.query.limit ?? '50'), 10) || 50
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        exceptions,
+        total: exceptions.length,
+        // Says what the list IS, so a manager reading an empty one knows it
+        // means "nothing blocked" rather than "the check has not run".
+        note:
+          'Records that failed the activation gate when last checked. A record appears here only after its gate has been evaluated.',
+      },
+    });
   }
 
   /**

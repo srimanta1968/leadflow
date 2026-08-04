@@ -1,0 +1,44 @@
+{
+  "name": "GET /api/leads/integrity-exceptions - The manager's blocked queue",
+  "description": "Lists records that failed the activation gate. THIS is what makes a blocked record manager-VISIBLE: the criterion is that a failed gate becomes somebody's problem rather than silently incomplete, and a marker nobody can list is not visible. A silently incomplete record is the worse outcome by far — it sits in the pipeline looking like every other lead while being unworkable.\n\nAN INDEXED READ over activation_state, not a re-evaluation of every lead. Re-running the gate across the table to build the queue would make the screen slower the worse the problem got, which is precisely backwards: the day a broken source floods the pipeline with incomplete records is the day the manager most needs this to load.\n\nORDERED BY MOST RECENTLY CHECKED, matching the partial index. Deliberately NOT by severity — the count of missing fields is not stored, and sorting on it would mean computing the gate for every blocked row, which is the scan the stored column exists to avoid.\n\nThe response carries a note saying what the list IS, so a manager reading an empty one knows it means 'nothing is blocked' rather than 'the check has not run'. Those are very different states and an empty list alone cannot distinguish them.\n\nThe limit is CLAMPED to 200 rather than trusted. A queue endpoint is exactly where an unbounded limit gets passed, and an unbounded read is the scan this design exists to prevent.\n\nRegistered BEFORE '/:id' so Express does not bind 'integrity-exceptions' as a lead id and reject it as a malformed UUID.\n\nProtected by the authenticate guard. QA: depends on register and login.",
+  "endpoint": "/api/leads/integrity-exceptions",
+  "method": "GET",
+  "taskId": "bdaec986-d033-4fcd-b201-07b81f13b1fc",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 2,
+  "expectedStatus": 200,
+  "coversCriterion": ["bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4"],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "testCases": [
+    {
+      "name": "Returns the blocked queue",
+      "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "expectedStatus": 200,
+      "expectedResponse": { "success": true }
+    },
+    {
+      "name": "Clamps an absurd limit instead of scanning the table",
+      "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "queryParams": { "limit": "100000" },
+      "expectedStatus": 200,
+      "expectedResponse": { "success": true }
+    },
+    {
+      "name": "Reject an unauthenticated read",
+      "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4",
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    }
+  ]
+}
