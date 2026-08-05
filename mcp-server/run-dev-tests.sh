@@ -138,9 +138,14 @@ say "$GREEN" "[OK] Tests started"
 DEADLINE=$(( SECONDS + TIMEOUT ))
 LAST=""
 while (( SECONDS < DEADLINE )); do
-    STATUS_JSON=$(curl -s --max-time 30 "${BASE}/api/test/status?projectPath=${PROJECT_PATH}" 2>/dev/null || echo '{}')
-    STATE=$(echo "$STATUS_JSON" | sed -n 's/.*"status" *: *"\([a-z_]*\)".*/\1/p' | head -1)
-    [[ -z "$STATE" ]] && STATE="unknown"
+    STATUS_JSON=$(curl -s --max-time 60 "${BASE}/api/test/status?projectPath=${PROJECT_PATH}" 2>/dev/null || echo '{}')
+    # Parse the TOP-LEVEL status with a real JSON parser. A regex cannot do this:
+    # the payload is one line of several MB and every per-test result carries its
+    # own "status", so a greedy match returns the LAST one ("passed") and the
+    # loop never terminates — it polls until the timeout on an already-finished run.
+    STATE=$(printf '%s' "$STATUS_JSON" | python -c 'import sys,json
+try: print((json.load(sys.stdin) or {}).get("status") or "unknown")
+except Exception: print("unknown")' 2>/dev/null || echo unknown)
     if [[ "$STATE" != "$LAST" ]]; then say "$YELLOW" "  [$(date +%H:%M:%S)] ${STATE}"; LAST="$STATE"; fi
     case "$STATE" in
         completed|idle)
