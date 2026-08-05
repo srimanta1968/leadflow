@@ -50,8 +50,28 @@ export const INTERVENTION_LEAD_MINUTES = 15;
  */
 const RAISE_AT_RISK = 0.55;
 
-/** How many signals one call returns before it stops being actionable. */
+/**
+ * How many signals one call RETURNS before it stops being actionable.
+ *
+ * A manager works a handful; a list of five hundred is a report nobody reads.
+ */
 const SIGNAL_LIMIT = 50;
+
+/**
+ * How many open clocks are CONSIDERED before scoring.
+ *
+ * SEPARATE FROM `SIGNAL_LIMIT`, and conflating the two was a real bug — the
+ * second of its kind in this query. Risk is scored in JavaScript, so a single
+ * limit meant the database chose the candidates by DEADLINE and the scorer only
+ * ever saw the soonest N. On a busy queue that is silently wrong: measured on
+ * this project's own database, 131 clocks were due within the next 25 minutes,
+ * so with one limit of 50 the module could return nothing at all while an
+ * unowned lead — a certain breach — sat at position 51 and was never scored.
+ *
+ * Fetch wide, score everything, then cap the OUTPUT. Scoring five hundred rows
+ * in memory costs nothing next to the aggregate query that produced them.
+ */
+const CANDIDATE_LIMIT = 500;
 
 export interface RiskEvidence {
   /** Stable signal key. */
@@ -285,6 +305,19 @@ export interface RiskSignalQuery {
 
 export interface RiskSignalReport {
   signals: RiskSignal[];
+  /**
+   * Real signals that crossed the threshold but fell outside the return cap.
+   *
+   * Reported rather than dropped quietly: a manager looking at fifty needs to
+   * know whether that is all of them or the worst fifty of ninety.
+   */
+  signalsSuppressed: number;
+  /**
+   * True when the candidate set hit its own ceiling, so some open clocks were
+   * never scored at all. A different and more serious kind of incompleteness
+   * than `signalsSuppressed`, and named separately for that reason.
+   */
+  candidatesTruncated: boolean;
   /** The lead time the report was filtered on. */
   interventionLeadMinutes: number;
   /**
@@ -340,7 +373,7 @@ export async function riskSignals(query: RiskSignalQuery = {}): Promise<RiskSign
   const limit = Math.min(Math.max(1, query.limit ?? SIGNAL_LIMIT), 200);
 
   const [rows, pastDueRow] = await Promise.all([
-    dataService.query<OpenLeadRow>(OPEN_LEADS_SQL, [limit]),
+    dataService.query<OpenLeadRow>(OPEN_LEADS_SQL, [CANDIDATE_LIMIT]),
     dataService.queryOne<{ past_due: string }>(PAST_DUE_COUNT_SQL, []),
   ]);
   const openClocksPastDue = parseInt(pastDueRow?.past_due ?? '0', 10) || 0;
@@ -417,7 +450,13 @@ export async function riskSignals(query: RiskSignalQuery = {}): Promise<RiskSign
   signals.sort((a, b) => a.minutesRemaining - b.minutesRemaining || b.risk - a.risk);
 
   return {
-    signals,
+    // Capped AFTER scoring and sorting, so the cut is by urgency among real
+    // signals rather than by whichever rows the database handed over first.
+    signals: signals.slice(0, limit),
+    signalsSuppressed: Math.max(0, signals.length - limit),
+    // Named rather than left silent: a truncated candidate set means some open
+    // clocks were never scored, and a report that hides that reads as complete.
+    candidatesTruncated: rows.length >= CANDIDATE_LIMIT,
     interventionLeadMinutes: minLead,
     openClocksExamined: rows.length,
     openClocksPastDue,

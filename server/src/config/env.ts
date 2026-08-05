@@ -43,6 +43,8 @@ export interface AppConfig {
   devSeed: {
     adminEmail: string;
     adminPassword: string;
+    stewardEmail: string;
+    stewardPassword: string;
   };
   projexCloud: {
     gatewayUrl: string;
@@ -146,6 +148,12 @@ export const config: AppConfig = {
   devSeed: {
     adminEmail: process.env.DEV_ADMIN_EMAIL || '',
     adminPassword: process.env.DEV_ADMIN_PASSWORD || '',
+    // A steward is a SEPARATE account, not an elevation of the admin one:
+    // users.role is a single column, and the capture-resolution grants belong to
+    // data_steward alone. Without this the api suite cannot exercise those
+    // endpoints with any identity — every dataset answers 403.
+    stewardEmail: process.env.DEV_STEWARD_EMAIL || '',
+    stewardPassword: process.env.DEV_STEWARD_PASSWORD || '',
   },
 
   // ProjexCloud SDK gateway — the source of every horizontal capability.

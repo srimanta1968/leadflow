@@ -239,7 +239,7 @@ describe('promotion is audited and reversible', () => {
 
     expect(append).toHaveBeenCalledTimes(1);
     const entry = append.mock.calls[0][0];
-    expect(entry.event).toBe('capture.promoted');
+    expect(entry.event).toBe('capture.promoted.v1');
     expect(entry.actor).toBe('persona-1');
     // "A record was promoted" and "a record was promoted after the steward
     // corrected the email" are different facts; only the second explains it.

@@ -79,8 +79,5 @@
       "when": "the call has no recorded basis, the basis cannot be verified upstream, or no such call exists. Deliberately one answer for all three so call ids cannot be enumerated by status code."
     }
   ],
-  "requiresRole": [
-    "admin"
-  ],
-  "_authNote": "Admin-scoped: the local role bridge maps a plain 'user' to sales_rep, which holds none of the required capabilities. requiresRole makes the runner send the token it pre-fetched for testCredentials.admin. The per-dataset Authorization header was REMOVED deliberately: a definition-supplied Authorization wins over the role token in the runner's resolution order, so leaving it would keep sending the register-chained sales_rep token and keep returning 403."
+  "_authNote": "NOT a role problem. The endpoint answers 403 RECORDING_CONSENT_MISSING when no registered call carries a recording basis — deliberately the same answer as for an unknown call id, so ids cannot be enumerated. requiresRole was added here on a mistaken reading of that 403 and has been removed: what this dataset needs is a PRODUCER that registers a call with a verified recording basis, and a {{cache:...}} reference to its id."
 }

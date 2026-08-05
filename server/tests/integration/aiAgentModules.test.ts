@@ -414,7 +414,7 @@ describe('the recording consent gate (AC4)', () => {
       // code path left to append from — which is exactly how the `governed`
       // wrapper, appending only on success, would have lost it.
       const events = appended.mock.calls.map((call) => call[0].event);
-      expect(events).toContain('ai.coach.refused_no_consent');
+      expect(events).toContain('ai.coach.refused_no_consent.v1');
     } finally {
       appended.mockRestore();
     }

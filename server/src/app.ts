@@ -6,7 +6,8 @@ import { config } from './config/env';
 import routes from './routes';
 import { dataService } from './services/DataService';
 import { runMigrations } from './db/migrationRunner';
-import { seedDevAdmin } from './db/devSeed';
+import { seedDevAdmin, seedDevSteward } from './db/devSeed';
+import { provisionAuditEventTypes } from './platform/audit/eventTypeProvisioner';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { platformSession } from './platform/auth';
 import { provisionRoles } from './platform/identity';
@@ -100,6 +101,32 @@ async function bootstrap(): Promise<void> {
     console.log(`[app] dev admin ${seed.created ? 'created' : 'already present'}`);
   } else if (config.nodeEnv !== 'production') {
     console.log(`[app] dev admin not seeded: ${seed.skipped}`);
+  }
+
+  // Stewardship is a SEPARATE account, not more grants on the admin one: the
+  // capture-resolution policies grant to data_steward alone, and users.role holds
+  // exactly one value. Without this the api suite has no caller that can reach
+  // those endpoints, so every dataset answers 403 and the refusal looks like a
+  // product bug rather than a missing test identity.
+  const stewardSeed = await seedDevSteward();
+  if (stewardSeed.attempted) {
+    console.log(`[app] dev steward ${stewardSeed.created ? 'created' : 'already present'}`);
+  } else if (config.nodeEnv !== 'production') {
+    console.log(`[app] dev steward not seeded: ${stewardSeed.skipped}`);
+  }
+
+  // Register this application's audit event types. ProjexCloud rejects an append
+  // whose type it does not know (OC-2), and emitEvent swallows that rejection —
+  // so an unregistered vocabulary silently discards the entire audit trail while
+  // the chain still verifies clean because it is empty.
+  const eventTypes = await provisionAuditEventTypes();
+  if (eventTypes.attempted) {
+    console.log(
+      `[app] audit event types: ${eventTypes.created} registered, ` +
+      `${eventTypes.alreadyPresent} already present, ${eventTypes.failed} failed`
+    );
+  } else {
+    console.log(`[app] audit event types not registered: ${eventTypes.skipped}`);
   }
 
   // Role provisioning is idempotent, so it runs on EVERY boot rather than once

@@ -195,7 +195,7 @@
     }
   ],
   "requiresRole": [
-    "admin"
+    "data_steward"
   ],
-  "_authNote": "Admin-scoped: the local role bridge maps a plain 'user' to sales_rep, which holds none of the required capabilities. requiresRole makes the runner send the token it pre-fetched for testCredentials.admin. The per-dataset Authorization header was REMOVED deliberately: a definition-supplied Authorization wins over the role token in the runner's resolution order, so leaving it would keep sending the register-chained sales_rep token and keep returning 403."
+  "_authNote": "Requires the data_steward SOP role (config/policies.ts). requiresRole makes the runner send the token pre-fetched for testCredentials.data_steward. No per-dataset Authorization header here on purpose: a definition-supplied header wins over the role token, which is what kept sending the register-chained sales_rep token and returning 403."
 }

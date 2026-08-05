@@ -83,7 +83,7 @@ describe('governed', () => {
     expect(res.statusCode).toBe(201);
     expect(appendSpy).toHaveBeenCalledTimes(1);
     expect(appendSpy.mock.calls[0][0]).toMatchObject({
-      event: 'routing.rule.created',
+      event: 'routing.rule.created.v1',
       // The PERSONA, not the person: which hat the human wore is the thing the
       // entry has to be able to state.
       actor: 'persona-1',

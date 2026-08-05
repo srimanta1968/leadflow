@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-05T03:44:42",
+  "updatedAt": "2026-08-05T06:34:10",
   "scope": "ai",
   "gaps": [
     {
@@ -12,16 +12,18 @@
     {
       "file": "tests/api_definitions/ai/coach-scorecard-callid-get.json",
       "rules": [
+        "AUTH-HEADER",
         "CODE-MATCH"
       ],
-      "findingsCount": 1
+      "findingsCount": 2
     },
     {
       "file": "tests/api_definitions/ai/manager-risk-signals-get.json",
       "rules": [
+        "AUTH-HEADER",
         "CODE-MATCH"
       ],
-      "findingsCount": 1
+      "findingsCount": 2
     },
     {
       "file": "tests/api_definitions/ai/proposals-id-decide-post.json",
@@ -40,9 +42,10 @@
     {
       "file": "tests/api_definitions/ai/revops-proposals-get.json",
       "rules": [
+        "AUTH-HEADER",
         "CODE-MATCH"
       ],
-      "findingsCount": 1
+      "findingsCount": 2
     },
     {
       "file": "tests/api_definitions/ai/sdr-proposals-id-accept-post.json",
@@ -60,9 +63,9 @@
     }
   ],
   "missingDefinitions": [],
-  "captureSyncIssues": 0,
+  "captureSyncIssues": 1,
   "summary": {
     "withFindings": 8,
-    "findingsCount": 8
+    "findingsCount": 11
   }
 }

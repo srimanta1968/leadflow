@@ -12,7 +12,8 @@
  * routing_rules, sla_metrics, sla_alerts, sla_policies, offline_capture_sync,
  * intake_event, intake_outage_queue, lead_source_event, ai_sdr_proposal,
  * ai_research_fact, ai_coach_call, ai_coach_scorecard, ai_proposal,
- * ai_completion, ai_agent_run, ai_capability_token and ai_budget — and each is
+ * ai_completion, ai_agent_run, ai_capability_token, ai_budget, call_recording,
+ * call_custody_event and call_artifact — and each is
  * classified below, including the ones that
  * hold NOTHING, because "we checked and it is clean" and "we forgot it
  * existed" must not look alike. `erasurePlan.test.ts` reads the live schema and
@@ -194,6 +195,27 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
     personalColumns: [],
     rationale:
       'Per-tenant token allowance and spend for a period. Counters and a tenant id; nothing about a person. Kept for the same reason a bill is kept.',
+  },
+  {
+    surface: 'call_artifact',
+    method: 'redact',
+    personalColumns: ['content'],
+    rationale:
+      'Everything derived from a recording — transcript segments, summary, objections, action items — and the transcript segments in particular are the person\'s own words. content is the personal column and it goes. THE OFFSETS AND THE KIND ARE KEPT, deliberately: what must survive an erasure is that an artifact existed, which stage produced it and where in the call it pointed, because that is the record showing the pipeline processed this person under a basis. Nulling content removes what was said while leaving the shape of the processing, which is exactly what an automated-decision or subject-access request asks to see. Note the redaction_applied column is counts only and carries nothing personal.',
+  },
+  {
+    surface: 'call_recording',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'NO MEDIA IS HELD HERE, by design and not by omission — the row carries the sdk-media blob POINTER, the consent basis reference, the jurisdiction rule applied and a content hash. The audio itself never enters this database, which is the strongest available answer to "are you sure the recording is gone": it was never here. The row is KEPT rather than deleted, and the consent basis reference with it, because it is the evidence that the recording existed under a lawful basis and that the media was subsequently purged upstream. Destroying that during an erasure would remove the proof of the control at exactly the moment somebody is exercising a privacy right. Purging the upstream blob is an sdk-media action recorded as a purged custody event, not a delete here.',
+  },
+  {
+    surface: 'call_custody_event',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'The append-only chain of custody: stage, actor, a detail line, a hash and a timestamp. Actors are operators or services, cleared through the users surface, and the detail lines are written about the PIPELINE rather than about the person — no transcript text, no contact point. AND IT COULD NOT BE ERASED EVEN IF IT HELD SOMETHING: migration 014 installs a trigger that refuses UPDATE and DELETE, because a chain the application can rewrite is not a chain. That is a deliberate constraint on erasure and it is the right one — the record of who handled a recording must outlive the recording, or the erasure itself becomes unprovable. Any future column here must therefore be non-personal by construction.',
   },
 ];
 

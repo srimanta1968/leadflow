@@ -4,7 +4,9 @@
   "variables": {
     "_note": "Global variables are for values that are genuinely the SAME in every environment. Anything secret-shaped belongs in environments[<env>].variables so a dev secret can never be carried into staging or production (MUST-46).",
     "absent_uuid": "00000000-0000-0000-0000-000000000000",
-    "_absent_uuid_note": "A syntactically valid UUID that NO record has, for the negative test cases that assert 404. It cannot come from {{cache:...}} the way MUST-36 asks for a foreign key, because the whole point is that no producer created it — a cached id would exist and the endpoint would answer 200 or 409 instead of the 404 under test. Global rather than per-environment because the nil UUID is absent in every environment by construction, and it is not secret-shaped."
+    "_absent_uuid_note": "A syntactically valid UUID that NO record has, for the negative test cases that assert 404. It cannot come from {{cache:...}} the way MUST-36 asks for a foreign key, because the whole point is that no producer created it — a cached id would exist and the endpoint would answer 200 or 409 instead of the 404 under test. Global rather than per-environment because the nil UUID is absent in every environment by construction, and it is not secret-shaped.",
+    "not_a_uuid": "not-a-uuid",
+    "_not_a_uuid_note": "A deliberately malformed id for the negative cases that assert 400 on a non-UUID path param. Cannot come from {{cache:...}} the way MUST-36 asks, for the same reason as absent_uuid and more so: the whole point is that it is NOT a valid id, so no producer could ever emit it."
   },
   "environments": {
     "dev": {
@@ -130,6 +132,12 @@
       "_status": "Same account as `default`, exposed under the role name so the Dev MCP can pre-fetch an ADMIN token. Its _prefetch_role_tokens reads testCredentials.<role> for every role any definition declares in requiresRole, and warns 'no testCredentials.admin configured — those endpoints will 403' when the key is absent. That was the state until now: the account existed and held admin, but nothing pointed the runner at it.",
       "_why_not_the_default_token": "Definitions authenticate with {{cache:auth.login.response.data.token}}, and login dependsOn register — so the default token belongs to a freshly registered throwaway user, which the role bridge maps to sales_rep. The admin-scoped endpoints therefore answered 403 even though this admin account was configured and working the whole time.",
       "email": "qa.operator@leadflow.test",
+      "password": "LeadFlow!Test2026"
+    },
+    "data_steward": {
+      "_status": "Seeded idempotently at boot by server/src/db/devSeed.ts (DEV_STEWARD_EMAIL / DEV_STEWARD_PASSWORD must match these values). A SEPARATE account from `admin` on purpose: users.role holds one value, and config/policies.ts grants the capture-resolution actions to data_steward alone.",
+      "_role_requirement": "MUST HOLD users.role='steward', which LOCAL_ROLE_BRIDGE maps to the data_steward SOP role. An admin caller is NOT a substitute — admin bridges to revenue_operations + sales_manager + sales_rep, none of which holds these grants, which is why every capture-resolve dataset answered 403.",
+      "email": "qa.steward@leadflow.test",
       "password": "LeadFlow!Test2026"
     }
   }

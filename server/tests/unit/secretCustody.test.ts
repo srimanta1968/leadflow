@@ -167,7 +167,7 @@ describe('revealing PII', () => {
       string,
       unknown
     >;
-    expect(body.event_type).toBe('pii.revealed');
+    expect(body.event_type).toBe('pii.revealed.v1');
     // The stamps sit inside sdk-audit's `payload` envelope.
     const payload = body.payload as Record<string, unknown>;
     expect(payload.actor_id).toBe('person:ada');

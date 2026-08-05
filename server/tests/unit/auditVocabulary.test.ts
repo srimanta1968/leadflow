@@ -52,20 +52,23 @@ describe('the audit vocabulary', () => {
     // `ai.analysis.run`: "who was watching the team's queue" and "where did this
     // routing proposal come from" are asked separately, and one combined name
     // would make each query return the other's rows.
-    expect(allAuditEventNames()).toHaveLength(46);
-    expect(isAuditEventName('capture.created')).toBe(true);
-    expect(isAuditEventName('sla.breached')).toBe(true);
-    expect(isAuditEventName('lead.routed')).toBe(true);
-    expect(isAuditEventName('sla.policy.updated')).toBe(true);
-    expect(isAuditEventName('ai.draft.proposed')).toBe(true);
+    // 2 more for the conversation intelligence pipeline: the eligibility CHECK
+    // is separate because it happens when there is no recording to attach it to,
+    // and a check that blocked a call leaves no other trace anywhere.
+    expect(allAuditEventNames()).toHaveLength(48);
+    expect(isAuditEventName('capture.created.v1')).toBe(true);
+    expect(isAuditEventName('sla.breached.v1')).toBe(true);
+    expect(isAuditEventName('lead.routed.v1')).toBe(true);
+    expect(isAuditEventName('sla.policy.updated.v1')).toBe(true);
+    expect(isAuditEventName('ai.draft.proposed.v1')).toBe(true);
     // A refusal is an event too: an absent entry cannot distinguish "we
     // declined to process this call" from "nobody ever asked", and only the
     // first is evidence the consent gate is working.
-    expect(isAuditEventName('ai.coach.refused_no_consent')).toBe(true);
+    expect(isAuditEventName('ai.coach.refused_no_consent.v1')).toBe(true);
     // A rejection and an acceptance are the same event name with a different
     // outcome in the metadata; pulling the kill switch is its own.
-    expect(isAuditEventName('ai.proposal.decided')).toBe(true);
-    expect(isAuditEventName('ai.kill_switch.engaged')).toBe(true);
+    expect(isAuditEventName('ai.proposal.decided.v1')).toBe(true);
+    expect(isAuditEventName('ai.kill_switch.engaged.v1')).toBe(true);
   });
 
   it('rejects a plausible-looking name that is not canonical', () => {
@@ -77,13 +80,20 @@ describe('the audit vocabulary', () => {
     expect(isAuditEventName('sla.policy.update')).toBe(false);
     expect(isAuditEventName('capture.create')).toBe(false);
     expect(isAuditEventName('Capture.Created')).toBe(false);
+    // The unversioned spelling is now a near-miss too — it is what every one of
+    // these names used to be, so it is exactly what a stale caller would send.
+    expect(isAuditEventName('capture.created')).toBe(false);
   });
 
   it('uses dot-delimited lower snake case throughout, with no duplicates', () => {
     const names = allAuditEventNames();
 
     for (const name of names) {
-      expect(name).toMatch(/^[a-z]+(\.[a-z_]+)+$/);
+      // The trailing .v<N> is MANDATORY, not decorative: ProjexCloud's
+      // EVENT_TYPE_NAME_PATTERN rejects an unversioned name with a 400 before
+      // any write, and because the append swallows failures by design that
+      // showed up only as log lines while the chain verified clean and empty.
+      expect(name).toMatch(/^[a-z]+(\.[a-z_]+)+\.v\d+$/);
     }
     expect(new Set(names).size).toBe(names.length);
   });
@@ -157,7 +167,7 @@ describe('appending an entry', () => {
     // event_type and pool_index are sdk-audit's envelope; the seven stamps
     // travel inside `payload`. Which envelope carries them was never the point
     // — the point is that a governed action cannot omit any of them.
-    expect(body.event_type).toBe('capture.created');
+    expect(body.event_type).toBe('capture.created.v1');
     expect(body.pool_index).toBeTruthy();
     const payload = body.payload as Record<string, unknown>;
     expect(payload.decision_ref).toBe('pdp_1');

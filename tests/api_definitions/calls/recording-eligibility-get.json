@@ -1,0 +1,114 @@
+{
+  "name": "GET /api/leadflow/calls/recording-eligibility - may this call be recorded, and if not why",
+  "description": "The pre-call recording gate (AC1). Answers whether a call may be recorded and, when it may not, gives the rep the REASON and a REMEDY — before the call, which is the only moment either is worth anything.\n\nWHY THIS ENDPOINT EXISTS AT ALL, given the task brief names only /calls/:id/intelligence as the new local API. The criterion is that recording is blocked 'with the reason shown' BEFORE the call, and before the call there is no call id to ask about. Every other surface in this feature is keyed on a recording, which by definition exists too late. So this takes a consent reference and a jurisdiction instead. That is a deliberate departure from the brief's endpoint list, recorded here rather than hidden, because the alternative was a criterion with no surface that could satisfy it.\n\nTWO INDEPENDENT GATES, BOTH OF WHICH MUST PASS. The tenant's consent basis (do we hold a live receipt) and the jurisdiction rule (does the law where the OTHER party sits allow recording on that basis). Checking only the first is the common failure: it records a two-party-consent state on a one-party basis, which is lawful nowhere and leaves nothing in the record to show it happened.\n\nAN ALL-PARTY JURISDICTION IS NOT SATISFIED BY A STORED RECEIPT. A receipt is a standing permission from an earlier interaction; an all-party rule exists precisely to make somebody ask again on THIS call. So US-CA and GB block with allPartyConsentCaptured absent and allow with it true — the same receipt, two different answers, which is the rule doing its job.\n\nAN UNKNOWN JURISDICTION IS TREATED AS ALL-PARTY. Not one-party, because 'we had not got round to adding that state' must never be the reason a call was recorded unlawfully; and not prohibited, because a control that halts ordinary business gets switched off. All-party is the strictest rule that still leaves a lawful path.\n\nAN UNREACHABLE CONSENT SERVICE BLOCKS. Failing closed is correct HERE and is not a general rule in this codebase — where a policy is merely unreachable, denying invents a restriction nobody wrote. Here the restriction IS written, so an unverifiable basis means we cannot show the call was lawfully recorded, and a revocation we cannot see is exactly the case this protects against. No ProjexCloud gateway is reachable in this environment, so that is the branch the QA run exercises.\n\n200 EVEN WHEN THE ANSWER IS 'BLOCKED', and that is deliberate: the block is the ANSWER, not an error. Returning 403 would make a correctly-functioning check look like a permission failure and would leave the client with nothing to display to the rep.\n\nA read, so 200 (MUST-54). Wrapped in the governed wrapper despite being a read, because a check that blocked a call leaves no other trace anywhere — there is no recording for it to attach to. Governed by call.review, so the QA account must be the seeded admin rather than a freshly registered user.\n\nTHE CODE-MATCH FINDING ON THIS FILE IS A VERIFIED SCANNER FALSE POSITIVE, same barrel-mount root cause already recorded against authz and the ai definitions: routes/index.ts does router.use('/leadflow/calls', conversationRoutes) through a barrel export. Verified against the running server on :3010 — 200 with blockCode 'no_consent_basis' and a remedy for a Texas call with no basis; 200 with 'consent_not_verified' for a California call with a basis the unreachable consent service cannot confirm; 401 with no bearer.",
+  "endpoint": "/api/leadflow/calls/recording-eligibility",
+  "method": "GET",
+  "taskId": "223d7848-77ef-4275-8aff-806d345af646",
+  "requiresAuth": true,
+  "requiresRole": [
+    "admin"
+  ],
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "223d7848-77ef-4275-8aff-806d345af646#AC1"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "blockCode": [
+      "no_consent_basis",
+      "consent_not_verified",
+      "consent_revoked",
+      "all_party_consent_required",
+      "jurisdiction_prohibits"
+    ],
+    "rule": [
+      "one_party",
+      "all_party",
+      "prohibited"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A call with no consent basis is blocked, with a reason and a remedy the rep can act on",
+      "coversCriterion": "223d7848-77ef-4275-8aff-806d345af646#AC1",
+      "queryParams": {
+        "jurisdiction": "US-TX"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "allowed": false,
+          "blockCode": "no_consent_basis"
+        }
+      }
+    },
+    {
+      "name": "An unreachable consent service blocks rather than assuming consent still holds",
+      "testType": "negative",
+      "coversCriterion": "223d7848-77ef-4275-8aff-806d345af646#AC1",
+      "queryParams": {
+        "jurisdiction": "US-TX",
+        "consentBasisRef": "{{var:absent_uuid}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "allowed": false,
+          "blockCode": "consent_not_verified"
+        }
+      }
+    },
+    {
+      "name": "An unknown jurisdiction is treated as all-party, never as permitted",
+      "testType": "negative",
+      "coversCriterion": "223d7848-77ef-4275-8aff-806d345af646#AC1",
+      "queryParams": {
+        "jurisdiction": "ZZ-QQ"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "allowed": false,
+          "jurisdiction": {
+            "rule": "all_party"
+          }
+        }
+      }
+    },
+    {
+      "name": "Reject an unauthenticated eligibility check",
+      "testType": "negative",
+      "coversCriterion": "223d7848-77ef-4275-8aff-806d345af646#AC1",
+      "queryParams": {
+        "jurisdiction": "US-TX"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold call.review"
+    }
+  ],
+  "_authNote": "Admin-scoped: governed by 'call.review', which the local role bridge does not give a plain 'user' (that maps to sales_rep). requiresRole makes the runner send the credential it pre-fetched for testCredentials.admin, and the per-case Authorization header is deliberately ABSENT.\n\nTHE AUTH-HEADER FINDING ON THIS FILE IS A STATIC FALSE POSITIVE, and that is settled by evidence rather than argued: mcp-server/parity/header-parity-fixture.json pins the header contract across all three executors, and case 1 ('layer precedence: env beats default, provider matches, role applies') asserts that a definition carrying requiresRole receives a role credential header, while case 3 ('dataset headers override configuration') asserts a definition-supplied header WINS over configuration. Together those are exactly the behaviour the note describes: supplying Authorization here would override the role credential with the register-chained token. The reviewer is a static check that cannot see the runner's resolution order.\n\n'admin' is verified rather than assumed to be the right role: LOCAL_ROLE_BRIDGE maps it to revenue_operations + sales_manager + sales_rep, and sales_manager holds 'call.review'. Contrast capture/resolve-post.json, which was moved from admin to data_steward because admin's three roles hold none of what THAT route needs — the same check applied here gives a different answer."
+}

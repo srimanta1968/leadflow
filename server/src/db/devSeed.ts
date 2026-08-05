@@ -44,6 +44,78 @@ export interface DevSeedResult {
  * creation — a re-run does not reset a password someone has deliberately
  * changed.
  */
+/**
+ * Provision one privileged dev account at a given role.
+ *
+ * Extracted so stewardship can be seeded the same way as admin. It must be a
+ * SEPARATE account rather than more grants on the admin one: users.role is a
+ * single column, and config/policies.ts assigns the capture-resolution grants to
+ * data_steward alone. Folding them into admin would recreate exactly the mistake
+ * the LOCAL_ROLE_BRIDGE comment warns about — treating one SOP role as a local
+ * superuser.
+ */
+async function seedDevUser(
+  email: string,
+  password: string,
+  role: string,
+  username: string,
+  firstName: string,
+  lastName: string,
+  missingVarsMessage: string
+): Promise<DevSeedResult> {
+  if (config.nodeEnv === 'production') {
+    return { attempted: false, created: false, skipped: 'NODE_ENV is production' };
+  }
+
+  if (!email || !password) {
+    return { attempted: false, created: false, skipped: missingVarsMessage };
+  }
+
+  const existing = await dataService.queryOne<{ id: string; role: string }>(
+    'SELECT id, role FROM users WHERE email = $1',
+    [email]
+  );
+
+  if (existing) {
+    if (existing.role !== role) {
+      // The row is there but not privileged — most likely someone registered
+      // through the normal flow with this address. Raise the role rather than
+      // rewriting the account, so their password keeps working.
+      await dataService.query(
+        'UPDATE users SET role = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+        [existing.id, role]
+      );
+    }
+    return { attempted: true, created: false };
+  }
+
+  const hash = await bcrypt.hash(password, config.bcryptRounds);
+  await dataService.query(
+    `INSERT INTO users (email, username, password_hash, first_name, last_name, role, email_verified)
+     VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+     ON CONFLICT (email) DO NOTHING`,
+    [email, username, hash, firstName, lastName, role]
+  );
+
+  return { attempted: true, created: true };
+}
+
+/**
+ * Seed the QA steward. Mirrors seedDevAdmin; see seedDevUser for why the two
+ * cannot be the same account.
+ */
+export async function seedDevSteward(): Promise<DevSeedResult> {
+  return seedDevUser(
+    config.devSeed.stewardEmail,
+    config.devSeed.stewardPassword,
+    'steward',
+    'dev-steward',
+    'Dev',
+    'Steward',
+    'DEV_STEWARD_EMAIL / DEV_STEWARD_PASSWORD are not set'
+  );
+}
+
 export async function seedDevAdmin(): Promise<DevSeedResult> {
   if (config.nodeEnv === 'production') {
     return { attempted: false, created: false, skipped: 'NODE_ENV is production' };

@@ -1,0 +1,142 @@
+{
+  "_purpose": "Conformance fixture for the header contract (see the 'Custom headers and variable resolution' section of docs/DEV_MCP.md). Three executors build requests from the same definition — the Dev MCP from disk, the Test MCP from api_library, and the ProjexLight backend for the UI's quick/chain/workflow/dataset/manual modes. Each must produce the SAME headers for the inputs below. Without this check the three drift within a release, and the drift is invisible until a staging run disagrees with a laptop.",
+  "_how_to_run": "Dev MCP: dist/parity/check_parity.py. Test MCP and ProjexLight executor: feed the same config+definition and compare against expected[]. A mismatch is a contract violation in whichever executor differs, not a reason to edit this file.",
+
+  "config": {
+    "activeEnvironment": "dev",
+    "defaultHeaders": {
+      "x-api-version": "2024-01",
+      "Accept-Language": "en"
+    },
+    "environments": {
+      "dev": {
+        "headers": {
+          "x-api-version": "dev-override",
+          "x-api-key": "{{var:gateway_key}}"
+        },
+        "variables": {
+          "gateway_key": "env-key-value",
+          "webhook_secret": "s3cr3t"
+        }
+      }
+    },
+    "providers": [
+      { "match": "/api/connectors", "headers": { "x-provider": "meta" } }
+    ],
+    "testCredentials": {
+      "admin": {
+        "email": "qa.admin@example.test",
+        "password": "irrelevant-for-parity",
+        "headers": { "x-admin-ops-token": "role-token-value" }
+      }
+    },
+    "computedHeaders": {
+      "x-hub-signature-256": {
+        "algorithm": "hmac-sha256",
+        "secret": "{{var:webhook_secret}}",
+        "over": "raw_body",
+        "prefix": "sha256=",
+        "encoding": "hex",
+        "match": "/api/connectors"
+      }
+    },
+    "variables": {
+      "gateway_key": "GLOBAL-MUST-NOT-WIN"
+    }
+  },
+
+  "cases": [
+    {
+      "name": "layer precedence: env beats default, provider matches, role applies",
+      "definition": {
+        "endpoint": "/api/connectors/lead-forms",
+        "method": "POST",
+        "requiresRole": ["admin"],
+        "expectedStatus": 201,
+        "testCases": [
+          { "name": "happy", "expectedStatus": 201, "payload": { "a": 1 } }
+        ]
+      },
+      "datasetIndex": 0,
+      "expect": {
+        "x-api-version": "dev-override",
+        "Accept-Language": "en",
+        "x-api-key": "env-key-value",
+        "x-provider": "meta",
+        "x-admin-ops-token": "role-token-value"
+      },
+      "_note": "x-api-key MUST resolve to the ENVIRONMENT value. If an executor returns 'GLOBAL-MUST-NOT-WIN' it is resolving global over environment, which would carry a dev secret into staging (MUST-46)."
+    },
+    {
+      "name": "provider and role headers do not leak to unrelated endpoints",
+      "definition": {
+        "endpoint": "/api/unrelated/thing",
+        "method": "GET",
+        "expectedStatus": 200,
+        "testCases": [{ "name": "happy", "expectedStatus": 200 }]
+      },
+      "datasetIndex": 0,
+      "expect": {
+        "x-api-version": "dev-override",
+        "Accept-Language": "en",
+        "x-api-key": "env-key-value"
+      },
+      "expectAbsent": ["x-provider", "x-admin-ops-token", "x-hub-signature-256"],
+      "_note": "A layer that applies everywhere is worse than no layer — it silently re-identifies every request."
+    },
+    {
+      "name": "dataset headers override configuration",
+      "definition": {
+        "endpoint": "/api/connectors/lead-forms",
+        "method": "POST",
+        "expectedStatus": 201,
+        "testCases": [
+          {
+            "name": "dataset overrides the version header",
+            "expectedStatus": 201,
+            "headers": { "x-api-version": "from-dataset" }
+          }
+        ]
+      },
+      "datasetIndex": 0,
+      "expect": { "x-api-version": "from-dataset" },
+      "_note": "Layer 6 is last for a reason: a negative case must be able to send a deliberately wrong value."
+    },
+    {
+      "name": "noAuth dataset sends no Authorization",
+      "definition": {
+        "endpoint": "/api/secure/thing",
+        "method": "GET",
+        "requiresAuth": true,
+        "expectedStatus": 200,
+        "testCases": [
+          { "name": "happy", "expectedStatus": 200 },
+          { "name": "401 - missing bearer token", "expectedStatus": 401, "headers": {} }
+        ]
+      },
+      "datasetIndex": 1,
+      "expectAbsent": ["Authorization"],
+      "_note": "A dataset expecting 401 with no Authorization of its own is treated as noAuth. Injecting a valid token makes its assertion impossible to satisfy — this was 8 of 11 failures in a real ProjexCloud run."
+    },
+    {
+      "name": "computed signature covers the exact body bytes",
+      "definition": {
+        "endpoint": "/api/connectors/lead-forms",
+        "method": "POST",
+        "expectedStatus": 202,
+        "testCases": [
+          { "name": "signed webhook", "expectedStatus": 202, "payload": { "a": 1 } }
+        ]
+      },
+      "datasetIndex": 0,
+      "expectComputed": {
+        "header": "x-hub-signature-256",
+        "algorithm": "hmac-sha256",
+        "secret": "s3cr3t",
+        "bodyJson": { "a": 1 },
+        "prefix": "sha256="
+      },
+      "_note": "Computed last, over the finalised body. An executor that signs before the body is complete produces a header the server rejects — a 401 that reads as a broken endpoint."
+    }
+  ]
+}

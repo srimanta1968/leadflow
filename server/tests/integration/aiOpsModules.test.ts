@@ -190,6 +190,8 @@ describe('breach prediction lead time (AC1)', () => {
   it('distinguishes an empty queue from a quiet one in the brief', async () => {
     const empty = huddleBrief({
       signals: [],
+      signalsSuppressed: 0,
+      candidatesTruncated: false,
       interventionLeadMinutes: 15,
       openClocksExamined: 0,
       openClocksPastDue: 0,
@@ -198,6 +200,8 @@ describe('breach prediction lead time (AC1)', () => {
     });
     const quiet = huddleBrief({
       signals: [],
+      signalsSuppressed: 0,
+      candidatesTruncated: false,
       interventionLeadMinutes: 15,
       openClocksExamined: 12,
       openClocksPastDue: 0,
@@ -220,6 +224,8 @@ describe('breach prediction lead time (AC1)', () => {
     // as all-clear and is the exact false reassurance the count exists to stop.
     const brief = huddleBrief({
       signals: [],
+      signalsSuppressed: 0,
+      candidatesTruncated: false,
       interventionLeadMinutes: 15,
       openClocksExamined: 2,
       openClocksPastDue: 2652,

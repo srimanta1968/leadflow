@@ -351,7 +351,7 @@ describe('every transmission is audited', () => {
 
     expect(append).toHaveBeenCalledTimes(1);
     const entry = append.mock.calls[0][0];
-    expect(entry.event).toBe('capture.created');
+    expect(entry.event).toBe('capture.created.v1');
     // "A capture happened" and "a capture happened from example.com with the
     // URL retained" are different facts; only the second can be reviewed
     // against the tenant's own policy afterwards.

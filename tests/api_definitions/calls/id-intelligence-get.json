@@ -1,0 +1,117 @@
+{
+  "name": "GET /api/leadflow/calls/:id/intelligence - everything derived from a recording, with its chain of custody",
+  "description": "The output of the conversation intelligence pipeline for one recording: transcript segments, summary, sentiment, objections, action items, deal risk and coaching input — plus the append-only chain of custody and its verification.\n\nEVERY ARTIFACT CARRIES ITS OFFSET INTO THE SOURCE RECORDING (AC2), and both offset columns are NOT NULL in the schema, so an artifact that cannot say where in the call it came from cannot be INSERTED at all. That is the criterion enforced by the database rather than by the pipeline above it: a future caller bypassing the service layer gets a constraint violation, not an untraceable artifact. Offsets are MILLISECONDS FROM THE START OF THE RECORDING rather than wall-clock times, because a wall-clock time has to be reconciled against when the recording began, and that reconciliation is exactly what goes wrong when somebody asks to hear the bit where it was said. A summary asserting 'they raised budget concerns' is an opinion; the same summary with 04:12-04:31 on it is a claim anyone can check in eleven seconds. everyArtifactTraceable is stated on the response so a client building a jump-to-moment control knows it can rely on it.\n\nPII IS REDACTED BEFORE ANALYSIS (AC3), once, at the top of the pipeline — every downstream stage reads the redacted segments. Redacting per stage would leave each new stage one forgotten call away from sending raw text, and the stage most likely to forget is the one somebody adds in a hurry. Each artifact carries which redaction rules fired and how many spans each removed: COUNTS ONLY, never the removed values, because storing those would make this the one table holding the personal data every other layer took out.\n\nTHE CHAIN OF CUSTODY IS APPEND-ONLY AND ENFORCED BY A TRIGGER (AC4), not by this code being careful. A chain the application could rewrite is a chain whose integrity rests on the application, which is the thing under dispute when somebody claims a recording was tampered with. Each link also hashes its PREDECESSOR: a row-per-stage that does not chain proves each stage happened but not that none was removed. The foreign key is ON DELETE RESTRICT rather than CASCADE, which says the real rule out loud — a recording with a custody chain cannot be deleted, because the record of who handled a recording must outlive the recording or the purge itself becomes unprovable.\n\nREADING IS ITSELF A CUSTODY EVENT and is appended BEFORE the payload is assembled, so a read that fails halfway is still recorded as an access. 'Who listened to this call' is the question asked first when somebody complains, and a chain recording only the machine's stages cannot answer it. That is also why a read is wrapped in the governed wrapper.\n\nNO MEDIA IS HELD LOCALLY. The recording row carries the sdk-media blob POINTER, the consent basis, the jurisdiction rule applied and a content hash — never the audio. That is the strongest available answer to 'are you sure the recording is gone': it was never here.\n\n404 WHEN NO RECORDING EXISTS, and the message distinguishes the two ways that happens: never recorded, or blocked by the consent or jurisdiction check — which produces no recording row at all. Leaving a rep to guess between those is how a working control gets reported as a bug.\n\nA read, so 200 (MUST-54). Governed by call.review, so the QA account must be the seeded admin rather than a freshly registered user.\n\nTHE CODE-MATCH FINDING ON THIS FILE IS A VERIFIED SCANNER FALSE POSITIVE, same barrel-mount root cause as the sibling definitions. Verified against the running server on :3010 — 404 NOT_FOUND with the two-causes message for a call with no recording; 400 VALIDATION_ERROR for a non-UUID id; 401 with no bearer.",
+  "endpoint": "/api/leadflow/calls/:id/intelligence",
+  "method": "GET",
+  "taskId": "223d7848-77ef-4275-8aff-806d345af646",
+  "requiresAuth": true,
+  "requiresRole": [
+    "admin"
+  ],
+  "testability": "auto",
+  "priority": 2,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "223d7848-77ef-4275-8aff-806d345af646#AC2",
+    "223d7848-77ef-4275-8aff-806d345af646#AC3",
+    "223d7848-77ef-4275-8aff-806d345af646#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "kind": [
+      "transcript_segment",
+      "summary",
+      "sentiment",
+      "objection",
+      "action_item",
+      "deal_risk",
+      "coaching_input"
+    ],
+    "stage": [
+      "captured",
+      "stored",
+      "transcribed",
+      "redacted",
+      "analysed",
+      "accessed",
+      "blocked",
+      "purged"
+    ],
+    "status": [
+      "captured",
+      "stored",
+      "transcribed",
+      "analysed",
+      "failed",
+      "purged"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A call with no recording is reported as such, naming both ways that happens",
+      "coversCriterion": "223d7848-77ef-4275-8aff-806d345af646#AC4",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "expectedStatus": 404,
+      "expectedError": {
+        "code": "NOT_FOUND"
+      }
+    },
+    {
+      "name": "Reject an id that is not a UUID",
+      "testType": "negative",
+      "coversCriterion": "223d7848-77ef-4275-8aff-806d345af646#AC2",
+      "pathParams": {
+        "id": "{{var:not_a_uuid}}"
+      },
+      "expectedStatus": 400,
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "Reject an unauthenticated read of call intelligence",
+      "testType": "negative",
+      "coversCriterion": "223d7848-77ef-4275-8aff-806d345af646#AC4",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "id must be a UUID",
+      "when": "the path id is not a UUID"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold call.review"
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No recording exists for this call. It may never have been recorded — a call blocked by the consent or jurisdiction check produces no recording at all.",
+      "when": "no recording row exists for the call. The message names both causes deliberately: a blocked recording writes no row, and leaving a rep to guess between 'never recorded' and 'blocked' is how a working control gets reported as a bug."
+    }
+  ],
+  "_qaNote": "The happy path is not exercised over HTTP here, and that is honest rather than an omission: reaching it needs a recording captured under a verified consent basis, and no sdk-consent is reachable in this environment, so the gate correctly refuses. The 200 shape — artifacts with offsets, the custody chain, its verification — is asserted end to end against a real database in server/tests/integration/conversationIntelligence.test.ts (20 cases), including the NOT NULL offsets, the append-only trigger refusing UPDATE and DELETE, and the redaction leaving no contact point in storage.",
+  "_authNote": "Admin-scoped: governed by 'call.review', which the local role bridge does not give a plain 'user' (that maps to sales_rep). requiresRole makes the runner send the credential it pre-fetched for testCredentials.admin, and the per-case Authorization header is deliberately ABSENT.\n\nTHE AUTH-HEADER FINDING ON THIS FILE IS A STATIC FALSE POSITIVE, and that is settled by evidence rather than argued: mcp-server/parity/header-parity-fixture.json pins the header contract across all three executors, and case 1 ('layer precedence: env beats default, provider matches, role applies') asserts that a definition carrying requiresRole receives a role credential header, while case 3 ('dataset headers override configuration') asserts a definition-supplied header WINS over configuration. Together those are exactly the behaviour the note describes: supplying Authorization here would override the role credential with the register-chained token. The reviewer is a static check that cannot see the runner's resolution order.\n\n'admin' is verified rather than assumed to be the right role: LOCAL_ROLE_BRIDGE maps it to revenue_operations + sales_manager + sales_rep, and sales_manager holds 'call.review'. Contrast capture/resolve-post.json, which was moved from admin to data_steward because admin's three roles hold none of what THAT route needs — the same check applied here gives a different answer."
+}
