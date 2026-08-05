@@ -33,13 +33,15 @@ export interface DuplicateCandidate {
 }
 
 export interface RoutingRepair {
-  ownerUserId: string;
-  ownerName: string | null;
-  /** Share of open leads this owner holds, 0..1. */
-  observedShare: number;
-  /** Share they would hold under an even split. */
-  fairShare: number;
-  breachedLeads: number;
+  personaId: string;
+  /** 'over_allocated' or 'starved' — the two have different causes and fixes. */
+  kind: 'over_allocated' | 'starved' | 'received_nothing';
+  /** Assignments this persona took under the candidate rules. */
+  count: number;
+  /** How far from the mean, as a multiple. 1.0 is exactly average. */
+  ratio: number;
+  /** Mean assignments per persona, so the ratio can be read against something. */
+  mean: number;
   /**
    * The simulation that backs this proposal.
    *
@@ -52,13 +54,28 @@ export interface RoutingRepair {
 }
 
 export interface RoutingSimulation {
-  /** Reference returned by sdk-assignment, so the run can be re-read. */
+  /**
+   * The RUN, not the rules — assignment.simulation_run is immutable, so a
+   * reviewer can re-open these exact numbers months later. candidate_version
+   * identifies the RULES, and two runs of one version over different windows are
+   * different evidence with the same version number.
+   */
   simulationRef: string;
-  /** Predicted share for this owner after the proposed change. */
-  projectedShare: number;
-  /** Predicted breaches over the simulated window, before and after. */
-  breachesBefore: number;
-  breachesAfter: number;
+  candidateVersion: number;
+  subjectsReplayed: number;
+  /**
+   * SLA outcome projection, when sdk-assignment has a projector wired.
+   *
+   * ABSENT MEANS NOT PROJECTED AND MUST NOT BE READ AS "NO CHANGE". There is
+   * deliberately no breaches_before/breaches_after on the upstream report, and
+   * the upstream says why: a rule set that distributes perfectly evenly can
+   * breach MORE, because a breach is a function of the clock, the calendar and
+   * the policy on each subject — none of which the replay reads. This field
+   * carries the projection when it exists and stays undefined otherwise; the
+   * old local breachesBefore/breachesAfter pair was inferred from distribution
+   * and has been deleted rather than left to imply a claim nobody can support.
+   */
+  slaProjection?: unknown;
   simulatedAt: string;
 }
 
@@ -96,38 +113,30 @@ export interface RevOpsReport {
 }
 
 /**
- * How much more than a fair share an owner must hold before it is worth
- * proposing a repair.
+ * How far from the mean counts as skewed, passed to sdk-assignment.
  *
- * A MULTIPLE OF FAIR SHARE, NOT AN ABSOLUTE PERCENTAGE, and the difference is
- * the whole rule. This started as "more than 15 percentage points above fair
- * share", which is a sane threshold for a team of three and silently unreachable
- * for any real one: measured against this project's own database — 2,969 owners
- * with leads in the window — fair share is 0.03%, so triggering would need one
- * person holding 15% of every open lead in the tenant. The check never fired and
- * looked like healthy routing. Holding TWICE your share means the same thing at
- * any team size.
+ * THE SKEW MATHS USED TO LIVE HERE and no longer does. LeadFlow derived its own
+ * fair-share rule — first an absolute 15-point gap, then a 2x multiple after the
+ * first version turned out to be unreachable on a real team — while
+ * sdk-assignment had been computing exactly this all along and returning it as
+ * `skew` on the simulate report. Two definitions of "skewed" over one dataset
+ * drift, and the local one was strictly worse: it could see over-allocation and
+ * was structurally blind to STARVATION, because counting who holds too much
+ * never surfaces the person holding nothing.
+ *
+ * 0.5 means 50% above or below the mean. Sent as skew_tolerance so the threshold
+ * is stated in the request rather than reimplemented in the reader.
  */
-const SKEW_MULTIPLE = 2;
+const SKEW_TOLERANCE = 0.5;
 
 /**
- * Fewest open leads before a ratio means anything.
+ * How many historical decisions the replay covers.
  *
- * Two leads against a fair share of one is a 2x skew and is noise. Without this
- * floor, the smallest teams generate the most proposals.
+ * The upstream default is the last 200. A wider window is a better sample and a
+ * slower call; this is the compromise, and it is stated here rather than left to
+ * the default so a change is visible in the diff.
  */
-const MIN_LEADS_FOR_SKEW = 5;
-
-/**
- * How many skewed owners are simulated per run.
- *
- * Simulation is a network call each. Against the owner count above, simulating
- * every skewed owner would be thousands of round trips to produce a list no
- * manager is going to work through — so the worst offenders are simulated and
- * the rest wait for the next run, by which time acting on these will have
- * changed the shares anyway.
- */
-const SKEW_CANDIDATE_LIMIT = 5;
+const REPLAY_LIMIT = 500;
 
 /**
  * Near-duplicates the canonical resolver did not merge.
@@ -193,19 +202,49 @@ export async function duplicateCandidates(limit = 25): Promise<DuplicateCandidat
   return candidates.slice(0, limit);
 }
 
+/** The candidate personas a replay is run against, from our own owned leads. */
+async function candidatePersonaIds(): Promise<string[]> {
+  const rows = await dataService.query<{ owner_persona_id: string }>(
+    `SELECT DISTINCT owner_persona_id
+       FROM leads
+      WHERE owner_persona_id IS NOT NULL
+        AND created_at >= NOW() - INTERVAL '30 days'`,
+    []
+  );
+  return rows.map((row) => row.owner_persona_id);
+}
+
 /**
- * Ask sdk-assignment to simulate a rebalance.
+ * Replay recent routing decisions through sdk-assignment and take its skew audit.
  *
- * @returns null when the simulator is unreachable. NULL IS THE POINT: the caller
- *          must not emit a routing proposal without this, and returning a
- *          plausible-looking local estimate instead would be inventing the
+ * ONE CALL FOR THE WHOLE TENANT, not one per owner. The previous version derived
+ * skew locally and then simulated the worst few offenders individually, which was
+ * both a network call per owner and a second opinion about who was skewed.
+ * sdk-assignment computes the audit over the whole replay, so the answer and the
+ * evidence come from the same place.
+ *
+ * @returns null when the simulator is unreachable OR has nothing to replay. NULL
+ *          IS THE POINT: the caller must not emit a routing proposal without
+ *          this, and returning a plausible local estimate would be inventing the
  *          evidence the criterion asks for.
  */
-async function simulateRebalance(
-  ownerUserId: string,
-  observedShare: number
-): Promise<RoutingSimulation | null> {
+async function replayForSkew(): Promise<{
+  simulation: RoutingSimulation;
+  skew: {
+    mean: number;
+    over_allocated: Array<{ persona_id: string; count: number; ratio: number }>;
+    starved: Array<{ persona_id: string; count: number; ratio: number }>;
+    received_nothing: string[];
+  };
+} | null> {
   if (!SdkGatewayClient.isConfigured()) {
+    return null;
+  }
+
+  const candidates = await candidatePersonaIds();
+  if (candidates.length < 2) {
+    // Skew across fewer than two personas is not a concept, and the endpoint
+    // requires a non-empty candidate list anyway.
     return null;
   }
 
@@ -213,33 +252,52 @@ async function simulateRebalance(
     const result = await SdkGatewayClient.call<{
       data?: {
         simulation_id?: string;
-        projected_share?: number;
-        breaches_before?: number;
-        breaches_after?: number;
+        candidate_version?: number;
+        subjects_replayed?: number;
+        skew?: {
+          mean: number;
+          over_allocated: Array<{ persona_id: string; count: number; ratio: number }>;
+          starved: Array<{ persona_id: string; count: number; ratio: number }>;
+          received_nothing: string[];
+        };
+        sla_projection?: unknown;
       };
     }>({
       sdk: 'sdk-assignment',
       path: '/api/assignment/simulate',
       method: 'POST',
-      idempotencyKey: `rebalance:${ownerUserId}:${observedShare.toFixed(2)}`,
-      body: { owner_user_id: ownerUserId, observed_share: observedShare, strategy: 'even_split' },
+      idempotencyKey: `revops-skew:${candidates.length}:${REPLAY_LIMIT}`,
+      body: {
+        // Replaying the CURRENT rules against the recorded decisions, which is
+        // what makes the report describe the distribution we actually have
+        // rather than one a hypothetical rule change would produce.
+        candidate_version: 1,
+        candidate_persona_ids: candidates,
+        skew_tolerance: SKEW_TOLERANCE,
+        limit: REPLAY_LIMIT,
+      },
     });
 
     const data = result.data?.data;
-    if (!data?.simulation_id || typeof data.projected_share !== 'number') {
-      // A response that does not carry a simulation reference is not evidence,
-      // whatever else it contains. Treated as unavailable rather than partially
-      // trusted — a proposal citing a simulation nobody can re-read is worse
-      // than one that says the simulator was down.
+    // A response with no run id is not evidence, whatever else it contains: a
+    // proposal citing a simulation nobody can re-open is worse than one that
+    // says the simulator was down. Same for a replay of nothing — zero subjects
+    // produces a skew audit over an empty set, which is not a finding.
+    if (!data?.simulation_id || !data.skew || !data.subjects_replayed) {
       return null;
     }
 
     return {
-      simulationRef: data.simulation_id,
-      projectedShare: data.projected_share,
-      breachesBefore: data.breaches_before ?? 0,
-      breachesAfter: data.breaches_after ?? 0,
-      simulatedAt: new Date().toISOString(),
+      simulation: {
+        simulationRef: data.simulation_id,
+        candidateVersion: data.candidate_version ?? 1,
+        subjectsReplayed: data.subjects_replayed,
+        // Carried through UNTOUCHED when present, absent when not. Absent means
+        // not projected, never "no change" — see the field docs.
+        slaProjection: data.sla_projection,
+        simulatedAt: new Date().toISOString(),
+      },
+      skew: data.skew,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -248,91 +306,66 @@ async function simulateRebalance(
   }
 }
 
-/**
- * Routing repairs, each backed by a simulation.
- *
- * THE ORDER HERE IS THE CRITERION. Skew is measured first, then the simulation
- * is run, and a proposal is built ONLY if the simulation came back. Doing it the
- * other way round — build the proposal, attach evidence if available — produces
- * exactly the artefact the criterion forbids: a routing change that looks
- * analysed and is not.
- */
 export async function routingRepairs(): Promise<{
   repairs: RoutingRepair[];
   unavailableReason: string | null;
 }> {
-  const owners = await dataService.query<{
-    owner_user_id: string;
-    owner_name: string | null;
-    open_leads: string;
-    breached_leads: string;
-  }>(
-    `SELECT l.owner_user_id,
-            COALESCE(
-              NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
-              u.email
-            ) AS owner_name,
-            COUNT(*) FILTER (WHERE l.first_response_at IS NULL)::text AS open_leads,
-            COUNT(*) FILTER (WHERE l.sla_breached)::text              AS breached_leads
-       FROM leads l
-       JOIN users u ON u.id = l.owner_user_id
-      WHERE l.owner_user_id IS NOT NULL
-        AND l.created_at >= NOW() - INTERVAL '30 days'
-      GROUP BY l.owner_user_id, u.first_name, u.last_name, u.email`,
-    []
-  );
+  // NO LOCAL SKEW MATHS. The whole owners-and-fair-share query that used to open
+  // this function is gone: sdk-assignment computes the audit over its own replay
+  // and returns it, so asking it is both the answer and the evidence. Deriving a
+  // second opinion here and then simulating to "confirm" it was two definitions
+  // of skewed over one dataset, and the local one could not see starvation at
+  // all.
+  const replay = await replayForSkew();
 
-  if (owners.length < 2) {
-    // Fair share is meaningless with one owner, and proposing a rebalance to a
-    // team of one is noise a manager learns to ignore.
-    return { repairs: [], unavailableReason: null };
+  if (!replay) {
+    // Distinguishable from "routing is healthy", which is the whole reason this
+    // field exists: an empty list with no reason reads as all-clear.
+    return { repairs: [], unavailableReason: 'assignment_simulation_unavailable' };
   }
 
-  const totalOpen = owners.reduce((sum, row) => sum + (parseInt(row.open_leads, 10) || 0), 0);
-  if (totalOpen === 0) {
-    return { repairs: [], unavailableReason: null };
-  }
-
-  const fairShare = 1 / owners.length;
+  const { simulation, skew } = replay;
   const repairs: RoutingRepair[] = [];
-  let unavailableReason: string | null = null;
 
-  // Skew is measured, ranked and CAPPED before any simulation runs. Doing the
-  // filtering inside the simulation loop would issue a network call per owner
-  // and then throw most of the answers away.
-  const skewed = owners
-    .map((row) => {
-      const openLeads = parseInt(row.open_leads, 10) || 0;
-      return { row, openLeads, observedShare: openLeads / totalOpen };
-    })
-    .filter(
-      (candidate) =>
-        candidate.openLeads >= MIN_LEADS_FOR_SKEW &&
-        candidate.observedShare >= fairShare * SKEW_MULTIPLE
-    )
-    .sort((a, b) => b.observedShare - a.observedShare)
-    .slice(0, SKEW_CANDIDATE_LIMIT);
-
-  for (const { row, observedShare } of skewed) {
-    const simulation = await simulateRebalance(row.owner_user_id, observedShare);
-    if (!simulation) {
-      unavailableReason = 'assignment_simulation_unavailable';
-      // NOT emitted. The skew is real and the repair is unproven, and shipping
-      // the second because of the first is the failure this guard exists for.
-      continue;
-    }
-
+  for (const row of skew.over_allocated) {
     repairs.push({
-      ownerUserId: row.owner_user_id,
-      ownerName: row.owner_name,
-      observedShare: Number(observedShare.toFixed(3)),
-      fairShare: Number(fairShare.toFixed(3)),
-      breachedLeads: parseInt(row.breached_leads, 10) || 0,
+      personaId: row.persona_id,
+      kind: 'over_allocated',
+      count: row.count,
+      ratio: Number(row.ratio.toFixed(3)),
+      mean: Number(skew.mean.toFixed(3)),
       simulation,
     });
   }
 
-  return { repairs, unavailableReason };
+  // STARVATION IS REPORTED SEPARATELY, and this is the capability the local
+  // version never had. Over-allocation and starvation have different causes and
+  // different fixes, and a single "imbalance" number hides the person who got
+  // nothing — which is the case a manager most wants to know about, because it
+  // is usually a rule that stopped matching rather than a workload problem.
+  for (const row of skew.starved) {
+    repairs.push({
+      personaId: row.persona_id,
+      kind: 'starved',
+      count: row.count,
+      ratio: Number(row.ratio.toFixed(3)),
+      mean: Number(skew.mean.toFixed(3)),
+      simulation,
+    });
+  }
+
+  for (const personaId of skew.received_nothing) {
+    repairs.push({
+      personaId,
+      kind: 'received_nothing',
+      count: 0,
+      ratio: 0,
+      mean: Number(skew.mean.toFixed(3)),
+      simulation,
+    });
+  }
+
+  return { repairs, unavailableReason: null };
 }
 
 /**
@@ -470,14 +503,24 @@ export async function revopsAnalysis(): Promise<RevOpsReport> {
   }
 
   for (const repair of routing.repairs) {
+    // Keyed on persona AND kind: one persona can legitimately be both starved
+    // under the current rules and named in received_nothing, and those are two
+    // decisions rather than one duplicate.
     proposals.push(
-      await proposeOnce(`routing:${repair.ownerUserId}`, {
+      await proposeOnce(`routing:${repair.kind}:${repair.personaId}`, {
         kind: 'next_action',
-        subjectType: 'user',
-        subjectId: repair.ownerUserId,
+        // The subject is a PERSONA now, not a local user row. sdk-assignment
+        // reasons in personas, and mapping its answer back onto a users.id would
+        // reintroduce exactly the local re-derivation this change removed.
+        subjectType: 'persona',
         content: {
           finding: 'routing_skew',
-          action: 'Rebalance this owner’s share of incoming leads.',
+          action:
+            repair.kind === 'over_allocated'
+              ? 'Rebalance this persona’s share of incoming work.'
+              : repair.kind === 'starved'
+                ? 'This persona is taking materially less than the mean — check the rules still match them.'
+                : 'This persona received NOTHING under the current rules, which is usually a rule that stopped matching rather than a workload problem.',
           // The simulation travels ON the proposal, so a reviewer reading it
           // months later sees the evidence rather than a claim that some
           // evidence once existed.

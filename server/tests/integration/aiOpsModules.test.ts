@@ -258,9 +258,11 @@ describe('routing proposals require simulation evidence (AC2)', () => {
     // rather than a mocked one.
     expect(SdkGatewayClient.isConfigured()).toBe(false);
 
-    // Eight open leads on one owner. Against this database's real owner
-    // population that is comfortably over twice a fair share, which is what the
-    // skew rule measures.
+    // The leads no longer establish skew — sdk-assignment computes that over its
+    // own replay and returns it as `skew`. They are here so the tenant is not
+    // trivially empty, and the assertion below is now the sharper one: with the
+    // simulator unreachable there is no skew audit AT ALL, so nothing can be
+    // proposed however the work is distributed.
     for (let index = 0; index < 8; index += 1) {
       await openLead({ elapsedMinutes: 5 });
     }
