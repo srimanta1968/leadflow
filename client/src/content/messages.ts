@@ -213,6 +213,16 @@ export const FAILURE: Record<string, Message> = {
     detail:
       'Every AI output must name a completion in the activity ledger that actually ran. Nothing was saved.',
   },
+  SEGMENT_NOT_GOVERNED: {
+    tone: 'error',
+    title: 'That audience is not one we may contact',
+    // Names the lawful basis rather than the registry. An operator told "segment
+    // not governed" reads it as a config gap and goes looking for who can add
+    // the segment; told that the audience has no basis to be contacted on, they
+    // understand it is not an administrative obstacle.
+    detail:
+      'Campaigns may only address audiences with a recorded consent purpose, and promotions only audiences who opted in. The recommendation was refused rather than quietly narrowed.',
+  },
   INTERNAL_ERROR: {
     tone: 'error',
     title: 'Something went wrong on our side',

@@ -3,7 +3,7 @@
     "hash": "4b6cc2f8df3be21351cb88fec0565fb541257d26d47083861329960ef8038449",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-04T22:07:38",
+    "verifiedAt": "2026-08-05T03:44:42",
     "route": [
       "POST",
       "/leadflow/ai/coach/calls"
@@ -20,7 +20,7 @@
     "hash": "3800315f882a06320b3f83d6a31e147c30f0b1d4c00f614b73592408eaa12608",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-04T21:41:39",
+    "verifiedAt": "2026-08-05T03:44:42",
     "route": [
       "GET",
       "/leadflow/ai/coach/scorecard/:p"
@@ -37,7 +37,7 @@
     "hash": "20fa134f979678bb4bc037d6900ab2d957495e36d62378c78e03f78e1888d21f",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-04T21:41:39",
+    "verifiedAt": "2026-08-05T03:44:42",
     "route": [
       "POST",
       "/leadflow/ai/sdr/proposals/:p/accept"
@@ -54,7 +54,7 @@
     "hash": "b80c6819dd3020f6c0e5b73ee488361fb6bcdb5f1419c953e556d2a70cf360a4",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-04T21:41:39",
+    "verifiedAt": "2026-08-05T03:44:42",
     "route": [
       "POST",
       "/leadflow/ai/sdr/qualify"
@@ -878,10 +878,10 @@
     ]
   },
   "ai/proposals-id-decide-post.json": {
-    "hash": "85eba8bda3b8036b480637f2504c2b79a16e4f71c08b93e4d086e97f5f8d9fd0",
+    "hash": "c0b9ac01ebd8ec3784bd0fe0e696b2ab3e053d3463e6ee243b402511df870c7a",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-04T21:40:50",
+    "verifiedAt": "2026-08-05T03:44:42",
     "route": [
       "POST",
       "/leadflow/ai/proposals/:p/decide"
@@ -895,10 +895,10 @@
     ]
   },
   "ai/propose-post.json": {
-    "hash": "ffa2576156fc193d2bfc5589d7cfd4396c677c2753037fee13c6ee76d327d3e6",
+    "hash": "030c5d52fa80d8e6f9ea50a49f14eb74f5aac124031913e9157e4d21d92b10a3",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-04T21:40:50",
+    "verifiedAt": "2026-08-05T03:44:42",
     "route": [
       "POST",
       "/leadflow/ai/propose"
@@ -908,6 +908,40 @@
         "rule": "CODE-MATCH",
         "severity": "low",
         "message": "POST /api/leadflow/ai/propose was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "ai/manager-risk-signals-get.json": {
+    "hash": "f10bb52d994b4e2146bb393d9145d7913b411562fec879ad663eac0fc05bc3a1",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-05T03:44:42",
+    "route": [
+      "GET",
+      "/leadflow/ai/manager/risk-signals"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/ai/manager/risk-signals was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "ai/revops-proposals-get.json": {
+    "hash": "a9f555f6e67142fed5845bb57cf1c3efcaf77f059886565ed184ae8700123f20",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-05T03:44:42",
+    "route": [
+      "GET",
+      "/leadflow/ai/revops/proposals"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/ai/revops/proposals was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
       }
     ]
   }

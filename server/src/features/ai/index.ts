@@ -8,6 +8,23 @@
 export { default as aiRoutes } from './aiRoutes';
 export { AiCoachController, AiSdrController } from './aiController';
 export { AiReviewGateController } from './reviewGateController';
+export { AiManagerController, AiRevOpsController } from './opsController';
+export { riskSignals, huddleBrief, INTERVENTION_LEAD_MINUTES } from './managerRiskService';
+export type { RiskSignal, RiskEvidence, RiskSignalReport } from './managerRiskService';
+export {
+  revopsAnalysis,
+  duplicateCandidates,
+  routingRepairs,
+  sequenceFindings,
+} from './revopsProposalService';
+export type { RevOpsReport, RoutingRepair, DuplicateCandidate } from './revopsProposalService';
+export {
+  attribution,
+  segmentSizes,
+  recommendCampaign,
+  marketingAnalysis,
+} from './marketingService';
+export type { AttributionReport, CampaignRecommendation } from './marketingService';
 export { qualifyLead, acceptProposal, TEMPLATE_VERSION } from './sdrQualifyService';
 export type { SdrProposal, SdrChannel, ScoreComponent, ResearchFact } from './sdrQualifyService';
 export { registerCall, scoreCall, mapObjection } from './coachScorecardService';

@@ -3,6 +3,7 @@ import { authenticate } from '../../middleware/auth';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { AiCoachController, AiSdrController } from './aiController';
 import { AiReviewGateController } from './reviewGateController';
+import { AiManagerController, AiRevOpsController } from './opsController';
 
 // @governance-tracked
 // Definition: tests/api_definitions/ai/sdr-qualify-post.json
@@ -11,6 +12,8 @@ import { AiReviewGateController } from './reviewGateController';
 // Definition: tests/api_definitions/ai/coach-scorecard-callid-get.json
 // Definition: tests/api_definitions/ai/propose-post.json
 // Definition: tests/api_definitions/ai/proposals-id-decide-post.json
+// Definition: tests/api_definitions/ai/manager-risk-signals-get.json
+// Definition: tests/api_definitions/ai/revops-proposals-get.json
 
 /**
  * The AI agent surface.
@@ -37,5 +40,7 @@ router.post('/sdr/qualify', asyncHandler(AiSdrController.qualify));
 router.post('/sdr/proposals/:id/accept', asyncHandler(AiSdrController.accept));
 router.post('/coach/calls', asyncHandler(AiCoachController.register));
 router.get('/coach/scorecard/:callId', asyncHandler(AiCoachController.scorecard));
+router.get('/manager/risk-signals', asyncHandler(AiManagerController.signals));
+router.get('/revops/proposals', asyncHandler(AiRevOpsController.proposals));
 
 export default router;

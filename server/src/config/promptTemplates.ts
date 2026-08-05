@@ -81,6 +81,41 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
       'the prospect directly — a message is a separate proposal a rep approves.',
     ].join('\n'),
   },
+  {
+    key: 'manager_huddle_brief',
+    version: 'sop-v3.0-huddle1',
+    purpose: 'Turn the response-risk signals into a daily brief a manager can read in a minute.',
+    slots: ['risk_summary', 'window_minutes'],
+    body: [
+      'Write the daily huddle brief from these signals: {risk_summary}.',
+      'The intervention window is {window_minutes} minutes. Lead with what can',
+      'still be acted on. Quote the numbers given; add none of your own, and',
+      'never state a cause the signals do not contain.',
+    ].join('\n'),
+  },
+  {
+    key: 'revops_finding',
+    version: 'sop-v3.0-revops1',
+    purpose: 'Phrase one RevOps finding as a proposal a human reviews.',
+    slots: ['finding_kind', 'evidence_summary'],
+    body: [
+      'Phrase this {finding_kind} finding as a proposed action: {evidence_summary}.',
+      'State what was observed and what is proposed, separately. Do not assert',
+      'the change has been made — a human decides, and nothing here applies it.',
+    ].join('\n'),
+  },
+  {
+    key: 'marketing_campaign_plan',
+    version: 'sop-v3.0-campaign1',
+    purpose: 'Phrase a campaign recommendation against a governed segment.',
+    slots: ['segment_label', 'segment_purpose', 'member_count'],
+    body: [
+      'Recommend a send to {segment_label} ({member_count} members) under the',
+      '{segment_purpose} purpose. Name that purpose in the recommendation.',
+      'Propose no audience other than the one given: the segment was checked',
+      'against the governed registry before you were called.',
+    ].join('\n'),
+  },
 ];
 
 /** Look up one pinned template. */

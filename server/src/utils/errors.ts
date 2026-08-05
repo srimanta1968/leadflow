@@ -162,6 +162,17 @@ export const ErrorCodes = {
    * stopped.
    */
   AI_COMPLETION_NOT_ACCOUNTED: 'AI_COMPLETION_NOT_ACCOUNTED',
+  /**
+   * A campaign named an audience outside the governed segment registry, or
+   * named a service-necessary audience for a promotional send.
+   *
+   * 422 and the sibling of RESEARCH_SOURCE_NOT_PERMITTED: the payload is
+   * well-formed and the refusal is about lawful basis. REFUSED rather than
+   * silently narrowed to the governed part — a quietly filtered audience
+   * produces a recommendation whose reasoning was drawn from people who are not
+   * in it, and the reviewer approving it cannot tell.
+   */
+  SEGMENT_NOT_GOVERNED: 'SEGMENT_NOT_GOVERNED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 

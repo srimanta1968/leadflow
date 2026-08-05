@@ -1,21 +1,19 @@
 {
-  "generatedAt": "2026-08-05T00:07:44.816785Z",
-  "taskId": "126418a5-93a2-4cea-8813-bc5f1fd9d424",
+  "generatedAt": "2026-08-05T03:45:21.521726Z",
+  "taskId": "0c5a3bed-354e-4400-9378-5fe701d1f90a",
   "gaps": [
     {
-      "criterionId": "a63a3ca6-90ba-43fc-b342-1de04bfa8350#AC2",
-      "criterion": "Data updates in real-time.",
+      "criterionId": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC2",
+      "criterion": "Routing proposals are backed by simulation evidence",
       "verdict": "partial",
-      "gap": "The refresh path is implemented and deliberate \u2014 Analytics.tsx subscribes to /api/events/stream via subscribeToEvents, coalesces reloads at 400ms so a sweep routing fifty leads costs one aggregate query rather than fifty, and shows a 'Live' indicator once a frame has arrived. The stream itself is covered by server/tests/unit/eventStream.test.ts and its api_definition is declared manual. WHAT HAS NO EXECUTABLE ARTIFACT is the refresh actually happening: scenario 1fca44d2 passed in a real browser, but its steps only prove the two push-refreshed panels RENDER. 'Live' is set only on a real data frame \u2014 not on connect and not on a heartbeat comment frame \u2014 and a linear single-tab BDD run cannot produce one, because the event would have to arrive while Analytics is already mounted and the runner has one tab and no way to act as a second operator. Proving it would need either a component harness the client does not have (no @testing-library/react, no jsdom \u2014 adding both is a dependency change outside this task) or a two-actor browser test the runner does not support. The limit is now written into tests/features/basic-analytics-dashboard.feature as a COVERAGE NOTE so it is visible in the artifact rather than only in this record.",
+      "gap": "THE GUARD IS PROVEN AND IS STRUCTURAL. RoutingRepair declares simulation as a REQUIRED field, so an unbacked repair is unconstructible rather than merely discouraged; routingRepairs() measures skew first, calls sdk-assignment second, and builds a proposal ONLY if the simulation returned. An executing test asserts that in the real unreachable state this suite runs in (no gateway configured): genuine skew is present, repairs is empty, and routingUnavailableReason is 'assignment_simulation_unavailable' so 'routing is healthy' stays distinguishable from 'we could not check'. The api_definition asserts the same over HTTP. WHAT IS UNPROVEN is the POSITIVE path: no sdk-assignment exists here, so a simulation has never actually returned and a backed RoutingRepair has never been constructed, proposed or reviewed. The criterion therefore holds today partly by vacuity \u2014 there are no routing proposals at all, so none lack evidence \u2014 and the branch that maps a real simulation response onto projectedShare/breachesBefore/breachesAfter has never executed. Closing it needs one run against a live sdk-assignment. NOTE a real defect found and fixed on the way, which would have made this silently vacuous forever: skew was measured as an absolute 15-percentage-point gap above fair share, which is unreachable on any real team \u2014 this project's own database has 2,969 owners, so fair share is 0.03% and triggering would have needed one person holding 15% of every open lead in the tenant. It is now a MULTIPLE of fair share (2x, floor of 5 open leads, worst 5 simulated per run), which means the same thing at any team size.",
       "evidence": {
-        "scenarios": [
-          "1fca44d2-b06d-4171-a568-3db7d14e77cd"
+        "apiDefinitions": [
+          "tests/api_definitions/ai/revops-proposals-get.json"
         ],
         "files": [
-          "client/src/pages/app/Analytics.tsx",
-          "client/src/services/eventStream.ts",
-          "server/tests/unit/eventStream.test.ts",
-          "tests/features/basic-analytics-dashboard.feature"
+          "server/src/features/ai/revopsProposalService.ts",
+          "server/tests/integration/aiOpsModules.test.ts"
         ]
       }
     }

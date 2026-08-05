@@ -30,6 +30,18 @@ export const AI_CAPABILITIES = {
   RESEARCH_LOOKUP: 'research.lookup',
   SCORECARD_WRITE: 'scorecard.write',
   PROPOSAL_CREATE: 'proposal.create',
+  /** Read the aggregate projections: queue depth, rollups, attribution. */
+  ANALYTICS_READ: 'analytics.read',
+  /**
+   * Ask sdk-assignment to SIMULATE a routing change.
+   *
+   * Simulate, never apply. There is deliberately no `assignment.apply`
+   * capability in this vocabulary: a routing change reaches the system through
+   * an accepted proposal, so no agent needs the ability to make one.
+   */
+  ASSIGNMENT_SIMULATE: 'assignment.simulate',
+  /** Read governed segment definitions and their membership counts. */
+  SEGMENT_READ: 'segment.read',
 } as const;
 
 export type AiCapability = (typeof AI_CAPABILITIES)[keyof typeof AI_CAPABILITIES];
@@ -112,6 +124,54 @@ export const AI_AGENTS: AiAgentDefinition[] = [
     ],
     proposes: ['next_action'],
     promptTemplateKey: 'next_action_plan',
+  },
+  {
+    key: 'manager_risk',
+    label: 'AI Manager — response risk',
+    purpose: 'Predicts an SLA breach early enough for a manager to intervene.',
+    consentPurpose: 'lead_management',
+    // Reads the queue and proposes; that is all. NOT lead.annotate and NOT
+    // assignment.simulate — a risk signal is an observation, and the repair it
+    // might imply belongs to the RevOps agent, which has to show a simulation.
+    capabilities: [
+      AI_CAPABILITIES.LEAD_READ,
+      AI_CAPABILITIES.ANALYTICS_READ,
+      AI_CAPABILITIES.PROPOSAL_CREATE,
+    ],
+    // A predicted breach is a score; the daily huddle brief is a summary.
+    proposes: ['score', 'summary'],
+    promptTemplateKey: 'manager_huddle_brief',
+  },
+  {
+    key: 'revops_analyst',
+    label: 'AI RevOps — duplicates, routing and sequences',
+    purpose: 'Finds duplicates, routing skew and poor sequence steps, each as a reviewable proposal.',
+    consentPurpose: 'lead_management',
+    capabilities: [
+      AI_CAPABILITIES.LEAD_READ,
+      AI_CAPABILITIES.ANALYTICS_READ,
+      AI_CAPABILITIES.ASSIGNMENT_SIMULATE,
+      AI_CAPABILITIES.PROPOSAL_CREATE,
+    ],
+    proposes: ['next_action'],
+    promptTemplateKey: 'revops_finding',
+  },
+  {
+    key: 'marketing_planner',
+    label: 'AI Marketing — attribution and next campaign',
+    purpose: 'Attributes responses across touches and recommends the next campaign from governed segments only.',
+    consentPurpose: 'lead_management',
+    // segment.read, NOT lead.read. The planner works on AUDIENCE COUNTS and
+    // never needs a person: it has no business reading a name to decide which
+    // governed segment to send to, and the narrower capability is what makes
+    // that structural rather than a matter of discipline.
+    capabilities: [
+      AI_CAPABILITIES.SEGMENT_READ,
+      AI_CAPABILITIES.ANALYTICS_READ,
+      AI_CAPABILITIES.PROPOSAL_CREATE,
+    ],
+    proposes: ['next_action'],
+    promptTemplateKey: 'marketing_campaign_plan',
   },
 ];
 

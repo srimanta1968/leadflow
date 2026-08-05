@@ -1,0 +1,89 @@
+{
+  "name": "GET /api/leadflow/ai/manager/risk-signals - predicted SLA breaches, early enough to act",
+  "description": "The AI Manager module. Predicts which running response clocks will breach and returns only the ones a manager can still do something about (AC1), each with its evidence and a confidence band, plus the daily huddle brief.\n\nWHY THIS EXISTS ALONGSIDE THE DETERMINISTIC AMBER FLAG. SlaMonitorService turns a lead at_risk at 0.8 of its window — six minutes of a thirty-minute clock, arriving at T+24. That is a fact about ONE lead's elapsed time and it is rarely actionable: by then the rep who was going to answer has either answered or is not at their desk. This endpoint predicts the same breach at T+15 from signals the elapsed-time rule does not have — how deep the owner's queue is, whether the lead has an owner at all, and whether that owner has recorded anything today. Those are properties of the QUEUE rather than of the lead, and they are what actually decides whether somebody gets to it. Every response reports deterministicAtRiskFraction alongside each signal's deterministicState, so a reader can see the module firing while the amber flag still says on_track.\n\nEVERY PREDICTION CARRIES ITS EVIDENCE. Four named signals — coverage, queue_depth, rep_activity, elapsed_fraction — each reporting what was observed, what it contributed and why. A risk score a manager cannot interrogate is one they will either over-trust or ignore, and the second happens the first time it is wrong. The confidence band widens when fewer signals contributed, so a prediction resting on one is visibly weaker than one where three agree.\n\nTHE INTERVENTION WINDOW IS THE CRITERION, IN THE RESPONSE. minutesRemaining and interventionWindowOpen are on every signal, and anything with less warning left than minLeadMinutes is FILTERED OUT rather than greyed — a list mixing 'act now' with 'too late' trains a manager to skim it. An already-breached clock is never returned: that is history, and reporting it would inflate the module's apparent hit rate with facts.\n\nopenClocksExamined is present so an empty list is not ambiguous: 'nothing is at risk' and 'nothing is being measured' look identical otherwise, and only one of them is good news. The huddle brief says which.\n\nDETERMINISTIC, NOT A MODEL CALL, for the same two reasons as the SDR scorer: a manager watching a lead move from 62 to 71 with nothing changed stops believing any of it, and the criterion asks for evidence per signal, which a language model can only narrate after the fact.\n\nA read, so 200 (MUST-54). WRAPPED IN THE GOVERNED WRAPPER DESPITE BEING A READ, which most reads here are not: the thing being read IS the sensitive part, because the response lists other people's leads and names the owner whose queue is deep. 'Who looked at the team's performance, and when' is a question that gets asked, and an unaudited management dashboard cannot answer it. Governed by dashboard.view_team — a Sales Rep holds lead.work_assigned and NOT this, and being refused is the correct outcome for a rep, so the QA account must be the seeded admin (which maps to sales_manager) rather than a freshly registered user.\n\nTHE CODE-MATCH FINDING ON THIS FILE IS A VERIFIED SCANNER FALSE POSITIVE, same barrel-mount root cause already recorded against authz/evaluate-post.json and the six other ai definitions: routes/index.ts does router.use('/leadflow/ai', aiRoutes) through a barrel export and aiRoutes does router.get('/manager/risk-signals'), so the literal path never appears in one file. Verified against the running server on :3010 — 200 for the seeded admin with signals, interventionLeadMinutes, openClocksExamined and brief all present; 400 VALIDATION_ERROR on a non-numeric minLeadMinutes; 401 with no bearer; and 403 FORBIDDEN for a freshly registered plain user, which is the policy working.",
+  "endpoint": "/api/leadflow/ai/manager/risk-signals",
+  "method": "GET",
+  "taskId": "0c5a3bed-354e-4400-9378-5fe701d1f90a",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 3,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC1",
+    "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC4"
+  ],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "deterministicState": ["on_track", "at_risk"],
+    "signal": ["coverage", "queue_depth", "rep_activity", "elapsed_fraction"]
+  },
+  "testCases": [
+    {
+      "name": "Predictions come back with lead time, evidence and the huddle brief",
+      "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "interventionLeadMinutes": 15,
+          "deterministicAtRiskFraction": 0.8
+        }
+      }
+    },
+    {
+      "name": "A caller may narrow the intervention window",
+      "testType": "negative",
+      "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "queryParams": { "minLeadMinutes": "45" },
+      "expectedStatus": 200,
+      "expectedResponse": { "success": true, "data": { "interventionLeadMinutes": 45 } }
+    },
+    {
+      "name": "Reject a lead time that is not a whole number of minutes",
+      "testType": "negative",
+      "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "queryParams": { "minLeadMinutes": "abc" },
+      "expectedStatus": 400,
+      "expectedError": { "code": "VALIDATION_ERROR" }
+    },
+    {
+      "name": "Reject a lead time beyond a day",
+      "testType": "negative",
+      "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC1",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "queryParams": { "minLeadMinutes": "5000" },
+      "expectedStatus": 400,
+      "expectedError": { "code": "VALIDATION_ERROR" }
+    },
+    {
+      "name": "Reject an unauthenticated read of the team's risk",
+      "testType": "negative",
+      "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC4",
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "minLeadMinutes must be a whole number between 1 and 1440",
+      "when": "minLeadMinutes is not a whole number in range"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold dashboard.view_team. A Sales Rep lands here, and that is the intended outcome: a rep should not be reading a list of which colleagues are behind."
+    }
+  ]
+}

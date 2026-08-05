@@ -1,0 +1,71 @@
+{
+  "name": "GET /api/leadflow/ai/revops/proposals - RevOps findings, each a reviewable proposal",
+  "description": "The AI RevOps module. Three kinds of finding about how the machine is running — duplicates the deterministic resolver missed, routing skew, and sequence steps whose misses outweigh their replies — each opened as a proposal a qualified human decides (AC4). Nothing here applies anything.\n\nROUTING PROPOSALS REQUIRE SIMULATION EVIDENCE, AND THAT IS ENFORCED BY ORDER OF OPERATIONS (AC2). Skew is measured first, sdk-assignment POST /api/assignment/simulate is called second, and a proposal is built ONLY if the simulation came back. Doing it the other way round — build the proposal, attach evidence when available — produces exactly the artefact the criterion forbids: a routing change that looks analysed and is not. The RoutingRepair type declares its simulation as REQUIRED rather than optional, so the compiler is the enforcement and the only way to construct one is to have the evidence.\n\nWHEN THE SIMULATOR IS UNREACHABLE, routingRepairs is EMPTY and routingUnavailableReason says 'assignment_simulation_unavailable'. That field exists precisely because the empty list is otherwise ambiguous: 'routing is healthy' and 'we could not check' look identical, and only one of them means the manager can stop looking. No ProjexCloud gateway is reachable in this environment, so that is the branch the QA run exercises — and it is the branch that proves the criterion, because it shows the skew being found and the proposal being withheld.\n\nSKEW IS A MULTIPLE OF FAIR SHARE, NOT AN ABSOLUTE PERCENTAGE. It began as 'more than 15 percentage points above fair share', which is sane for a team of three and silently unreachable for a real one — measured against this project's own database, 2,969 owners with leads in the window means fair share is 0.03%, so triggering would need one person holding 15% of every open lead in the tenant. Holding twice your share means the same thing at any team size. A floor of five open leads keeps small numbers from generating noise, and only the five worst offenders are simulated per run, because simulation is a network call each.\n\nSAFE TO RE-RUN, WHICH IS WHY IT IS A GET. Every proposal is keyed on the finding it came from, so a second call returns the proposals already waiting rather than a second copy of each. It was NOT idempotent when first written, and a second live call duly opened every sequence proposal again — verified fixed on :3010, where two consecutive calls return the same 12 proposals and leave 12 rows. Matching is against OPEN proposals only: a finding whose proposal was rejected and which is still true SHOULD come back, because that is a steward saying 'not now' rather than 'never'.\n\n200, not 201: the response is the analysis, and the proposals are a consequence of it rather than the addressable thing being created. Governed by data.configure — RevOps findings are about how the machine is configured, which is that role's own remit — so the QA account must be the seeded admin (which maps to revenue_operations) rather than a freshly registered user, who correctly gets 403.\n\nTHE CODE-MATCH FINDING ON THIS FILE IS A VERIFIED SCANNER FALSE POSITIVE, same barrel-mount root cause as the other ai definitions. Verified against the running server on :3010 — 200 with duplicates, routingRepairs, routingUnavailableReason, sequenceFindings and proposals all present; 401 with no bearer.",
+  "endpoint": "/api/leadflow/ai/revops/proposals",
+  "method": "GET",
+  "taskId": "0c5a3bed-354e-4400-9378-5fe701d1f90a",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 4,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC2",
+    "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC4"
+  ],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "matchedOn": ["canonical_email", "canonical_phone", "canonical_social_id"],
+    "finding": ["duplicate_candidate", "routing_skew", "sequence_quality"],
+    "routingUnavailableReason": ["assignment_simulation_unavailable"]
+  },
+  "captureResponse": {
+    "ai.revopsProposals.response.data.generatedAt": "data.generatedAt"
+  },
+  "testCases": [
+    {
+      "name": "Findings come back as proposals, and routing is withheld without simulation evidence",
+      "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC2",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "routingRepairs": [],
+          "routingUnavailableReason": "assignment_simulation_unavailable"
+        }
+      }
+    },
+    {
+      "name": "Re-running opens no second copy of the same findings",
+      "testType": "negative",
+      "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC4",
+      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": { "routingUnavailableReason": "assignment_simulation_unavailable" }
+      }
+    },
+    {
+      "name": "Reject an unauthenticated read of the RevOps queue",
+      "testType": "negative",
+      "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC4",
+      "expectedStatus": 401,
+      "expectedError": { "code": "UNAUTHENTICATED" }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication required",
+      "when": "the Authorization header is absent or the token does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold data.configure. A Sales Rep lands here, correctly: how routing and dedupe are configured is RevOps' remit."
+    }
+  ]
+}

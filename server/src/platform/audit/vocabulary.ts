@@ -92,6 +92,15 @@ export const AUDIT_EVENTS = {
   // runs it caught. An emergency stop nobody can reconstruct afterwards leaves
   // the review with no answer to "what was running when we pulled it".
   AI_KILL_SWITCH_ENGAGED: 'ai.kill_switch.engaged',
+
+  // The AI Manager, RevOps and Marketing modules. Two names rather than one
+  // `ai.analysis.run`, because the two answer different questions and get asked
+  // about separately: `ai.risk.predicted` is read when somebody wants to know
+  // who was watching the team's queue, and `ai.revops.analysed` when somebody
+  // asks where a routing proposal came from. One combined name would make both
+  // queries return the other's rows.
+  AI_RISK_PREDICTED: 'ai.risk.predicted',
+  AI_REVOPS_ANALYSED: 'ai.revops.analysed',
 } as const;
 
 /** Any name in the vocabulary. Nothing else is appendable. */

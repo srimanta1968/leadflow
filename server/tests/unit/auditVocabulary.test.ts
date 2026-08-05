@@ -47,7 +47,12 @@ describe('the audit vocabulary', () => {
     // while the only consequential output was a message; the review gate takes
     // scores, summaries, next actions and offer-term changes too, and it names
     // the REJECTION, which the draft pair never did.
-    expect(allAuditEventNames()).toHaveLength(44);
+    //
+    // 2 more for the Manager and RevOps modules. Two names rather than one
+    // `ai.analysis.run`: "who was watching the team's queue" and "where did this
+    // routing proposal come from" are asked separately, and one combined name
+    // would make each query return the other's rows.
+    expect(allAuditEventNames()).toHaveLength(46);
     expect(isAuditEventName('capture.created')).toBe(true);
     expect(isAuditEventName('sla.breached')).toBe(true);
     expect(isAuditEventName('lead.routed')).toBe(true);
