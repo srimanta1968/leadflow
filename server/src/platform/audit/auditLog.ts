@@ -143,8 +143,22 @@ export async function appendAuditEntry(entry: AuditEntry): Promise<AuditAppendRe
 export interface ChainVerificationResult {
   attempted: boolean;
   intact: boolean;
+  /**
+   * How many entries the verifier actually walked.
+   *
+   * REPORTED BECAUSE "INTACT" ALONE IS AMBIGUOUS. An empty chain verifies
+   * perfectly — there is nothing in it to be inconsistent — so `ok: true` with
+   * `entries_checked: 0` means "nothing was ever accepted", which is the
+   * WORST case dressed as the best. That is precisely how the unversioned
+   * event-type names hid: sdk-audit rejected every append with a 400, the
+   * append swallows failures by design, and the nightly verification kept
+   * reporting a clean chain that was clean because it was empty.
+   */
+  entriesChecked: number;
   /** Set when the chain did not verify. */
   detail?: string;
+  /** Sequence number the chain broke at, when it broke. */
+  breakAtSeq?: number | null;
   /** Reference of the incident opened, when one was. */
   incidentRef?: string;
 }
@@ -161,16 +175,37 @@ export interface ChainVerificationResult {
  * hash chain is not a warning — either something rewrote history or the ledger
  * is corrupt, and both need a person. A log line would sit unread among the
  * successes.
+ *
+ * THE RESPONSE FIELD IS `ok`, NOT `intact`. This read `intact` — a field
+ * sdk-audit has never returned — so the check was `undefined === true`, false on
+ * every run, and the nightly verification opened a CRITICAL "chain mismatch"
+ * incident every single night against a chain that was fine. An alarm that
+ * always fires is an alarm nobody reads, which would have made a genuine
+ * mismatch invisible in exactly the pile of false ones this created. The real
+ * shape is sdk-audit's VerifyProof: ok, entries_checked, break_at_seq,
+ * break_reason.
  */
 export async function verifyAuditChain(): Promise<ChainVerificationResult> {
   if (!SdkGatewayClient.isConfigured()) {
-    return { attempted: false, intact: false, detail: 'No ProjexCloud gateway configured' };
+    return {
+      attempted: false,
+      intact: false,
+      entriesChecked: 0,
+      detail: 'No ProjexCloud gateway configured',
+    };
   }
 
   const correlationId = randomUUID();
 
   try {
-    const result = await SdkGatewayClient.call<{ data?: { intact?: boolean; detail?: string } }>({
+    const result = await SdkGatewayClient.call<{
+      data?: {
+        ok?: boolean;
+        entries_checked?: number;
+        break_at_seq?: number | null;
+        break_reason?: string | null;
+      };
+    }>({
       sdk: 'sdk-audit',
       path: '/api/audit/verify',
       method: 'POST',
@@ -179,20 +214,54 @@ export async function verifyAuditChain(): Promise<ChainVerificationResult> {
       body: { pool_index: auditTenantId(), tenant_id: auditTenantId() },
     });
 
-    const intact = result.data?.data?.intact === true;
-    if (intact) {
-      return { attempted: true, intact: true };
+    const proof = result.data?.data;
+    const entriesChecked = proof?.entries_checked ?? 0;
+    // `=== true`, so a malformed response reads as NOT verified rather than
+    // letting a missing field pass as a clean chain — the mistake this function
+    // has been making in the other direction.
+    const ok = proof?.ok === true;
+
+    if (ok && entriesChecked > 0) {
+      return { attempted: true, intact: true, entriesChecked };
     }
 
-    const detail = result.data?.data?.detail ?? 'The audit chain did not verify.';
+    if (ok && entriesChecked === 0) {
+      // VERIFIED AND EMPTY. Not an incident — nothing is corrupt — but not a
+      // pass either: a ledger with no entries means nothing was ever accepted,
+      // and reporting that as intact is what let a whole rejected vocabulary go
+      // unnoticed. Surfaced as not-intact with the reason named.
+      return {
+        attempted: true,
+        intact: false,
+        entriesChecked: 0,
+        detail:
+          'The audit chain verified, but it is EMPTY — no entries have ever been accepted. Check that the event types are registered and that appends are not being rejected.',
+      };
+    }
+
+    const detail = proof?.break_reason
+      ? `The audit chain broke at sequence ${proof.break_at_seq ?? 'unknown'}: ${proof.break_reason}`
+      : 'The audit chain did not verify.';
     const incidentRef = await openChainIncident(detail, correlationId);
-    return { attempted: true, intact: false, detail, incidentRef };
+    return {
+      attempted: true,
+      intact: false,
+      entriesChecked,
+      detail,
+      breakAtSeq: proof?.break_at_seq ?? null,
+      incidentRef,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[audit] chain verification could not run:', message);
     // An unreachable verifier is NOT a verified chain. Reported as not-intact so
     // a silent outage cannot masquerade as a clean bill of health.
-    return { attempted: true, intact: false, detail: `Verification unavailable: ${message}` };
+    return {
+      attempted: true,
+      intact: false,
+      entriesChecked: 0,
+      detail: `Verification unavailable: ${message}`,
+    };
   }
 }
 

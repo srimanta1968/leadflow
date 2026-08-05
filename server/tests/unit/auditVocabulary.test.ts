@@ -190,24 +190,67 @@ describe('appending an entry', () => {
   });
 });
 
+/**
+ * THESE MOCKS NOW MATCH sdk-audit's REAL VerifyProof, and that is the point.
+ *
+ * They used to return `{ intact: true }` — a field sdk-audit has never emitted.
+ * The production code read the same invented field, so the tests agreed with the
+ * code and both were wrong together: `undefined === true` is false, so every
+ * nightly run reported a broken chain and opened a CRITICAL incident against a
+ * ledger that was fine. A test written from the same assumption as the code
+ * cannot catch the assumption. The real shape is ok / entries_checked /
+ * break_at_seq / break_reason.
+ */
 describe('nightly chain verification', () => {
-  it('reports an intact chain', async () => {
+  it('reports an intact chain, and how many entries it actually walked', async () => {
     jest.spyOn(SdkGatewayClient, 'isConfigured').mockReturnValue(true);
-    jest
-      .spyOn(SdkGatewayClient, 'call')
-      .mockResolvedValue({ delivered: true, status: 200, data: { data: { intact: true } } });
+    jest.spyOn(SdkGatewayClient, 'call').mockResolvedValue({
+      delivered: true,
+      status: 200,
+      data: { data: { ok: true, entries_checked: 128, break_at_seq: null, break_reason: null } },
+    });
 
-    await expect(verifyAuditChain()).resolves.toMatchObject({ intact: true });
+    await expect(verifyAuditChain()).resolves.toMatchObject({
+      intact: true,
+      entriesChecked: 128,
+    });
   });
 
-  it('opens an incident when the chain does not verify', async () => {
+  it('refuses to call a VERIFIED BUT EMPTY chain intact', async () => {
+    jest.spyOn(SdkGatewayClient, 'isConfigured').mockReturnValue(true);
+    jest.spyOn(SdkGatewayClient, 'call').mockResolvedValue({
+      delivered: true,
+      status: 200,
+      data: { data: { ok: true, entries_checked: 0, break_at_seq: null, break_reason: null } },
+    });
+
+    // An empty chain verifies perfectly — there is nothing in it to be
+    // inconsistent — so ok:true with zero entries is the WORST case wearing the
+    // best case's answer. It is exactly how a whole rejected event vocabulary
+    // went unnoticed: every append 400'd, the append swallows failures by
+    // design, and verification kept reporting clean.
+    const result = await verifyAuditChain();
+
+    expect(result.intact).toBe(false);
+    expect(result.entriesChecked).toBe(0);
+    expect(result.detail).toMatch(/EMPTY/);
+  });
+
+  it('opens an incident when the chain does not verify, naming where it broke', async () => {
     jest.spyOn(SdkGatewayClient, 'isConfigured').mockReturnValue(true);
     const call = jest.spyOn(SdkGatewayClient, 'call').mockImplementation(async (options) => {
       if (options.sdk === 'sdk-audit') {
         return {
           delivered: true,
           status: 200,
-          data: { data: { intact: false, detail: 'hash mismatch at seq 41' } },
+          data: {
+            data: {
+              ok: false,
+              entries_checked: 41,
+              break_at_seq: 41,
+              break_reason: 'hash mismatch',
+            },
+          },
         } as never;
       }
       return { delivered: true, status: 201, data: { data: { incident_id: 'inc-7' } } } as never;
@@ -217,6 +260,10 @@ describe('nightly chain verification', () => {
 
     expect(result.intact).toBe(false);
     expect(result.incidentRef).toBe('inc-7');
+    // The sequence number is the whole diagnostic — "it broke" without "where"
+    // sends somebody to read the entire ledger.
+    expect(result.breakAtSeq).toBe(41);
+    expect(result.detail).toMatch(/sequence 41/);
     // A broken hash chain needs a person, not a log line among the successes.
     expect(call.mock.calls.some((args) => args[0].sdk === 'sdk-incident')).toBe(true);
   });
