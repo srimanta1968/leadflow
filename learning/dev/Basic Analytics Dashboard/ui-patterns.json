@@ -1,54 +1,105 @@
 {
   "version": "3.0",
   "base_url": "http://host.docker.internal:5173",
-  "last_updated": "2026-07-31T05:33:18.725852",
+  "last_updated": "2026-08-05T00:06:38.419280",
   "pages": {
-    "http://host.docker.internal:5173/app": {
-      "url": "http://host.docker.internal:5173/app",
-      "last_visited": "2026-07-31T05:33:12.356172",
-      "visit_count": 3,
-      "actions": {
-        "click:I click \"Sign in\"": {
-          "action_type": "click",
-          "action_label": "I click \"Sign in\"",
-          "triggered_at": "2026-07-31T05:32:34.987611",
-          "containers": {
-            "div#root": {
-              "container_selector": "div#root",
-              "container_hash": "PGRpdiBpZD0icm9vdCI+",
-              "metadata": {
-                "id": "root",
-                "classes": null,
-                "role": null
-              },
-              "element_counts": {
-                "inputs": 0,
-                "selects": 0,
-                "textareas": 0,
-                "buttons": 1,
-                "total": 0
-              },
-              "extracted": false,
-              "extracted_at": null,
-              "last_used": "2026-07-31T05:33:12.356186",
-              "usage_count": 3,
-              "elements": [],
-              "buttons": []
-            }
-          },
-          "last_triggered": "2026-07-31T05:33:12.356182"
-        }
-      }
-    },
     "http://host.docker.internal:5173/app/analytics": {
       "url": "http://host.docker.internal:5173/app/analytics",
-      "last_visited": "2026-07-31T05:33:18.094237",
-      "visit_count": 4,
+      "last_visited": "2026-08-05T00:06:34.989919",
+      "visit_count": 6,
       "actions": {
         "click:I click \"Analytics\"": {
           "action_type": "click",
           "action_label": "I click \"Analytics\"",
-          "triggered_at": "2026-07-31T05:32:37.284244",
+          "triggered_at": "2026-08-05T00:06:11.853719",
+          "containers": {
+            "div.flex.min-h-screen": {
+              "container_selector": "div.flex.min-h-screen",
+              "container_hash": "PGRpdiBjbGFzcz0iZmxl",
+              "metadata": {
+                "id": null,
+                "classes": "flex min-h-screen bg-bg",
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 2,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 1,
+                "total": 2
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-08-05T00:06:25.042190",
+              "usage_count": 3,
+              "elements": [],
+              "buttons": []
+            }
+          },
+          "last_triggered": "2026-08-05T00:06:25.042184"
+        },
+        "click:I click \"Avg response\"": {
+          "action_type": "click",
+          "action_label": "I click \"Avg response\"",
+          "triggered_at": "2026-08-05T00:06:29.879358",
+          "containers": {
+            "div.flex.min-h-screen": {
+              "container_selector": "div.flex.min-h-screen",
+              "container_hash": "PGRpdiBjbGFzcz0iZmxl",
+              "metadata": {
+                "id": null,
+                "classes": "flex min-h-screen bg-bg",
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 2,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 1,
+                "total": 2
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-08-05T00:06:29.879364",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            }
+          }
+        },
+        "click:I click \"Newest first\"": {
+          "action_type": "click",
+          "action_label": "I click \"Newest first\"",
+          "triggered_at": "2026-08-05T00:06:32.419828",
+          "containers": {
+            "div.flex.min-h-screen": {
+              "container_selector": "div.flex.min-h-screen",
+              "container_hash": "PGRpdiBjbGFzcz0iZmxl",
+              "metadata": {
+                "id": null,
+                "classes": "flex min-h-screen bg-bg",
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 2,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 1,
+                "total": 2
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-08-05T00:06:32.419834",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            }
+          }
+        },
+        "click:I click \"Clear filters\"": {
+          "action_type": "click",
+          "action_label": "I click \"Clear filters\"",
+          "triggered_at": "2026-08-05T00:06:34.989964",
           "containers": {
             "div#root": {
               "container_selector": "div#root",
@@ -67,37 +118,7 @@
               },
               "extracted": false,
               "extracted_at": null,
-              "last_used": "2026-07-31T05:33:14.791178",
-              "usage_count": 3,
-              "elements": [],
-              "buttons": []
-            }
-          },
-          "last_triggered": "2026-07-31T05:33:14.791172"
-        },
-        "click:I click \"Clear filters\"": {
-          "action_type": "click",
-          "action_label": "I click \"Clear filters\"",
-          "triggered_at": "2026-07-31T05:33:18.094246",
-          "containers": {
-            "div#root": {
-              "container_selector": "div#root",
-              "container_hash": "PGRpdiBpZD0icm9vdCI+",
-              "metadata": {
-                "id": "root",
-                "classes": null,
-                "role": null
-              },
-              "element_counts": {
-                "inputs": 2,
-                "selects": 0,
-                "textareas": 0,
-                "buttons": 2,
-                "total": 2
-              },
-              "extracted": false,
-              "extracted_at": null,
-              "last_used": "2026-07-31T05:33:18.094250",
+              "last_used": "2026-08-05T00:06:34.989983",
               "usage_count": 1,
               "elements": [],
               "buttons": []
@@ -109,9 +130,9 @@
   },
   "selector_rankings": {},
   "statistics": {
-    "total_pages": 2,
-    "total_actions": 3,
-    "total_containers": 3,
+    "total_pages": 1,
+    "total_actions": 4,
+    "total_containers": 4,
     "total_extracted_containers": 0,
     "total_elements": 0,
     "total_buttons": 0,

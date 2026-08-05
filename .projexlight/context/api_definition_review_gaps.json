@@ -1,44 +1,9 @@
 {
-  "updatedAt": "2026-08-04T22:07:38",
-  "scope": "ai",
+  "updatedAt": "2026-08-05T00:01:30",
+  "scope": "analytics",
   "gaps": [
     {
-      "file": "tests/api_definitions/ai/coach-calls-post.json",
-      "rules": [
-        "CODE-MATCH"
-      ],
-      "findingsCount": 1
-    },
-    {
-      "file": "tests/api_definitions/ai/coach-scorecard-callid-get.json",
-      "rules": [
-        "CODE-MATCH"
-      ],
-      "findingsCount": 1
-    },
-    {
-      "file": "tests/api_definitions/ai/proposals-id-decide-post.json",
-      "rules": [
-        "CODE-MATCH"
-      ],
-      "findingsCount": 1
-    },
-    {
-      "file": "tests/api_definitions/ai/propose-post.json",
-      "rules": [
-        "CODE-MATCH"
-      ],
-      "findingsCount": 1
-    },
-    {
-      "file": "tests/api_definitions/ai/sdr-proposals-id-accept-post.json",
-      "rules": [
-        "CODE-MATCH"
-      ],
-      "findingsCount": 1
-    },
-    {
-      "file": "tests/api_definitions/ai/sdr-qualify-post.json",
+      "file": "tests/api_definitions/analytics/overview-get.json",
       "rules": [
         "CODE-MATCH"
       ],
@@ -48,7 +13,7 @@
   "missingDefinitions": [],
   "captureSyncIssues": 0,
   "summary": {
-    "withFindings": 6,
-    "findingsCount": 6
+    "withFindings": 1,
+    "findingsCount": 1
   }
 }

@@ -40,6 +40,20 @@ Feature: Basic Analytics Dashboard
   those down, because the dashboard renders whatever the database currently
   holds.
 
+  COVERAGE NOTE, "Data updates in real-time": the scenario below proves the two
+  push-refreshed panels RENDER. It does NOT prove they REFRESH, and saying so is
+  the point of this note. The screen subscribes to /api/events/stream and
+  re-reads on a push (coalesced at 400ms, so a sweep routing fifty leads is one
+  query not fifty), and the "Live" indicator appears only once a real data frame
+  has arrived - not on connect, and not on a heartbeat comment frame. A linear
+  single-tab BDD run cannot produce that frame: the event would have to arrive
+  while Analytics is already mounted, and the runner has one tab and no way to
+  act as a second operator. The stream itself is covered by
+  server/tests/unit/eventStream.test.ts and its api_definition is declared
+  manual for the same reason. So the refresh path is implemented and reviewed
+  but has no executable artifact, and this criterion is reported partial rather
+  than covered.
+
   "Target attainment" is the ProjexCloud sdk-sla contribution to this screen.
   The step below proves the line RENDERS; which of its two readings appears
   depends on whether a gateway is configured, and no gateway is reachable in

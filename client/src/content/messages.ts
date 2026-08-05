@@ -149,6 +149,70 @@ export const FAILURE: Record<string, Message> = {
     title: 'Could not reach LeadFlow',
     detail: 'Check your connection, then retry.',
   },
+  RESEARCH_SOURCE_NOT_PERMITTED: {
+    tone: 'error',
+    title: 'That research source is not approved',
+    // Says what the refusal PROTECTS rather than restating the rule. An operator
+    // told "source not permitted" reads it as a configuration nuisance; told the
+    // draft would otherwise look fully researched while missing something, they
+    // understand why it was refused instead of quietly skipped.
+    detail:
+      'Research only runs against the approved source registry. The request was refused rather than skipped, so a draft never looks better researched than it is.',
+  },
+  OFFER_TRUTH_VIOLATION: {
+    tone: 'error',
+    title: 'That wording promises something we have not approved',
+    detail:
+      'A price, discount, roadmap date or guaranteed result outside the approved offer. Rewrite it, or ask for the offer to be approved first.',
+  },
+  RECORDING_CONSENT_MISSING: {
+    tone: 'error',
+    title: 'No verified recording consent for this call',
+    detail:
+      'Call content is not processed until the recording basis can be shown. Register the call with its consent basis, or check whether consent was withdrawn.',
+  },
+  AI_HALTED: {
+    tone: 'warning',
+    // WARNING, not error, and not phrased as a permission problem. Nothing the
+    // operator did caused this and nothing they can do clears it — the whole
+    // capability is switched off, and wording it like a refusal would send them
+    // looking for someone to grant them access that does not exist right now.
+    title: 'AI is switched off right now',
+    detail: 'An administrator has halted all AI generation. Existing work is unaffected.',
+  },
+  AI_BUDGET_EXHAUSTED: {
+    tone: 'warning',
+    title: 'This period’s AI allowance is spent',
+    // Deliberately says waiting will NOT help. This looks like a rate limit and
+    // is not one: retrying with backoff simply keeps failing until somebody
+    // raises the budget or the month turns.
+    detail: 'Waiting will not clear it — ask an administrator to raise the allowance.',
+  },
+  AI_CONSENT_BASIS_MISSING: {
+    tone: 'error',
+    title: 'No consent basis for this AI request',
+    detail:
+      'An agent only processes someone’s data under a live consent receipt for that purpose. Attach the receipt, or check whether it has been withdrawn.',
+  },
+  AI_CAPABILITY_NOT_DECLARED: {
+    tone: 'error',
+    title: 'That agent is not allowed to do this',
+    // Names where the fix lives. Otherwise the natural next move is to look for
+    // a permission to grant, and this one is not grantable at runtime by design.
+    detail:
+      'Each agent is registered with the minimum access it needs. Widening it is a reviewed change to the agent registry, not something that can be granted here.',
+  },
+  PROMPT_TEMPLATE_NOT_PERMITTED: {
+    tone: 'error',
+    title: 'That prompt is not in the approved library',
+    detail: 'Agents only send published, versioned prompts. Publish it first, then retry.',
+  },
+  AI_COMPLETION_NOT_ACCOUNTED: {
+    tone: 'error',
+    title: 'That output cannot be traced to a recorded completion',
+    detail:
+      'Every AI output must name a completion in the activity ledger that actually ran. Nothing was saved.',
+  },
   INTERNAL_ERROR: {
     tone: 'error',
     title: 'Something went wrong on our side',
