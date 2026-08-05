@@ -91,13 +91,14 @@
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
       "payload": {
-        "lead_id": "{{static:not-a-uuid}}",
+        "lead_id": "{{var:not_a_uuid}}",
         "limit": 100
       },
       "expectedStatus": 400,
       "expectedError": {
         "code": "VALIDATION_ERROR"
-      }
+      },
+      "testType": "negative"
     },
     {
       "name": "Reject an unauthenticated sweep",
@@ -108,7 +109,8 @@
       "expectedStatus": 401,
       "expectedError": {
         "code": "UNAUTHENTICATED"
-      }
+      },
+      "testType": "negative"
     }
   ],
   "errorCases": [

@@ -16,13 +16,25 @@
     "POST /api/sla/evaluate"
   ],
   "fieldEnums": {
-    "kind": ["owner_warning", "manager_breach"],
-    "state": ["pending", "delivered", "acknowledged", "failed"]
+    "kind": [
+      "owner_warning",
+      "manager_breach"
+    ],
+    "state": [
+      "pending",
+      "delivered",
+      "acknowledged",
+      "failed"
+    ]
   },
   "statusTransitions": {
     "entity": "sla_alert",
     "field": "state",
-    "flow": ["pending", "delivered", "acknowledged"],
+    "flow": [
+      "pending",
+      "delivered",
+      "acknowledged"
+    ],
     "transitions": [
       {
         "from": "pending",
@@ -77,12 +89,13 @@
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
       "payload": {
-        "lead_id": "{{static:not-a-uuid}}"
+        "lead_id": "{{var:not_a_uuid}}"
       },
       "expectedStatus": 400,
       "expectedError": {
         "code": "VALIDATION_ERROR"
-      }
+      },
+      "testType": "negative"
     },
     {
       "name": "Reject an unauthenticated acknowledgement",
@@ -92,7 +105,8 @@
       "expectedStatus": 401,
       "expectedError": {
         "code": "UNAUTHENTICATED"
-      }
+      },
+      "testType": "negative"
     }
   ],
   "errorCases": [
