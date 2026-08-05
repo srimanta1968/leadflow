@@ -202,6 +202,38 @@ export async function duplicateCandidates(limit = 25): Promise<DuplicateCandidat
   return candidates.slice(0, limit);
 }
 
+/**
+ * The rule set version currently ACTIVE for this tenant.
+ *
+ * READ, NOT ASSUMED. This started as a hardcoded `candidate_version: 1`, which
+ * is a guess that fails silently in the worst way: if the tenant's active rule
+ * set is version 3, replaying against version 1 compares what actually happened
+ * against RULES THAT ARE NO LONGER IN FORCE, and the skew audit then describes a
+ * distribution nobody is operating. The proposal would look evidenced and be
+ * about the wrong thing.
+ *
+ * @returns null when no rule set is active — which means there is nothing to
+ *          replay against, not that version 1 will do.
+ */
+async function activeRuleSetVersion(): Promise<number | null> {
+  try {
+    const result = await SdkGatewayClient.call<{
+      data?: { versions?: Array<{ version?: number; is_active?: boolean }> };
+    }>({
+      sdk: 'sdk-assignment',
+      path: '/api/assignment/routes',
+      method: 'GET',
+    });
+
+    const active = result.data?.data?.versions?.find((entry) => entry.is_active === true);
+    return typeof active?.version === 'number' ? active.version : null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[revops] could not read the active rule set version:', message);
+    return null;
+  }
+}
+
 /** The candidate personas a replay is run against, from our own owned leads. */
 async function candidatePersonaIds(): Promise<string[]> {
   const rows = await dataService.query<{ owner_persona_id: string }>(
@@ -241,10 +273,21 @@ async function replayForSkew(): Promise<{
     return null;
   }
 
-  const candidates = await candidatePersonaIds();
+  const [candidates, candidateVersion] = await Promise.all([
+    candidatePersonaIds(),
+    activeRuleSetVersion(),
+  ]);
+
   if (candidates.length < 2) {
     // Skew across fewer than two personas is not a concept, and the endpoint
     // requires a non-empty candidate list anyway.
+    return null;
+  }
+
+  if (candidateVersion === null) {
+    // No active rule set means there is nothing meaningful to replay against.
+    // Falling back to a version number would produce an audit of a distribution
+    // nobody is operating, which is worse than no audit.
     return null;
   }
 
@@ -266,12 +309,12 @@ async function replayForSkew(): Promise<{
       sdk: 'sdk-assignment',
       path: '/api/assignment/simulate',
       method: 'POST',
-      idempotencyKey: `revops-skew:${candidates.length}:${REPLAY_LIMIT}`,
+      idempotencyKey: `revops-skew:${candidateVersion}:${candidates.length}:${REPLAY_LIMIT}`,
       body: {
-        // Replaying the CURRENT rules against the recorded decisions, which is
-        // what makes the report describe the distribution we actually have
-        // rather than one a hypothetical rule change would produce.
-        candidate_version: 1,
+        // Replaying the CURRENTLY ACTIVE rules against the recorded decisions,
+        // which is what makes the report describe the distribution we actually
+        // have rather than one a hypothetical rule change would produce.
+        candidate_version: candidateVersion,
         candidate_persona_ids: candidates,
         skew_tolerance: SKEW_TOLERANCE,
         limit: REPLAY_LIMIT,
@@ -290,7 +333,7 @@ async function replayForSkew(): Promise<{
     return {
       simulation: {
         simulationRef: data.simulation_id,
-        candidateVersion: data.candidate_version ?? 1,
+        candidateVersion: data.candidate_version ?? candidateVersion,
         subjectsReplayed: data.subjects_replayed,
         // Carried through UNTOUCHED when present, absent when not. Absent means
         // not projected, never "no change" — see the field docs.
