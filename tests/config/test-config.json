@@ -125,6 +125,12 @@
       "password": "LeadFlow!Test2026",
       "_scope": "dev only. The .test TLD is reserved by RFC 2606 and can never be a real mailbox, so this address cannot receive mail or collide with a customer. Do NOT copy these values into qa/staging/production — provision those out of band and pass them with run-all-tests.sh --login-email/--login-password.",
       "_role_requirement": "MUST HOLD users.role='admin' IN ANY ENVIRONMENT THE API SUITE RUNS AGAINST. The mutating routing and SLA endpoints sit behind the policy decision point. The local role bridge maps 'user' -> sales_rep, and a Sales Rep correctly holds none of routing.configure, lead.reassign, sla.configure, sla.evaluate or sla.alert_dispatch — so an unelevated account makes 7 endpoints answer 403 and leaves 4 more skipped, because the PATCH/DELETE definitions need an id captured from a POST that never succeeded. 'admin' maps to revenue_operations + sales_manager, which covers all five. In dev this is applied automatically at boot by server/src/db/devSeed.ts (DEV_ADMIN_EMAIL / DEV_ADMIN_PASSWORD must match the values here). That seed REFUSES to run when NODE_ENV=production, so on any deployed target the role has to be granted out of band — see ProjexCloud docs/prod-setup/qa-fixture-seeds.md."
+    },
+    "admin": {
+      "_status": "Same account as `default`, exposed under the role name so the Dev MCP can pre-fetch an ADMIN token. Its _prefetch_role_tokens reads testCredentials.<role> for every role any definition declares in requiresRole, and warns 'no testCredentials.admin configured — those endpoints will 403' when the key is absent. That was the state until now: the account existed and held admin, but nothing pointed the runner at it.",
+      "_why_not_the_default_token": "Definitions authenticate with {{cache:auth.login.response.data.token}}, and login dependsOn register — so the default token belongs to a freshly registered throwaway user, which the role bridge maps to sales_rep. The admin-scoped endpoints therefore answered 403 even though this admin account was configured and working the whole time.",
+      "email": "qa.operator@leadflow.test",
+      "password": "LeadFlow!Test2026"
     }
   }
 }

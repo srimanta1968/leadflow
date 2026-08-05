@@ -12,16 +12,26 @@
     "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC1",
     "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC4"
   ],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "fieldEnums": {
-    "deterministicState": ["on_track", "at_risk"],
-    "signal": ["coverage", "queue_depth", "rep_activity", "elapsed_fraction"]
+    "deterministicState": [
+      "on_track",
+      "at_risk"
+    ],
+    "signal": [
+      "coverage",
+      "queue_depth",
+      "rep_activity",
+      "elapsed_fraction"
+    ]
   },
   "testCases": [
     {
       "name": "Predictions come back with lead time, evidence and the huddle brief",
       "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
@@ -35,35 +45,49 @@
       "name": "A caller may narrow the intervention window",
       "testType": "negative",
       "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "queryParams": { "minLeadMinutes": "45" },
+      "queryParams": {
+        "minLeadMinutes": "45"
+      },
       "expectedStatus": 200,
-      "expectedResponse": { "success": true, "data": { "interventionLeadMinutes": 45 } }
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "interventionLeadMinutes": 45
+        }
+      }
     },
     {
       "name": "Reject a lead time that is not a whole number of minutes",
       "testType": "negative",
       "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "queryParams": { "minLeadMinutes": "abc" },
+      "queryParams": {
+        "minLeadMinutes": "abc"
+      },
       "expectedStatus": 400,
-      "expectedError": { "code": "VALIDATION_ERROR" }
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
     },
     {
       "name": "Reject a lead time beyond a day",
       "testType": "negative",
       "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "queryParams": { "minLeadMinutes": "5000" },
+      "queryParams": {
+        "minLeadMinutes": "5000"
+      },
       "expectedStatus": 400,
-      "expectedError": { "code": "VALIDATION_ERROR" }
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
     },
     {
       "name": "Reject an unauthenticated read of the team's risk",
       "testType": "negative",
       "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC4",
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [
@@ -85,5 +109,9 @@
       "message": "No policy grants this action to the caller's roles.",
       "when": "the caller does not hold dashboard.view_team. A Sales Rep lands here, and that is the intended outcome: a rep should not be reading a list of which colleagues are behind."
     }
-  ]
+  ],
+  "requiresRole": [
+    "admin"
+  ],
+  "_authNote": "Admin-scoped: this endpoint is governed by 'dashboard.view_team', which the local role bridge does NOT give a plain 'user' (which maps to sales_rep), so a register-chained token answers 403 — correctly. requiresRole makes the runner send the token it pre-fetched for testCredentials.admin. The per-case Authorization header is deliberately ABSENT: a definition-supplied Authorization wins over the role token in the runner's resolution order, so leaving it in would keep sending the sales_rep token and keep returning 403. Same fix already recorded on coach-scorecard-callid-get.json."
 }

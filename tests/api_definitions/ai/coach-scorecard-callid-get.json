@@ -21,30 +21,42 @@
     {
       "name": "A registered call with a verified basis returns the ten SOP dimensions",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC3",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "callId": "{{cache:ai.coachCall.response.data.call.id}}" },
+      "pathParams": {
+        "callId": "{{cache:ai.coachCall.response.data.call.id}}"
+      },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "scorecard": { "dimensionCount": 10 } }
+        "data": {
+          "scorecard": {
+            "dimensionCount": 10
+          }
+        }
       }
     },
     {
       "name": "Refuse to score a call with no verified recording basis",
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "callId": "{{var:absent_uuid}}" },
+      "pathParams": {
+        "callId": "{{var:absent_uuid}}"
+      },
       "expectedStatus": 403,
-      "expectedError": { "code": "RECORDING_CONSENT_MISSING" }
+      "expectedError": {
+        "code": "RECORDING_CONSENT_MISSING"
+      }
     },
     {
       "name": "Reject an unauthenticated scorecard read",
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
-      "pathParams": { "callId": "{{cache:ai.coachCall.response.data.call.id}}" },
+      "pathParams": {
+        "callId": "{{cache:ai.coachCall.response.data.call.id}}"
+      },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [
@@ -66,5 +78,9 @@
       "message": "No verified recording consent basis for this call, or the call is not registered",
       "when": "the call has no recorded basis, the basis cannot be verified upstream, or no such call exists. Deliberately one answer for all three so call ids cannot be enumerated by status code."
     }
-  ]
+  ],
+  "requiresRole": [
+    "admin"
+  ],
+  "_authNote": "Admin-scoped: the local role bridge maps a plain 'user' to sales_rep, which holds none of the required capabilities. requiresRole makes the runner send the token it pre-fetched for testCredentials.admin. The per-dataset Authorization header was REMOVED deliberately: a definition-supplied Authorization wins over the role token in the runner's resolution order, so leaving it would keep sending the register-chained sales_rep token and keep returning 403."
 }

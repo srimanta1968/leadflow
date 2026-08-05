@@ -20,8 +20,17 @@
     "POST /api/leadflow/capture/quick"
   ],
   "fieldEnums": {
-    "stage": ["normalize", "search"],
-    "trustState": ["P0_CAPTURED", "P1_NORMALIZED", "P2_CANDIDATE", "P3_LINKED", "P4_DIRECT"]
+    "stage": [
+      "normalize",
+      "search"
+    ],
+    "trustState": [
+      "P0_CAPTURED",
+      "P1_NORMALIZED",
+      "P2_CANDIDATE",
+      "P3_LINKED",
+      "P4_DIRECT"
+    ]
   },
   "captureResponse": {
     "capture.resolve.response.data.trustState": "data.trustState",
@@ -31,9 +40,6 @@
     {
       "name": "Save P1 - normalize the record and report the state it actually reached",
       "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC1",
-      "headers": {
-        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
-      },
       "pathParams": {
         "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
       },
@@ -57,9 +63,6 @@
     {
       "name": "A steward correction overrides the assistant's proposal for that field",
       "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC2",
-      "headers": {
-        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
-      },
       "pathParams": {
         "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
       },
@@ -77,16 +80,16 @@
           "normalized": {
             "full_name": "Priyanka Raman-Shah"
           },
-          "correctedFields": ["full_name", "phone"]
+          "correctedFields": [
+            "full_name",
+            "phone"
+          ]
         }
       }
     },
     {
       "name": "Search & Create Candidates proposes a relationship, never a merge",
       "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC3",
-      "headers": {
-        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
-      },
       "pathParams": {
         "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
       },
@@ -108,9 +111,6 @@
     {
       "name": "A promotion returns the handle a retraction would quote",
       "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC4",
-      "headers": {
-        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
-      },
       "pathParams": {
         "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
       },
@@ -128,9 +128,6 @@
     {
       "name": "Reject an unknown stage rather than guessing which one was meant",
       "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC1",
-      "headers": {
-        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
-      },
       "pathParams": {
         "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
       },
@@ -145,9 +142,6 @@
     {
       "name": "Reject a capture id that is not a UUID",
       "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC1",
-      "headers": {
-        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
-      },
       "pathParams": {
         "id": "{{static:not-a-uuid}}"
       },
@@ -199,5 +193,9 @@
       "message": "A ProjexCloud SDK required by this resolution is unavailable",
       "when": "a configured gateway fails. NOT raised when the gateway is unconfigured — that is the documented local fallback."
     }
-  ]
+  ],
+  "requiresRole": [
+    "admin"
+  ],
+  "_authNote": "Admin-scoped: the local role bridge maps a plain 'user' to sales_rep, which holds none of the required capabilities. requiresRole makes the runner send the token it pre-fetched for testCredentials.admin. The per-dataset Authorization header was REMOVED deliberately: a definition-supplied Authorization wins over the role token in the runner's resolution order, so leaving it would keep sending the register-chained sales_rep token and keep returning 403."
 }

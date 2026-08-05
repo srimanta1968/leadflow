@@ -12,11 +12,24 @@
     "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC2",
     "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC4"
   ],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "fieldEnums": {
-    "matchedOn": ["canonical_email", "canonical_phone", "canonical_social_id"],
-    "finding": ["duplicate_candidate", "routing_skew", "sequence_quality"],
-    "routingUnavailableReason": ["assignment_simulation_unavailable"]
+    "matchedOn": [
+      "canonical_email",
+      "canonical_phone",
+      "canonical_social_id"
+    ],
+    "finding": [
+      "duplicate_candidate",
+      "routing_skew",
+      "sequence_quality"
+    ],
+    "routingUnavailableReason": [
+      "assignment_simulation_unavailable"
+    ]
   },
   "captureResponse": {
     "ai.revopsProposals.response.data.generatedAt": "data.generatedAt"
@@ -25,7 +38,6 @@
     {
       "name": "Findings come back as proposals, and routing is withheld without simulation evidence",
       "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC2",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
@@ -39,11 +51,12 @@
       "name": "Re-running opens no second copy of the same findings",
       "testType": "negative",
       "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC4",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "routingUnavailableReason": "assignment_simulation_unavailable" }
+        "data": {
+          "routingUnavailableReason": "assignment_simulation_unavailable"
+        }
       }
     },
     {
@@ -51,7 +64,9 @@
       "testType": "negative",
       "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC4",
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [
@@ -67,5 +82,9 @@
       "message": "No policy grants this action to the caller's roles.",
       "when": "the caller does not hold data.configure. A Sales Rep lands here, correctly: how routing and dedupe are configured is RevOps' remit."
     }
-  ]
+  ],
+  "requiresRole": [
+    "admin"
+  ],
+  "_authNote": "Admin-scoped: this endpoint is governed by 'data.configure', which the local role bridge does NOT give a plain 'user' (which maps to sales_rep), so a register-chained token answers 403 — correctly. requiresRole makes the runner send the token it pre-fetched for testCredentials.admin. The per-case Authorization header is deliberately ABSENT: a definition-supplied Authorization wins over the role token in the runner's resolution order, so leaving it in would keep sending the sales_rep token and keep returning 403. Same fix already recorded on coach-scorecard-callid-get.json."
 }
