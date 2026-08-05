@@ -76,6 +76,14 @@ const LOCAL_ROLE_BRIDGE: Record<string, string[]> = {
   admin: ['revenue_operations', 'sales_manager', 'sales_rep'],
   manager: ['sales_manager'],
   user: ['sales_rep'],
+  // A steward is NOT folded into `admin`. The capture-resolution grants sit with
+  // data_steward alone (config/policies.ts), and the comment above this map
+  // records why that separation exists: expecting one SOP role to stand in for a
+  // local superuser is the mistake that produced the 403s in the first place.
+  // Kept as its own local role so a caller either legitimately holds stewardship
+  // or does not — `users.role` is a single column, so this is a SEPARATE account,
+  // never an elevation of the admin one.
+  steward: ['data_steward'],
 };
 
 /**

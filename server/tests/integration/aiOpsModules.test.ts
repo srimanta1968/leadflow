@@ -192,6 +192,7 @@ describe('breach prediction lead time (AC1)', () => {
       signals: [],
       interventionLeadMinutes: 15,
       openClocksExamined: 0,
+      openClocksPastDue: 0,
       deterministicAtRiskFraction: AT_RISK_THRESHOLD,
       generatedAt: new Date().toISOString(),
     });
@@ -199,6 +200,7 @@ describe('breach prediction lead time (AC1)', () => {
       signals: [],
       interventionLeadMinutes: 15,
       openClocksExamined: 12,
+      openClocksPastDue: 0,
       deterministicAtRiskFraction: AT_RISK_THRESHOLD,
       generatedAt: new Date().toISOString(),
     });
@@ -207,6 +209,36 @@ describe('breach prediction lead time (AC1)', () => {
     // empty list, and only one of them is good news.
     expect(empty.headline).toMatch(/Nothing is being measured/);
     expect(quiet.headline).toMatch(/none predicted to breach/);
+  });
+
+  it('never reports a quiet forecast while leads sit past their deadline', async () => {
+    // THE REGRESSION THIS LOCKS DOWN. Predictions are drawn only from future-due
+    // clocks, which is right — but that filter made openClocksExamined stop
+    // counting most of the queue. Measured on the development database at the
+    // time: 2 clocks future-due, 2,652 unanswered past their deadline. The brief
+    // would have said "2 clocks running, none predicted to breach", which reads
+    // as all-clear and is the exact false reassurance the count exists to stop.
+    const brief = huddleBrief({
+      signals: [],
+      interventionLeadMinutes: 15,
+      openClocksExamined: 2,
+      openClocksPastDue: 2652,
+      deterministicAtRiskFraction: AT_RISK_THRESHOLD,
+      generatedAt: new Date().toISOString(),
+    });
+
+    expect(brief.lines.join(' ')).toMatch(/2652 unanswered leads are ALREADY past their deadline/);
+    // And the headline no longer claims the whole queue is inside its window.
+    expect(brief.headline).toMatch(/still inside their windows/);
+  });
+
+  it('counts the past-due backlog on the report itself', async () => {
+    const report = await riskSignals();
+
+    // Reported alongside the predictions rather than left to the caller to go
+    // and find, because the caller that forgets is the one showing a manager an
+    // empty risk list.
+    expect(Number.isInteger(report.openClocksPastDue)).toBe(true);
   });
 });
 

@@ -291,12 +291,40 @@ export interface RiskSignalReport {
    * Open clocks examined, so an empty signal list is distinguishable from an
    * empty queue. "Nothing is at risk" and "nothing is being measured" look
    * identical otherwise, and only one of them is good news.
+   *
+   * FUTURE-DUE ONLY. Predictions can only come from clocks that have not yet
+   * expired, so that is the population this counts — see `openClocksPastDue`
+   * for the rest, which must not be invisible here.
    */
   openClocksExamined: number;
+  /**
+   * Unanswered clocks whose deadline has ALREADY passed.
+   *
+   * REPORTED BECAUSE EXCLUDING THEM SILENTLY WAS A LIE BY OMISSION. Predictions
+   * are drawn only from future-due clocks, which is correct — a passed deadline
+   * is history and the sweep's business, not a forecast. But that filter turned
+   * `openClocksExamined` into a number that quietly stopped counting most of the
+   * queue: measured on this project's own database, 2 clocks were future-due and
+   * 2,652 were unanswered past their deadline. A manager reading "2 clocks
+   * running, none predicted to breach" would have concluded things were fine,
+   * which is exactly the false reassurance `openClocksExamined` was added to
+   * prevent. Counting them here does not make them predictions; it stops the
+   * absence of predictions from reading as an absence of problems.
+   */
+  openClocksPastDue: number;
   /** Where the deterministic rule would have raised its own flag, for contrast. */
   deterministicAtRiskFraction: number;
   generatedAt: string;
 }
+
+/** Unanswered clocks already past their deadline, which produce no prediction. */
+const PAST_DUE_COUNT_SQL = `
+  SELECT COUNT(*)::text AS past_due
+    FROM leads
+   WHERE first_response_at IS NULL
+     AND sla_due_at IS NOT NULL
+     AND sla_breached = FALSE
+     AND sla_due_at <= NOW()`;
 
 /**
  * Predict which open clocks will breach, early enough to act.
@@ -311,7 +339,11 @@ export async function riskSignals(query: RiskSignalQuery = {}): Promise<RiskSign
   const minLead = query.minLeadMinutes ?? INTERVENTION_LEAD_MINUTES;
   const limit = Math.min(Math.max(1, query.limit ?? SIGNAL_LIMIT), 200);
 
-  const rows = await dataService.query<OpenLeadRow>(OPEN_LEADS_SQL, [limit]);
+  const [rows, pastDueRow] = await Promise.all([
+    dataService.query<OpenLeadRow>(OPEN_LEADS_SQL, [limit]),
+    dataService.queryOne<{ past_due: string }>(PAST_DUE_COUNT_SQL, []),
+  ]);
+  const openClocksPastDue = parseInt(pastDueRow?.past_due ?? '0', 10) || 0;
   const signals: RiskSignal[] = [];
 
   for (const row of rows) {
@@ -388,6 +420,7 @@ export async function riskSignals(query: RiskSignalQuery = {}): Promise<RiskSign
     signals,
     interventionLeadMinutes: minLead,
     openClocksExamined: rows.length,
+    openClocksPastDue,
     deterministicAtRiskFraction: AT_RISK_THRESHOLD,
     generatedAt: now.toISOString(),
   };
@@ -406,13 +439,28 @@ export function huddleBrief(report: RiskSignalReport): {
 } {
   const { signals } = report;
 
+  /**
+   * What is already late, said FIRST when there are no predictions.
+   *
+   * A brief that reports "none predicted to breach" while thousands sit
+   * unanswered past their deadline is worse than no brief: it is an active
+   * reassurance that the queue is fine. Predictions correctly exclude past-due
+   * clocks, so the only way the brief can stay honest is to name them.
+   */
+  const overdueLine =
+    report.openClocksPastDue > 0
+      ? `${report.openClocksPastDue} unanswered ${report.openClocksPastDue === 1 ? 'lead is' : 'leads are'} ALREADY past their deadline. Those are not predictions — they are the sweep's, and they need working now.`
+      : null;
+
   if (signals.length === 0) {
     return {
       headline:
-        report.openClocksExamined === 0
+        report.openClocksExamined === 0 && report.openClocksPastDue === 0
           ? 'No clocks running. Nothing is being measured.'
-          : `${report.openClocksExamined} clock${report.openClocksExamined === 1 ? '' : 's'} running, none predicted to breach.`,
-      lines: [],
+          : report.openClocksExamined === 1
+            ? '1 clock still inside its window, none predicted to breach.'
+            : `${report.openClocksExamined} clocks still inside their windows, none predicted to breach.`,
+      lines: overdueLine ? [overdueLine] : [],
     };
   }
 
@@ -434,6 +482,10 @@ export function huddleBrief(report: RiskSignalReport): {
     lines.push(
       `${ahead} are still reported on_track by the elapsed-time rule — these are the ones this brief exists for.`
     );
+  }
+
+  if (overdueLine) {
+    lines.push(overdueLine);
   }
 
   return { headline: `Response risk for the next ${report.interventionLeadMinutes}+ minutes`, lines };
