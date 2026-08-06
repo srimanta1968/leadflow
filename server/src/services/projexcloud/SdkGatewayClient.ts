@@ -57,6 +57,65 @@ interface MachineToken {
  */
 const TOKEN_SKEW_MS = 60_000;
 
+/** Returns the parsed body, or null when it is not JSON at all. */
+function safeJsonParse(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+/** Longest an upstream reason may be before it stops being a log line. */
+const MAX_DETAIL_LENGTH = 500;
+
+/**
+ * Pulls the human-readable reason out of a gateway error body.
+ *
+ * The gateway is not uniform, so this reads the shapes it actually emits rather
+ * than one canonical envelope:
+ *
+ *   { error: 'ValidationError', details: ['...'] }   <- the registry routes
+ *   { error: 'InternalError' }                       <- catch-all handlers
+ *   { error: { code, message } } / { message }       <- AppError-style SDKs
+ *
+ * Falls back to the raw text so an unrecognised shape still says something.
+ * Nothing here is parsed for CONTROL — callers match on substrings, and a
+ * missing detail degrades to the bare status, which is what we had before.
+ */
+function extractUpstreamDetail(data: unknown, rawText: string): string | null {
+  const clamp = (value: string): string | null => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return trimmed.length > MAX_DETAIL_LENGTH
+      ? `${trimmed.slice(0, MAX_DETAIL_LENGTH)}…`
+      : trimmed;
+  };
+
+  if (data && typeof data === 'object') {
+    const body = data as Record<string, unknown>;
+
+    // `details` first: it is the specific reason, where `error` is only the
+    // class of failure ('ValidationError' alone tells a caller nothing).
+    if (Array.isArray(body.details)) {
+      const joined = body.details.filter((d) => typeof d === 'string').join('; ');
+      if (joined) return clamp(joined);
+    }
+    if (typeof body.message === 'string') return clamp(body.message);
+
+    if (typeof body.error === 'string') return clamp(body.error);
+    if (body.error && typeof body.error === 'object') {
+      const nested = body.error as Record<string, unknown>;
+      if (typeof nested.message === 'string') return clamp(nested.message);
+      if (typeof nested.code === 'string') return clamp(nested.code);
+    }
+  }
+
+  // Unparseable or unrecognised — the raw text beats nothing, clamped because
+  // an HTML error page would otherwise land whole in the log.
+  return clamp(rawText);
+}
+
 export class SdkGatewayClient {
   /** True when a gateway URL and API key are both present in the environment. */
   static isConfigured(): boolean {
@@ -257,13 +316,26 @@ export class SdkGatewayClient {
       });
 
       const text = await response.text();
-      const data = text ? (JSON.parse(text) as T) : null;
+      // Tolerant on purpose. A non-JSON error body — an nginx HTML 502 page, a
+      // proxy timeout — used to throw here, and the throw was caught below as a
+      // transport failure, which reported "is unavailable" and DISCARDED the
+      // status code. The status is the one thing worth keeping when the body is
+      // unreadable, so a parse failure must not cost us it.
+      const data = text ? (safeJsonParse(text) as T | null) : null;
 
       if (!response.ok) {
+        // The body carries WHY, and dropping it made every 4xx from the gateway
+        // read as the same opaque `returned 400`. Callers that branch on the
+        // reason could not: eventTypeProvisioner's `platform baseline type`
+        // check sat in the code unable to ever match, so two event types that
+        // append perfectly well were logged as permanent failures on every
+        // boot. It also flattens the distinction that matters most — a genuine
+        // 400 (bad retention_class) looked identical to a benign one.
+        const detail = extractUpstreamDetail(data, text);
         throw new AppError(
           502,
           ErrorCodes.UPSTREAM_UNAVAILABLE,
-          `ProjexCloud ${options.sdk} returned ${response.status}`
+          `ProjexCloud ${options.sdk} returned ${response.status}${detail ? `: ${detail}` : ''}`
         );
       }
 

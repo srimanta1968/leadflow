@@ -36,10 +36,23 @@ export interface EventTypeProvisionSummary {
   skipped?: string;
 }
 
-/** A 409/duplicate is success: registration is additive and idempotent. */
+/**
+ * A 409/duplicate is success: registration is additive and idempotent.
+ *
+ * So is a PLATFORM BASELINE collision, which arrives as a 400 rather than a
+ * 409. `import.run.committed.v1` and `handoff.accepted.v1` are both in
+ * ProjexCloud's EVENT_TYPE_REGISTRY, and registerTenantEventType refuses to let
+ * a tenant re-register a baseline name — resolution is baseline-first, so the
+ * tenant row could never win and would read as a redefinition of a type other
+ * tenants already write under. What is refused is REGISTERING the name; using
+ * it is unaffected, because resolveEventType finds it in the baseline and both
+ * carry the regulated + event-sourcing metadata we wanted anyway. Counting that
+ * as a failure logged two permanent errors on every boot for event types that
+ * append perfectly well.
+ */
 function isAlreadyExists(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /409|already exists|duplicate/i.test(message);
+  return /409|already exists|duplicate|platform baseline type/i.test(message);
 }
 
 export async function provisionAuditEventTypes(): Promise<EventTypeProvisionSummary> {
@@ -69,8 +82,21 @@ export async function provisionAuditEventTypes(): Promise<EventTypeProvisionSumm
         // Keyed on the type so a retry after a timeout cannot register twice.
         idempotencyKey: `event-type:${eventType}`,
         body: {
-          tenant_id: config.projexCloud.tenantId,
           event_type: eventType,
+          // REQUIRED, and there are no server-side defaults — omitting either one
+          // fails validation with a 400 that emitEvent then swallows, which is how
+          // all 48 registrations failed silently while the boot log still read as
+          // routine. tenant_id is deliberately NOT sent: the route takes it from
+          // the verified claim and ignores the body, so passing it only suggests
+          // a caller could choose its own tenant.
+          //
+          // regulated + event-sourcing to match how the platform classifies the
+          // equivalent vault/consent types. This vocabulary is consent receipts,
+          // PII reveals, SLA breaches and AI decisions — the record you have to
+          // produce when asked why someone was contacted, so it must not be
+          // compacted or last-write-wins away.
+          retention_class: 'regulated',
+          conflict_policy: 'event-sourcing',
         },
       });
       summary.created += 1;

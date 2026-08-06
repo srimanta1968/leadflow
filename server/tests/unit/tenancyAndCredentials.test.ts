@@ -187,3 +187,99 @@ describe('machine credential exchange', () => {
     ).rejects.toMatchObject({ code: 'UPSTREAM_UNAVAILABLE' });
   });
 });
+
+/**
+ * A non-ok response used to collapse to a bare `returned <status>`, discarding a
+ * body that said exactly what was wrong. Callers branch on the reason —
+ * eventTypeProvisioner distinguishes a benign baseline collision from a real
+ * validation failure, and both arrive as 400 — so the reason has to survive.
+ */
+describe('an upstream refusal', () => {
+  const gatewayReturns = (status: number, body: unknown, asText?: string) => {
+    config.projexCloud.gatewayUrl = 'https://gateway.test';
+    config.projexCloud.apiKey = 'eyJhbGciOiJIUzI1NiJ9.body.sig';
+    global.fetch = jest.fn(async () => ({
+      ok: false,
+      status,
+      text: async () => asText ?? JSON.stringify(body),
+    })) as unknown as typeof fetch;
+  };
+
+  const callIt = () =>
+    SdkGatewayClient.call({ sdk: 'sdk-audit', path: '/api/events/types', method: 'POST' });
+
+  /** The message of the refusal, or a marker if the call unexpectedly resolved. */
+  const refusalMessage = async (): Promise<string> => {
+    try {
+      await callIt();
+      return '<resolved, but a refusal was expected>';
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+  };
+
+  it('carries the reason the gateway gave, not just the status', async () => {
+    // The real shape from POST /api/events/types.
+    gatewayReturns(400, {
+      error: 'ValidationError',
+      details: [
+        "event_type 'handoff.accepted.v1' is a platform baseline type and cannot be redefined by a tenant. It is already usable as-is.",
+      ],
+    });
+
+    await expect(callIt()).rejects.toThrow(/returned 400: .*platform baseline type/);
+  });
+
+  it('joins several details rather than reporting only the first', async () => {
+    gatewayReturns(400, {
+      error: 'ValidationError',
+      details: ['retention_class must be one of transient, operational, regulated', 'schema_version must be an integer >= 1'],
+    });
+
+    const message = await refusalMessage();
+
+    expect(message).toContain('retention_class must be one of');
+    expect(message).toContain('schema_version must be an integer');
+  });
+
+  it('reads the other envelopes the gateway emits', async () => {
+    gatewayReturns(500, { error: 'InternalError' });
+    await expect(callIt()).rejects.toThrow('returned 500: InternalError');
+
+    gatewayReturns(404, { error: { code: 'NotFound', message: 'no such route' } });
+    await expect(callIt()).rejects.toThrow('returned 404: no such route');
+
+    gatewayReturns(409, { message: 'already registered' });
+    await expect(callIt()).rejects.toThrow('returned 409: already registered');
+  });
+
+  it('keeps the STATUS when the body is not JSON at all', async () => {
+    // An nginx error page used to throw inside JSON.parse, get caught as a
+    // transport failure, and report "is unavailable" — losing the one fact
+    // worth keeping. `returned <status>` is what isAlreadyExists matches on.
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    gatewayReturns(502, null, '<html><body>502 Bad Gateway</body></html>');
+
+    await expect(callIt()).rejects.toThrow(/returned 502/);
+  });
+
+  it('clamps a runaway body so one refusal cannot flood the log', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    gatewayReturns(500, null, 'x'.repeat(5000));
+
+    const message = await refusalMessage();
+
+    expect(message.length).toBeLessThan(700);
+    expect(message).toContain('…');
+  });
+
+  it('still says `returned <status>` in the form the provisioners match', async () => {
+    // roleProvisioner and purposeProvisioner both test /returned (409|422)\b/.
+    // Appending `: <detail>` must not break that word boundary.
+    gatewayReturns(409, { error: 'Conflict', details: ['role template exists'] });
+
+    const message = await refusalMessage();
+
+    expect(/returned (409|422)\b/.test(message)).toBe(true);
+  });
+});

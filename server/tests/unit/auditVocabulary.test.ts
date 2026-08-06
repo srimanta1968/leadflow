@@ -4,10 +4,15 @@ import { CONSENT_PURPOSES, isKnownPurpose, serviceNecessaryPurposes } from '../.
 import { AUDIT_EVENTS, allAuditEventNames, isAuditEventName } from '../../src/platform/audit/vocabulary';
 import { appendAuditEntry, verifyAuditChain, AuditEntry } from '../../src/platform/audit/auditLog';
 import { provisionConsentPurposes } from '../../src/platform/consent/purposeProvisioner';
+import { provisionAuditEventTypes } from '../../src/platform/audit/eventTypeProvisioner';
 import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { config } from '../../src/config/env';
 import { AppError, ErrorCodes } from '../../src/utils/errors';
 
+const ORIGINAL_TENANT = config.projexCloud.tenantId;
+
 afterEach(() => {
+  config.projexCloud.tenantId = ORIGINAL_TENANT;
   jest.restoreAllMocks();
 });
 
@@ -327,5 +332,78 @@ describe('the consent purpose registry', () => {
 
     expect(summary.attempted).toBe(false);
     expect(summary.results.every((r) => r.outcome === 'skipped')).toBe(true);
+  });
+});
+
+describe('registering the vocabulary with ProjexCloud', () => {
+  /**
+   * Two of LeadFlow's names are ALSO in ProjexCloud's compile-time
+   * EVENT_TYPE_REGISTRY, and registerTenantEventType refuses to let a tenant
+   * re-register a baseline name — resolution is baseline-first, so the tenant
+   * row could never win. The refusal arrives as a 400, not a 409.
+   */
+  const BASELINE_NAMES = ['import.run.committed.v1', 'handoff.accepted.v1'];
+
+  /** The 400 body the gateway actually sends, as SdkGatewayClient now reports it. */
+  const baselineRefusal = (eventType: string) =>
+    new AppError(
+      502,
+      ErrorCodes.UPSTREAM_UNAVAILABLE,
+      `ProjexCloud sdk-audit returned 400: event_type '${eventType}' is a platform baseline type ` +
+        'and cannot be redefined by a tenant. It is already usable as-is.'
+    );
+
+  it('counts a platform baseline collision as present, not as a failure', async () => {
+    config.projexCloud.tenantId = 'tenant-leadflow';
+    jest.spyOn(SdkGatewayClient, 'isConfigured').mockReturnValue(true);
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    jest.spyOn(SdkGatewayClient, 'call').mockImplementation(async (options) => {
+      const eventType = (options.body as { event_type: string }).event_type;
+      if (BASELINE_NAMES.includes(eventType)) throw baselineRefusal(eventType);
+      return { delivered: true, status: 201, data: null };
+    });
+
+    const summary = await provisionAuditEventTypes();
+
+    // These two append perfectly well — resolveEventType finds them in the
+    // baseline. Logging them as permanent failures on every boot trained the
+    // reader to ignore the one line that would matter if it were real.
+    expect(summary.alreadyPresent).toBe(BASELINE_NAMES.length);
+    expect(summary.failed).toBe(0);
+    expect(logged).not.toHaveBeenCalled();
+  });
+
+  it('still reports a REAL validation failure', async () => {
+    config.projexCloud.tenantId = 'tenant-leadflow';
+    jest.spyOn(SdkGatewayClient, 'isConfigured').mockReturnValue(true);
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    jest
+      .spyOn(SdkGatewayClient, 'call')
+      .mockRejectedValue(
+        new AppError(
+          502,
+          ErrorCodes.UPSTREAM_UNAVAILABLE,
+          'ProjexCloud sdk-audit returned 400: retention_class must be one of transient, operational, regulated'
+        )
+      );
+
+    const summary = await provisionAuditEventTypes();
+
+    // The whole point of carrying the detail is that these two 400s are no
+    // longer the same thing. A bad payload must not be swallowed as benign.
+    expect(summary.created).toBe(0);
+    expect(summary.alreadyPresent).toBe(0);
+    expect(summary.failed).toBeGreaterThan(0);
+  });
+
+  it('skips when no tenant is configured rather than reporting failures', async () => {
+    config.projexCloud.tenantId = '';
+
+    const summary = await provisionAuditEventTypes();
+
+    expect(summary.attempted).toBe(false);
+    expect(summary.failed).toBe(0);
   });
 });
