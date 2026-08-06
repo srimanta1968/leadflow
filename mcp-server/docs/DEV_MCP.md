@@ -748,6 +748,25 @@ can be traced to the layer that set it rather than guessed at.
 
 ---
 
+## Known issues
+
+### `projexlight_review_api_definitions` ignores `projectPath`
+
+Reported from a LeadFlow session: the tool was called with ProjexCloud's path and
+reviewed **LeadFlow** instead — root `/projects/additional1`, 9 files rather than the
+~30 expected. It reviews whichever project the container treats as current, silently,
+and reports success either way.
+
+This is the same class as the recorded `start_api_tests` `projectPath` bug, inverted:
+there the argument was ignored in favour of the owner project, here in favour of the
+additional mount. Both fail the same way — a clean report about a project you did not
+ask about, which is worse than an error because nothing looks wrong.
+
+**Until it is fixed:** confirm the root in the tool's own output before trusting a
+review, and check the file count matches the project you aimed at. A review whose root
+is not your project has validated nothing, and definition edits it "passed" remain
+unverified.
+
 ## Cheat sheet
 
 ```bash

@@ -36,12 +36,9 @@ Feature: SLA Management
   @scenario_type:UI
   @ui_test
   @portal:leadflow
+  @login:default
   Scenario: SLAs can be configured for different lead types
-    Given I navigate to "/signin"
-    When I fill "email" with "${login:email}"
-    And I fill "password" with "${login:password}"
-    And I click "Sign in"
-    And I click "SLA targets"
+    When I click "SLA targets"
     Then I should see "SLA targets"
     When I fill "name" with "${random_name}"
     And I select "Live chat" from "source_channel"

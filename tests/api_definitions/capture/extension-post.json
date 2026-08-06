@@ -13,9 +13,16 @@
     "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC2",
     "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC4"
   ],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "fieldEnums": {
-    "quickAction": ["contact", "property", "lead"]
+    "quickAction": [
+      "contact",
+      "property",
+      "lead"
+    ]
   },
   "captureResponse": {
     "capture.extension.response.data.sourceRecordId": "data.sourceRecordId"
@@ -24,6 +31,7 @@
     {
       "name": "A confirmed capture is accepted and recorded",
       "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC2",
+      "capturesResponse": true,
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -69,6 +77,7 @@
     {
       "name": "REFUSE an unconfirmed capture - this is the background-harvesting guard",
       "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC2",
+      "testType": "negative",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -86,6 +95,7 @@
     {
       "name": "REFUSE a payload carrying a credential-shaped field",
       "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC1",
+      "testType": "negative",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -104,6 +114,7 @@
     {
       "name": "REFUSE a password field, whatever else the payload looks like",
       "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC1",
+      "testType": "negative",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -122,6 +133,7 @@
     {
       "name": "Reject a capture with no selected text - there is nothing to record",
       "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC1",
+      "testType": "negative",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -138,6 +150,7 @@
     {
       "name": "Reject an unauthenticated transmission",
       "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC4",
+      "testType": "negative",
       "payload": {
         "selectedText": "Anything",
         "domain": "example.com",

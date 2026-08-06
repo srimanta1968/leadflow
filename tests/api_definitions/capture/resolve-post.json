@@ -40,6 +40,7 @@
     {
       "name": "Save P1 - normalize the record and report the state it actually reached",
       "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC1",
+      "capturesResponse": true,
       "pathParams": {
         "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
       },
@@ -128,6 +129,8 @@
     {
       "name": "Reject an unknown stage rather than guessing which one was meant",
       "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC1",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|unknown-stage",
       "pathParams": {
         "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
       },
@@ -142,8 +145,10 @@
     {
       "name": "Reject a capture id that is not a UUID",
       "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC1",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|malformed-id",
       "pathParams": {
-        "id": "{{static:not-a-uuid}}"
+        "id": "{{var:not_a_uuid}}"
       },
       "payload": {
         "stage": "normalize"
@@ -156,6 +161,8 @@
     {
       "name": "Reject an unauthenticated resolve",
       "coversCriterion": "7b9e97d6-7838-42be-adbb-4239c1224520#AC4",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
       "pathParams": {
         "id": "{{cache:capture.quick.response.data.sourceRecordId}}"
       },
@@ -197,5 +204,5 @@
   "requiresRole": [
     "data_steward"
   ],
-  "_authNote": "Requires the data_steward SOP role (config/policies.ts). requiresRole makes the runner send the token pre-fetched for testCredentials.data_steward. No per-dataset Authorization header here on purpose: a definition-supplied header wins over the role token, which is what kept sending the register-chained sales_rep token and returning 403."
+  "_authNote": "Requires the data_steward SOP role (config/policies.ts). requiresRole makes the runner send the token pre-fetched for testCredentials.data_steward. No per-dataset Authorization header here on purpose: a definition-supplied header wins over the role token, which is what kept sending the register-chained sales_rep token and returning 403.\n\nTHE AUTH-HEADER FINDING ON THIS FILE IS A STATIC FALSE POSITIVE, on the same evidence that settles it for ai/manager-risk-signals-get.json and calls/id-intelligence-get.json: mcp-server/parity/header-parity-fixture.json pins the header contract across all three executors — case 1 asserts a definition carrying requiresRole receives a role credential header, and case 3 asserts a definition-supplied header WINS over configuration. Adding Authorization here to satisfy the reviewer would therefore override the data_steward token with the register-chained sales_rep one and put every dataset in this file back to 403. The reviewer is a static check with no view of the runner's resolution order.\n\ndata_steward is verified rather than assumed: admin bridges to revenue_operations + sales_manager + sales_rep and NONE of those holds source_record.promote, which is why this file was moved off admin.\n\nTHE 403/FORBIDDEN ERROR CASE HAS NO DATASET, and that is a gate conflict rather than an oversight. MUST-64 asks for a negative case per errorCase; reaching 403 needs a caller who is authenticated but unauthorised, and the only way to produce one here is a per-dataset Authorization carrying the register-chained sales_rep token — which is precisely what MUST-71 forbids alongside requiresRole, at high severity, because it cannot tell a deliberate one-dataset downgrade from an accidental file-wide override. It was written that way, MUST-71 fired, and it was removed. The refusal itself is covered where no such conflict exists: the `governed('source_record.promote')` wrapper in server/src/features/capture/resolveCaptureController.ts, and the grant table in config/policies.ts."
 }

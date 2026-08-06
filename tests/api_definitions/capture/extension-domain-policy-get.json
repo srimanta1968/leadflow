@@ -8,8 +8,13 @@
   "testability": "auto",
   "priority": 1,
   "expectedStatus": 200,
-  "coversCriterion": ["4691fc71-6138-4a33-b3d9-54be4f9d693c#AC3"],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "coversCriterion": [
+    "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC3"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "captureResponse": {
     "capture.domainPolicy.response.data.allowed": "data.allowed"
   },
@@ -17,6 +22,7 @@
     {
       "name": "An ordinary domain is permitted",
       "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC3",
+      "capturesResponse": true,
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -53,6 +59,7 @@
     {
       "name": "Reject a request with no domain rather than assuming one",
       "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC3",
+      "testType": "negative",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -65,6 +72,7 @@
     {
       "name": "Reject an unauthenticated policy question",
       "coversCriterion": "4691fc71-6138-4a33-b3d9-54be4f9d693c#AC3",
+      "testType": "negative",
       "queryParams": {
         "domain": "{{static:example.com}}"
       },

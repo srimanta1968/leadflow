@@ -3,6 +3,13 @@
 Feature: AI Lead Routing
   Leads are routed to a named owner and a response clock is started.
 
+  THE LEAD QUEUE MOVED. It is the screen this feature works: the routed, owned,
+  SLA-tracked lead projection, now at /app/leads and reached by clicking "Lead
+  queue" in the sidebar. /app is the Capture Inbox, one rung earlier, which
+  works SOURCE RECORDS that have no owner yet. They were one screen until the
+  trust ladder arrived; keeping them one would have meant a queue whose rows
+  answered to two different lifecycles.
+
   Field names below are the real `name` attributes from
   client/src/pages/app/RoutingRules.tsx (name, source_channel, assigned_user_id,
   evaluation_order, criteria), client/src/pages/app/QuickCapture.tsx and
@@ -29,17 +36,19 @@ Feature: AI Lead Routing
   executes nothing, and describing one endpoint in two places guarantees the copy
   nobody runs will drift (MUST-43).
 
-  Background:
-    Given I navigate to "/signin"
-    When I fill "email" with "${login:email}"
-    And I fill "password" with "${login:password}"
-    And I click "Sign in"
-    Then I should see "Capture Inbox"
+  SIGN-IN is the @login:default tag, not a Background block. The runner only
+  attaches steps AFTER it has seen a Scenario: line, so the hand-written
+  Background this file used to carry was parsed into nothing - both scenarios
+  below ran SIGNED OUT and clicked at a marketing page that has no sidebar. The
+  tag runs the flow from tests/config/test-config.json loginConfig, which is the
+  same five steps, so nothing is lost by deleting them and they stop drifting
+  from the real sign-in screen.
 
   @scenario_id:93bee22d-9946-49e6-8c5b-458fe74d939f
   @scenario_type:UI
   @ui_test
   @portal:leadflow
+  @login:default
   # SCOPE NOTE: this scenario covers CREATE and the presence of the per-rule
   # controls. It deliberately does NOT drive Edit / Deactivate / Retire, because
   # the supported step vocabulary has no way to scope a click to a particular
@@ -65,13 +74,14 @@ Feature: AI Lead Routing
   @scenario_type:UI
   @ui_test
   @portal:leadflow
-  Scenario: A routed lead shows its owner in the Capture Inbox
+  @login:default
+  Scenario: A routed lead shows its owner in the Lead queue
     When I click "Quick Capture"
     And I fill "name" with "${random_name}"
     And I fill "email" with "${random_email}"
     And I select "Phone" from "source"
     And I click "Capture lead"
     Then I should see "Lead captured"
-    When I click "Capture Inbox"
+    When I click "Lead queue"
     And I click "Route"
     Then I should see "Lead routed"

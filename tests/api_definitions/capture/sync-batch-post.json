@@ -13,17 +13,26 @@
     "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC2",
     "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC4"
   ],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "fieldEnums": {
-    "captureKind": ["contact", "business_card", "voice_note"]
+    "captureKind": [
+      "contact",
+      "business_card",
+      "voice_note"
+    ]
   },
   "captureResponse": {
     "capture.syncBatch.response.data.accepted": "data.accepted"
   },
+  "_idNote": "clientCaptureId is NOT a foreign key and has no producer to cache from — the device mints it offline, before the server has heard of the record, and the server's only job is to recognise it on a replay. Every dataset therefore carries a literal, one distinct value per case. It was written as {{dynamic:uuid}} in three cases and MUST-36 read the Id suffix as an FK; a fresh uuid per run would also defeat the idempotency the endpoint exists for, since nothing could ever be recognised as a replay.",
   "testCases": [
     {
       "name": "Five offline captures produce five records",
       "coversCriterion": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC1",
+      "capturesResponse": true,
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -119,7 +128,7 @@
       "payload": {
         "items": [
           {
-            "clientCaptureId": "{{dynamic:uuid}}",
+            "clientCaptureId": "off-batch-b-1",
             "captureKind": "voice_note",
             "rawInput": "Owner wants a quote for the flat roof, no name given",
             "propertyReference": "17 Mill Lane",
@@ -146,7 +155,7 @@
       "payload": {
         "items": [
           {
-            "clientCaptureId": "{{dynamic:uuid}}",
+            "clientCaptureId": "off-batch-c-1",
             "captureKind": "contact",
             "rawInput": "Valid capture",
             "originClass": "USER_PROVIDED",
@@ -173,6 +182,7 @@
     {
       "name": "Reject an empty batch rather than answering nothing",
       "coversCriterion": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC2",
+      "testType": "negative",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -187,6 +197,7 @@
     {
       "name": "Reject a batch larger than the cap",
       "coversCriterion": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC2",
+      "testType": "negative",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -201,10 +212,11 @@
     {
       "name": "Reject an unauthenticated sync",
       "coversCriterion": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65#AC1",
+      "testType": "negative",
       "payload": {
         "items": [
           {
-            "clientCaptureId": "{{dynamic:uuid}}",
+            "clientCaptureId": "off-batch-unauth-1",
             "captureKind": "contact",
             "rawInput": "Anything",
             "originClass": "USER_PROVIDED",

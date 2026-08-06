@@ -1,0 +1,50 @@
+[
+  {
+    "timestamp": "2026-08-06T05:47:56.928995",
+    "iteration": 1,
+    "llmCalls": 0,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 0,
+    "patternsCount": 1,
+    "scenarios": [
+      {
+        "name": "An operator triages the Capture Inbox and drills into a trust rung",
+        "status": "passed",
+        "totalCommands": 28,
+        "successfulCommands": 28,
+        "failedAt": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-08-06T17:08:43.125941",
+    "iteration": 2,
+    "llmCalls": 0,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 0,
+    "patternsCount": 1,
+    "scenarios": [
+      {
+        "name": "An operator triages the Capture Inbox and drills into a trust rung",
+        "status": "passed",
+        "totalCommands": 6,
+        "successfulCommands": 6,
+        "failedAt": null
+      },
+      {
+        "name": "The six-tile KPI rail carries the mockup's captions",
+        "status": "passed",
+        "totalCommands": 12,
+        "successfulCommands": 12,
+        "failedAt": null
+      },
+      {
+        "name": "The source breakdown and the three capture rules are stated on the screen",
+        "status": "passed",
+        "totalCommands": 5,
+        "successfulCommands": 5,
+        "failedAt": null
+      }
+    ]
+  }
+]

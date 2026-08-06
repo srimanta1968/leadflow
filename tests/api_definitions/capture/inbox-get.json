@@ -1,6 +1,6 @@
 {
   "name": "GET /api/leadflow/capture/inbox - composed capture inbox for the triage screen",
-  "description": "One call that assembles everything the Capture Inbox renders: the six headline counts and a page of rows, each row carrying its trust state, the evidence it rests on, a plain-language explanation, its age, its origin class, and the actions the CALLER may actually take on it. COMPOSED ON PURPOSE. The screen needs source records from sdk-source-record and at-risk clocks from sdk-sla; asking separately would be two round trips before the first paint, and the counts would be computed from two reads taken at different instants, so the headline numbers could disagree with the rows beneath them. THIS IS NOT GET /api/leads. That returns the lead projection - the routed, owned, SLA-tracked record an operator works. This returns the pre-projection trust ladder: captures that have not yet become leads, sitting at P0 through P4, awaiting normalization, promotion or a linking decision. A capture appears here BEFORE it is a lead and stops appearing once it has been linked. AVAILABLE ACTIONS are computed from the trust state AND the caller's policy verdict, intersected. A P0 capture can technically be normalized, but a Sales Rep may not promote one, so a Rep sees normalize and not promote while a Data Steward sees both. The screen therefore never renders an action that would be refused on click, which is the difference between a UI that teaches its rules and one that lets people discover them by failing. CURSOR PAGINATION, not offset. The inbox is a live queue that grows while it is being read, and an offset page-two skips whatever arrived above it; the cursor is the last row's (created_at, source_record_id) pair, so a concurrent insert cannot shift the window or duplicate a row across pages. FILTERS narrow by trust_state and origin_class, both from the closed vocabularies below. DEGRADATION: when ProjexCloud is unreachable the endpoint answers 200 with empty items, zeroed counts and upstream_available false, rather than 502 - a triage screen that shows nothing and says why is more useful than an error page, and the operator can still reach every other screen. QA: depends on register, login, and a captured lead so the window is not empty.",
+  "description": "One call that assembles everything the Capture Inbox renders: the six headline counts and a page of rows, each row carrying its trust state, the evidence it rests on, a plain-language explanation, its age, its origin class, and the actions the CALLER may actually take on it. COMPOSED ON PURPOSE. The screen needs source records from sdk-source-record and at-risk clocks from sdk-sla; asking separately would be two round trips before the first paint, and the counts would be computed from two reads taken at different instants, so the headline numbers could disagree with the rows beneath them. THIS IS NOT GET /api/leads. That returns the lead projection - the routed, owned, SLA-tracked record an operator works. This returns the pre-projection trust ladder: captures that have not yet become leads, sitting at P0 through P4, awaiting normalization, promotion or a linking decision. A capture appears here BEFORE it is a lead and stops appearing once it has been linked. AVAILABLE ACTIONS are computed from the trust state AND the caller's policy verdict, intersected. A P0 capture can technically be normalized, but a Sales Rep may not promote one, so a Rep sees normalize and not promote while a Data Steward sees both. The screen therefore never renders an action that would be refused on click, which is the difference between a UI that teaches its rules and one that lets people discover them by failing. CURSOR PAGINATION, not offset. The inbox is a live queue that grows while it is being read, and an offset page-two skips whatever arrived above it; the cursor is the last row's (created_at, source_record_id) pair, so a concurrent insert cannot shift the window or duplicate a row across pages. FILTERS narrow by trust_state and origin_class, both from the closed vocabularies below. THE COUNTS ARE NOT AFFECTED BY THE FILTER, deliberately: they are computed over the whole counting window (the 500 most recent captures) while only `items` is narrowed, so drilling into a tile does not zero the other five tiles and lose the operator the overview at exactly the moment they start working the queue. `sources` is the same window broken down by capture surface - quick add, browser extension, mobile contacts, email signature, business card - so the whole screen, tiles and rows and breakdown, comes from ONE read and the headline numbers cannot disagree with the rows beneath them. Two counts carry caveats worth knowing: `slaRisk` is sdk-sla's live at-risk clocks when that SDK answers and otherwise falls back to captures older than 24 hours derived from the same window, with `sla_from_upstream` saying which of the two the number is; and `offlineQueue` is ALWAYS 0 here, because a capture taken with no signal exists only on the device until it syncs and no server can count it - the screen overlays the real figure from the device store. DEGRADATION: when ProjexCloud is unreachable the endpoint answers 200 with empty items, zeroed counts and upstream_available false, rather than 502 - a triage screen that shows nothing and says why is more useful than an error page, and the operator can still reach every other screen. QA: depends on register, login, and a captured lead so the window is not empty.",
   "endpoint": "/api/leadflow/capture/inbox",
   "method": "GET",
   "taskId": "8c6ed254-1cfb-4489-87ce-acd02652c569",
@@ -12,7 +12,9 @@
   "coversCriterion": [
     "8c6ed254-1cfb-4489-87ce-acd02652c569#AC2",
     "8c6ed254-1cfb-4489-87ce-acd02652c569#AC3",
-    "8c6ed254-1cfb-4489-87ce-acd02652c569#AC4"
+    "8c6ed254-1cfb-4489-87ce-acd02652c569#AC4",
+    "297fdaee-3a00-4d85-9452-b46b63725d72#AC2",
+    "297fdaee-3a00-4d85-9452-b46b63725d72#AC4"
   ],
   "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/leads"],
   "fieldEnums": {
@@ -32,6 +34,14 @@
       "source_record.promote",
       "identity.link.verify",
       "suppression.apply"
+    ],
+    "captureSource": [
+      "quick_add",
+      "browser_extension",
+      "mobile_contacts",
+      "email_signature",
+      "business_card",
+      "other"
     ]
   },
   "captureResponse": {
@@ -44,10 +54,26 @@
         "8c6ed254-1cfb-4489-87ce-acd02652c569#AC2",
         "8c6ed254-1cfb-4489-87ce-acd02652c569#AC4"
       ],
+      "capturesResponse": true,
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
       "queryParams": {
+        "limit": "{{static:25}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Drill into one rung of the ladder and keep every tile populated",
+      "coversCriterion": ["297fdaee-3a00-4d85-9452-b46b63725d72#AC2"],
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "trust_state": "{{static:P0_CAPTURED}}",
         "limit": "{{static:25}}"
       },
       "expectedStatus": 200,

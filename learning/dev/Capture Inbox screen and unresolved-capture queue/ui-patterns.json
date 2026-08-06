@@ -1,17 +1,17 @@
 {
   "version": "3.0",
   "base_url": "http://host.docker.internal:5173",
-  "last_updated": "2026-08-06T06:18:25.773983",
+  "last_updated": "2026-08-06T17:08:43.040631",
   "pages": {
     "http://host.docker.internal:5173/app": {
       "url": "http://host.docker.internal:5173/app",
-      "last_visited": "2026-08-06T06:13:15.351284",
+      "last_visited": "2026-08-06T17:08:34.715419",
       "visit_count": 2,
       "actions": {
-        "click:I click \"Sign in\"": {
+        "click:I click \"New P0\"": {
           "action_type": "click",
-          "action_label": "I click \"Sign in\"",
-          "triggered_at": "2026-08-06T06:04:06.533748",
+          "action_label": "I click \"New P0\"",
+          "triggered_at": "2026-08-06T17:08:32.534136",
           "containers": {
             "div.flex.min-h-screen": {
               "container_selector": "div.flex.min-h-screen",
@@ -30,61 +30,24 @@
               },
               "extracted": false,
               "extracted_at": null,
-              "last_used": "2026-08-06T06:13:15.352702",
-              "usage_count": 2,
-              "elements": [],
-              "buttons": []
-            }
-          },
-          "last_triggered": "2026-08-06T06:13:15.352561"
-        }
-      }
-    },
-    "http://host.docker.internal:5173/app/leads": {
-      "url": "http://host.docker.internal:5173/app/leads",
-      "last_visited": "2026-08-06T06:18:24.524373",
-      "visit_count": 2,
-      "actions": {
-        "click:I click \"Lead queue\"": {
-          "action_type": "click",
-          "action_label": "I click \"Lead queue\"",
-          "triggered_at": "2026-08-06T06:18:22.652806",
-          "containers": {
-            "div.flex.min-h-screen": {
-              "container_selector": "div.flex.min-h-screen",
-              "container_hash": "PGRpdiBjbGFzcz0iZmxl",
-              "metadata": {
-                "id": null,
-                "classes": "flex min-h-screen bg-bg",
-                "role": null
-              },
-              "element_counts": {
-                "inputs": 0,
-                "selects": 0,
-                "textareas": 0,
-                "buttons": 1,
-                "total": 0
-              },
-              "extracted": false,
-              "extracted_at": null,
-              "last_used": "2026-08-06T06:18:22.652845",
+              "last_used": "2026-08-06T17:08:32.535649",
               "usage_count": 1,
               "elements": [],
               "buttons": []
             }
           }
         },
-        "click:I click \"Route\"": {
+        "click:I click \"Show all captures\"": {
           "action_type": "click",
-          "action_label": "I click \"Route\"",
-          "triggered_at": "2026-08-06T06:18:24.524385",
+          "action_label": "I click \"Show all captures\"",
+          "triggered_at": "2026-08-06T17:08:34.715853",
           "containers": {
-            "div#root": {
-              "container_selector": "div#root",
-              "container_hash": "PGRpdiBpZD0icm9vdCI+",
+            "div.flex.min-h-screen": {
+              "container_selector": "div.flex.min-h-screen",
+              "container_hash": "PGRpdiBjbGFzcz0iZmxl",
               "metadata": {
-                "id": "root",
-                "classes": null,
+                "id": null,
+                "classes": "flex min-h-screen bg-bg",
                 "role": null
               },
               "element_counts": {
@@ -96,7 +59,7 @@
               },
               "extracted": false,
               "extracted_at": null,
-              "last_used": "2026-08-06T06:18:24.524390",
+              "last_used": "2026-08-06T17:08:34.715876",
               "usage_count": 1,
               "elements": [],
               "buttons": []
@@ -108,9 +71,9 @@
   },
   "selector_rankings": {},
   "statistics": {
-    "total_pages": 2,
-    "total_actions": 3,
-    "total_containers": 3,
+    "total_pages": 1,
+    "total_actions": 2,
+    "total_containers": 2,
     "total_extracted_containers": 0,
     "total_elements": 0,
     "total_buttons": 0,

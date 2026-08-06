@@ -142,5 +142,53 @@
         "failedAt": null
       }
     ]
+  },
+  {
+    "timestamp": "2026-08-06T05:59:50.595352",
+    "iteration": 7,
+    "llmCalls": 2,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 2,
+    "patternsCount": 1,
+    "scenarios": [
+      {
+        "name": "A routing rule can be created and offers per-rule controls",
+        "status": "failed",
+        "totalCommands": 13,
+        "successfulCommands": 11,
+        "failedAt": 12
+      },
+      {
+        "name": "A routed lead shows its owner in the Lead queue",
+        "status": "failed",
+        "totalCommands": 1,
+        "successfulCommands": 0,
+        "failedAt": 1
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-08-06T06:18:25.814307",
+    "iteration": 8,
+    "llmCalls": 2,
+    "localHealingSuccesses": 0,
+    "llmHealingSuccesses": 2,
+    "patternsCount": 2,
+    "scenarios": [
+      {
+        "name": "A routing rule can be created and offers per-rule controls",
+        "status": "failed",
+        "totalCommands": 13,
+        "successfulCommands": 11,
+        "failedAt": 12
+      },
+      {
+        "name": "A routed lead shows its owner in the Lead queue",
+        "status": "failed",
+        "totalCommands": 14,
+        "successfulCommands": 8,
+        "failedAt": 9
+      }
+    ]
   }
 ]

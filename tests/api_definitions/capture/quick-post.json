@@ -14,9 +14,15 @@
     "bd5ea1b4-9393-42d3-b7f9-5f922f20405d#AC3",
     "bd5ea1b4-9393-42d3-b7f9-5f922f20405d#AC4"
   ],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "fieldEnums": {
-    "mode": ["manual", "assisted"],
+    "mode": [
+      "manual",
+      "assisted"
+    ],
     "originClass": [
       "USER_PROVIDED",
       "FIRST_PARTY_DIRECT",
@@ -24,8 +30,17 @@
       "USER_AUTHORIZED_CONTACT_STORE",
       "UNKNOWN_QUARANTINED"
     ],
-    "visibility": ["private", "business_unit", "tenant"],
-    "relationshipHint": ["owner", "delegate", "account_team", "none"]
+    "visibility": [
+      "private",
+      "business_unit",
+      "tenant"
+    ],
+    "relationshipHint": [
+      "owner",
+      "delegate",
+      "account_team",
+      "none"
+    ]
   },
   "captureResponse": {
     "capture.quick.response.data.sourceRecordId": "data.sourceRecordId",
@@ -35,6 +50,7 @@
     {
       "name": "Capture raw text with a declared origin class",
       "coversCriterion": "bd5ea1b4-9393-42d3-b7f9-5f922f20405d#AC2",
+      "capturesResponse": true,
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -87,6 +103,7 @@
     {
       "name": "Reject a capture with no origin class - 422, never a default",
       "coversCriterion": "bd5ea1b4-9393-42d3-b7f9-5f922f20405d#AC1",
+      "testType": "negative",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -103,6 +120,7 @@
     {
       "name": "Reject an origin class outside the vocabulary",
       "coversCriterion": "bd5ea1b4-9393-42d3-b7f9-5f922f20405d#AC1",
+      "testType": "negative",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -120,6 +138,7 @@
     {
       "name": "Reject a capture with no raw input - there is no evidence to store",
       "coversCriterion": "bd5ea1b4-9393-42d3-b7f9-5f922f20405d#AC2",
+      "testType": "negative",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -159,6 +178,7 @@
     {
       "name": "Reject an unauthenticated capture",
       "coversCriterion": "bd5ea1b4-9393-42d3-b7f9-5f922f20405d#AC4",
+      "testType": "negative",
       "payload": {
         "mode": "manual",
         "rawInput": "Anyone",

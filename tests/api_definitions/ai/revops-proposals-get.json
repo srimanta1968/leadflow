@@ -38,6 +38,7 @@
     {
       "name": "Findings come back as proposals, and routing is withheld without simulation evidence",
       "coversCriterion": "0c5a3bed-354e-4400-9378-5fe701d1f90a#AC2",
+      "capturesResponse": true,
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,

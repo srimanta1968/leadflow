@@ -72,23 +72,17 @@ Feature: Lead Capture from Web Forms
   @scenario_type:UI
   @ui_test
   @portal:leadflow
+  @login:default
   Scenario: A signed-in operator reaches the Capture Inbox
-    Given I navigate to "/signin"
-    When I fill "email" with "${login:email}"
-    And I fill "password" with "${login:password}"
-    And I click "Sign in"
-    Then I should see "Capture Inbox"
+    Then I should see "Universal Quick Capture"
 
   @scenario_id:103f6657-06f1-4771-a92c-ad91df915701
   @scenario_type:UI
   @ui_test
   @portal:leadflow
+  @login:default
   Scenario: An operator captures a lead by hand through Quick Capture
-    Given I navigate to "/signin"
-    When I fill "email" with "${login:email}"
-    And I fill "password" with "${login:password}"
-    And I click "Sign in"
-    And I click "Quick Capture"
+    When I click "Quick Capture"
     And I fill "name" with "${random_name}"
     And I fill "email" with "${random_email}"
     And I fill "company" with "${random_name}"

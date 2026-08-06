@@ -14,6 +14,11 @@ enumerate real errors; do not guess.
 - [ ] `POST /api/leadflow/ai/propose` — tests/api_definitions/ai/propose-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `GET /api/leadflow/ai/revops/proposals` — tests/api_definitions/ai/revops-proposals-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `POST /api/leadflow/ai/sdr/proposals/:id/accept` — tests/api_definitions/ai/sdr-proposals-id-accept-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 422/OFFER_TRUTH_VIOLATION
+- [ ] `GET /api/leadflow/calls/:id/intelligence` — tests/api_definitions/calls/id-intelligence-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 403/FORBIDDEN, 404/NOT_FOUND
+- [ ] `GET /api/leadflow/calls/recording-eligibility` — tests/api_definitions/calls/recording-eligibility-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `POST /api/leadflow/capture/:id/resolve` — tests/api_definitions/capture/resolve-post.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 403/FORBIDDEN
+- [ ] `GET /api/events/stream` — tests/api_definitions/events/stream-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN
+- [ ] `POST /api/sla/alerts/acknowledge` — tests/api_definitions/sla/alerts-acknowledge-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/sla/evaluate` — tests/api_definitions/sla/evaluate-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
 
 Call `projexlight_get_api_definition_rules` for the exact format.
