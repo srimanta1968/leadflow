@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build:tokens && tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
     "lint": "eslint src --ext ts,tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:tokens": "node scripts/build-tokens.mjs"
   },
   "dependencies": {
     "react": "^18.2.0",

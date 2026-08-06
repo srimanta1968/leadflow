@@ -1,0 +1,49 @@
+/*
+ * GENERATED — do not edit.
+ *
+ * Source: src/design-system/tokens.json
+ * Regenerate: npm run build:tokens
+ *
+ * Hand-editing this file reintroduces exactly the drift it was written to end: the
+ * palette used to live here AND in tailwind.config.js as two hand-typed copies, and
+ * four tokens had already gone missing from one of them.
+ */
+:root {
+  --bg: #070708;
+  --bg2: #0a0a0d;
+  --sidebar: #0b0b0d;
+  --panel: #151519;
+  --panel2: #1b1b20;
+  --panel3: #202027;
+  --line: #303038;
+  --line2: #3a3a44;
+  --text: #f4f4f6;
+  --muted: #9999a4;
+  --soft: #6e6e79;
+  --blue: #3d82ff;
+  --mag: #ff3cab;
+  --green: #00d59a;
+  --gold: #ffae00;
+  --purple: #9364ff;
+  --cyan: #00c7df;
+  --red: #ff4f63;
+  --orange: #ff783d;
+  --white: #ffffff;
+
+  --sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --cond: "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --shadow-panel: 0 18px 55px rgba(0,0,0,.35);
+  --shadow-glow: 0 0 0 1px rgba(61,130,255,.35), 0 18px 55px rgba(61,130,255,.18);
+
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 11px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+  --radius-3xl: 17px;
+  --radius-pill: 99px;
+  --radius-full: 50%;
+}

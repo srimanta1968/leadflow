@@ -13,6 +13,7 @@ import { QuickContactModal } from '../../components/app/QuickContactModal';
 import { ResolveCaptureModal } from '../../components/app/ResolveCaptureModal';
 import { ExtensionPreviewModal } from '../../components/app/ExtensionPreviewModal';
 import { outstandingCount, readQueue, QueueItem } from '../../features/capture/offlineQueue';
+import { accentClass, captureSourceFill, trustChipClass } from '../../design-system/tokens';
 
 /** Human labels for the origin vocabulary, from the shared content module. */
 const ORIGIN_LABELS = new Map(CAPTURE_ORIGIN_OPTIONS.map((option) => [option.value as string, option.label]));
@@ -53,22 +54,18 @@ function lensKey(lens: Lens): string {
   }
 }
 
-/** The badge for a trust state, with the mockup's accent for each rung. */
-const TRUST_BADGE: Record<TrustState, { short: string; className: string }> = {
-  P0_CAPTURED: { short: 'P0', className: 'border-gold/40 bg-gold/10 text-gold' },
-  P1_NORMALIZED: { short: 'P1', className: 'border-blue/40 bg-blue/10 text-blue' },
-  P2_CANDIDATE: { short: 'P2', className: 'border-purple/40 bg-purple/10 text-purple' },
-  P3_LINKED: { short: 'P3', className: 'border-cyan/40 bg-cyan/10 text-cyan' },
-  P4_DIRECT: { short: 'P4', className: 'border-green/40 bg-green/10 text-green' },
-};
-
-/** The accent each capture source carries in the breakdown panel. */
-const SOURCE_TONE: Record<string, string> = {
-  quick_add: 'bg-blue',
-  browser_extension: 'bg-cyan',
-  mobile_contacts: 'bg-green',
-  email_signature: 'bg-purple',
-  business_card: 'bg-gold',
+/**
+ * The rung label. The COLOUR is not chosen here — trustChipClass resolves it from
+ * the design system's trust map, so P2 reads the same purple on this screen as it
+ * does anywhere else. This file used to carry its own copy of that mapping, which
+ * is how two screens end up disagreeing about what a rung looks like.
+ */
+const TRUST_SHORT: Record<TrustState, string> = {
+  P0_CAPTURED: 'P0',
+  P1_NORMALIZED: 'P1',
+  P2_CANDIDATE: 'P2',
+  P3_LINKED: 'P3',
+  P4_DIRECT: 'P4',
 };
 
 /** Relative age, in the mockup's own shorthand. */
@@ -104,14 +101,14 @@ export function actionFor(item: CaptureInboxItem): {
   if (can('identity.link.verify')) {
     return {
       label: 'Compare',
-      className: 'border-purple/50 text-purple hover:bg-purple/10',
+      className: accentClass('publicRecord'),
       title: 'Compare the evidence on both records before linking',
     };
   }
   if (can('source_record.normalize')) {
     return {
       label: 'Resolve',
-      className: 'border-blue/50 text-blue hover:bg-blue/10',
+      className: accentClass('identity'),
       title: 'Parse this capture into fields',
     };
   }
@@ -119,13 +116,13 @@ export function actionFor(item: CaptureInboxItem): {
     if (item.originClass === 'FIRST_PARTY_DIRECT') {
       return {
         label: 'Promote',
-        className: 'border-green/50 text-green hover:bg-green/10',
+        className: accentClass('success'),
         title: 'Direct interaction evidence — promote without further review',
       };
     }
     return {
       label: 'Review',
-      className: 'border-blue/50 text-blue hover:bg-blue/10',
+      className: accentClass('identity'),
       title: 'Check the parse before promoting',
     };
   }
@@ -453,12 +450,12 @@ export default function CaptureInbox() {
           ) : (
             <ul className="mt-5 space-y-2">
               {rows.map((item) => {
-                const badge = TRUST_BADGE[item.trustState] ?? TRUST_BADGE.P0_CAPTURED;
+                const short = TRUST_SHORT[item.trustState] ?? 'P0';
                 const action = actionFor(item);
                 return (
                   <li key={item.sourceRecordId}>
                     <div className="flex items-center gap-4 rounded-xl border border-line bg-panel2 px-4 py-3 transition-colors hover:border-line2">
-                      <span className={`lf-pill shrink-0 ${badge.className}`}>{badge.short}</span>
+                      <span className={`lf-pill shrink-0 ${trustChipClass(item.trustState)}`}>{short}</span>
                       {/* The row itself inspects. A button rather than a click
                           handler on the div so it is reachable by keyboard and
                           announced as the control it is. */}
@@ -517,7 +514,7 @@ export default function CaptureInbox() {
                     aria-hidden="true"
                   >
                     <div
-                      className={`h-full rounded-full ${SOURCE_TONE[source.key] ?? 'bg-blue'}`}
+                      className={`h-full rounded-full ${captureSourceFill(source.key)}`}
                       style={{
                         width: `${maxSource === 0 ? 0 : Math.round((source.count / maxSource) * 100)}%`,
                       }}

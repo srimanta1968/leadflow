@@ -1,36 +1,12 @@
+/* The `:root` custom properties, GENERATED from src/design-system/tokens.json.
+ * Must precede the Tailwind directives so `@apply` and base styles can read them.
+ * This was previously a hand-typed copy of the palette living alongside a second
+ * copy in tailwind.config.js; four tokens had already gone missing from it. */
+@import './tokens.generated.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/**
- * Token mirror.
- *
- * The Tailwind theme is the source of truth for application code, but the same
- * values are exposed as CSS custom properties so the mockup's own class names
- * port across unchanged and so canvas/SVG code can read them at runtime.
- */
-:root {
-  --bg: #070708;
-  --bg2: #0a0a0d;
-  --sidebar: #0b0b0d;
-  --panel: #151519;
-  --panel2: #1b1b20;
-  --panel3: #202027;
-  --line: #303038;
-  --line2: #3a3a44;
-  --text: #f4f4f6;
-  --muted: #9999a4;
-  --soft: #6e6e79;
-  --blue: #3d82ff;
-  --mag: #ff3cab;
-  --green: #00d59a;
-  --gold: #ffae00;
-  --purple: #9364ff;
-  --cyan: #00c7df;
-  --red: #ff4f63;
-  --orange: #ff783d;
-  --shadow: 0 18px 55px rgba(0, 0, 0, 0.35);
-}
 
 @layer base {
   html {
