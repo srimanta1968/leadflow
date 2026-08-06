@@ -380,6 +380,74 @@ export interface QuickCaptureResult {
 }
 
 
+/** The trust ladder, in the order the inbox climbs it. */
+export type TrustState =
+  | 'P0_CAPTURED'
+  | 'P1_NORMALIZED'
+  | 'P2_CANDIDATE'
+  | 'P3_LINKED'
+  | 'P4_DIRECT';
+
+/** An action the caller may take on a capture, after state ∩ policy. */
+export type CaptureAction =
+  | 'source_record.normalize'
+  | 'source_record.promote'
+  | 'identity.link.verify'
+  | 'suppression.apply';
+
+/** One row of the unresolved queue. */
+export interface CaptureInboxItem {
+  sourceRecordId: string;
+  trustState: TrustState;
+  originClass: string;
+  /** The evidence line — exactly what was captured. Never re-worded. */
+  primaryEvidence: string | null;
+  /** Why the row is at this rung, in plain language. */
+  explanation: string;
+  ageMinutes: number;
+  captureSource: string;
+  /** What this caller may do to this row. Empty means read-only. */
+  availableActions: CaptureAction[];
+}
+
+/** The six headline counts. */
+export interface CaptureInboxCounts {
+  newP0: number;
+  parsedP1: number;
+  candidateP2: number;
+  offlineQueue: number;
+  browserCaptures: number;
+  slaRisk: number;
+}
+
+/** One row of the Capture Sources breakdown. */
+export interface CaptureSourceCount {
+  key: string;
+  label: string;
+  count: number;
+}
+
+/** Everything the Capture Inbox renders, from one call. */
+export interface CaptureInbox {
+  counts: CaptureInboxCounts;
+  items: CaptureInboxItem[];
+  sources: CaptureSourceCount[];
+  next_cursor: string | null;
+  /** False when the provenance store could not be reached. */
+  upstream_available: boolean;
+  /** False when the SLA figure is derived from age rather than live clocks. */
+  sla_from_upstream: boolean;
+  tenant_id: string | null;
+}
+
+/** How the inbox queue is narrowed. */
+export interface CaptureInboxFilters {
+  trust_state?: TrustState;
+  origin_class?: string;
+  limit?: number;
+  cursor?: string;
+}
+
 /** What resolving a capture returns. */
 export interface ResolveCaptureResult {
   captureId: string;
@@ -455,6 +523,30 @@ export const api = {
 
   quickCapture: (payload: QuickCapturePayload) =>
     request<QuickCaptureResult>('/leadflow/capture/quick', { method: 'POST', body: payload }),
+
+  /**
+   * Read the whole Capture Inbox — tiles, queue and source breakdown — in one
+   * call.
+   *
+   * ONE REQUEST BY DESIGN, not by accident. Splitting the tiles from the rows
+   * would mean two reads taken at different instants, so the headline count and
+   * the queue under it could disagree; drilling into a tile that says 27 and
+   * landing on 24 rows reads as a bug in the queue rather than as the second it
+   * took to fetch.
+   *
+   * Empty filters are omitted rather than sent blank, so the request URL states
+   * exactly what was asked for.
+   */
+  captureInbox: (filters: CaptureInboxFilters = {}, signal?: AbortSignal) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      if (value !== undefined && value !== '') {
+        params.set(key, String(value));
+      }
+    }
+    const query = params.toString();
+    return request<CaptureInbox>(`/leadflow/capture/inbox${query ? `?${query}` : ''}`, { signal });
+  },
 
   /** Capture a lead as an authenticated operator. */
   captureLead: (payload: LeadCapturePayload) =>

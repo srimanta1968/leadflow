@@ -6,9 +6,14 @@ import { PlatformRequest } from '../../platform/auth/sessionContext';
 import { evaluateBatch } from '../../platform/policy/policyEngine';
 import {
   availableActions,
+  CAPTURE_SOURCES,
+  captureSourceFor,
+  COUNT_WINDOW,
   encodeCursor,
   InboxQuery,
+  isAfterCursor,
   parseInboxQuery,
+  SLA_RISK_MINUTES,
   TrustState,
 } from './inboxQuery';
 
@@ -20,6 +25,10 @@ interface SourceRecordRow {
   evidence_ref?: string;
   quarantine_reason?: string;
   created_at?: string;
+  /** Which LeadFlow surface posted it — `leadflow`, `leadflow-extension`, … */
+  source_system?: string;
+  /** Present on offline syncs: contact | business_card | voice_note. */
+  capture_kind?: string;
 }
 
 /** The headline counts across the top of the screen. */
@@ -39,6 +48,9 @@ const GATED_ACTIONS = [
   'identity.link.verify',
   'suppression.apply',
 ];
+
+/** How far back the Browser Captures tile counts — the mockup's "This week". */
+const BROWSER_CAPTURE_WINDOW_MINUTES = 7 * 24 * 60;
 
 /** Minutes since a capture arrived, floored at zero. */
 function ageMinutes(createdAt: string | undefined): number {
@@ -85,19 +97,34 @@ function rolesFor(req: AuthenticatedRequest & PlatformRequest): string[] {
   return req.session?.role ? [req.session.role] : [];
 }
 
-/** Ask sdk-source-record for a page, or report that it could not be reached. */
-async function fetchRecords(
-  query: InboxQuery
-): Promise<{ rows: SourceRecordRow[]; upstreamAvailable: boolean }> {
+/**
+ * Ask sdk-source-record for the counting window, or report it unreachable.
+ *
+ * DELIBERATELY UNFILTERED BY TRUST STATE even when the caller asked for one
+ * rung. The six tiles must keep showing the whole queue after a drill-in —
+ * counting only the rows that survived the filter would zero every tile except
+ * the one just clicked, so the operator would lose the very overview the tiles
+ * exist to give at the exact moment they started working the queue.
+ *
+ * `age_minutes_max` is passed so the window is the UNRESOLVED backlog rather
+ * than the tenant's whole history: the inbox is a triage queue, and a record
+ * captured last quarter is not work in progress.
+ */
+async function fetchWindow(): Promise<{ rows: SourceRecordRow[]; upstreamAvailable: boolean }> {
   if (!SdkGatewayClient.isConfigured()) {
     return { rows: [], upstreamAvailable: false };
+  }
+
+  const params = new URLSearchParams({ limit: String(COUNT_WINDOW) });
+  if (config.projexCloud.tenantId) {
+    params.set('tenant_id', config.projexCloud.tenantId);
   }
 
   try {
     const result = await SdkGatewayClient.call<{ data?: { records?: SourceRecordRow[] } }>({
       sdk: 'sdk-source-record',
       // Path from the SDK catalog: GET /api/source-records.
-      path: '/api/source-records',
+      path: `/api/source-records?${params.toString()}`,
       method: 'GET',
       body: undefined,
     });
@@ -109,9 +136,85 @@ async function fetchRecords(
   }
 }
 
+/**
+ * How many response clocks sdk-sla considers at risk.
+ *
+ * Returns null — NOT zero — when the SDK cannot answer. Zero is a claim that
+ * nothing is at risk, which is the most dangerous thing this screen could say
+ * while it is in fact blind; null lets the caller fall back to the count it can
+ * still derive honestly.
+ *
+ * The response is read defensively across `at_risk` / `count` / `total` because
+ * the published contract describes "at_risk and a count" while the catalog
+ * example shows a bare `data` array — an unrecognised shape reads as unknown
+ * rather than as an empty queue.
+ */
+async function fetchSlaAtRisk(): Promise<number | null> {
+  if (!SdkGatewayClient.isConfigured()) {
+    return null;
+  }
+
+  const params = new URLSearchParams();
+  if (config.projexCloud.tenantId) {
+    // Required by the endpoint: it answers 400 without a tenant.
+    params.set('tenant_id', config.projexCloud.tenantId);
+  }
+
+  try {
+    const result = await SdkGatewayClient.call<{
+      data?: unknown;
+      total?: number;
+    }>({
+      sdk: 'sdk-sla',
+      path: `/api/sla/at-risk${params.toString() ? `?${params.toString()}` : ''}`,
+      method: 'GET',
+      body: undefined,
+    });
+
+    const body = result.data;
+    if (!body) {
+      return null;
+    }
+    const payload = body.data as { at_risk?: unknown[]; count?: number } | unknown[] | undefined;
+
+    if (Array.isArray(payload)) {
+      return payload.length;
+    }
+    if (payload && Array.isArray(payload.at_risk)) {
+      return payload.at_risk.length;
+    }
+    if (payload && typeof payload.count === 'number') {
+      return payload.count;
+    }
+    if (typeof body.total === 'number') {
+      return body.total;
+    }
+    return null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[captureInbox] sla at-risk unavailable:', message);
+    return null;
+  }
+}
+
+/** Newest first, ties broken by id so two captures in one millisecond order. */
+function byRecency(a: SourceRecordRow, b: SourceRecordRow): number {
+  const left = Date.parse(a.created_at ?? '') || 0;
+  const right = Date.parse(b.created_at ?? '') || 0;
+  if (left !== right) {
+    return right - left;
+  }
+  return (b.capture_id ?? '').localeCompare(a.capture_id ?? '');
+}
+
 export class CaptureInboxController {
   /**
    * GET /api/leadflow/capture/inbox — the composed triage view.
+   *
+   * ONE CALL POPULATES THE WHOLE SCREEN: the six tiles, the queue, and the
+   * source breakdown all come from a single counting window, so the headline
+   * numbers cannot disagree with the rows beneath them the way two reads taken
+   * a second apart would.
    *
    * DEGRADES TO AN EMPTY, HONEST ANSWER. When ProjexCloud cannot be reached the
    * response is a 200 with zeroed counts and `upstream_available: false`, not a
@@ -123,7 +226,7 @@ export class CaptureInboxController {
     req: AuthenticatedRequest & PlatformRequest,
     res: Response
   ): Promise<void> {
-    const query = parseInboxQuery(req.query as Record<string, unknown>);
+    const query: InboxQuery = parseInboxQuery(req.query as Record<string, unknown>);
 
     // ONE policy evaluation for the whole page, not one per row. Every row asks
     // the same question of the same caller, so the answer is identical and a
@@ -136,10 +239,76 @@ export class CaptureInboxController {
       decisions.filter((decision) => decision.effect === 'permit').map((d) => d.action)
     );
 
-    const { rows, upstreamAvailable } = await fetchRecords(query);
+    // Issued together: the window is what every tile and row is derived from,
+    // and the SLA count is the one figure it cannot derive. Awaiting them in
+    // sequence would add a whole round trip to first paint for no benefit.
+    const [{ rows, upstreamAvailable }, slaAtRisk] = await Promise.all([
+      fetchWindow(),
+      fetchSlaAtRisk(),
+    ]);
 
-    const items = rows.slice(0, query.limit).map((row) => {
-      const state = (row.trust_state ?? 'P0_CAPTURED') as TrustState;
+    const window = [...rows].sort(byRecency);
+
+    // The counts, from the WHOLE window — see fetchWindow on why they are not
+    // computed from the filtered page.
+    const stateOf = (row: SourceRecordRow): TrustState =>
+      (row.trust_state ?? 'P0_CAPTURED') as TrustState;
+
+    const olderThanADay = window.filter(
+      (row) => ageMinutes(row.created_at) >= SLA_RISK_MINUTES
+    ).length;
+
+    const counts: InboxCounts = {
+      newP0: window.filter((row) => stateOf(row) === 'P0_CAPTURED').length,
+      parsedP1: window.filter((row) => stateOf(row) === 'P1_NORMALIZED').length,
+      candidateP2: window.filter((row) => stateOf(row) === 'P2_CANDIDATE').length,
+      // The device's own outstanding queue, which no server can see: a capture
+      // taken with no signal exists only on the handset until it syncs. Always
+      // 0 here, and the screen overlays the real figure from the device store.
+      offlineQueue: 0,
+      browserCaptures: window.filter(
+        (row) =>
+          row.source_system === 'leadflow-extension' &&
+          ageMinutes(row.created_at) <= BROWSER_CAPTURE_WINDOW_MINUTES
+      ).length,
+      // sdk-sla's live clocks when it answered; otherwise the count this window
+      // can still support, which is exactly what the tile's caption claims.
+      slaRisk: slaAtRisk ?? olderThanADay,
+    };
+
+    const sources = CAPTURE_SOURCES.map((source) => ({
+      key: source.key,
+      label: source.label,
+      count: window.filter((row) => captureSourceFor(row.source_system, row.capture_kind) === source.key)
+        .length,
+    }));
+
+    // The page: the caller's filter, then the cursor, then the limit. Filtering
+    // AFTER the cursor would let a filtered-out row consume the page's budget
+    // and hand back a short page that looks like the end of the queue.
+    const filtered = window.filter((row) => {
+      if (query.trustState && stateOf(row) !== query.trustState) {
+        return false;
+      }
+      if (query.originClass && (row.origin_class ?? 'UNKNOWN_QUARANTINED') !== query.originClass) {
+        return false;
+      }
+      return true;
+    });
+
+    const afterCursor = query.cursor
+      ? filtered.filter((row) =>
+          isAfterCursor(
+            { createdAt: row.created_at ?? '', sourceRecordId: row.capture_id ?? '' },
+            query.cursor!
+          )
+        )
+      : filtered;
+
+    const page = afterCursor.slice(0, query.limit);
+
+    const items = page.map((row) => {
+      const state = stateOf(row);
       return {
         sourceRecordId: row.capture_id ?? '',
         trustState: state,
@@ -147,28 +316,17 @@ export class CaptureInboxController {
         primaryEvidence: row.evidence_ref ?? null,
         explanation: explain(state, row.quarantine_reason),
         ageMinutes: ageMinutes(row.created_at),
+        captureSource: captureSourceFor(row.source_system, row.capture_kind),
         availableActions: availableActions(state, permitted),
       };
     });
 
-    const counts: InboxCounts = {
-      newP0: items.filter((item) => item.trustState === 'P0_CAPTURED').length,
-      parsedP1: items.filter((item) => item.trustState === 'P1_NORMALIZED').length,
-      candidateP2: items.filter((item) => item.trustState === 'P2_CANDIDATE').length,
-      // Not yet sourced: the offline queue and browser-capture counters belong
-      // to surfaces that do not exist yet. Reported as 0 rather than omitted, so
-      // the screen renders a stable shape and a future value slots in.
-      offlineQueue: 0,
-      browserCaptures: 0,
-      slaRisk: 0,
-    };
-
-    const last = items[items.length - 1];
+    const lastRow = page[page.length - 1];
     const nextCursor =
-      items.length === query.limit && last
+      afterCursor.length > page.length && lastRow
         ? encodeCursor({
-            createdAt: rows[items.length - 1]?.created_at ?? new Date().toISOString(),
-            sourceRecordId: last.sourceRecordId,
+            createdAt: lastRow.created_at ?? new Date().toISOString(),
+            sourceRecordId: lastRow.capture_id ?? '',
           })
         : null;
 
@@ -177,10 +335,14 @@ export class CaptureInboxController {
       data: {
         counts,
         items,
+        sources,
         next_cursor: nextCursor,
         // Stated explicitly so the screen can say "we could not reach the
         // provenance store" rather than implying the queue is empty.
         upstream_available: upstreamAvailable,
+        // False when the SLA figure is the locally-derived age count rather
+        // than sdk-sla's live clocks. The screen says which it is showing.
+        sla_from_upstream: slaAtRisk !== null,
         tenant_id: config.projexCloud.tenantId || null,
       },
     });

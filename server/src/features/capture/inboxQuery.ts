@@ -28,6 +28,71 @@ export const MAX_LIMIT = 200;
 const DEFAULT_LIMIT = 25;
 
 /**
+ * How many recent captures the counting window holds.
+ *
+ * The six tiles are counted over this window rather than over the tenant's
+ * whole history, because the inbox is a triage queue: a record captured last
+ * quarter is not outstanding work, and a tile that keeps climbing forever
+ * stops being a number anybody acts on. Larger than any page so a drill-in
+ * never shrinks the tiles.
+ */
+export const COUNT_WINDOW = 500;
+
+/**
+ * When a capture is old enough to be at risk — the mockup's "Older than 24
+ * hours". Used only as the fallback when sdk-sla cannot be reached.
+ */
+export const SLA_RISK_MINUTES = 24 * 60;
+
+/**
+ * The capture surfaces the breakdown panel lists, in the mockup's order.
+ *
+ * Keyed off `source_system` — the value each LeadFlow capture path stamps on
+ * the source record it posts upstream — with `capture_kind` splitting the
+ * offline sync, which carries several kinds under one system name.
+ *
+ * EMAIL SIGNATURE HAS NO CAPTURE PATH YET. It is listed because the panel is
+ * an inventory of the surfaces the product claims to support, and a row that
+ * reads 0 says "nothing arrived this way" where a missing row says nothing at
+ * all — the second is how a broken ingestion path stays invisible.
+ */
+export const CAPTURE_SOURCES = [
+  { key: 'quick_add', label: 'Quick Add' },
+  { key: 'browser_extension', label: 'Browser extension' },
+  { key: 'mobile_contacts', label: 'Mobile contacts' },
+  { key: 'email_signature', label: 'Email signature' },
+  { key: 'business_card', label: 'Business card' },
+] as const;
+
+export type CaptureSourceKey = (typeof CAPTURE_SOURCES)[number]['key'] | 'other';
+
+/**
+ * Which surface a source record arrived through.
+ *
+ * Anything unrecognised is `other` rather than being forced into the nearest
+ * bucket: an import or a partner feed is not a quick add, and quietly counting
+ * it as one would overstate a channel nobody used.
+ */
+export function captureSourceFor(
+  sourceSystem: string | undefined,
+  captureKind: string | undefined
+): CaptureSourceKey {
+  switch (sourceSystem) {
+    case 'leadflow':
+      return 'quick_add';
+    case 'leadflow-extension':
+      return 'browser_extension';
+    case 'leadflow-offline':
+      // One system name, several kinds — the device says which.
+      return captureKind === 'business_card' ? 'business_card' : 'mobile_contacts';
+    case 'leadflow-email-signature':
+      return 'email_signature';
+    default:
+      return 'other';
+  }
+}
+
+/**
  * Where the next page starts.
  *
  * A COMPOSITE of the row's timestamp AND its id, not the timestamp alone.
@@ -85,6 +150,25 @@ export function decodeCursor(raw: string): InboxCursor {
   }
 
   return { createdAt, sourceRecordId };
+}
+
+/**
+ * Is this row strictly past the cursor, in the queue's own newest-first order?
+ *
+ * COMPARES THE PAIR, not the timestamp alone. Two captures sharing a
+ * millisecond would otherwise both be "not past" the first one's cursor and the
+ * second would be served twice, or both be "past" it and the first would be
+ * skipped — which in a triage queue means either duplicated work or a capture
+ * nobody ever sees. The id decides the tie, using the same ordering the page
+ * itself is sorted by.
+ */
+export function isAfterCursor(row: InboxCursor, cursor: InboxCursor): boolean {
+  const rowTime = Date.parse(row.createdAt) || 0;
+  const cursorTime = Date.parse(cursor.createdAt) || 0;
+  if (rowTime !== cursorTime) {
+    return rowTime < cursorTime;
+  }
+  return row.sourceRecordId.localeCompare(cursor.sourceRecordId) < 0;
 }
 
 /**

@@ -14,6 +14,7 @@ import Demo from './pages/marketing/Demo';
 import SignIn from './pages/auth/SignIn';
 import SignUp from './pages/auth/SignUp';
 import CaptureInbox from './pages/app/CaptureInbox';
+import LeadQueue from './pages/app/LeadQueue';
 import QuickCapture from './pages/app/QuickCapture';
 import RoutingRules from './pages/app/RoutingRules';
 import SlaSettings from './pages/app/SlaSettings';
@@ -60,6 +61,7 @@ export default function App() {
               }
             >
               <Route index element={<CaptureInbox />} />
+              <Route path="leads" element={<LeadQueue />} />
               <Route path="capture" element={<QuickCapture />} />
               <Route path="routing" element={<RoutingRules />} />
               <Route path="sla" element={<SlaSettings />} />

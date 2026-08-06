@@ -23,6 +23,9 @@ const SCREEN_SUBTITLE: Record<string, string> = {
  */
 const NAV: { label: string; to: string; planned?: boolean }[] = [
   { label: 'Capture Inbox', to: '/app' },
+  // The lead projection, one rung past the trust ladder. Distinct from the
+  // Capture Inbox above, which works source records that are not leads yet.
+  { label: 'Lead queue', to: '/app/leads' },
   { label: 'Quick Capture', to: '/app/capture' },
   { label: 'Routing rules', to: '/app/routing' },
   { label: 'SLA targets', to: '/app/sla' },

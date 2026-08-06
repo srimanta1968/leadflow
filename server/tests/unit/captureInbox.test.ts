@@ -4,6 +4,8 @@ import {
   decodeCursor,
   actionsForTrustState,
   availableActions,
+  captureSourceFor,
+  isAfterCursor,
   MAX_LIMIT,
 } from '../../src/features/capture/inboxQuery';
 
@@ -38,6 +40,32 @@ describe('cursor pagination', () => {
     // Split on the FIRST separator: the ISO timestamp cannot contain a pipe,
     // but an upstream id can.
     expect(decodeCursor(encodeCursor(cursor)).sourceRecordId).toBe('cap|weird|id');
+  });
+
+  it('walks the page in the queue order, and never twice over a shared millisecond', () => {
+    // The queue is newest first, so "after the cursor" means OLDER than it.
+    const cursor = { createdAt: '2026-08-02T10:00:00.000Z', sourceRecordId: 'cap-5' };
+
+    expect(
+      isAfterCursor({ createdAt: '2026-08-02T09:59:00.000Z', sourceRecordId: 'cap-9' }, cursor)
+    ).toBe(true);
+    expect(
+      isAfterCursor({ createdAt: '2026-08-02T10:01:00.000Z', sourceRecordId: 'cap-1' }, cursor)
+    ).toBe(false);
+
+    // The cursor row itself must not come back: it was the last row of the
+    // previous page, and re-serving it is duplicated triage work.
+    expect(isAfterCursor(cursor, cursor)).toBe(false);
+
+    // Two captures in the SAME millisecond are split by id, using the same
+    // ordering the page is sorted by — so one lands on each side and neither
+    // is skipped nor repeated.
+    expect(
+      isAfterCursor({ createdAt: '2026-08-02T10:00:00.000Z', sourceRecordId: 'cap-4' }, cursor)
+    ).toBe(true);
+    expect(
+      isAfterCursor({ createdAt: '2026-08-02T10:00:00.000Z', sourceRecordId: 'cap-6' }, cursor)
+    ).toBe(false);
   });
 
   it('refuses a malformed cursor rather than silently restarting at page one', () => {
@@ -77,6 +105,22 @@ describe('query validation', () => {
     expect(query.trustState).toBeNull();
     expect(query.originClass).toBeNull();
     expect(query.cursor).toBeNull();
+  });
+});
+
+describe('capture source attribution', () => {
+  it('maps each surface, splits the offline sync by kind, and buckets the rest as other', () => {
+    expect(captureSourceFor('leadflow', undefined)).toBe('quick_add');
+    expect(captureSourceFor('leadflow-extension', undefined)).toBe('browser_extension');
+
+    // One system name, two surfaces — the device says which.
+    expect(captureSourceFor('leadflow-offline', 'contact')).toBe('mobile_contacts');
+    expect(captureSourceFor('leadflow-offline', 'business_card')).toBe('business_card');
+
+    // An import or a partner feed is NOT a quick add. Forcing it into the
+    // nearest bucket would overstate a channel nobody used.
+    expect(captureSourceFor('acculynx-import', undefined)).toBe('other');
+    expect(captureSourceFor(undefined, undefined)).toBe('other');
   });
 });
 
