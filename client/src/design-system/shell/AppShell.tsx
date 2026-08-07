@@ -174,9 +174,27 @@ export function AppShell() {
                   key={item.to}
                   item={item}
                   counts={counts}
-                  // An item that states WHY it is open is open. Only a declared
-                  // action is asked of the PDP, and that check fails closed.
-                  allowed={item.action ? isAllowed(permissions, item.action) : true}
+                  /*
+                   * An item that states WHY it is open is open. A gated one is
+                   * a link WHILE THE VERDICT IS IN FLIGHT, and locked only once
+                   * the PDP has actually said no.
+                   *
+                   * Treating "loading" as "denied" is the tempting default and it
+                   * is wrong twice over. It flashes every item as locked on each
+                   * mount, and — because a locked item is a <span> and a
+                   * permitted one is an <a> — it REPLACES the element the moment
+                   * the answer arrives. Anything holding the old node loses it:
+                   * a click already in flight lands on a detached span and times
+                   * out waiting for it to become stable, which is exactly how
+                   * this surfaced. Optimism costs nothing here because the
+                   * screens are enforced server side; the shell is a signpost,
+                   * not the gate.
+                   */
+                  allowed={
+                    item.action
+                      ? permissions.loading || isAllowed(permissions, item.action)
+                      : true
+                  }
                   collapsed={collapsed}
                   onNavigate={() => setDrawerOpen(false)}
                 />
