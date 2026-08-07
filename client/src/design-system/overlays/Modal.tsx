@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
+import { useOverlayBehaviour } from './useOverlayBehaviour';
 
 /**
  * The overlay base for every dialog in the application.
@@ -25,10 +26,6 @@ const SIZE: Record<ModalSize, string> = {
   xl: 'w-[min(1380px,98vw)] max-h-[92vh]',
   full: 'w-[min(1380px,98vw)] max-h-[96vh]',
 };
-
-/** Everything focusable, in DOM order. Disabled controls are excluded. */
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export interface ModalProps {
   open: boolean;
@@ -58,70 +55,10 @@ export function Modal({
   dismissable = true,
 }: ModalProps) {
   const panel = useRef<HTMLDivElement>(null);
-  const restoreTo = useRef<HTMLElement | null>(null);
 
-  // Scroll lock. The scrollbar's width is compensated so the page behind does not
-  // jump sideways as the dialog opens — a shift that reads as a glitch and moves
-  // whatever the operator was about to click.
-  useEffect(() => {
-    if (!open) return undefined;
-    const { body, documentElement } = document;
-    const previous = body.style.overflow;
-    const previousPad = body.style.paddingRight;
-    const gap = window.innerWidth - documentElement.clientWidth;
-    body.style.overflow = 'hidden';
-    if (gap > 0) body.style.paddingRight = `${gap}px`;
-    return () => {
-      body.style.overflow = previous;
-      body.style.paddingRight = previousPad;
-    };
-  }, [open]);
-
-  // Focus in on open, and back where it came from on close. Returning focus is
-  // the half everyone forgets: without it a keyboard user lands at the top of the
-  // document and has to find their place again.
-  useEffect(() => {
-    if (!open) return undefined;
-    restoreTo.current = document.activeElement as HTMLElement | null;
-    const first = panel.current?.querySelector<HTMLElement>(FOCUSABLE);
-    (first ?? panel.current)?.focus();
-    return () => restoreTo.current?.focus?.();
-  }, [open]);
-
-  // Escape, and the tab cycle.
-  useEffect(() => {
-    if (!open) return undefined;
-    function onKey(e: KeyboardEvent): void {
-      if (e.key === 'Escape' && dismissable) {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-      if (e.key !== 'Tab' || !panel.current) return;
-
-      const focusable = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)]
-        .filter((el) => el.offsetParent !== null || el === document.activeElement);
-      if (focusable.length === 0) {
-        // Nothing to move to — hold focus on the panel rather than letting Tab
-        // escape to the page behind.
-        e.preventDefault();
-        panel.current.focus();
-        return;
-      }
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [open, onClose, dismissable]);
+  // Scroll lock, focus trap, Escape and focus restoration all live in the shared
+  // hook, so Modal and Drawer cannot drift apart on any of them.
+  useOverlayBehaviour({ open, panel, onClose, dismissable });
 
   if (!open) return null;
 
