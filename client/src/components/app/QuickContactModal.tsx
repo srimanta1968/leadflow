@@ -1,4 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react';
+import { Modal } from '../../design-system/overlays/Modal';
 import { api, ApiError, QuickCaptureResult } from '../../services/api';
 import {
   CAPTURE_MODES,
@@ -246,14 +247,14 @@ export function QuickContactModal({ open, onClose, onCaptured }: QuickContactMod
   };
 
   return (
-    <div className="modal xl" role="dialog" aria-modal="true" aria-labelledby="quick-contact-title">
-      <div className="modal-body">
-        <header>
-          <h2 id="quick-contact-title">Quick Contact Capture</h2>
-          <p className="sub">
-            Creates a provisional P0 source record. No paid enrichment or destructive merge.
-          </p>
-        </header>
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="xl"
+      title="Quick Contact Capture"
+      subtitle="Creates a provisional P0 source record. No paid enrichment or destructive merge."
+    >
+      <div>
 
         <div role="tablist" aria-label="Capture mode">
           {CAPTURE_MODES.map((option) => (
@@ -468,7 +469,7 @@ export function QuickContactModal({ open, onClose, onCaptured }: QuickContactMod
           </footer>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 }
 

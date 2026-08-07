@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Modal } from '../../design-system/overlays/Modal';
 import { api, ApiError, ResolveCaptureResult } from '../../services/api';
 
 /** The four nodes on the status rail, in order, with the mockup's copy. */
@@ -112,12 +113,14 @@ export function ResolveCaptureModal({
   const progress = railProgress(reached);
 
   return (
-    <div className="modal xl" role="dialog" aria-modal="true" aria-labelledby="resolve-title">
-      <div className="modal-body">
-        <header>
-          <h2 id="resolve-title">Resolve Quick Capture</h2>
-          <p className="sub">Raw evidence → normalized handles → candidate search.</p>
-        </header>
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="xl"
+      title="Resolve Quick Capture"
+      subtitle="Raw evidence → normalized handles → candidate search."
+    >
+      <div>
 
         <ol aria-label="Trust state">
           {RAIL_NODES.map((node) => {
@@ -203,7 +206,7 @@ export function ResolveCaptureModal({
           </button>
         </footer>
       </div>
-    </div>
+    </Modal>
   );
 }
 
