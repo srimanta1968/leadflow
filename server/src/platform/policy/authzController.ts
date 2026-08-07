@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../../middleware/auth';
 import { AppError } from '../../utils/errors';
 import { PlatformRequest } from '../auth/sessionContext';
 import { evaluateBatch, isKnownAction, PolicyRequest } from './policyEngine';
+import { rolesFor } from './governed';
 
 /**
  * Most actions a screen can ask about at once.
@@ -63,20 +64,23 @@ export function validateActions(body: unknown): PolicyRequest[] {
   });
 }
 
-/**
- * The caller's roles.
+/*
+ * The caller's roles come from governed.ts — the SAME function the enforcement
+ * path uses, imported rather than reimplemented.
  *
- * Read from the VERIFIED platform session when one is present. Falls back to the
- * local session's single role while ProjexCloud identity is not yet wired up —
- * and to no roles at all if neither exists, which denies everything. Failing
- * closed is the only safe default in a permission check.
+ * This file used to carry its own copy, and the copy had drifted: it returned the
+ * LOCAL session role verbatim ('admin', 'user') while governed.ts maps it through
+ * LOCAL_ROLE_BRIDGE to the SOP roles the policy bundle is actually keyed by
+ * ('revenue_operations', 'sales_rep', ...). Nothing matched, so this endpoint
+ * denied EVERY action for every locally-authenticated caller while the very same
+ * action succeeded when performed.
+ *
+ * That is the worst shape this bug could take. A preview that wrongly says "no"
+ * hides controls the caller is entitled to, and it does so silently — there is no
+ * failure to investigate, just a screen that looks emptier than it should. It
+ * surfaced when the application shell began gating its navigation on this
+ * endpoint and the entire sidebar rendered locked.
  */
-function rolesFor(req: AuthenticatedRequest & PlatformRequest): string[] {
-  if (req.platformSession?.roles.length) {
-    return req.platformSession.roles;
-  }
-  return req.session?.role ? [req.session.role] : [];
-}
 
 export class AuthzController {
   /** POST /api/leadflow/authz/evaluate — one verdict per requested action. */
