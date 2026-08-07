@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from '../../components/marketing/Logo';
 import { useSession } from '../../context/SessionContext';
@@ -8,6 +8,10 @@ import { SUCCESS } from '../../content/messages';
 import { isAllowed, usePermissions } from '../../platform/permissions/usePermissions';
 import { NAV_ACTIONS, NAV_GROUPS, SCREEN_SUBTITLE, type NavItem } from './navModel';
 import { useShellCounts, type ShellCounts } from './useShellCounts';
+import { CommandPalette } from './CommandPalette';
+import { COMMAND_ACTIONS } from './commandRegistry';
+import { QuickContactModal } from '../../components/app/QuickContactModal';
+import { ExtensionPreviewModal } from '../../components/app/ExtensionPreviewModal';
 
 /**
  * The application shell: sidebar, brandbar, topbar and the view outlet.
@@ -107,15 +111,44 @@ export function AppShell() {
 
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const counts = useShellCounts(pathname);
+  // ONE batch for the whole shell. The nav and the palette gate on overlapping
+  // actions, and two hooks would ask the PDP the same question twice per mount.
   const permissions = usePermissions(
-    NAV_ACTIONS.map((action) => ({ action, resourceType: 'screen' })),
+    useMemo(
+      () => [...new Set([...NAV_ACTIONS, ...COMMAND_ACTIONS])]
+        .map((action) => ({ action, resourceType: 'screen' })),
+      [],
+    ),
   );
 
   useEffect(() => {
     window.localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
   }, [collapsed]);
+
+  // ⌘K / Ctrl+K anywhere. preventDefault matters: on Chrome ⌘K focuses the
+  // address bar, so without it the palette opens behind the browser's own search.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const allowedAction = useCallback(
+    // Same optimism as the nav: in flight is not denied. The palette runs nothing
+    // the server would refuse, it only decides what to LIST.
+    (action: string) => permissions.loading || isAllowed(permissions, action),
+    [permissions],
+  );
 
   // Escape closes the drawer. A modal-ish overlay that traps a keyboard user with
   // no way out is worse than no drawer.
@@ -271,18 +304,20 @@ export function AppShell() {
           </p>
 
           <div className="flex items-center gap-3">
-            {/* The mockup's ⌘K affordance. Labelled as unavailable rather than
-                wired to nothing: a search box that swallows what you type is a
-                worse lie than an honest placeholder. */}
-            <span
-              className="hidden items-center gap-2 rounded-lg border border-line bg-panel px-3 py-1.5 text-xs text-soft md:flex"
-              title="Global search is not available yet"
+            {/* The mockup's .searchbox. Now a real control rather than the
+                honest placeholder it was while the palette did not exist. */}
+            <button
+              type="button"
+              name="openCommandPalette"
+              onClick={() => setPaletteOpen(true)}
+              aria-keyshortcuts="Meta+K Control+K"
+              className="hidden items-center gap-2 rounded-lg border border-line bg-panel px-3 py-1.5 text-xs text-soft transition-colors hover:border-line2 hover:text-muted md:flex"
             >
               Search
               <kbd className="rounded border border-line2 bg-panel3 px-1.5 py-0.5 font-mono text-[10px]">
                 ⌘K
               </kbd>
-            </span>
+            </button>
             <button type="button" onClick={handleSignOut} className="lf-btn-ghost lg:hidden">
               Sign out
             </button>
@@ -293,6 +328,19 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        isAllowed={allowedAction}
+        onIntent={(intent) => {
+          if (intent === 'quick-capture') setQuickOpen(true);
+          if (intent === 'extension-preview') setPreviewOpen(true);
+        }}
+      />
+
+      <QuickContactModal open={quickOpen} onClose={() => setQuickOpen(false)} onCaptured={() => setQuickOpen(false)} />
+      <ExtensionPreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} />
     </div>
   );
 }

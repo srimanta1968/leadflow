@@ -75,3 +75,17 @@ Feature: Capture Inbox screen and unresolved-capture queue
     And I should see "No automatic enrichment"
     And I should see "Source first, entity later"
     And I should see "Restricted sites"
+
+  @scenario_type:UI
+  @ui_test
+  @portal:leadflow
+  @login:default
+  @scenario_id:78c5c751-b2be-4e4e-b42b-4be7d83bf853
+  Scenario: The command palette opens from the topbar and groups what it offers
+    When I click "Search"
+    Then I should see "Navigation"
+    And I should see "Action"
+    And I should see "Quick Contact"
+    And I should see "esc to close"
+    When I fill "command" with "routing"
+    Then I should see "Open Routing rules"
