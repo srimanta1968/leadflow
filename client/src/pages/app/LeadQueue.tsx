@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { DataTable } from '../../design-system/data/DataTable';
 import { api, ApiError, Lead } from '../../services/api';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { failureFor } from '../../content/messages';
@@ -233,96 +234,78 @@ export default function LeadQueue() {
           </Link>
         </div>
       ) : leads.length > 0 ? (
-        <div className="lf-panel mt-8 overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-sm">
-            <caption className="sr-only">
-              Captured leads, newest first, with elapsed time against the 30-minute response window
-            </caption>
-            <thead>
-              <tr className="border-b border-line text-xs uppercase tracking-wider text-soft">
-                <th scope="col" className="px-5 py-3.5 font-semibold">
-                  Name
-                </th>
-                <th scope="col" className="px-5 py-3.5 font-semibold">
-                  Email
-                </th>
-                <th scope="col" className="px-5 py-3.5 font-semibold">
-                  Source
-                </th>
-                <th scope="col" className="px-5 py-3.5 font-semibold">
-                  Captured
-                </th>
-                <th scope="col" className="px-5 py-3.5 font-semibold">
-                  Owner
-                </th>
-                <th scope="col" className="px-5 py-3.5 font-semibold">
-                  Response clock
-                </th>
-                <th scope="col" className="px-5 py-3.5 font-semibold">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/70">
-              {leads.map((lead) => (
-                <tr key={lead.id} className="transition-colors hover:bg-panel2/60">
-                  <td className="px-5 py-4 font-semibold text-text">{lead.name ?? '—'}</td>
-                  <td className="px-5 py-4 text-muted">{lead.email ?? '—'}</td>
-                  <td className="px-5 py-4">
-                    <span className="lf-pill border-line2 bg-panel2 text-muted">
-                      {SOURCE_LABELS.get(lead.source ?? '') ?? lead.source ?? 'Unknown'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-muted">{age(lead.created_at)}</td>
-
-                  <td className="px-5 py-4">
-                    {lead.owner_user_id ? (
-                      <span className="text-text">
-                        {lead.owner_name ?? 'Assigned'}
-                        {lead.routing_method && (
-                          <span className="ml-2 font-mono text-[11px] text-soft">
-                            {lead.routing_method}
-                          </span>
-                        )}
-                      </span>
-                    ) : (
-                      <span className="lf-pill border-orange/40 bg-orange/10 text-orange">
-                        Unowned
-                      </span>
+        <div className="mt-8">
+          <DataTable
+            rows={leads}
+            rowKey={(lead) => lead.id}
+            caption="Captured leads, newest first, with elapsed time against the 30-minute response window"
+            columns={[
+              {
+                key: 'name', header: 'Name', width: '18%',
+                sortValue: (lead) => lead.name ?? null,
+                cell: (lead) => <span className="font-semibold text-text">{lead.name ?? '—'}</span>,
+              },
+              {
+                key: 'email', header: 'Email', width: '20%',
+                sortValue: (lead) => lead.email ?? null,
+                cell: (lead) => lead.email ?? '—',
+              },
+              {
+                key: 'source', header: 'Source',
+                sortValue: (lead) => lead.source ?? null,
+                cell: (lead) => (
+                  <span className="lf-pill border-line2 bg-panel2 text-muted">
+                    {SOURCE_LABELS.get(lead.source ?? '') ?? lead.source ?? 'Unknown'}
+                  </span>
+                ),
+              },
+              {
+                key: 'captured', header: 'Captured',
+                // Sorts on the INSTANT, renders the elapsed shorthand. Sorting the
+                // rendered string puts "3 hr" after "12 min".
+                sortValue: (lead) => (lead.created_at ? Date.parse(lead.created_at) : null),
+                cell: (lead) => age(lead.created_at),
+              },
+              {
+                key: 'owner', header: 'Owner',
+                sortValue: (lead) => lead.owner_name ?? null,
+                cell: (lead) => (lead.owner_user_id ? (
+                  <span className="text-text">
+                    {lead.owner_name ?? 'Assigned'}
+                    {lead.routing_method && (
+                      <span className="ml-2 font-mono text-[11px] text-soft">{lead.routing_method}</span>
                     )}
-                  </td>
-
-                  <td className="px-5 py-4">
-                    {/* The clock only means anything once a lead has an owner —
-                        an unrouted lead has no deadline to be measured against. */}
-                    {lead.assigned_at ? (
-                      <span className={`font-mono font-semibold ${slaTone(lead.assigned_at)}`}>
-                        {age(lead.assigned_at)}
-                        <span className="ml-2 font-sans text-xs font-medium">
-                          {slaLabel(lead.assigned_at)}
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="text-xs text-soft">not started</span>
-                    )}
-                  </td>
-
-                  <td className="px-5 py-4 text-right">
-                    {!lead.owner_user_id && (
-                      <button
-                        type="button"
-                        onClick={() => void routeOne(lead.id)}
-                        className="lf-btn-secondary px-3 py-1.5 text-xs"
-                        disabled={routingId === lead.id}
-                      >
-                        {routingId === lead.id ? 'Routing…' : 'Route'}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </span>
+                ) : (
+                  <span className="lf-pill border-orange/40 bg-orange/10 text-orange">Unowned</span>
+                )),
+              },
+              {
+                key: 'clock', header: 'Response clock',
+                sortValue: (lead) => (lead.assigned_at ? Date.parse(lead.assigned_at) : null),
+                // The clock only means anything once a lead has an owner — an
+                // unrouted lead has no deadline to be measured against.
+                cell: (lead) => (lead.assigned_at ? (
+                  <span className={`font-mono font-semibold ${slaTone(lead.assigned_at)}`}>
+                    {age(lead.assigned_at)}
+                    <span className="ml-2 font-sans text-xs font-medium">{slaLabel(lead.assigned_at)}</span>
+                  </span>
+                ) : (
+                  <span className="text-xs text-soft">not started</span>
+                )),
+              },
+            ]}
+            rowActions={(lead) => (!lead.owner_user_id ? (
+              <button
+                type="button"
+                onClick={() => void routeOne(lead.id)}
+                className="lf-btn-secondary px-3 py-1.5 text-xs"
+                disabled={routingId === lead.id}
+              >
+                {routingId === lead.id ? 'Routing…' : 'Route'}
+              </button>
+            ) : null)}
+          />
         </div>
       ) : null}
     </div>

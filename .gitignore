@@ -59,7 +59,11 @@ docker-compose.override.yml
 *.sqlite
 *.sqlite3
 *.db
-data/
+# Anchored. A bare `data/` matches a directory of that name at ANY depth, and it
+# was silently swallowing client/src/design-system/data — source, not a database.
+# The commit appeared to succeed and the components simply were not in it.
+/data/
+mcp-server/data/
 
 # Temporary files
 tmp/
