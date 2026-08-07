@@ -1,119 +1,16 @@
 {
   "version": "3.0",
   "base_url": "http://host.docker.internal:5173",
-  "last_updated": "2026-08-06T06:18:25.773983",
-  "pages": {
-    "http://host.docker.internal:5173/app": {
-      "url": "http://host.docker.internal:5173/app",
-      "last_visited": "2026-08-06T06:13:15.351284",
-      "visit_count": 2,
-      "actions": {
-        "click:I click \"Sign in\"": {
-          "action_type": "click",
-          "action_label": "I click \"Sign in\"",
-          "triggered_at": "2026-08-06T06:04:06.533748",
-          "containers": {
-            "div.flex.min-h-screen": {
-              "container_selector": "div.flex.min-h-screen",
-              "container_hash": "PGRpdiBjbGFzcz0iZmxl",
-              "metadata": {
-                "id": null,
-                "classes": "flex min-h-screen bg-bg",
-                "role": null
-              },
-              "element_counts": {
-                "inputs": 0,
-                "selects": 0,
-                "textareas": 0,
-                "buttons": 1,
-                "total": 0
-              },
-              "extracted": false,
-              "extracted_at": null,
-              "last_used": "2026-08-06T06:13:15.352702",
-              "usage_count": 2,
-              "elements": [],
-              "buttons": []
-            }
-          },
-          "last_triggered": "2026-08-06T06:13:15.352561"
-        }
-      }
-    },
-    "http://host.docker.internal:5173/app/leads": {
-      "url": "http://host.docker.internal:5173/app/leads",
-      "last_visited": "2026-08-06T06:18:24.524373",
-      "visit_count": 2,
-      "actions": {
-        "click:I click \"Lead queue\"": {
-          "action_type": "click",
-          "action_label": "I click \"Lead queue\"",
-          "triggered_at": "2026-08-06T06:18:22.652806",
-          "containers": {
-            "div.flex.min-h-screen": {
-              "container_selector": "div.flex.min-h-screen",
-              "container_hash": "PGRpdiBjbGFzcz0iZmxl",
-              "metadata": {
-                "id": null,
-                "classes": "flex min-h-screen bg-bg",
-                "role": null
-              },
-              "element_counts": {
-                "inputs": 0,
-                "selects": 0,
-                "textareas": 0,
-                "buttons": 1,
-                "total": 0
-              },
-              "extracted": false,
-              "extracted_at": null,
-              "last_used": "2026-08-06T06:18:22.652845",
-              "usage_count": 1,
-              "elements": [],
-              "buttons": []
-            }
-          }
-        },
-        "click:I click \"Route\"": {
-          "action_type": "click",
-          "action_label": "I click \"Route\"",
-          "triggered_at": "2026-08-06T06:18:24.524385",
-          "containers": {
-            "div#root": {
-              "container_selector": "div#root",
-              "container_hash": "PGRpdiBpZD0icm9vdCI+",
-              "metadata": {
-                "id": "root",
-                "classes": null,
-                "role": null
-              },
-              "element_counts": {
-                "inputs": 0,
-                "selects": 0,
-                "textareas": 0,
-                "buttons": 1,
-                "total": 0
-              },
-              "extracted": false,
-              "extracted_at": null,
-              "last_used": "2026-08-06T06:18:24.524390",
-              "usage_count": 1,
-              "elements": [],
-              "buttons": []
-            }
-          }
-        }
-      }
-    }
-  },
+  "last_updated": "2026-08-07T17:55:06.393983",
+  "pages": {},
   "selector_rankings": {},
   "statistics": {
-    "total_pages": 2,
-    "total_actions": 3,
-    "total_containers": 3,
+    "total_pages": 0,
+    "total_actions": 0,
+    "total_containers": 0,
     "total_extracted_containers": 0,
     "total_elements": 0,
     "total_buttons": 0,
-    "extraction_rate": 0.0
+    "extraction_rate": 0
   }
 }

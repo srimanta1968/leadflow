@@ -39,6 +39,22 @@ export interface DataTableProps<T> {
   loading?: boolean;
   /** Shown when there are genuinely no rows — never when a read failed. */
   empty?: ReactNode;
+  /**
+   * A failed read, which is NOT an empty result. Takes precedence over `empty`,
+   * because the two are indistinguishable to a caller that only has a row array:
+   * a fetch that threw leaves `rows` at `[]`, and the table then says "Nothing to
+   * show" about data it never managed to ask for. `empty` has always carried a
+   * comment saying it must not be used for this; the comment could not enforce
+   * it, and every screen hand-rolled its own error panel instead — the bespoke
+   * markup this task exists to stop.
+   */
+  error?: ReactNode;
+  /**
+   * Row height preset. `dense` is the triage density — an operator working a
+   * queue wants rows per screen, not whitespace. An explicit `rowHeight` still
+   * wins, so this is a default rather than a constraint.
+   */
+  density?: 'comfortable' | 'dense';
   rowHeight?: number;
   /** Viewport height in px. */
   height?: number;
@@ -53,7 +69,9 @@ export function DataTable<T>({
   rowActions,
   loading,
   empty,
-  rowHeight = 44,
+  error,
+  density = 'comfortable',
+  rowHeight = density === 'dense' ? 32 : 44,
   height = 520,
   caption,
 }: DataTableProps<T>) {
@@ -92,10 +110,29 @@ export function DataTable<T>({
   if (loading) {
     return (
       <div className="lf-panel overflow-hidden p-0">
-        <div className="space-y-2 p-4" aria-busy="true" aria-label="Loading rows">
+        {/* role="status" rather than a bare aria-label: aria-label is PROHIBITED
+            on a generic div, so the label was being discarded and the skeleton
+            announced as nothing at all. status also puts it in a live region,
+            which is what a screen-reader user needs from a loading state. */}
+        <div className="space-y-2 p-4" role="status" aria-busy="true" aria-label="Loading rows">
           {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="h-8 animate-pulse rounded-lg bg-panel2" />
+            // motion-safe: the pulse is suppressed under prefers-reduced-motion.
+            // A skeleton is decorative, so it is the first thing that should stop
+            // moving for somebody who asked the OS for less movement.
+            <div key={i} className="h-8 motion-safe:animate-pulse rounded-lg bg-panel2" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  // BEFORE the empty check, never after: a read that failed has no rows either,
+  // and "Nothing to show" is a false statement about data nobody fetched.
+  if (error) {
+    return (
+      <div className="lf-panel p-0">
+        <div role="alert" className="px-4 py-10 text-center text-sm text-red">
+          {error}
         </div>
       </div>
     );
@@ -130,6 +167,16 @@ export function DataTable<T>({
                     key={column.key}
                     scope="col"
                     style={{ width: column.width }}
+                    // aria-sort belongs on the COLUMN HEADER, not on the button
+                    // inside it — it is only permitted on columnheader/rowheader,
+                    // so on the button it was an invalid attribute that assistive
+                    // technology dropped. Sort state was therefore never
+                    // announced, which is the entire purpose of the attribute.
+                    aria-sort={
+                      column.sortValue && active
+                        ? (sort.direction === 'asc' ? 'ascending' : 'descending')
+                        : column.sortValue ? 'none' : undefined
+                    }
                     className={`px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-soft ${
                       column.align === 'right' ? 'text-right' : 'text-left'
                     }`}
@@ -138,7 +185,6 @@ export function DataTable<T>({
                       <button
                         type="button"
                         onClick={() => toggleSort(column.key)}
-                        aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                         className="inline-flex items-center gap-1 hover:text-muted"
                       >
                         {column.header}
@@ -150,7 +196,14 @@ export function DataTable<T>({
                   </th>
                 );
               })}
-              {rowActions && <th scope="col" className="w-10" />}
+              {/* Visually blank, but never blank to a screen reader: an empty
+                  <th> makes the row's last cell belong to a column with no name,
+                  so the actions are announced with no idea what they act on. */}
+              {rowActions && (
+                <th scope="col" className="w-10">
+                  <span className="sr-only">Actions</span>
+                </th>
+              )}
             </tr>
           </thead>
 

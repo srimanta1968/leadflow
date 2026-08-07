@@ -1,17 +1,17 @@
 {
   "version": "3.0",
   "base_url": "http://host.docker.internal:5173",
-  "last_updated": "2026-08-06T17:08:43.040631",
+  "last_updated": "2026-08-07T20:15:28.826818",
   "pages": {
     "http://host.docker.internal:5173/app": {
       "url": "http://host.docker.internal:5173/app",
-      "last_visited": "2026-08-06T17:08:34.715419",
-      "visit_count": 2,
+      "last_visited": "2026-08-07T20:15:24.671804",
+      "visit_count": 3,
       "actions": {
         "click:I click \"New P0\"": {
           "action_type": "click",
           "action_label": "I click \"New P0\"",
-          "triggered_at": "2026-08-06T17:08:32.534136",
+          "triggered_at": "2026-08-07T20:14:57.148376",
           "containers": {
             "div.flex.min-h-screen": {
               "container_selector": "div.flex.min-h-screen",
@@ -25,12 +25,12 @@
                 "inputs": 0,
                 "selects": 0,
                 "textareas": 0,
-                "buttons": 1,
+                "buttons": 3,
                 "total": 0
               },
               "extracted": false,
               "extracted_at": null,
-              "last_used": "2026-08-06T17:08:32.535649",
+              "last_used": "2026-08-07T20:14:57.149588",
               "usage_count": 1,
               "elements": [],
               "buttons": []
@@ -40,7 +40,7 @@
         "click:I click \"Show all captures\"": {
           "action_type": "click",
           "action_label": "I click \"Show all captures\"",
-          "triggered_at": "2026-08-06T17:08:34.715853",
+          "triggered_at": "2026-08-07T20:14:59.416165",
           "containers": {
             "div.flex.min-h-screen": {
               "container_selector": "div.flex.min-h-screen",
@@ -54,12 +54,41 @@
                 "inputs": 0,
                 "selects": 0,
                 "textareas": 0,
-                "buttons": 1,
+                "buttons": 3,
                 "total": 0
               },
               "extracted": false,
               "extracted_at": null,
-              "last_used": "2026-08-06T17:08:34.715876",
+              "last_used": "2026-08-07T20:14:59.416173",
+              "usage_count": 1,
+              "elements": [],
+              "buttons": []
+            }
+          }
+        },
+        "click:I click \"Search\"": {
+          "action_type": "click",
+          "action_label": "I click \"Search\"",
+          "triggered_at": "2026-08-07T20:15:24.671894",
+          "containers": {
+            "div.flex.min-h-screen": {
+              "container_selector": "div.flex.min-h-screen",
+              "container_hash": "PGRpdiBjbGFzcz0iZmxl",
+              "metadata": {
+                "id": null,
+                "classes": "flex min-h-screen bg-bg",
+                "role": null
+              },
+              "element_counts": {
+                "inputs": 1,
+                "selects": 0,
+                "textareas": 0,
+                "buttons": 3,
+                "total": 1
+              },
+              "extracted": false,
+              "extracted_at": null,
+              "last_used": "2026-08-07T20:15:24.671948",
               "usage_count": 1,
               "elements": [],
               "buttons": []
@@ -72,8 +101,8 @@
   "selector_rankings": {},
   "statistics": {
     "total_pages": 1,
-    "total_actions": 2,
-    "total_containers": 2,
+    "total_actions": 3,
+    "total_containers": 3,
     "total_extracted_containers": 0,
     "total_elements": 0,
     "total_buttons": 0,

@@ -206,7 +206,7 @@ export default function Home() {
                   >
                     <path
                       d="M4 9.5l3.2 3.2L14 5.6"
-                      stroke="#00d59a"
+                      stroke="var(--green)"
                       strokeWidth="2.1"
                       strokeLinecap="round"
                       strokeLinejoin="round"

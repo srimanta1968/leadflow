@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Modal } from '../../design-system/overlays/Modal';
 import {
   buildTransmissionPreview,
   hasTransmittableSelection,
@@ -57,23 +58,14 @@ export function ExtensionPreviewModal({ open, onClose }: ExtensionPreviewModalPr
   const hasSelection = hasTransmittableSelection(selectedText);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-6"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="extension-preview-title"
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="lg"
+      title="Extension Preview"
+      subtitle="Exactly what a capture from this page would transmit. Selected visible text is the capture; everything else is listed so the promise is checkable."
     >
-      <div className="lf-panel-raised my-8 w-full max-w-2xl p-7">
-        <header>
-          <p className="lf-eyebrow">Browser capture</p>
-          <h2 id="extension-preview-title" className="mt-1 text-xl font-bold text-text">
-            Extension Preview
-          </h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            Exactly what a capture from this page would transmit. Selected visible text is the
-            capture; everything else is listed so the promise is checkable.
-          </p>
-        </header>
+      <div>
 
         <section className="mt-6" aria-label="Selected text">
           <p className="lf-label">Your selection</p>
@@ -129,7 +121,7 @@ export function ExtensionPreviewModal({ open, onClose }: ExtensionPreviewModalPr
           </button>
         </footer>
       </div>
-    </div>
+    </Modal>
   );
 }
 

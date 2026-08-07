@@ -65,7 +65,7 @@ export default function Pricing() {
                       >
                         <path
                           d="M4 9.5l3.2 3.2L14 5.6"
-                          stroke={plan.featured ? '#3d82ff' : '#00d59a'}
+                          stroke={plan.featured ? 'var(--blue)' : 'var(--green)'}
                           strokeWidth="2.1"
                           strokeLinecap="round"
                           strokeLinejoin="round"

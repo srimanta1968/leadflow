@@ -142,7 +142,7 @@ export default function QuickCapture() {
               <svg width="20" height="20" viewBox="0 0 22 22" fill="none" aria-hidden="true">
                 <path
                   d="M5 11.5l4 4 8-9"
-                  stroke="#00d59a"
+                  stroke="var(--green)"
                   strokeWidth="2.4"
                   strokeLinecap="round"
                   strokeLinejoin="round"

@@ -130,10 +130,16 @@ export function DropZone({ accept, label, hint, onFile, preview }: DropZoneProps
           </span>
         )}
       </button>
+      {/* The input is sr-only, NOT hidden — a keyboard or screen-reader user
+          reaches it directly rather than through the drop button. That only
+          works if it has a name, and it had none: it was an unlabelled file
+          field announced as "file upload button", with nothing saying what
+          file. `label` carries the same words the visible button shows. */}
       <input
         ref={input}
         type="file"
         accept={accept}
+        aria-label={label}
         className="sr-only"
         onChange={(e) => take(e.target.files?.[0])}
       />

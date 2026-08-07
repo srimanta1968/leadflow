@@ -114,3 +114,6 @@ test-results/
 
 # MCP feedback history (regenerated locally)
 mcp-server/feedback/history/
+
+# Storybook static build
+client/storybook-static/

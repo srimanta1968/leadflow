@@ -1,0 +1,25 @@
+{
+  "scenarioName": "A routing rule can be created and offers per-rule controls",
+  "commands": [
+    {
+      "stepNum": 1,
+      "action": "click",
+      "selector": "text=\"Routing rules\"",
+      "originalSelector": "button:has-text('Routing rules')",
+      "description": "I click \"Routing rules\"",
+      "healedBy": "advanced_local",
+      "healedAt": "2026-08-06T23:31:59.210078"
+    },
+    {
+      "stepNum": 4,
+      "action": "fill",
+      "selector": "input[name*=\"evaluation_order\" i]",
+      "originalSelector": "input[placeholder*='evaluation_order' i], textarea[placeholder*='evaluation_order' i]",
+      "description": "I fill \"evaluation_order\" with \"50\"",
+      "healedBy": "advanced_local",
+      "healedAt": "2026-08-07T03:28:09.533900"
+    }
+  ],
+  "version": "4.2",
+  "timestamp": "2026-08-07T03:28:09.534341"
+}
