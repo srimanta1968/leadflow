@@ -3,7 +3,7 @@ import { adapterKeys } from '../../config/sourceAdapters';
 import { applyAttribution, extractAttribution } from './attribution';
 import { dataService } from '../../services/DataService';
 import { currentTenantContext, tenantIdFor } from '../../platform/tenancy/tenantHierarchy';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { SignatureState } from './signatureVerifier';
 
 /**

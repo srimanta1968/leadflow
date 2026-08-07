@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { SyncBatchService } from '../../src/features/capture/syncBatchService';
 import { dataService } from '../../src/services/DataService';
 import { config } from '../../src/config/env';
-import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../src/platform/sdkGateway';
 
 /**
  * Draining an offline capture queue.

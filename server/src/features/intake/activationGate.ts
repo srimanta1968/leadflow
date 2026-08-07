@@ -1,5 +1,5 @@
 import { dataService } from '../../services/DataService';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { currentTenantContext, tenantIdFor } from '../../platform/tenancy/tenantHierarchy';
 
 /** The three groups SOP §03 organises the required fields into. */

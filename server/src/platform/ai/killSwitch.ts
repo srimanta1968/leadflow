@@ -1,4 +1,4 @@
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { AppError, ErrorCodes } from '../../utils/errors';
 
 /**

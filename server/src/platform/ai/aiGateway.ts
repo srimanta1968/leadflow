@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { agentByKey } from '../../config/aiAgents';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { AppError, ErrorCodes } from '../../utils/errors';
 import { budgetTenantId, releaseReservation, reserveTokens, settleTokens } from './aiBudget';
 import { verifyAiConsentBasis } from './aiConsent';

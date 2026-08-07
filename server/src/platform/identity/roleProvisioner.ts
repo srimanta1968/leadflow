@@ -1,6 +1,6 @@
 import { config } from '../../config/env';
 import { ROLE_DEFINITIONS, RoleDefinition } from '../../config/roles';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient, upstreamStatusOf } from '../../platform/sdkGateway';
 
 /** What one role's provisioning attempt produced. */
 export interface RoleProvisionResult {
@@ -33,8 +33,12 @@ export interface ProvisionSummary {
  * If a list endpoint is ever published, replace this with a read.
  */
 function isAlreadyExists(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /returned (409|422)\b/.test(message);
+  // STRUCTURED, not prose. This used to be /returned (409|422)/ against the
+  // error message, so rewording that message would have silently turned every
+  // benign duplicate into a logged failure on each boot -- with nothing failing
+  // to say so. The gateway now carries the upstream status on the error itself.
+  const status = upstreamStatusOf(error);
+  return status === 409 || status === 422;
 }
 
 /**

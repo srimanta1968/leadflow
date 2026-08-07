@@ -1,5 +1,5 @@
 import { dataService } from '../../services/DataService';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 
 /**
  * The recording-consent gate.

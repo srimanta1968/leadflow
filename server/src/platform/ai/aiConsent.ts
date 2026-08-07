@@ -1,5 +1,5 @@
 import { isKnownPurpose } from '../../config/consentPurposes';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 
 /**
  * The consent gate on AI completions.

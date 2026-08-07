@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { config } from '../../config/env';
 import { AuthenticatedRequest } from '../../middleware/auth';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { PlatformRequest } from '../../platform/auth/sessionContext';
 import { evaluateBatch } from '../../platform/policy/policyEngine';
 import {

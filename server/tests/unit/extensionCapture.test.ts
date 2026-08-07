@@ -7,7 +7,7 @@ import {
 import { ExtensionCaptureController } from '../../src/features/capture/extensionCaptureController';
 import { GovernedRequest } from '../../src/platform/policy/governed';
 import * as auditLog from '../../src/platform/audit/auditLog';
-import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../src/platform/sdkGateway';
 
 /**
  * Browser capture guardrails.

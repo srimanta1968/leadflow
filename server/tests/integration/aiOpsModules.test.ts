@@ -9,7 +9,7 @@ import {
 } from '../../src/config/governedSegments';
 import { isKnownPurpose } from '../../src/config/consentPurposes';
 import { dataService } from '../../src/services/DataService';
-import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../src/platform/sdkGateway';
 import { AT_RISK_THRESHOLD } from '../../src/services/SlaMonitorService';
 import {
   INTERVENTION_LEAD_MINUTES,

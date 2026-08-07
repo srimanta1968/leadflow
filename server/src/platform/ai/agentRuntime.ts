@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { AiAgentDefinition, agentByKey, agentHasCapability } from '../../config/aiAgents';
 import { dataService } from '../../services/DataService';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { AppError, ErrorCodes } from '../../utils/errors';
 import { appendAuditEntry } from '../audit/auditLog';
 import { AUDIT_EVENTS } from '../audit/vocabulary';

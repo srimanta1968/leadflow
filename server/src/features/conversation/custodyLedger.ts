@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { dataService } from '../../services/DataService';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 
 /**
  * The chain of custody for a recording.

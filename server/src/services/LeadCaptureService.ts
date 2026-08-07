@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { dataService } from './DataService';
-import { SdkGatewayClient } from './projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../platform/sdkGateway';
 import { RoutingService } from './RoutingService';
 import { eventStream } from './EventStream';
 import { AppError, ErrorCodes } from '../utils/errors';

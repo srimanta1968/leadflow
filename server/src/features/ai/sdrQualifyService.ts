@@ -5,7 +5,7 @@ import {
   partitionRequestedSources,
 } from '../../config/researchSources';
 import { promptTemplateVersion } from '../../config/promptTemplates';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { AppError, ErrorCodes } from '../../utils/errors';
 import { assertOfferTruth } from './offerTruth';
 import { appendAuditEntry } from '../../platform/audit/auditLog';

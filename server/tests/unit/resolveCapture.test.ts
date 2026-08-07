@@ -3,7 +3,7 @@ import { railNodeFor, ResolveCaptureService } from '../../src/features/capture/r
 import { ResolveCaptureController } from '../../src/features/capture/resolveCaptureController';
 import { GovernedRequest } from '../../src/platform/policy/governed';
 import * as auditLog from '../../src/platform/audit/auditLog';
-import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../src/platform/sdkGateway';
 import { Response } from 'express';
 
 /**

@@ -1,6 +1,6 @@
 import { AnalyticsService } from '../../src/services/AnalyticsService';
 import { config } from '../../src/config/env';
-import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../src/platform/sdkGateway';
 import { validateAnalyticsOverviewQuery } from '../../src/validators/analyticsValidators';
 import { AppError } from '../../src/utils/errors';
 import { Fixtures } from '../fixtures';

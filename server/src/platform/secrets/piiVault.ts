@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { config } from '../../config/env';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { AUDIT_EVENTS } from '../audit/vocabulary';
 import { appendAuditEntry } from '../audit/auditLog';
 

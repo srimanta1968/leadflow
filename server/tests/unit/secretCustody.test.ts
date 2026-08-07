@@ -6,7 +6,7 @@ import {
   secretRefFor,
 } from '../../src/config/providers';
 import { revealPii } from '../../src/platform/secrets/piiVault';
-import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../src/platform/sdkGateway';
 
 afterEach(() => {
   jest.restoreAllMocks();

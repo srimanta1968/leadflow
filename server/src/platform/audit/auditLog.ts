@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { currentTenantContext, tenantIdFor } from '../tenancy/tenantHierarchy';
 import { AuditEventName } from './vocabulary';
 

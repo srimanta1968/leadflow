@@ -9,7 +9,7 @@ import {
 import { PROMPT_TEMPLATES, promptTemplateVersion } from '../../src/config/promptTemplates';
 import { allGrantedPermissions } from '../../src/config/roles';
 import { dataService } from '../../src/services/DataService';
-import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../src/platform/sdkGateway';
 import { complete } from '../../src/platform/ai/aiGateway';
 import {
   activeRuns,

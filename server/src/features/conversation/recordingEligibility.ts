@@ -1,5 +1,5 @@
 import { JurisdictionPolicy, ruleFor } from '../../config/recordingJurisdictions';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 
 /**
  * May this call be recorded, and if not, why.

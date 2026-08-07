@@ -1,5 +1,6 @@
 import { config } from '../../src/config/env';
-import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient, upstreamStatusOf } from '../../src/platform/sdkGateway';
+import { AppError } from '../../src/utils/errors';
 import {
   resolveTenantContext,
   tenantIdFor,
@@ -193,8 +194,23 @@ describe('machine credential exchange', () => {
  * body that said exactly what was wrong. Callers branch on the reason —
  * eventTypeProvisioner distinguishes a benign baseline collision from a real
  * validation failure, and both arrive as 400 — so the reason has to survive.
+ *
+ * THE CONTRACT MOVED, and these tests moved with it. The status used to be
+ * recoverable only by regexing `returned <status>` out of the message, and three
+ * provisioners did exactly that. It now rides on `AppError.details` and is read
+ * with `upstreamStatusOf`, so what is asserted below is the field those callers
+ * actually branch on rather than the wording of a sentence. The reason still has
+ * to survive in the message, and that is asserted too — it is what a human reads.
  */
 describe('an upstream refusal', () => {
+  beforeEach(() => {
+    // The circuit is a process-wide singleton and this block deliberately
+    // produces a run of 5xx. Without a reset the breaker opens partway through
+    // and later cases get "circuit open" instead of the mapping under test —
+    // which is the breaker working correctly, in the wrong place.
+    SdkGatewayClient.resetTelemetry();
+  });
+
   const gatewayReturns = (status: number, body: unknown, asText?: string) => {
     config.projexCloud.gatewayUrl = 'https://gateway.test';
     config.projexCloud.apiKey = 'eyJhbGciOiJIUzI1NiJ9.body.sig';
@@ -205,17 +221,29 @@ describe('an upstream refusal', () => {
     })) as unknown as typeof fetch;
   };
 
+  // maxAttempts 1: these assert the MAPPING, and letting every 500 retry three
+  // times with backoff would add seconds per case to test nothing new.
   const callIt = () =>
-    SdkGatewayClient.call({ sdk: 'sdk-audit', path: '/api/events/types', method: 'POST' });
+    SdkGatewayClient.call({
+      sdk: 'sdk-audit',
+      path: '/api/events/types',
+      method: 'POST',
+      retry: { maxAttempts: 1 },
+    });
 
-  /** The message of the refusal, or a marker if the call unexpectedly resolved. */
-  const refusalMessage = async (): Promise<string> => {
+  /** The refusal itself, or a marker if the call unexpectedly resolved. */
+  const refusal = async (): Promise<unknown> => {
     try {
       await callIt();
-      return '<resolved, but a refusal was expected>';
+      return new Error('<resolved, but a refusal was expected>');
     } catch (error) {
-      return error instanceof Error ? error.message : String(error);
+      return error;
     }
+  };
+
+  const messageOf = async (): Promise<string> => {
+    const error = await refusal();
+    return error instanceof Error ? error.message : String(error);
   };
 
   it('carries the reason the gateway gave, not just the status', async () => {
@@ -227,16 +255,23 @@ describe('an upstream refusal', () => {
       ],
     });
 
-    await expect(callIt()).rejects.toThrow(/returned 400: .*platform baseline type/);
+    const error = await refusal();
+    expect((error as Error).message).toMatch(/platform baseline type/);
+    // 400, not 502: our payload, not their outage.
+    expect(upstreamStatusOf(error)).toBe(400);
+    expect((error as AppError).statusCode).toBe(400);
   });
 
   it('joins several details rather than reporting only the first', async () => {
     gatewayReturns(400, {
       error: 'ValidationError',
-      details: ['retention_class must be one of transient, operational, regulated', 'schema_version must be an integer >= 1'],
+      details: [
+        'retention_class must be one of transient, operational, regulated',
+        'schema_version must be an integer >= 1',
+      ],
     });
 
-    const message = await refusalMessage();
+    const message = await messageOf();
 
     expect(message).toContain('retention_class must be one of');
     expect(message).toContain('schema_version must be an integer');
@@ -244,42 +279,55 @@ describe('an upstream refusal', () => {
 
   it('reads the other envelopes the gateway emits', async () => {
     gatewayReturns(500, { error: 'InternalError' });
-    await expect(callIt()).rejects.toThrow('returned 500: InternalError');
-
-    gatewayReturns(404, { error: { code: 'NotFound', message: 'no such route' } });
-    await expect(callIt()).rejects.toThrow('returned 404: no such route');
+    expect(await messageOf()).toContain('InternalError');
+    expect(upstreamStatusOf(await refusal())).toBe(500);
 
     gatewayReturns(409, { message: 'already registered' });
-    await expect(callIt()).rejects.toThrow('returned 409: already registered');
+    expect(await messageOf()).toContain('already registered');
+    expect(upstreamStatusOf(await refusal())).toBe(409);
+  });
+
+  it('tells a missing ROUTE apart from a missing RECORD', async () => {
+    // Both are 404 and they mean opposite things. A wrong path reported as
+    // NOT_FOUND renders an empty state for data that exists.
+    gatewayReturns(404, { message: 'Route POST:/api/events/types not found' });
+    expect(((await refusal()) as AppError).statusCode).toBe(502);
+
+    gatewayReturns(404, { error: { code: 'NotFound', message: 'no such event type' } });
+    expect(((await refusal()) as AppError).statusCode).toBe(404);
   });
 
   it('keeps the STATUS when the body is not JSON at all', async () => {
     // An nginx error page used to throw inside JSON.parse, get caught as a
     // transport failure, and report "is unavailable" — losing the one fact
-    // worth keeping. `returned <status>` is what isAlreadyExists matches on.
+    // worth keeping.
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
     gatewayReturns(502, null, '<html><body>502 Bad Gateway</body></html>');
 
-    await expect(callIt()).rejects.toThrow(/returned 502/);
+    expect(upstreamStatusOf(await refusal())).toBe(502);
   });
 
   it('clamps a runaway body so one refusal cannot flood the log', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
     gatewayReturns(500, null, 'x'.repeat(5000));
 
-    const message = await refusalMessage();
+    const message = await messageOf();
 
     expect(message.length).toBeLessThan(700);
     expect(message).toContain('…');
   });
 
-  it('still says `returned <status>` in the form the provisioners match', async () => {
-    // roleProvisioner and purposeProvisioner both test /returned (409|422)\b/.
-    // Appending `: <detail>` must not break that word boundary.
+  it('hands the provisioners a status they can branch on WITHOUT reading prose', async () => {
+    // The replacement for the old /returned (409|422)\b/ assertion.
+    // roleProvisioner, purposeProvisioner and eventTypeProvisioner all now call
+    // upstreamStatusOf, so this is the exact contract they depend on.
     gatewayReturns(409, { error: 'Conflict', details: ['role template exists'] });
+    expect(upstreamStatusOf(await refusal())).toBe(409);
 
-    const message = await refusalMessage();
+    gatewayReturns(422, { error: 'Unprocessable', details: ['purpose exists'] });
+    expect(upstreamStatusOf(await refusal())).toBe(422);
 
-    expect(/returned (409|422)\b/.test(message)).toBe(true);
+    // And a non-gateway error answers null rather than throwing.
+    expect(upstreamStatusOf(new Error('something else'))).toBeNull();
   });
 });

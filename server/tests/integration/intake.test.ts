@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { config } from '../../src/config/env';
 import { IntakeService } from '../../src/features/intake/intakeService';
 import { signPayload, verifySignature } from '../../src/features/intake/signatureVerifier';
-import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../src/platform/sdkGateway';
 import { dataService } from '../../src/services/DataService';
 
 /**

@@ -1,5 +1,5 @@
 import { dataService } from './DataService';
-import { SdkGatewayClient } from './projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../platform/sdkGateway';
 import { eventStream } from './EventStream';
 import { AppError } from '../utils/errors';
 import { SlaAlert, SlaAlertChannel, SlaAlertKind, SlaAlertState } from '../types';

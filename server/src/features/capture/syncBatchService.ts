@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { dataService } from '../../services/DataService';
 import { currentTenantContext, tenantIdFor } from '../../platform/tenancy/tenantHierarchy';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { ORIGIN_CLASSES, OriginClass } from './inboxQuery';
 
 /** How a queued capture was taken on the device. */

@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { dataService } from './DataService';
-import { SdkGatewayClient } from './projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../platform/sdkGateway';
 import { SLA_WINDOW_MINUTES } from './RoutingService';
 import { SlaAlertService } from './SlaAlertService';
 import { eventStream } from './EventStream';

@@ -24,7 +24,7 @@
  * provisioners: a flag would be a local record of upstream state, and the two
  * drift the first time the tenant is rebuilt.
  */
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient, upstreamStatusOf } from '../../platform/sdkGateway';
 import { config } from '../../config/env';
 import { AUDIT_EVENTS } from './vocabulary';
 
@@ -51,8 +51,18 @@ export interface EventTypeProvisionSummary {
  * append perfectly well.
  */
 function isAlreadyExists(error: unknown): boolean {
+  // A 409 is structural and read from the error, not from its wording.
+  const status = upstreamStatusOf(error);
+  if (status === 409) return true;
+
+  // The baseline case is genuinely TEXTUAL and cannot be read from a status:
+  // ProjexCloud answers 400 for it, which is the same status as a real
+  // validation failure. The distinguishing information exists only in the
+  // detail the gateway quoted, so this half stays a message match -- narrowed
+  // to a 400 so it cannot swallow an unrelated error.
+  if (status !== 400) return false;
   const message = error instanceof Error ? error.message : String(error);
-  return /409|already exists|duplicate|platform baseline type/i.test(message);
+  return /already exists|duplicate|platform baseline type/i.test(message);
 }
 
 export async function provisionAuditEventTypes(): Promise<EventTypeProvisionSummary> {

@@ -5,9 +5,21 @@ import { AUDIT_EVENTS, allAuditEventNames, isAuditEventName } from '../../src/pl
 import { appendAuditEntry, verifyAuditChain, AuditEntry } from '../../src/platform/audit/auditLog';
 import { provisionConsentPurposes } from '../../src/platform/consent/purposeProvisioner';
 import { provisionAuditEventTypes } from '../../src/platform/audit/eventTypeProvisioner';
-import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient , mapUpstreamStatus, toAppError } from '../../src/platform/sdkGateway';
 import { config } from '../../src/config/env';
 import { AppError, ErrorCodes } from '../../src/utils/errors';
+
+/**
+ * An upstream refusal built the way the GATEWAY builds one.
+ *
+ * These used to be hand-written AppErrors whose message read
+ * `ProjexCloud sdk-x returned 409` — a shape nothing produced, matched by a
+ * regex nothing guaranteed. Routing through the real mapper means the test
+ * fails if the contract the provisioners depend on ever moves, which is the
+ * only reason to have it.
+ */
+const upstreamRefusal = (sdk: string, status: number, detail: string): AppError =>
+  toAppError(mapUpstreamStatus(sdk, status, detail), sdk);
 
 const ORIGINAL_TENANT = config.projexCloud.tenantId;
 
@@ -315,7 +327,7 @@ describe('the consent purpose registry', () => {
     jest
       .spyOn(SdkGatewayClient, 'call')
       .mockRejectedValue(
-        new AppError(502, ErrorCodes.UPSTREAM_UNAVAILABLE, 'ProjexCloud sdk-consent returned 409')
+        upstreamRefusal('sdk-consent', 409, 'from the gateway')
       );
 
     const summary = await provisionConsentPurposes();
@@ -346,11 +358,14 @@ describe('registering the vocabulary with ProjexCloud', () => {
 
   /** The 400 body the gateway actually sends, as SdkGatewayClient now reports it. */
   const baselineRefusal = (eventType: string) =>
-    new AppError(
-      502,
-      ErrorCodes.UPSTREAM_UNAVAILABLE,
-      `ProjexCloud sdk-audit returned 400: event_type '${eventType}' is a platform baseline type ` +
-        'and cannot be redefined by a tenant. It is already usable as-is.'
+    upstreamRefusal(
+      'sdk-audit',
+      // 400, not 409. ProjexCloud answers a baseline collision with the SAME
+      // status as a genuine validation failure, which is precisely why this one
+      // case still has to be recognised from the detail text.
+      400,
+      `event_type '${eventType}' is a platform baseline type `
+        + 'and cannot be redefined by a tenant. It is already usable as-is.'
     );
 
   it('counts a platform baseline collision as present, not as a failure', async () => {
@@ -382,10 +397,10 @@ describe('registering the vocabulary with ProjexCloud', () => {
     jest
       .spyOn(SdkGatewayClient, 'call')
       .mockRejectedValue(
-        new AppError(
-          502,
-          ErrorCodes.UPSTREAM_UNAVAILABLE,
-          'ProjexCloud sdk-audit returned 400: retention_class must be one of transient, operational, regulated'
+        upstreamRefusal(
+          'sdk-audit',
+          400,
+          'retention_class must be one of transient, operational, regulated'
         )
       );
 

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { currentTenantContext, tenantIdFor } from '../../platform/tenancy/tenantHierarchy';
 import { AppError, ErrorCodes } from '../../utils/errors';
 import { TrustState } from './inboxQuery';

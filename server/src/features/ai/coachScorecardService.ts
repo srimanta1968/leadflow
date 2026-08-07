@@ -5,7 +5,7 @@ import {
   LACE_STEPS,
   objectionByKey,
 } from '../../config/coachingScorecard';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { AppError, ErrorCodes } from '../../utils/errors';
 import { ConsentVerification, verifyRecordingBasis } from './recordingConsent';
 import { appendAuditEntry } from '../../platform/audit/auditLog';

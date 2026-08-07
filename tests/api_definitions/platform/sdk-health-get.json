@@ -1,0 +1,118 @@
+{
+  "name": "GET /api/leadflow/platform/sdk-health - which ProjexCloud SDKs are actually answering",
+  "description": "Reports, per ProjexCloud SDK, what LeadFlow has OBSERVED while doing real work: circuit state, call and failure counts, p50/p95 latency, the last status seen and — when the circuit is open — how long until the next probe. It is the RevOps provider-health panel's only source.\n\nOBSERVED, NOT PINGED. This is not an uptime monitor and deliberately does not synthesise traffic. It answers the question an operator actually asks — \"why did my capture not enrich?\" — from the same calls that failed them. A synthetic ping reporting an SDK up while every real call 403s is worse than no panel at all, because it moves the investigation away from the fault.\n\nAN SDK WITH NO TRAFFIC REPORTS `unknown`, NEVER `healthy`. Green for something never called is a lie in a quieter voice. The inverse matters just as much and was got wrong on the first live run: an SDK that has answered — even only with 4xx — is demonstrably up and reports `healthy`. The boot provisioners leave sdk-consent and sdk-rebac with nothing but 409s meaning \"already registered\", and calling those `unknown` after nine prompt replies hides a working dependency behind a shrug.\n\nOUR BAD PAYLOADS ARE NOT THEIR OUTAGE. A 4xx is counted as `callerFaults` and excluded from the failure-rate denominator, so a screen sending a malformed request in a loop cannot drive an SDK to `unavailable` and mask a genuine outage elsewhere on the same panel. Only 5xx, 429 and transport failures move the circuit.\n\nALWAYS 200, even when everything is on fire. The panel's job is to REPORT the outage; answering 503 because the things it describes are unhealthy would make the diagnostic vanish exactly when it is needed, and would trip whatever monitors the panel itself. Severity is carried in the body as `unavailable` and `degraded` counts.\n\nNO PERSONAL DATA. SDK names, states, counts and timings only — which is why it is behind `authenticate` rather than `governed`: there is no subject to make a governed decision about, and gating a health panel on `integration.configure` would lock it to the people who change integrations rather than the people working a queue that has just gone quiet.\n\nThis endpoint is the observable surface of AC2 (the circuit opens on sustained failure and recovers via a half-open probe). AC1 (one idempotency key reused across retries), AC3 (the lint rule) and AC4 (a replayed webhook writes exactly once) ship no HTTP surface of their own and are proved by tests/unit/sdkGateway.test.ts, tests/unit/sdkGatewayBoundary.test.ts and tests/unit/webhookReplay.test.ts respectively.\n\nProtected by the authenticate guard; the Authorization header is required on this GET. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/platform/sdk-health",
+  "method": "GET",
+  "taskId": "9413f9f7-d3b2-4ce3-8060-2368887e5cfe",
+  "featureId": "d9386c03-903a-4389-b6c7-1ca50f86b1b9",
+  "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "9413f9f7-d3b2-4ce3-8060-2368887e5cfe#AC2"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "data.sdks[].verdict": [
+      "healthy",
+      "degraded",
+      "unavailable",
+      "unknown"
+    ],
+    "data.sdks[].circuit": [
+      "closed",
+      "open",
+      "half_open"
+    ]
+  },
+  "captureResponse": {
+    "platform.sdkHealth.response.data.gatewayConfigured": "data.gatewayConfigured",
+    "platform.sdkHealth.response.data.unavailable": "data.unavailable"
+  },
+  "testCases": [
+    {
+      "name": "Reports the gateway's configuration and a per-SDK snapshot",
+      "coversCriterion": "9413f9f7-d3b2-4ce3-8060-2368887e5cfe#AC2",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "gatewayConfigured": true,
+          "unavailable": 0,
+          "degraded": 0
+        }
+      }
+    },
+    {
+      "name": "Answers 200 with a severity count rather than an error status",
+      "coversCriterion": "9413f9f7-d3b2-4ce3-8060-2368887e5cfe#AC2",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "unavailable": 0
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    },
+    {
+      "name": "NEGATIVE: an Authorization header that is not a bearer scheme",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {
+        "Authorization": "Basic {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Verified against the running server rather than assumed: a Basic header returns this and not INVALID_TOKEN, because nothing was presented that could be verified."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify. Distinct from UNAUTHENTICATED on purpose: 'you sent nothing' and 'what you sent is stale' need different actions from the caller — attach a token versus refresh one."
+    }
+  ]
+}

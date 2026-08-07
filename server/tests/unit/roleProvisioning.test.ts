@@ -11,8 +11,20 @@ import {
   provisionRoles,
   assignPersonaToBusinessUnit,
 } from '../../src/platform/identity/roleProvisioner';
-import { SdkGatewayClient } from '../../src/services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient , mapUpstreamStatus, toAppError } from '../../src/platform/sdkGateway';
 import { AppError, ErrorCodes } from '../../src/utils/errors';
+
+/**
+ * An upstream refusal built the way the GATEWAY builds one.
+ *
+ * These used to be hand-written AppErrors whose message read
+ * `ProjexCloud sdk-x returned 409` — a shape nothing produced, matched by a
+ * regex nothing guaranteed. Routing through the real mapper means the test
+ * fails if the contract the provisioners depend on ever moves, which is the
+ * only reason to have it.
+ */
+const upstreamRefusal = (sdk: string, status: number, detail: string): AppError =>
+  toAppError(mapUpstreamStatus(sdk, status, detail), sdk);
 
 /**
  * The role catalogue and its provisioning.
@@ -147,7 +159,7 @@ describe('provisioning', () => {
     jest
       .spyOn(SdkGatewayClient, 'call')
       .mockRejectedValue(
-        new AppError(502, ErrorCodes.UPSTREAM_UNAVAILABLE, 'ProjexCloud sdk-rebac returned 409')
+        upstreamRefusal('sdk-rebac', 409, 'from the gateway')
       );
 
     const summary = await provisionRoles();
@@ -179,7 +191,7 @@ describe('provisioning', () => {
     jest
       .spyOn(SdkGatewayClient, 'call')
       .mockRejectedValue(
-        new AppError(502, ErrorCodes.UPSTREAM_UNAVAILABLE, 'ProjexCloud sdk-rebac returned 500')
+        upstreamRefusal('sdk-rebac', 500, 'from the gateway')
       );
 
     const summary = await provisionRoles();
@@ -213,7 +225,7 @@ describe('business-unit assignment', () => {
     jest
       .spyOn(SdkGatewayClient, 'call')
       .mockRejectedValue(
-        new AppError(502, ErrorCodes.UPSTREAM_UNAVAILABLE, 'ProjexCloud sdk-persona returned 409')
+        upstreamRefusal('sdk-persona', 409, 'from the gateway')
       );
 
     await expect(assignPersonaToBusinessUnit('persona-42', 'bu-north')).resolves.toBe(true);

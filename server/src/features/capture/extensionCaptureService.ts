@@ -1,5 +1,5 @@
 import { config } from '../../config/env';
-import { SdkGatewayClient } from '../../services/projexcloud/SdkGatewayClient';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { currentTenantContext, tenantIdFor } from '../../platform/tenancy/tenantHierarchy';
 import { AppError, ErrorCodes } from '../../utils/errors';
 
