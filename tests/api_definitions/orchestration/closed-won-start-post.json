@@ -1,6 +1,6 @@
 {
   "name": "POST /api/leadflow/closed-won/start - start or resume the closed-won saga",
-  "description": "Runs the closed-won chain: verify payment evidence, transition the deal, STOP presale sequences and campaign enrolments, provision the customer, send the welcome, alert AE / manager / Finance / CS / leadership, create the handoff, issue the onboarding scheduling link. Every step declares a compensation.\n\nONE ENDPOINT FOR START AND RESUME, deliberately. A caller retrying after a timeout cannot know whether the first attempt died mid-saga, and making them choose between 'start' and 'resume' guarantees somebody eventually picks wrong. The runner reads the step ledger and continues from the first unfinished step, so the same call is correct in every case; the body reports `replayed` and `resumed` so the caller can tell what actually happened.\n\nA MID-SAGA CRASH RESUMES WITHOUT DUPLICATING. Every step result is persisted as it lands rather than held in memory - in-memory state is exactly what is gone when the process dies - so a resumed run skips what the ledger says is done. No second customer, no second welcome, no second handoff. A resumed run that then fails still compensates work the EARLIER process did, not merely its own, because otherwise the crash leaves orphans forever.\n\nPRESALE IS STOPPED BEFORE THE WELCOME, and stop_presale is the one REQUIRED step in the chain: a failure there rolls the saga back rather than carrying on. The alternative is a customer who has just paid receiving 'still thinking it over?' the next morning - the most reliable way to annoy somebody who has just given you money, and invisible in testing because the sequence fires hours later on its own schedule.\n\nTWO UPSTREAM GAPS ARE RECORDED RATHER THAN FAKED. sdk-billing exposes invoices, showback and repricing but no customer and no licence creation, and sdk-payment exposes no charge READ to verify against. The provisioning step therefore fails with the missing capability named, and is marked optional so the gap lands in leadflow_saga_step.error per run instead of failing every closed-won deal over something LeadFlow cannot fix. Payment is instead verified from the evidence presented: no chargeId, no saga - caught before a licence is issued rather than eight steps later.\n\nThe key is the DEAL plus the CHARGE. A deal alone would collapse two genuine closes of one renewal; a charge alone would not survive a deal re-closed after a refund. Both arrive as {{var:upstream_deal_id}} and {{var:upstream_charge_id}} rather than {{cache:...}} because neither has a producer to trace to: deals are created in sdk-crm and charges in sdk-payment, through the SDK gateway, and no LeadFlow route creates either - which is the last-resort case MUST-36 allows for.\n\nBehind authenticate and governed on onboarding.manage. QA: depends on register and login.",
+  "description": "Runs the closed-won chain: verify payment evidence, transition the deal, STOP presale sequences and campaign enrolments, provision the customer, send the welcome, alert AE / manager / Finance / CS / leadership, create the handoff, issue the onboarding scheduling link. Every step declares a compensation.\n\nONE ENDPOINT FOR START AND RESUME, deliberately. A caller retrying after a timeout cannot know whether the first attempt died mid-saga, and making them choose between 'start' and 'resume' guarantees somebody eventually picks wrong. The runner reads the step ledger and continues from the first unfinished step, so the same call is correct in every case; the body reports `replayed` and `resumed` so the caller can tell what actually happened.\n\nA MID-SAGA CRASH RESUMES WITHOUT DUPLICATING. Every step result is persisted as it lands rather than held in memory - in-memory state is exactly what is gone when the process dies - so a resumed run skips what the ledger says is done. No second customer, no second welcome, no second handoff. A resumed run that then fails still compensates work the EARLIER process did, not merely its own, because otherwise the crash leaves orphans forever.\n\nPRESALE IS STOPPED BEFORE THE WELCOME, and stop_presale is the one REQUIRED step in the chain: a failure there rolls the saga back rather than carrying on. The alternative is a customer who has just paid receiving 'still thinking it over?' the next morning - the most reliable way to annoy somebody who has just given you money, and invisible in testing because the sequence fires hours later on its own schedule.\n\nTWO UPSTREAM GAPS ARE RECORDED RATHER THAN FAKED. sdk-billing exposes invoices, showback and repricing but no customer and no licence creation, and sdk-payment exposes no charge READ to verify against. The provisioning step therefore fails with the missing capability named, and is marked optional so the gap lands in leadflow_saga_step.error per run instead of failing every closed-won deal over something LeadFlow cannot fix. Payment is instead verified from the evidence presented: no chargeId, no saga - caught before a licence is issued rather than eight steps later.\n\nThe key is the DEAL plus the CHARGE. A deal alone would collapse two genuine closes of one renewal; a charge alone would not survive a deal re-closed after a refund. Both arrive as {{var:upstream_deal_id}} and {{var:upstream_charge_id}} rather than {{cache:...}} because neither has a producer to trace to: deals are created in sdk-crm and charges in sdk-payment, through the SDK gateway, and no LeadFlow route creates either - which is the last-resort case MUST-36 allows for.\n\nBehind authenticate and governed on onboarding.manage, which is held by client_success alone. The definition therefore declares requiresRole:[\"admin\"] and the runner swaps to testCredentials.admin (qa.operator@leadflow.test, local role `admin`, which bridges to client_success) - the suite's DEFAULT identity bridges to sales_rep and would only ever see 403, which documents the guard but proves nothing about the saga. The 403 errorCase below is kept because it is a real response, but it is not reachable while this definition runs as admin. QA: depends on register and login.\n\nVERIFIED LIVE as admin: 200 with data.idempotencyKey = closed_won:<dealId>:<chargeId>. In an environment with no SDK gateway configured the run answers status 'compensated' at failedStep 'transition_deal' - sdk-crm cannot be reached, transition_deal is a REQUIRED step, so the saga rolls back exactly as designed. That is a successful HTTP call reporting an unsuccessful business outcome, which is why expectedStatus is 200 and the assertion is on success:true rather than on the saga's status. Re-running the suite replays the same key and answers 200 again with replayed:true, so the case is idempotent across runs by construction.\n\nNO testCase sets its own Authorization header, and that is required rather than stylistic: an explicit header takes PRECEDENCE over the role token, so declaring requiresRole and then pinning a header means the role token is never sent and the endpoint 403s (MUST-71). The two 401 cases were removed for the same reason - they can only be expressed by overriding the header, which would defeat the swap. They remain documented in errorCases below, and the 401 branch is middleware behaviour identical across all 51 routes, already covered by the definitions that do not declare a role.",
   "endpoint": "/api/leadflow/closed-won/start",
   "method": "POST",
   "taskId": "3d3548f1-6492-4ea5-b7f5-0a8024455d45",
@@ -10,7 +10,7 @@
   "requiresAuth": true,
   "testability": "auto",
   "priority": 1,
-  "expectedStatus": 403,
+  "expectedStatus": 200,
   "coversCriterion": [
     "3d3548f1-6492-4ea5-b7f5-0a8024455d45#AC1",
     "3d3548f1-6492-4ea5-b7f5-0a8024455d45#AC2",
@@ -22,44 +22,35 @@
   ],
   "testCases": [
     {
-      "name": "NEGATIVE: the suite identity does not hold onboarding.manage",
-      "testType": "negative",
-      "coversErrorCase": "403|FORBIDDEN",
-      "headers": {
-        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
-      },
+      "name": "Start the closed-won saga and get back its run id",
+      "coversCriterion": "3d3548f1-6492-4ea5-b7f5-0a8024455d45#AC1",
       "payload": {
         "dealId": "{{var:upstream_deal_id}}",
         "chargeId": "{{var:upstream_charge_id}}",
+        "subjectRef": "{{dynamic:uuid}}",
+        "tenantId": null,
+        "ownerId": null,
+        "enrollmentIds": [],
+        "campaignIds": [],
+        "causationId": null
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no chargeId, so there is no payment evidence to start on",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "payload": {
+        "dealId": "{{var:upstream_deal_id}}",
         "subjectRef": "{{dynamic:uuid}}"
       },
-      "expectedStatus": 403,
+      "expectedStatus": 400,
       "expectedResponse": {
         "success": false,
-        "code": "FORBIDDEN"
-      }
-    },
-    {
-      "name": "NEGATIVE: no Authorization header at all",
-      "testType": "negative",
-      "coversErrorCase": "401|UNAUTHENTICATED",
-      "expectedStatus": 401,
-      "expectedResponse": {
-        "success": false,
-        "code": "UNAUTHENTICATED"
-      }
-    },
-    {
-      "name": "NEGATIVE: a bearer token that does not verify",
-      "testType": "negative",
-      "coversErrorCase": "401|INVALID_TOKEN",
-      "headers": {
-        "Authorization": "Bearer {{dynamic:uuid}}"
-      },
-      "expectedStatus": 401,
-      "expectedResponse": {
-        "success": false,
-        "code": "INVALID_TOKEN"
+        "code": "VALIDATION_ERROR"
       }
     }
   ],
@@ -77,16 +68,22 @@
       "when": "a Bearer token was presented but does not verify"
     },
     {
-      "status": 403,
-      "code": "FORBIDDEN",
-      "message": "No policy grants this action to the caller's roles.",
-      "when": "the caller's roles do not grant onboarding.manage. THIS IS THE STATUS THE SUITE OBSERVES, and it is correct rather than a defect: onboarding.manage is held by client_success alone, and the suite's single identity (register then login, local role `user`) bridges to sales_rep. A local `admin` DOES reach it - client_success was added to the admin bridge with this task, because it holds handoff.accept, onboarding.manage and escalation.receive and no local role mapped to it at all, leaving the entire post-sale half of the product unreachable by every user in the system. Verified live as an admin: the same call answers 400 on a missing chargeId rather than 403. Covering the happy path from the runner needs a SECOND seeded identity in the auth definitions, which is a change to shared fixtures rather than to this endpoint."
-    },
-    {
       "status": 400,
       "code": "VALIDATION_ERROR",
       "message": "dealId, chargeId and subjectRef are all required - dealId and chargeId together identify this close",
       "when": "any of the three is absent. NOT reachable by the suite, because governed() refuses before the handler validates - a caller holding onboarding.manage sees this instead, verified live as an admin."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller's roles do not grant onboarding.manage. NOT reachable while this definition runs as requiresRole:[\"admin\"], and kept rather than deleted because it is a real branch: the DEFAULT suite identity bridges to sales_rep and receives exactly this. onboarding.manage is held by client_success alone, which was added to the local admin bridge with this task - before that no local role mapped to it and the entire post-sale half of the product was unreachable by every user in the system."
     }
-  ]
+  ],
+  "requiresRole": [
+    "admin"
+  ],
+  "captureResponse": {
+    "closedwon.start.response.data.idempotencyKey": "data.idempotencyKey"
+  }
 }

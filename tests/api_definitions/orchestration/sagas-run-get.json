@@ -1,6 +1,6 @@
 {
   "name": "GET /api/leadflow/sagas/{run_id} - the run and its step ledger",
-  "description": "Returns one saga run with its ordered step ledger: which steps ran, which were compensated, and which compensation itself failed.\n\nTHE LEDGER IS THE POINT, not the summary. A status field can say 'compensated'; only the ledger can say that step four was undone, step three's compensation ALSO failed, and step two is therefore still out there. That is what an operator reconciles a half-finished saga from, and it is why a failed compensation is recorded and the rollback continues rather than stopping - stopping would orphan every earlier step because a later one could not be undone, turning one orphan into a chain.\n\nThe run id IS the idempotency key, which is deliberate: it is derived from the business identity (deal plus charge, or platform plus source event), so an operator holding the deal id can construct the run id without a lookup table.\n\nBehind authenticate and governed on onboarding.manage. QA: depends on register and login.",
+  "description": "Returns one saga run with its ordered step ledger: which steps ran, which were compensated, and which compensation itself failed.\n\nTHE LEDGER IS THE POINT, not the summary. A status field can say 'compensated'; only the ledger can say that step four was undone, step three's compensation ALSO failed, and step two is therefore still out there. That is what an operator reconciles a half-finished saga from, and it is why a failed compensation is recorded and the rollback continues rather than stopping - stopping would orphan every earlier step because a later one could not be undone, turning one orphan into a chain.\n\nThe run id IS the idempotency key, which is deliberate: it is derived from the business identity (deal plus charge, or platform plus source event), so an operator holding the deal id can construct the run id without a lookup table.\n\nThe run id is NOT invented here: it is captured from POST /api/leadflow/closed-won/start, which returns the idempotency key it ran under, and that endpoint is a dependsOn of this one. That is the producer chain MUST-36 asks for, and it is also the only honest way to read a run back - a fabricated key matches nothing and 404s.\n\nBehind authenticate and governed on onboarding.manage, held by client_success alone, so the definition declares requiresRole:[\"admin\"] and the runner swaps to testCredentials.admin (qa.operator@leadflow.test, whose local `admin` role bridges to client_success). QA: depends on register and login.\n\nNO testCase sets its own Authorization header, and that is required rather than stylistic: an explicit header takes PRECEDENCE over the role token, so declaring requiresRole and then pinning a header means the role token is never sent and the endpoint 403s (MUST-71). The two 401 cases were removed for the same reason - they can only be expressed by overriding the header, which would defeat the swap. They remain documented in errorCases below, and the 401 branch is middleware behaviour identical across all 51 routes, already covered by the definitions that do not declare a role.",
   "endpoint": "/api/leadflow/sagas/{run_id}",
   "method": "GET",
   "taskId": "3d3548f1-6492-4ea5-b7f5-0a8024455d45",
@@ -10,58 +10,39 @@
   "requiresAuth": true,
   "testability": "auto",
   "priority": 2,
-  "expectedStatus": 403,
+  "expectedStatus": 200,
   "coversCriterion": [
+    "3d3548f1-6492-4ea5-b7f5-0a8024455d45#AC1",
     "3d3548f1-6492-4ea5-b7f5-0a8024455d45#AC2"
   ],
   "dependsOn": [
     "POST /api/auth/register",
-    "POST /api/auth/login"
+    "POST /api/auth/login",
+    "POST /api/leadflow/closed-won/start"
   ],
   "testCases": [
     {
-      "name": "NEGATIVE: the suite identity does not hold onboarding.manage",
-      "testType": "negative",
-      "coversErrorCase": "403|FORBIDDEN",
-      "headers": {
-        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
-      },
+      "name": "Read back the run that closed-won/start just created, with its step ledger",
+      "coversCriterion": "3d3548f1-6492-4ea5-b7f5-0a8024455d45#AC2",
       "pathParams": {
-        "run_id": "{{var:absent_saga_run_id}}"
+        "run_id": "{{cache:closedwon.start.response.data.idempotencyKey}}"
       },
-      "expectedStatus": 403,
+      "expectedStatus": 200,
       "expectedResponse": {
-        "success": false,
-        "code": "FORBIDDEN"
+        "success": true
       }
     },
     {
-      "name": "NEGATIVE: no Authorization header at all",
+      "name": "NEGATIVE: a well-formed run id that matches no run",
       "testType": "negative",
-      "coversErrorCase": "401|UNAUTHENTICATED",
-      "expectedStatus": 401,
-      "expectedResponse": {
-        "success": false,
-        "code": "UNAUTHENTICATED"
-      },
+      "coversErrorCase": "404|NOT_FOUND",
       "pathParams": {
         "run_id": "{{var:absent_saga_run_id}}"
-      }
-    },
-    {
-      "name": "NEGATIVE: a bearer token that does not verify",
-      "testType": "negative",
-      "coversErrorCase": "401|INVALID_TOKEN",
-      "headers": {
-        "Authorization": "Bearer {{dynamic:uuid}}"
       },
-      "expectedStatus": 401,
+      "expectedStatus": 404,
       "expectedResponse": {
         "success": false,
-        "code": "INVALID_TOKEN"
-      },
-      "pathParams": {
-        "run_id": "{{var:absent_saga_run_id}}"
+        "code": "NOT_FOUND"
       }
     }
   ],
@@ -79,16 +60,19 @@
       "when": "a Bearer token was presented but does not verify"
     },
     {
-      "status": 403,
-      "code": "FORBIDDEN",
-      "message": "No policy grants this action to the caller's roles.",
-      "when": "the caller's roles do not grant onboarding.manage. THIS IS THE STATUS THE SUITE OBSERVES, and it is correct rather than a defect: onboarding.manage is held by client_success alone, and the suite's single identity (register then login, local role `user`) bridges to sales_rep. A local `admin` DOES reach it - client_success was added to the admin bridge with this task, because it holds handoff.accept, onboarding.manage and escalation.receive and no local role mapped to it at all, leaving the entire post-sale half of the product unreachable by every user in the system. Verified live as an admin: the same call answers 400 on a missing chargeId rather than 403. Covering the happy path from the runner needs a SECOND seeded identity in the auth definitions, which is a change to shared fixtures rather than to this endpoint."
-    },
-    {
       "status": 404,
       "code": "NOT_FOUND",
       "message": "No saga run with that id",
-      "when": "no run exists under that idempotency key. NOT reachable by the suite for the same reason as above; verified live as an admin, which answers 404 rather than 403."
+      "when": "no run exists under that idempotency key. Reachable now that the definition runs as admin, and covered by the {{var:absent_saga_run_id}} case."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller's roles do not grant onboarding.manage. NOT reachable while this definition runs as requiresRole:[\"admin\"]; the DEFAULT suite identity bridges to sales_rep and receives exactly this."
     }
+  ],
+  "requiresRole": [
+    "admin"
   ]
 }
