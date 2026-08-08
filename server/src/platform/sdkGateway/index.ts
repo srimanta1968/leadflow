@@ -20,6 +20,8 @@ export {
   beginAttemptSequence,
   backoffDelayMs,
   shouldRetry,
+  toTraceId,
+  newSpanId,
   DEFAULT_RETRY,
 } from './retry';
 export type { AttemptSequence, RetryOptions } from './retry';

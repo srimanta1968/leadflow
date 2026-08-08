@@ -6,9 +6,11 @@ import {
   countsAgainstCircuit,
   extractUpstreamDetail,
   mapUpstreamStatus,
+  newSpanId,
   redact,
   redactHeaders,
   shouldRetry,
+  toTraceId,
   SdkHealthRegistry,
   verdictFor,
 } from '../../src/platform/sdkGateway';
@@ -62,6 +64,37 @@ describe('idempotency keys survive retries', () => {
     expect(shouldRetry({ ...base, status: 503 })).toBe(true);
     // And it stops at the cap.
     expect(shouldRetry({ ...base, status: 503, attempt: DEFAULT_RETRY.maxAttempts })).toBe(false);
+  });
+
+  it('carries an id ProjexCloud can actually join on', () => {
+    // WHY THIS EXISTS. LeadFlow sent x-correlation-id; ProjexCloud's tracing
+    // hook reads X-Trace-Id or a W3C traceparent. Neither side read the other's
+    // name, so their log held the cause of a 500 and ours held the request, and
+    // nothing connected the two. The trace id is DERIVED from the correlation id
+    // rather than generated separately, so both names carry one identity.
+    const seq = beginAttemptSequence({ correlationId: '4f3c2b1a-9d8e-4f7a-b6c5-d4e3f2a1b0c9' });
+    expect(seq.traceId).toBe('4f3c2b1a9d8e4f7ab6c5d4e3f2a1b0c9');
+    expect(seq.traceId).toMatch(/^[0-9a-f]{32}$/);
+    // A UUID's hex digits ARE a valid trace-id once the dashes come off, which
+    // is what makes this free rather than a second identifier to keep in step.
+    expect(seq.traceId).toBe(seq.correlationId.replace(/-/g, ''));
+  });
+
+  it('still produces a VALID trace id from a correlation id that is not a UUID', () => {
+    // A malformed traceparent is discarded by a collector rather than corrected,
+    // which would silently put us back to two unjoinable halves.
+    expect(toTraceId('order-42')).toMatch(/^[0-9a-f]{32}$/);
+    // All-zero is invalid per the spec, and is exactly what a non-hex id would
+    // otherwise collapse to.
+    expect(toTraceId('zzz')).toMatch(/^[0-9a-f]{32}$/);
+    expect(toTraceId('zzz')).not.toMatch(/^0{32}$/);
+  });
+
+  it('gives each ATTEMPT its own span while the trace stays put', () => {
+    // A retry is a new span of the same trace. This mirrors the idempotency key
+    // staying constant across attempts — same intention, another try.
+    expect(newSpanId()).toMatch(/^[0-9a-f]{16}$/);
+    expect(newSpanId()).not.toBe(newSpanId());
   });
 
   it('spreads backoff across the whole window rather than around a centre', () => {

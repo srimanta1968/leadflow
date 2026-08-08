@@ -8,6 +8,7 @@ import {
   DEFAULT_RETRY,
   backoffDelayMs,
   beginAttemptSequence,
+  newSpanId,
   shouldRetry,
   sleep,
   type RetryOptions,
@@ -291,6 +292,7 @@ export class SdkGatewayClient {
             attempt,
             durationMs,
             correlationId: sequence.correlationId,
+            traceId: sequence.traceId,
             body: options.body,
           }),
         ),
@@ -318,7 +320,12 @@ export class SdkGatewayClient {
   private static async attempt<T>(
     url: string,
     options: SdkCallOptions,
-    sequence: { idempotencyKey: string; correlationId: string; causationId: string | null },
+    sequence: {
+      idempotencyKey: string;
+      correlationId: string;
+      traceId: string;
+      causationId: string | null;
+    },
   ): Promise<
     | { ok: true; status: number; data: T | null }
     | { ok: false; status: number | null; detail: string | null }
@@ -344,7 +351,18 @@ export class SdkGatewayClient {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${bearer}`,
         'Idempotency-Key': sequence.idempotencyKey,
+        // BOTH NAMES, ON PURPOSE. x-correlation-id is LeadFlow's own and every
+        // log line here quotes it; x-trace-id and traceparent are what
+        // ProjexCloud's tracing hook actually reads. They carry the SAME
+        // identity in two encodings, so their server log and ours join on one
+        // id instead of each holding half a thread.
+        //
+        // The span id is per ATTEMPT while the trace id is per call, which is
+        // the correct shape: a retry is a new span of the same trace, and it
+        // mirrors the idempotency key staying constant across attempts.
         'x-correlation-id': sequence.correlationId,
+        'x-trace-id': sequence.traceId,
+        traceparent: `00-${sequence.traceId}-${newSpanId()}-01`,
       };
       if (sequence.causationId) headers['x-causation-id'] = sequence.causationId;
       // Scope headers are sent only when configured: an empty header is worse

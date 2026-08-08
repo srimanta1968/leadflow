@@ -18,7 +18,7 @@ const SAFE_KEYS = new Set([
   'id', 'ids', 'tenant_id', 'tenantId', 'app_id', 'appId', 'lead_id', 'leadId',
   'source_record_id', 'sourceRecordId', 'event_id', 'eventId', 'sourceEventId',
   'correlation_id', 'correlationId', 'causation_id', 'causationId',
-  'trace_id', 'traceId', 'request_id', 'requestId',
+  'trace_id', 'traceId', 'traceparent', 'request_id', 'requestId',
   'status', 'state', 'outcome', 'code', 'error', 'reason', 'detail', 'details',
   'kind', 'type', 'event_type', 'eventType', 'platform', 'sdk', 'method', 'path',
   'count', 'total', 'limit', 'offset', 'page', 'attempt', 'duration_ms', 'durationMs',
@@ -109,6 +109,8 @@ export function callSummary(input: {
   attempt: number;
   durationMs: number;
   correlationId: string;
+  /** The joinable id. Ours and ProjexCloud's logs index by the same value. */
+  traceId?: string;
   body?: unknown;
 }): Record<string, unknown> {
   return {
@@ -119,6 +121,9 @@ export function callSummary(input: {
     attempt: input.attempt,
     durationMs: input.durationMs,
     correlationId: input.correlationId,
+    // The whole point of deriving it: when ProjexCloud answers 500 with nothing
+    // but {"error":"InternalError"}, this is the id their log can be searched by.
+    traceId: input.traceId,
     body: input.body === undefined ? undefined : redact(input.body),
   };
 }

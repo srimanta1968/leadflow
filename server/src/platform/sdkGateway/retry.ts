@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 
 /**
  * Retry policy and idempotency keys.
@@ -37,8 +37,43 @@ export interface AttemptSequence {
   /** Stable across every attempt. Never regenerate this. */
   idempotencyKey: string;
   correlationId: string;
+  /**
+   * The SAME identity as `correlationId`, in the encoding ProjexCloud reads.
+   *
+   * 32 lowercase hex characters — a W3C trace-id. LeadFlow sends
+   * `x-correlation-id` and ProjexCloud's tracing hook reads `X-Trace-Id` or a
+   * W3C `traceparent`, so until now the two systems each held half of a thread
+   * that could never be joined: their log had the cause of a 500, ours had the
+   * request, and nothing connected them.
+   *
+   * Derived rather than independently generated, so the id LeadFlow puts in its
+   * own logs and the id ProjexCloud indexes by are the same number written two
+   * ways. A UUID's hex digits ARE a valid trace-id once the dashes come off,
+   * which is what makes this free.
+   */
+  traceId: string;
   /** Set by the gateway when the caller supplied a parent, for lineage. */
   causationId: string | null;
+}
+
+/**
+ * A correlation id as a W3C trace-id: exactly 32 lowercase hex characters.
+ *
+ * Tolerant of a caller-supplied correlation id that is not a UUID — anything
+ * non-hex is dropped and the result padded, because a malformed traceparent is
+ * DISCARDED by a collector rather than corrected, which would silently put us
+ * back where we started. An all-zero trace-id is invalid per the spec and is
+ * replaced, since that is what a non-hex id would otherwise collapse to.
+ */
+export function toTraceId(correlationId: string): string {
+  const hex = correlationId.toLowerCase().replace(/[^0-9a-f]/g, '');
+  const padded = (hex + hex).slice(0, 32).padEnd(32, '0');
+  return /^0{32}$/.test(padded) ? randomBytes(16).toString('hex') : padded;
+}
+
+/** A fresh 16-hex-character span id. One per ATTEMPT, not per call. */
+export function newSpanId(): string {
+  return randomBytes(8).toString('hex');
 }
 
 /**
@@ -55,9 +90,12 @@ export function beginAttemptSequence(input: {
   correlationId?: string;
   causationId?: string | null;
 }): AttemptSequence {
+  const correlationId = input.correlationId ?? randomUUID();
   return {
     idempotencyKey: input.idempotencyKey ?? randomUUID(),
-    correlationId: input.correlationId ?? randomUUID(),
+    correlationId,
+    // Derived, never independently generated — see AttemptSequence.traceId.
+    traceId: toTraceId(correlationId),
     causationId: input.causationId ?? null,
   };
 }
