@@ -1,6 +1,6 @@
 {
   "name": "POST /api/leadflow/intake/orchestrate - raw signal to acknowledged assigned lead",
-  "description": "Runs the ten-step intake saga under ONE idempotency key and ONE causation chain: source record, contact parse, identity resolve, CRM contact, CRM deal, lead score, assignment, SLA clock, NEXT action, acknowledgement. Every step declares an explicit compensation.\n\n200, NOT 201, AND THAT IS DELIBERATE. A replay of the same source event creates nothing and returns the ORIGINAL ids, so 201 would be a lie on the second call - and the caller cannot know in advance which call it is making. The body carries `replayed` instead.\n\nTHE IDEMPOTENCY KEY IS THE PROVIDER'S EVENT ID, not one LeadFlow mints: `intake:{platform}:{sourceEventId}`. A key generated here would be unique per call, which is exactly the wrong property - the point is that two deliveries of one event collapse. Both halves are required for that reason, and their absence is a 400 rather than a silent default.\n\nREPLAY PRODUCES EXACTLY ONE OF EACH ARTIFACT because the second attempt performs NO WORK AT ALL, rather than doing the work and deduplicating afterwards. A concurrent second delivery takes the same branch: the run row is claimed with ON CONFLICT DO NOTHING, so whoever loses the race reads the winner's output.\n\nCOMPENSATION RUNS IN REVERSE OVER COMPLETED STEPS ONLY. Undoing a step that never ran is how a rollback causes the damage it exists to prevent. A compensation that itself fails is recorded and the rollback CONTINUES - stopping there would orphan every earlier step because a later one could not be undone, turning one orphan into a chain. Each compensation is a forward action: you do not un-create a CRM contact, you retire it.\n\nTHE ACKNOWLEDGEMENT IS OPTIONAL. If the message fails, the lead still exists, is assigned, has a clock and a NEXT action - tearing all of that down over an undelivered email destroys good work over the least consequential step in the chain. It also goes through the channel decision like every other send: being first does not exempt it from consent.\n\nBehind authenticate and governed on lead.work_assigned. QA: depends on register and login.",
+  "description": "Runs the ten-step intake saga under ONE idempotency key and ONE causation chain: source record, contact parse, identity resolve, CRM contact, CRM deal, lead score, assignment, SLA clock, NEXT action, acknowledgement. Every step declares an explicit compensation.\n\n200, NOT 201, AND THAT IS DELIBERATE. A replay of the same source event creates nothing and returns the ORIGINAL ids, so 201 would be a lie on the second call - and the caller cannot know in advance which call it is making. The body carries `replayed` instead.\n\nTHE IDEMPOTENCY KEY IS THE PROVIDER'S EVENT ID, not one LeadFlow mints: `intake:{platform}:{sourceEventId}` - which is why the sourceEventId in the negative case comes from {{cache:intake.events.response.data.sourceEventId}} and POST /api/leadflow/intake/events is a dependency: the id has a real producer, so MUST-36's traced form applies rather than a generated one, and the case then isolates the missing `platform` instead of testing two absences at once. A key generated here would be unique per call, which is exactly the wrong property - the point is that two deliveries of one event collapse. Both halves are required for that reason, and their absence is a 400 rather than a silent default.\n\nREPLAY PRODUCES EXACTLY ONE OF EACH ARTIFACT because the second attempt performs NO WORK AT ALL, rather than doing the work and deduplicating afterwards. A concurrent second delivery takes the same branch: the run row is claimed with ON CONFLICT DO NOTHING, so whoever loses the race reads the winner's output.\n\nCOMPENSATION RUNS IN REVERSE OVER COMPLETED STEPS ONLY. Undoing a step that never ran is how a rollback causes the damage it exists to prevent. A compensation that itself fails is recorded and the rollback CONTINUES - stopping there would orphan every earlier step because a later one could not be undone, turning one orphan into a chain. Each compensation is a forward action: you do not un-create a CRM contact, you retire it.\n\nTHE ACKNOWLEDGEMENT IS OPTIONAL. If the message fails, the lead still exists, is assigned, has a clock and a NEXT action - tearing all of that down over an undelivered email destroys good work over the least consequential step in the chain. It also goes through the channel decision like every other send: being first does not exempt it from consent.\n\nBehind authenticate and governed on lead.work_assigned. QA: depends on register and login.",
   "endpoint": "/api/leadflow/intake/orchestrate",
   "method": "POST",
   "taskId": "d40c77c6-310f-4b96-a3cb-28e11a4c4409",
@@ -17,11 +17,13 @@
   ],
   "dependsOn": [
     "POST /api/auth/register",
-    "POST /api/auth/login"
+    "POST /api/auth/login",
+    "POST /api/leadflow/intake/events"
   ],
   "testCases": [
     {
       "name": "NEGATIVE: no sourceEventId, so a replay could never be recognised",
+      "testType": "negative",
       "coversErrorCase": "400|VALIDATION_ERROR",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
@@ -37,12 +39,13 @@
     },
     {
       "name": "NEGATIVE: no platform, the other half of the idempotency key",
+      "testType": "negative",
       "coversErrorCase": "400|VALIDATION_ERROR",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
       "payload": {
-        "sourceEventId": "{{dynamic:uuid}}"
+        "sourceEventId": "{{cache:intake.events.response.data.sourceEventId}}"
       },
       "expectedStatus": 400,
       "expectedResponse": {
@@ -52,6 +55,7 @@
     },
     {
       "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
       "coversErrorCase": "401|UNAUTHENTICATED",
       "expectedStatus": 401,
       "expectedResponse": {
@@ -61,6 +65,7 @@
     },
     {
       "name": "NEGATIVE: a bearer token that does not verify",
+      "testType": "negative",
       "coversErrorCase": "401|INVALID_TOKEN",
       "headers": {
         "Authorization": "Bearer {{dynamic:uuid}}"

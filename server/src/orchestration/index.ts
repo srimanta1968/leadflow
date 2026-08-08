@@ -11,6 +11,10 @@
 export { orchestrateIntake, intakeSteps } from './leadIntakeOrchestrator';
 export type { IntakeInput } from './leadIntakeOrchestrator';
 export { runSaga, sagaSteps } from './saga';
+export { runClosedWon, closedWonSteps } from './closedWonSaga';
+export type { ClosedWonInput } from './closedWonSaga';
+export { handleRung, ESCALATION_RULES } from './escalationGlue';
+export type { RungEvent, Rung, EscalationOutcome } from './escalationGlue';
 export type { SagaStep, SagaResult, StepContext } from './saga';
 export { compose, composeBulk, decisionById } from './channelDecision';
 export type {

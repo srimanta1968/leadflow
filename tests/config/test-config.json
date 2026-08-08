@@ -6,7 +6,13 @@
     "absent_uuid": "00000000-0000-0000-0000-000000000000",
     "_absent_uuid_note": "A syntactically valid UUID that NO record has, for the negative test cases that assert 404. It cannot come from {{cache:...}} the way MUST-36 asks for a foreign key, because the whole point is that no producer created it — a cached id would exist and the endpoint would answer 200 or 409 instead of the 404 under test. Global rather than per-environment because the nil UUID is absent in every environment by construction, and it is not secret-shaped.",
     "not_a_uuid": "not-a-uuid",
-    "_not_a_uuid_note": "A deliberately malformed id for the negative cases that assert 400 on a non-UUID path param. Cannot come from {{cache:...}} the way MUST-36 asks, for the same reason as absent_uuid and more so: the whole point is that it is NOT a valid id, so no producer could ever emit it."
+    "_not_a_uuid_note": "A deliberately malformed id for the negative cases that assert 400 on a non-UUID path param. Cannot come from {{cache:...}} the way MUST-36 asks, for the same reason as absent_uuid and more so: the whole point is that it is NOT a valid id, so no producer could ever emit it.",
+    "absent_saga_run_id": "closed_won:no-such-deal:no-such-charge",
+    "_absent_saga_run_id_note": "A well-formed saga run id that matches NO run, for the lookup negative on GET /api/leadflow/sagas/{run_id}. A run id IS the idempotency key - derived from the business identity - so it is NOT a UUID, which makes {{dynamic:uuid}} the wrong SHAPE as well as banned by MUST-36 in a foreign-key position. Global for the same reason as absent_uuid: no API creates a saga run purely to be missed, so it is absent in every environment by construction, and it is not secret-shaped.",
+    "upstream_deal_id": "d0000000-0000-4000-8000-00000000dea1",
+    "_upstream_deal_id_note": "The deal half of the closed-won key on POST /api/leadflow/closed-won/start. MUST-36 asks for {{cache:...}} from a producer and there is none to trace to: deals are created in sdk-crm through the SDK gateway, and NO LeadFlow route creates one - grep for a deal-creating endpoint under tests/api_definitions and server/src/routes and there is nothing to depend on. That makes this the last-resort {{var:name}} form the rule allows. The case it appears in asserts 403, so the policy layer refuses before the handler ever reads the body; the value only has to be well-formed and traceable to this note.",
+    "upstream_charge_id": "c0000000-0000-4000-8000-00000000cha1",
+    "_upstream_charge_id_note": "The payment half of the same key. Same reasoning as upstream_deal_id and one step further: sdk-payment exposes charge, refund, distribute, methods and provider but no charge READ, so not only does LeadFlow not create charges, it cannot look one up either - which is why the saga verifies payment from the evidence the caller presents rather than by reading it back."
   },
   "environments": {
     "dev": {

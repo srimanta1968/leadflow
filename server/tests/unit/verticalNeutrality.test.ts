@@ -151,6 +151,8 @@ describe('no SDK-owned domain table is duplicated locally', () => {
       'leadflow_event_dead_letter', 'leadflow_pipeline_projection',
       // 017 — the intake saga and the channel-decision ledger.
       'leadflow_saga_run', 'leadflow_saga_step', 'leadflow_channel_decision',
+      // 018 — the escalation ledger and its systemic-incident dedupe.
+      'leadflow_escalation_event', 'leadflow_escalation_incident',
     ];
     const missing = expected.filter((t) => !tables.includes(t));
     expect(missing.join('\n')).toBe('');
@@ -268,6 +270,8 @@ describe('the schema self-provisions and is safe to re-run', () => {
       'leadflow_close_reason',
       'leadflow_dashboard_rollup',
       'leadflow_disposition_code',
+      'leadflow_escalation_event',
+      'leadflow_escalation_incident',
       'leadflow_event_dead_letter',
       'leadflow_event_log',
       'leadflow_kpi_definition',

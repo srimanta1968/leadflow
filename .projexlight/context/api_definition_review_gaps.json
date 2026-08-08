@@ -1,0 +1,48 @@
+{
+  "updatedAt": "2026-08-08T17:08:03",
+  "scope": "orchestration",
+  "gaps": [
+    {
+      "file": "tests/api_definitions/orchestration/channel-decision-bulk-post.json",
+      "rules": [
+        "CODE-MATCH",
+        "MUST-14"
+      ],
+      "findingsCount": 2
+    },
+    {
+      "file": "tests/api_definitions/orchestration/channel-decision-post.json",
+      "rules": [
+        "CODE-MATCH"
+      ],
+      "findingsCount": 1
+    },
+    {
+      "file": "tests/api_definitions/orchestration/closed-won-start-post.json",
+      "rules": [
+        "CODE-MATCH"
+      ],
+      "findingsCount": 1
+    },
+    {
+      "file": "tests/api_definitions/orchestration/intake-orchestrate-post.json",
+      "rules": [
+        "CODE-MATCH"
+      ],
+      "findingsCount": 1
+    },
+    {
+      "file": "tests/api_definitions/orchestration/sagas-run-get.json",
+      "rules": [
+        "CODE-MATCH"
+      ],
+      "findingsCount": 1
+    }
+  ],
+  "missingDefinitions": [],
+  "captureSyncIssues": 0,
+  "summary": {
+    "withFindings": 5,
+    "findingsCount": 6
+  }
+}

@@ -73,7 +73,22 @@ export interface GovernedSpec {
  * for a local superuser.
  */
 const LOCAL_ROLE_BRIDGE: Record<string, string[]> = {
-  admin: ['revenue_operations', 'sales_manager', 'sales_rep'],
+  /*
+   * `client_success` added here, and it is a judgement call worth reading.
+   *
+   * It holds handoff.accept, onboarding.manage and escalation.receive — the
+   * entire post-sale half of the product — and NO local role bridged to it, so
+   * every onboarding endpoint was unreachable by every user in the system. That
+   * is a gap rather than a policy: an endpoint nobody can call is dead code
+   * wearing a permission check.
+   *
+   * Folded into `admin` rather than given its own local role because users.role
+   * is a single column and adding a value is a product decision, not a fix. Note
+   * the contrast with `steward` below: that separation is deliberate and about
+   * LEAST PRIVILEGE on capture resolution, which is a different question from an
+   * area of the product having no caller at all.
+   */
+  admin: ['revenue_operations', 'sales_manager', 'sales_rep', 'client_success'],
   manager: ['sales_manager'],
   user: ['sales_rep'],
   // A steward is NOT folded into `admin`. The capture-resolution grants sit with

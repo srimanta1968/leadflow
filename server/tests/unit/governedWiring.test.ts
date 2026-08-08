@@ -62,6 +62,12 @@ describe('the local role bridge', () => {
       // The local admin worked leads too, and recording a first response is
       // lead.work_assigned — which only a Rep holds.
       'sales_rep',
+      // Added with the closed-won saga. client_success holds handoff.accept,
+      // onboarding.manage and escalation.receive — the entire post-sale half of
+      // the product — and NO local role bridged to it, so every onboarding
+      // endpoint was unreachable by every user in the system. An endpoint nobody
+      // can call is dead code wearing a permission check.
+      'client_success',
     ]);
     expect(rolesFor(asRole('manager'))).toEqual(['sales_manager']);
     expect(rolesFor(asRole('user'))).toEqual(['sales_rep']);

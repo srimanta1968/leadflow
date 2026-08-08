@@ -346,6 +346,20 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
     rationale:
       'REDACTED, NOT DELETED, and this is the one place in the schema where that is the harder call. The row proves somebody was allowed — or refused — to be contacted, and on what basis; deleting it destroys the evidence that a refusal was honoured, which is exactly the record a complaint or a regulator asks for. subject_ref is a pointer cleared through the subject surfaces. The `reasons` text is written for a human and can quote a value ("that address is suppressed after a bounce"), so it is nulled while the verdict, the timestamp and which checks ran are kept. What survives is the fact that a decision was made and what it was; what goes is the sentence that might name the person.',
   },
+  {
+    surface: 'leadflow_escalation_event',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'A rung ledger: the producer event id, a subject_ref pointer, which rung fired and how many minutes late. No name, no address, no message body - the notification itself is sdk-notification surface. subject_ref is cleared transitively through the lead. Kept rather than deleted on an erasure because it is the evidence that an escalation happened on time, which is what an SLA audit asks for, and it identifies nobody once the lead it points at is gone.',
+  },
+  {
+    surface: 'leadflow_escalation_incident',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'One row per systemic episode: a time-bucket key, a tenant, a count and the upstream incident reference. Describes an OUTAGE rather than a person - the whole point of the table is that it is about many subjects at once and names none of them. The incident itself lives in sdk-incident.',
+  },
 ];
 
 /** Surfaces that actually require an erasure action. */

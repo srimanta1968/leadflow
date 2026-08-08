@@ -6,6 +6,9 @@ import { governed, type GovernedRequest } from '../platform/policy/governed';
 import { PERMISSIONS } from '../config/roles';
 import { AUDIT_EVENTS } from '../platform/audit/vocabulary';
 import { orchestrateIntake } from './leadIntakeOrchestrator';
+import { runClosedWon } from './closedWonSaga';
+import { sagaSteps } from './saga';
+import { dataService } from '../services/DataService';
 import { compose, composeBulk, type Channel, type ChannelDecisionInput } from './channelDecision';
 
 export const orchestrationRoutes: Router = Router();
@@ -213,6 +216,112 @@ orchestrationRoutes.post(
           review: decisions.filter((d) => d.verdict === 'review').length,
           denied: decisions.filter((d) => d.verdict === 'deny').length,
         },
+      });
+    },
+  )),
+);
+
+/**
+ * POST /api/leadflow/closed-won/start — start or RESUME the closed-won saga.
+ *
+ * One endpoint for both, deliberately. A caller retrying after a timeout cannot
+ * know whether the first attempt died mid-saga, and making them choose between
+ * "start" and "resume" guarantees somebody eventually picks wrong. The runner
+ * reads the step ledger and continues from the first unfinished step, so the
+ * same call is correct in every case — the body reports `replayed` and `resumed`
+ * so the caller can tell what actually happened.
+ */
+orchestrationRoutes.post(
+  '/closed-won/start',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.ONBOARDING_MANAGE,
+      event: AUDIT_EVENTS.CAPTURE_NORMALIZED,
+      purpose: 'lead_management',
+      resourceType: 'deal',
+      resourceId: (req) => (req.body as { dealId?: string })?.dealId,
+      metadata: (req) => ({
+        deal_id: (req.body as { dealId?: string })?.dealId ?? null,
+        charge_id: (req.body as { chargeId?: string })?.chargeId ?? null,
+      }),
+      obligations: {
+        own_record_only: {
+          kind: 'defer',
+          because: 'a closed-won handoff crosses from sales to onboarding, so it belongs to neither one alone',
+        },
+      },
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const dealId = typeof body.dealId === 'string' ? body.dealId : '';
+      const chargeId = typeof body.chargeId === 'string' ? body.chargeId : '';
+      const subjectRef = typeof body.subjectRef === 'string' ? body.subjectRef : '';
+      if (!dealId || !chargeId || !subjectRef) {
+        // chargeId is REQUIRED and is the payment evidence. sdk-payment exposes
+        // no charge read, so this is the only verification available — and a
+        // closed-won saga starting with no payment evidence at all is precisely
+        // the failure worth catching before a licence is issued.
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'dealId, chargeId and subjectRef are all required — dealId and chargeId together identify this close',
+        );
+      }
+
+      const result = await runClosedWon({
+        dealId,
+        chargeId,
+        subjectRef,
+        tenantId: typeof body.tenantId === 'string' ? body.tenantId : null,
+        ownerId: typeof body.ownerId === 'string' ? body.ownerId : null,
+        enrollmentIds: Array.isArray(body.enrollmentIds) ? (body.enrollmentIds as string[]) : [],
+        campaignIds: Array.isArray(body.campaignIds) ? (body.campaignIds as string[]) : [],
+        causationId: typeof body.causationId === 'string' ? body.causationId : null,
+      });
+
+      res.status(200).json({ success: true, data: result });
+    },
+  )),
+);
+
+/**
+ * GET /api/leadflow/sagas/:run_id — the run and its step ledger.
+ *
+ * The ledger is the point rather than the summary: "which steps ran, which were
+ * compensated, and which compensation itself failed" is what an operator
+ * reconciles a half-finished saga from, and a status field alone cannot say it.
+ */
+orchestrationRoutes.get(
+  '/sagas/:run_id',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.ONBOARDING_MANAGE,
+      event: AUDIT_EVENTS.CAPTURE_NORMALIZED,
+      purpose: 'lead_management',
+      resourceType: 'saga_run',
+      resourceId: (req) => String(req.params.run_id),
+      metadata: (req) => ({ run_id: String(req.params.run_id) }),
+      obligations: {
+        own_record_only: {
+          kind: 'defer',
+          because: 'a saga run is operational state, not a record with an owner',
+        },
+      },
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const runId = String(req.params.run_id);
+      const runs = await dataService.query<Record<string, unknown>>(
+        `SELECT idempotency_key, saga_name, status, correlation_id, causation_id,
+                output, failed_step, error, started_at, finished_at
+           FROM leadflow_saga_run WHERE idempotency_key = $1`,
+        [runId],
+      );
+      if (runs.length === 0) {
+        throw new AppError(404, ErrorCodes.NOT_FOUND, 'No saga run with that id');
+      }
+      res.status(200).json({
+        success: true,
+        data: { run: runs[0], steps: await sagaSteps(runId) },
       });
     },
   )),

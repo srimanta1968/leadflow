@@ -64,6 +64,8 @@ export interface SagaResult {
   error: string | null;
   /** Steps whose compensation ran, newest first. */
   compensated: string[];
+  /** True when this attempt picked up a run a dead process had left part-done. */
+  resumed?: boolean;
 }
 
 interface RunRow {
@@ -90,7 +92,7 @@ export async function runSaga(
   input: Record<string, unknown>,
   options: { causationId?: string | null } = {},
 ): Promise<SagaResult> {
-  const correlationId = randomUUID();
+  const correlationId: string = randomUUID();
 
   const claimed = await dataService.query<RunRow>(
     `INSERT INTO leadflow_saga_run
@@ -101,39 +103,81 @@ export async function runSaga(
     [idempotencyKey, sagaName, correlationId, options.causationId ?? null, JSON.stringify(input)],
   );
 
+  let runCorrelationId: string = correlationId;
+  const results: Record<string, unknown> = {};
+  /** Steps already done by an earlier attempt. Never re-run, never compensated twice. */
+  const alreadyDone = new Set<string>();
+
   if (claimed.length === 0) {
-    // Somebody got here first. Hand back what they produced rather than doing it
-    // again — including for a run still in flight, because two concurrent
-    // deliveries of one event must not both create a lead.
     const existing = await dataService.query<RunRow>(
       `SELECT idempotency_key, status, correlation_id, output, failed_step, error
          FROM leadflow_saga_run WHERE idempotency_key = $1`,
       [idempotencyKey],
     );
     const row = existing[0];
-    return {
-      idempotencyKey,
-      status: (row?.status as SagaResult['status']) ?? 'failed',
-      replayed: true,
-      correlationId: row?.correlation_id ?? correlationId,
-      results: row?.output ?? {},
-      failedStep: row?.failed_step ?? null,
-      error: row?.error ?? null,
-      compensated: [],
-    };
+    runCorrelationId = row?.correlation_id ?? correlationId;
+
+    if (row && (row.status === 'completed' || row.status === 'compensated')) {
+      // SETTLED. Hand back what the first attempt produced rather than doing it
+      // again — the caller sees the SAME ids, not a second set.
+      return {
+        idempotencyKey,
+        status: row.status as SagaResult['status'],
+        replayed: true,
+        correlationId: runCorrelationId,
+        results: row.output ?? {},
+        failedStep: row.failed_step ?? null,
+        error: row.error ?? null,
+        compensated: [],
+      };
+    }
+
+    /*
+     * STILL 'running' — this is a RESUME, and it is the acceptance criterion.
+     *
+     * A process that died mid-saga leaves the run row claimed and its ledger
+     * half-written. Treating that as a completed replay would return partial
+     * output as though it were the whole answer; treating it as a fresh run
+     * would re-execute steps that already created a customer and a licence.
+     * Neither is acceptable, so the ledger is read back and the completed steps
+     * are skipped: execution continues at the first one that did not finish.
+     *
+     * This is why every step result is persisted as it lands rather than kept in
+     * memory — in-memory state is exactly what is gone when the process dies.
+     */
+    const ledger = await dataService.query<{ step_name: string; result: unknown }>(
+      `SELECT step_name, result FROM leadflow_saga_step
+        WHERE idempotency_key = $1 AND status = 'completed'
+        ORDER BY position ASC`,
+      [idempotencyKey],
+    );
+    for (const row2 of ledger) {
+      alreadyDone.add(row2.step_name);
+      results[row2.step_name] = row2.result;
+    }
   }
 
-  const results: Record<string, unknown> = {};
   const completed: { step: SagaStep; result: unknown; ctx: StepContext }[] = [];
   const compensated: string[] = [];
 
   for (const [index, step] of steps.entries()) {
     const ctx: StepContext = {
-      correlationId,
+      correlationId: runCorrelationId,
       stepKey: `${idempotencyKey}:${step.name}`,
       results,
       input,
     };
+
+    if (alreadyDone.has(step.name)) {
+      /*
+       * Done by the attempt that died. NOT re-run — that is the whole point —
+       * but it IS pushed onto `completed`, because if a LATER step now fails
+       * this one still has to be compensated. A resumed run that rolls back
+       * must undo everything that exists, not merely what this process did.
+       */
+      completed.push({ step, result: results[step.name], ctx });
+      continue;
+    }
 
     await dataService.query(
       `INSERT INTO leadflow_saga_step (idempotency_key, step_name, position, status, step_key)
@@ -200,7 +244,8 @@ export async function runSaga(
       );
 
       return {
-        idempotencyKey, status: 'compensated', replayed: false, correlationId,
+        idempotencyKey, status: 'compensated', replayed: false,
+        correlationId: runCorrelationId,
         results, failedStep: step.name, error: message, compensated,
       };
     }
@@ -214,7 +259,10 @@ export async function runSaga(
   );
 
   return {
-    idempotencyKey, status: 'completed', replayed: false, correlationId,
+    idempotencyKey, status: 'completed',
+    // `replayed` false, but `resumed` says whether this attempt inherited work.
+    replayed: false, resumed: alreadyDone.size > 0,
+    correlationId: runCorrelationId,
     results, failedStep: null, error: null, compensated: [],
   };
 }

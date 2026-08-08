@@ -17,6 +17,9 @@ enumerate real errors; do not guess.
 - [ ] `GET /api/leadflow/calls/recording-eligibility` — tests/api_definitions/calls/recording-eligibility-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `POST /api/leadflow/capture/:id/resolve` — tests/api_definitions/capture/resolve-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `GET /api/events/stream` — tests/api_definitions/events/stream-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN
+- [ ] `POST /api/leadflow/channel-decision/bulk` — tests/api_definitions/orchestration/channel-decision-bulk-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
+- [ ] `POST /api/leadflow/channel-decision` — tests/api_definitions/orchestration/channel-decision-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
+- [ ] `POST /api/leadflow/intake/orchestrate` — tests/api_definitions/orchestration/intake-orchestrate-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `POST /api/sla/alerts/acknowledge` — tests/api_definitions/sla/alerts-acknowledge-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
 - [ ] `POST /api/sla/evaluate` — tests/api_definitions/sla/evaluate-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
 
