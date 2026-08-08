@@ -34,7 +34,14 @@ export interface ImportRunRow {
   started_by?: string | null;
   correlation_id?: string;
   created_at?: string;
-  dry_run_result?: { governance?: GovernanceVerdict[] } | null;
+  mapping_template_id?: string | null;
+  dry_run_result?: {
+    governance?: GovernanceVerdict[];
+    new_count?: number;
+    exact_link_count?: number;
+    review_case_count?: number;
+    invalid_count?: number;
+  } | null;
 }
 
 /** A single dry-run governance check, verbatim from sdk-import. */
@@ -58,6 +65,12 @@ export interface MappingTemplateRow {
   kind?: string;
   version?: number;
   source_kind?: string | null;
+  /** { "<source column>": { target, confidence, reason } } — one key per mapped field. */
+  field_map?: Record<string, unknown> | null;
+  transforms?: unknown[] | null;
+  /** Incremented per committed run that used it: which mapping the tenant relies on. */
+  use_count?: number | null;
+  crosswalk_strategy?: string | null;
 }
 
 export interface ConnectorInstallRow {
@@ -199,6 +212,45 @@ export function listConnectors(): Promise<Reached<ConnectorInstallRow[]>> {
       return rows.length > 0 || !Array.isArray(body) ? rows : (body as ConnectorInstallRow[]);
     },
   );
+}
+
+/**
+ * Which connector KINDS exist at all, independent of what this tenant installed.
+ *
+ * SEPARATE FROM `listConnectors`, and the distinction is the whole of AC3. The
+ * installs list answers "what can this tenant import from today"; the kinds list
+ * answers "what does the product support". A source tile shown ONLY when it is
+ * installed silently disappears for every tenant that has not connected it,
+ * which reads as "we do not support Google Contacts" rather than "you have not
+ * connected Google Contacts yet" — the opposite of what the operator needs to
+ * know, since the second is a thing they can act on.
+ */
+export function listConnectorKinds(): Promise<Reached<ConnectorKindRow[]>> {
+  return read(
+    'sdk-connectors',
+    '/api/connectors/kinds',
+    [] as ConnectorKindRow[],
+    (body) => {
+      /*
+       * sdk-connectors returns `data.kinds` as a BARE STRING ARRAY — the adapter
+       * registry's keys — not as objects. Reading it as objects yields an array
+       * of undefined `kind`s, which then silently filters to nothing and every
+       * source tile reports "not connected" no matter what is installed. It was
+       * doing exactly that until the shape was checked against the handler.
+       */
+      const raw = asArray<unknown>(body, 'kinds');
+      return raw.map((entry) =>
+        typeof entry === 'string' ? { kind: entry } : (entry as ConnectorKindRow),
+      );
+    },
+  );
+}
+
+export interface ConnectorKindRow {
+  kind?: string;
+  label?: string;
+  status?: string;
+  available?: boolean;
 }
 
 /**

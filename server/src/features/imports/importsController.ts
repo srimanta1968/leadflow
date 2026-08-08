@@ -10,6 +10,7 @@ import {
   getPermittedUse,
   getRun,
   listConnectors,
+  listConnectorKinds,
   listExceptions,
   listRuns,
   listTemplates,
@@ -109,6 +110,54 @@ function verdictsOf(run: ImportRunRow | null): GovernanceVerdict[] {
   return Array.isArray(governance) ? governance : [];
 }
 
+/**
+ * The four words the Import Runs table is allowed to say, derived HERE.
+ *
+ * The mockup's status column is Review / Complete / Restricted / Quarantined —
+ * four values, where sdk-import's lifecycle has eight. They are not the same
+ * vocabulary and the mapping is a real decision, not a rename:
+ *
+ *  - Quarantined is its own lifecycle state and passes straight through.
+ *  - Restricted is NOT a lifecycle state at all. It is a committed run whose
+ *    data came in under a third-party rights attestation, and it is called out
+ *    separately because that is the run whose evidence somebody may have to
+ *    produce later. Deriving it from the ATTESTATION rather than the status is
+ *    the only way to distinguish it from an ordinary completed import.
+ *  - Complete is a committed run with no such attestation.
+ *  - Review covers every state still in flight, because from the operator's
+ *    side of the table draft, previewing, mapping, dry_run and committing are
+ *    one thing: not finished, look at it.
+ *
+ * DERIVED ON THE SERVER so every consumer says the same word. Two screens each
+ * mapping eight states onto four is two chances to disagree about what
+ * "Restricted" means, and the one that matters is the compliance one.
+ */
+export type PresentationStatus = 'review' | 'complete' | 'restricted' | 'quarantined';
+
+function presentationStatus(run: ImportRunRow): PresentationStatus {
+  if (run.status === 'quarantined') {
+    return 'quarantined';
+  }
+  if (run.status === 'complete' || run.status === 'rolled_back') {
+    return run.attestation_id ? 'restricted' : 'complete';
+  }
+  return 'review';
+}
+
+/**
+ * Where the run's data came from, in the badge vocabulary the table uses.
+ *
+ * `unknown` is deliberately NOT collapsed into first-party. A run whose
+ * provenance nobody recorded is the one a quarantine exists for, and defaulting
+ * it to the reassuring answer would hide exactly the case the column is for.
+ */
+function originAttestation(run: ImportRunRow): 'tenant_first_party' | 'third_party' | 'unknown' {
+  if (run.attestation_id) {
+    return 'third_party';
+  }
+  return run.status === 'quarantined' ? 'unknown' : 'tenant_first_party';
+}
+
 /** Whether the rollback window is open AS OF NOW, rather than a raw deadline. */
 function rollbackState(run: ImportRunRow | null): Record<string, unknown> {
   const deadline = run?.rollback_deadline ?? null;
@@ -144,44 +193,102 @@ importsRoutes.get(
       obligations: NOT_AN_OWNED_RECORD,
     },
     async (_req: GovernedRequest, res: Response): Promise<void> => {
-      const [runs, templates, connectors] = await Promise.all([
+      const [runs, templates, connectors, kinds] = await Promise.all([
         listRuns(),
         listTemplates(),
         listConnectors(),
+        listConnectorKinds(),
       ]);
 
+      /*
+       * SOURCE AVAILABILITY, and this is AC3 in one object.
+       *
+       * The product's eight source tiles are a FIXED catalogue — the screen
+       * renders all of them whether or not this tenant has connected anything.
+       * What varies is which are usable, so availability is reported per kind
+       * rather than by omitting the tile. Hiding an unconnected source reads as
+       * "not supported"; showing it as unavailable reads as "not connected
+       * yet", which is the only one of the two an operator can act on.
+       */
+      const installedKinds = new Set(
+        connectors.value.map((install) => install.kind).filter((kind): kind is string => Boolean(kind)),
+      );
+      const knownKinds = new Map(
+        kinds.value
+          .filter((kind) => Boolean(kind.kind))
+          .map((kind) => [kind.kind as string, kind]),
+      );
+
       // Derived from the SAME list that is returned, so a tile can never
-      // disagree with the rows beneath it.
-      const statusCounts: Record<string, number> = {};
+      // disagree with the rows beneath it. Counted in the PRESENTATION
+      // vocabulary, because that is what the segmented filter above the table
+      // offers — counting lifecycle states would give the filter four labels
+      // and eight numbers.
+      const statusCounts: Record<string, number> = { review: 0, complete: 0, restricted: 0, quarantined: 0 };
       for (const run of runs.value) {
-        const status = run.status ?? 'unknown';
+        const status = presentationStatus(run);
         statusCounts[status] = (statusCounts[status] ?? 0) + 1;
       }
 
       res.status(200).json({
         success: true,
         data: {
-          runs: runs.value.map((run) => ({
-            run_id: run.run_id ?? null,
-            status: run.status ?? null,
-            source_kind: run.source_kind ?? null,
-            file_name: run.file_name ?? null,
-            row_count: run.row_count ?? null,
-            committed_row_count: run.committed_row_count ?? null,
-            exception_count: run.exception_count ?? 0,
-            quarantine_reason: run.quarantine_reason ?? null,
-            created_at: run.created_at ?? null,
-            committed_at: run.committed_at ?? null,
-            rollback: rollbackState(run),
-          })),
+          runs: runs.value.map((run) => {
+            const dry = run.dry_run_result ?? null;
+            return {
+              run_id: run.run_id ?? null,
+              // Both vocabularies, deliberately: the table shows the four-value
+              // one, and the drill-in still needs to know which of the eight
+              // lifecycle states it is really in.
+              status: run.status ?? null,
+              presentation_status: presentationStatus(run),
+              origin_attestation: originAttestation(run),
+              source_kind: run.source_kind ?? null,
+              file_name: run.file_name ?? null,
+              row_count: run.row_count ?? null,
+              committed_row_count: run.committed_row_count ?? null,
+              // The mockup's "Created / Linked" pair: rows this run brought into
+              // existence, and rows it attached to somebody already known.
+              created_count: dry?.new_count ?? null,
+              linked_count: dry?.exact_link_count ?? null,
+              // "Review" in the table is the steward's queue for this run, not
+              // its exceptions — a candidate needing a human is not an error.
+              review_count: dry?.review_case_count ?? null,
+              exception_count: run.exception_count ?? 0,
+              mapping_template_id: run.mapping_template_id ?? null,
+              quarantine_reason: run.quarantine_reason ?? null,
+              started_by: run.started_by ?? null,
+              created_at: run.created_at ?? null,
+              committed_at: run.committed_at ?? null,
+              rollback: rollbackState(run),
+            };
+          }),
           run_count: runs.value.length,
           status_counts: statusCounts,
+          // Every kind the product knows about, each marked usable or not —
+          // never a filtered list. See the comment above.
+          source_availability: Array.from(knownKinds.values()).map((kind) => ({
+            kind: kind.kind ?? null,
+            label: kind.label ?? null,
+            installed: installedKinds.has(kind.kind as string),
+            available: kind.available !== false,
+          })),
+          installed_kinds: Array.from(installedKinds),
           templates: templates.value.map((template) => ({
             template_id: template.template_id ?? null,
             name: template.name ?? null,
             kind: template.kind ?? null,
             version: template.version ?? null,
             source_kind: template.source_kind ?? null,
+            // COUNTED HERE rather than shipped as raw JSONB. The card wants
+            // "48 canonical fields, 12 transforms"; sending the whole field_map
+            // so the browser can call Object.keys on it would move kilobytes per
+            // template to compute one integer.
+            canonical_field_count: template.field_map ? Object.keys(template.field_map).length : null,
+            transform_count: Array.isArray(template.transforms) ? template.transforms.length : null,
+            // The reason to reuse a template rather than author another one.
+            use_count: template.use_count ?? null,
+            crosswalk_strategy: template.crosswalk_strategy ?? null,
           })),
           template_count: templates.value.length,
           connectors: connectors.value.map((install) => ({
@@ -197,6 +304,7 @@ importsRoutes.get(
             runs: runs.available,
             templates: templates.available,
             connectors: connectors.available,
+            source_kinds: kinds.available,
           },
           tenant_id: tenantId() ?? null,
         },

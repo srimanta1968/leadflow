@@ -17,6 +17,10 @@ enumerate real errors; do not guess.
 - [ ] `GET /api/leadflow/calls/recording-eligibility` — tests/api_definitions/calls/recording-eligibility-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `POST /api/leadflow/capture/:id/resolve` — tests/api_definitions/capture/resolve-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `GET /api/events/stream` — tests/api_definitions/events/stream-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN
+- [ ] `GET /api/leadflow/imports/center` — tests/api_definitions/imports/center-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
+- [ ] `GET /api/leadflow/imports/runs/{run_id}/evidence` — tests/api_definitions/imports/runs-id-evidence-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
+- [ ] `GET /api/leadflow/imports/runs/{run_id}` — tests/api_definitions/imports/runs-id-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
+- [ ] `POST /api/leadflow/imports/runs/{run_id}/report` — tests/api_definitions/imports/runs-id-report-post.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
 - [ ] `POST /api/leadflow/channel-decision/bulk` — tests/api_definitions/orchestration/channel-decision-bulk-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `POST /api/leadflow/channel-decision` — tests/api_definitions/orchestration/channel-decision-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `POST /api/leadflow/closed-won/start` — tests/api_definitions/orchestration/closed-won-start-post.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN

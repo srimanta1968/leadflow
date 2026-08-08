@@ -216,6 +216,20 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
       PERMISSIONS.SLA_CONFIGURE,
       PERMISSIONS.SLA_EVALUATE,
       PERMISSIONS.SLA_ALERT_DISPATCH,
+      /*
+       * WATCHING imports, not adjudicating them.
+       *
+       * RevOps configures the machine and runs reconciliation, and an import is
+       * the largest single thing that machine does to the contact data — an
+       * Import Center nobody in RevOps can open makes reconciliation.run a
+       * grant without a screen. Deliberately the READ half only: the Data
+       * Steward still owns import.commit and import.rollback, so RevOps can see
+       * that a run went wrong without being able to apply or reverse one.
+       *
+       * NOT import.evidence_read either. The rights attestation stays with the
+       * Steward and the Privacy Officer — see the note on that permission.
+       */
+      PERMISSIONS.IMPORT_RUN_READ,
     ],
     requiresApproval: [
       PERMISSIONS.PRODUCT_CLAIM_APPROVE,

@@ -1,21 +1,19 @@
 {
-  "generatedAt": "2026-08-08T18:05:13.453964Z",
-  "taskId": "16e54e8c-590d-41d1-9494-9249519c107f",
+  "generatedAt": "2026-08-08T18:24:17.423564Z",
+  "taskId": "041938ca-bef0-42ec-91a3-b4f2834a2a6e",
   "gaps": [
     {
-      "criterionId": "16e54e8c-590d-41d1-9494-9249519c107f#AC1",
-      "criterion": "API definitions authored before handlers with full producer chains",
+      "criterionId": "041938ca-bef0-42ec-91a3-b4f2834a2a6e#AC4",
+      "criterion": "Mapping templates show version, certification and reuse count",
       "verdict": "partial",
-      "gap": "The definitions were authored first \u2014 all four exist, pass projexlight_review_api_definitions with 0 missingDefinitions and no MUST findings, and carry fieldEnums for run status and template kind. The PRODUCER CHAIN half is not satisfiable as the feature stands: three of the four endpoints take a run_id, and NO LeadFlow route creates an import run. Runs are created in sdk-import through the SDK gateway, so there is nothing to {{cache:}} from and nothing to put in dependsOn beyond register/login. The id therefore comes from {{var:absent_import_run_id}} \u2014 the last-resort form MUST-36 permits when no API anywhere creates the id \u2014 and the three definitions assert the 404 branch, which is what a reachable gateway actually returns for it (verified live). This is a REAL gap and it lands on the wizard: tasks 77-80 build the Import wizard, which has to create, preview, map, dry-run and commit a run, and no task in the current plan defines a LeadFlow write surface for that. Once one exists, these three definitions should chain to it and assert the populated 200.",
+      "gap": "The screen renders all three - name + v<version>, a Certified/Custom badge, and 'N canonical fields, N transforms, used N times' - and the server derives the counts from sdk-import's field_map, transforms and use_count columns rather than shipping raw JSONB to the browser. What is NOT proven is that they render with real values: no LeadFlow route creates a mapping template, sdk-import returns an empty library in this environment, so the template cards never appear in a local run and the .feature scenario can only assert the section heading. The values are asserted at the payload level in tests/api_definitions/imports/center-get.json. Closing this needs either a seeded template in the environment or the Import wizard's template-authoring surface (tasks 77-80), which is the same missing write surface already recorded against task 75 AC1.",
       "evidence": {
-        "apiDefinitions": [
-          "tests/api_definitions/imports/center-get.json",
-          "tests/api_definitions/imports/runs-id-get.json",
-          "tests/api_definitions/imports/runs-id-report-post.json",
-          "tests/api_definitions/imports/runs-id-evidence-get.json"
-        ],
         "files": [
-          "tests/config/test-config.json"
+          "client/src/pages/app/ImportCenter.tsx",
+          "server/src/features/imports/importsController.ts"
+        ],
+        "apiDefinitions": [
+          "tests/api_definitions/imports/center-get.json"
         ]
       }
     }

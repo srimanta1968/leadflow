@@ -64,7 +64,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Contacts', to: '/app/contacts', ungated: 'reading contacts is tenant-scoped by the endpoint, not role-gated', planned: true },
       { label: 'Capture Inbox', to: '/app', ungated: 'every operator triages their own tenant queue; the rows are scoped server side and the per-row ACTIONS are gated individually', count: 'captureUnresolved' },
       { label: 'Quick Capture', to: '/app/capture', ungated: 'capturing a lead is the one thing every role may do; refusing it would lose the lead' },
-      { label: 'Import Center', to: '/app/import', action: 'import.commit', planned: true },
+      { label: 'Import Center', to: '/app/import', action: 'import.run_read' },  // Gated on the READ grant, not import.commit: this screen reviews imports,
+      // it does not apply them, and requiring the commit grant to LOOK would hide
+      // the register from the Privacy Officer who audits it.
     ],
   },
   {

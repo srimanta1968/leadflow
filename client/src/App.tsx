@@ -19,6 +19,7 @@ import QuickCapture from './pages/app/QuickCapture';
 import RoutingRules from './pages/app/RoutingRules';
 import SlaSettings from './pages/app/SlaSettings';
 import Analytics from './pages/app/Analytics';
+import ImportCenter from './pages/app/ImportCenter';
 import NotFound from './pages/NotFound';
 
 /**
@@ -65,6 +66,7 @@ export default function App() {
               <Route path="capture" element={<QuickCapture />} />
               <Route path="routing" element={<RoutingRules />} />
               <Route path="sla" element={<SlaSettings />} />
+              <Route path="import" element={<ImportCenter />} />
               <Route path="analytics" element={<Analytics />} />
             </Route>
 

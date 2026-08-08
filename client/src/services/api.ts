@@ -380,6 +380,209 @@ export interface QuickCaptureResult {
 }
 
 
+/* ------------------------------------------------------------ Import Center */
+
+/** The eight states an import run moves through, in lifecycle order. */
+export type ImportRunStatus =
+  | 'draft'
+  | 'previewing'
+  | 'mapping'
+  | 'dry_run'
+  | 'committing'
+  | 'complete'
+  | 'quarantined'
+  | 'rolled_back';
+
+/**
+ * Whether the rollback window is still open, computed by the server.
+ *
+ * `available` rather than a raw deadline the screen has to compare against now:
+ * "rollback_deadline: last Tuesday" asks the reader to do date arithmetic to
+ * answer the only question they have.
+ */
+export interface ImportRollbackState {
+  deadline: string | null;
+  rolled_back_at: string | null;
+  available: boolean;
+}
+
+/**
+ * One row of the run register.
+ *
+ * TWO STATUS VOCABULARIES, deliberately. `status` is sdk-import's eight-state
+ * lifecycle, which the drill-in needs; `presentation_status` is the four words
+ * the table is allowed to say. The server derives the second from the first
+ * plus the rights attestation, so every consumer says the same word — two
+ * screens each mapping eight onto four is two chances to disagree about what
+ * "Restricted" means, and the one that matters is the compliance one.
+ */
+export interface ImportRunSummary {
+  run_id: string | null;
+  status: ImportRunStatus | null;
+  presentation_status: 'review' | 'complete' | 'restricted' | 'quarantined' | null;
+  origin_attestation: 'tenant_first_party' | 'third_party' | 'unknown' | null;
+  /** Rows this run brought into existence. */
+  created_count: number | null;
+  /** Rows it attached to somebody already known. */
+  linked_count: number | null;
+  /** Steward cases it left behind. A candidate needing a human is not an error. */
+  review_count: number | null;
+  mapping_template_id: string | null;
+  started_by: string | null;
+  source_kind: string | null;
+  file_name: string | null;
+  row_count: number | null;
+  committed_row_count: number | null;
+  exception_count: number;
+  quarantine_reason: string | null;
+  created_at: string | null;
+  committed_at: string | null;
+  rollback: ImportRollbackState;
+}
+
+export interface ImportTemplateSummary {
+  template_id: string | null;
+  name: string | null;
+  kind: 'certified' | 'custom' | null;
+  version: number | null;
+  source_kind: string | null;
+  canonical_field_count: number | null;
+  transform_count: number | null;
+  /** How often it has been reused — the reason to prefer it over a new one. */
+  use_count: number | null;
+}
+
+export interface ImportConnectorSummary {
+  install_id: string | null;
+  kind: string | null;
+  status: string | null;
+  last_sync_at: string | null;
+}
+
+/**
+ * PER PANEL, not one flag for the page.
+ *
+ * A connector outage must empty the connector tiles and leave the register
+ * intact — the register is what the screen is for. One combined flag would make
+ * the screen claim it knows nothing when it knows most of it.
+ */
+export interface ImportUpstreamAvailability {
+  runs?: boolean;
+  templates?: boolean;
+  connectors?: boolean;
+  source_kinds?: boolean;
+  run?: boolean;
+  exceptions?: boolean;
+  attestation?: boolean;
+  permitted_use?: boolean;
+}
+
+/**
+ * One source tile's usability.
+ *
+ * Reported for EVERY kind the product supports, never a filtered list: a tile
+ * dropped because nobody connected it reads as "not supported", where the same
+ * tile marked unavailable reads as "not connected yet".
+ */
+export interface ImportSourceAvailability {
+  kind: string | null;
+  label: string | null;
+  installed: boolean;
+  available: boolean;
+}
+
+export interface ImportCenter {
+  runs: ImportRunSummary[];
+  source_availability: ImportSourceAvailability[];
+  installed_kinds: string[];
+  run_count: number;
+  /** Counted in the PRESENTATION vocabulary, matching the segmented filter. */
+  status_counts: Partial<Record<'review' | 'complete' | 'restricted' | 'quarantined', number>>;
+  templates: ImportTemplateSummary[];
+  template_count: number;
+  connectors: ImportConnectorSummary[];
+  connector_count: number;
+  upstream_available: ImportUpstreamAvailability;
+  tenant_id: string | null;
+}
+
+/** One dry-run governance check, verbatim — including the ones that passed. */
+export interface ImportGovernanceVerdict {
+  check?: string;
+  passed?: boolean;
+  detail?: string;
+}
+
+/**
+ * Created-entity lineage as a SHAPE rather than as rows.
+ *
+ * A committed run can create tens of thousands of lineage rows; the drill-in
+ * needs how many of each kind and how many are already reversed.
+ */
+export interface ImportLineageSummary {
+  total: number;
+  by_entity_kind: Record<string, number>;
+  by_action: Record<string, number>;
+  reversed: number;
+}
+
+export interface ImportRunDetail {
+  run_id: string;
+  run: Record<string, unknown> | null;
+  lineage: ImportLineageSummary;
+  governance: ImportGovernanceVerdict[];
+  /**
+   * NULL, not zero, when the store could not be reached. "No exceptions" is the
+   * most reassuring thing this screen can say and the most dangerous thing to
+   * say while blind.
+   */
+  exception_count: number | null;
+  rollback: ImportRollbackState;
+  upstream_available: ImportUpstreamAvailability;
+  tenant_id: string | null;
+}
+
+export interface ImportRunReport {
+  report: {
+    run_id: string;
+    status: ImportRunStatus | null;
+    source: { kind: string | null; file_name: string | null };
+    rows: {
+      read: number | null;
+      committed: number | null;
+      excepted: number | null;
+      /** Stated rather than left to the reader to work out. */
+      unaccounted: number | null;
+    };
+    lineage: ImportLineageSummary;
+    governance: ImportGovernanceVerdict[];
+    rollback: ImportRollbackState;
+    committed_at: string | null;
+    started_by: string | null;
+    correlation_id: string | null;
+  };
+  upstream_available: ImportUpstreamAvailability;
+  tenant_id: string | null;
+}
+
+export interface ImportRunEvidence {
+  run_id: string;
+  attestation_id: string | null;
+  attestation: Record<string, unknown> | null;
+  permitted_use: Record<string, unknown> | null;
+  governance: ImportGovernanceVerdict[];
+  evidence: {
+    source_kind: string | null;
+    source_ref: string | null;
+    correlation_id: string | null;
+    committed_at: string | null;
+    /** Says plainly why there is nothing to show, so empty is never mistaken for missing. */
+    basis: string;
+  };
+  upstream_available: ImportUpstreamAvailability;
+  tenant_id: string | null;
+}
+
 /** The trust ladder, in the order the inbox climbs it. */
 export type TrustState =
   | 'P0_CAPTURED'
@@ -704,4 +907,41 @@ export const api = {
     request<{ policy: SlaPolicy; already_inactive: boolean }>(`/sla/policies/${policyId}`, {
       method: 'DELETE',
     }),
+
+  /**
+   * The whole Import Center in ONE call.
+   *
+   * The register, the template library and connector availability arrive
+   * together and already reconciled — the server derives status_counts from the
+   * same run list it returns, so a tile cannot disagree with the rows beneath
+   * it. Three separate browser calls would reintroduce exactly that drift.
+   */
+  importCenter: () => request<ImportCenter>('/leadflow/imports/center'),
+
+  /** One run: its lineage summary, governance verdicts and exception count. */
+  importRun: (runId: string) =>
+    request<ImportRunDetail>(`/leadflow/imports/runs/${encodeURIComponent(runId)}`),
+
+  /**
+   * The completed-run report behind the Report action.
+   *
+   * A POST because composing it fans out across three upstream reads and is
+   * recorded as a disclosure — an import report names what happened to whose
+   * data, and reports get forwarded.
+   */
+  importRunReport: (runId: string) =>
+    request<ImportRunReport>(`/leadflow/imports/runs/${encodeURIComponent(runId)}/report`, {
+      method: 'POST',
+      body: {},
+    }),
+
+  /**
+   * The rights attestation behind a restricted run.
+   *
+   * Gated more narrowly than the rest of the screen — `import.evidence_read` is
+   * held by the Data Steward and the Privacy Officer alone — so this is the one
+   * call here that can 403 for somebody who can see everything else.
+   */
+  importRunEvidence: (runId: string) =>
+    request<ImportRunEvidence>(`/leadflow/imports/runs/${encodeURIComponent(runId)}/evidence`),
 };

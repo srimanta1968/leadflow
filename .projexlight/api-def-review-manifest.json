@@ -3,7 +3,7 @@
     "hash": "f898d52fe1bcb44095ad16b7c78aeb4f0fd893aa3248b1608803f6784edc57dd",
     "status": "findings",
     "findingsCount": 2,
-    "verifiedAt": "2026-08-08T17:40:46",
+    "verifiedAt": "2026-08-08T18:24:36",
     "route": [
       "POST",
       "/leadflow/channel-decision/bulk"
@@ -25,7 +25,7 @@
     "hash": "2852c8e55d632c0a57fe72dd0b4f36b7b365e52457ff71084a1754ba28ca8b32",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-08T17:40:46",
+    "verifiedAt": "2026-08-08T18:24:36",
     "route": [
       "POST",
       "/leadflow/channel-decision"
@@ -41,8 +41,8 @@
   "orchestration/closed-won-start-post.json": {
     "hash": "028f95818a7a9286fa7939b9d8f4fb7f530f9cf88a0760ef0f82434972c4b558",
     "status": "findings",
-    "findingsCount": 2,
-    "verifiedAt": "2026-08-08T17:41:29",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-08T18:24:36",
     "route": [
       "POST",
       "/leadflow/closed-won/start"
@@ -52,11 +52,6 @@
         "rule": "CODE-MATCH",
         "severity": "low",
         "message": "POST /api/leadflow/closed-won/start was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      },
-      {
-        "rule": "AUTH-HEADER",
-        "severity": "high",
-        "message": "POST /api/leadflow/closed-won/start is protected (requiresAuth/requiresRole/401 errorCase) but no testCase carries an auth header \u2014 the runner sends it unauthenticated (\u2192 401/400). Add the header THIS route requires to each testCase (GET included), valued from the auth producer via {{cache:...}} (+ dependsOn): Authorization: Bearer {{cache:<auth-producer>.token}} for JWT, or the vendor token / api-key header (e.g. x-*-ops-token / x-api-key) \u2014 pick the token identity the route accepts (tenant vs non-tenant)."
       }
     ]
   },
@@ -64,7 +59,7 @@
     "hash": "ff35753c0a621145f421d507c2f3de64e081199e51009036df5ad5b87af362e7",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-08T17:40:46",
+    "verifiedAt": "2026-08-08T18:24:36",
     "route": [
       "POST",
       "/leadflow/intake/orchestrate"
@@ -80,8 +75,8 @@
   "orchestration/sagas-run-get.json": {
     "hash": "71002e700ed4c020667a63cacd467df801434f9d23868b2bace60193c4f3bf75",
     "status": "findings",
-    "findingsCount": 2,
-    "verifiedAt": "2026-08-08T17:41:29",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-08T18:24:36",
     "route": [
       "GET",
       "/leadflow/sagas/:p"
@@ -91,191 +86,6 @@
         "rule": "CODE-MATCH",
         "severity": "low",
         "message": "GET /api/leadflow/sagas/{run_id} was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      },
-      {
-        "rule": "AUTH-HEADER",
-        "severity": "high",
-        "message": "GET /api/leadflow/sagas/{run_id} is protected (requiresAuth/requiresRole/401 errorCase) but no testCase carries an auth header \u2014 the runner sends it unauthenticated (\u2192 401/400). Add the header THIS route requires to each testCase (GET included), valued from the auth producer via {{cache:...}} (+ dependsOn): Authorization: Bearer {{cache:<auth-producer>.token}} for JWT, or the vendor token / api-key header (e.g. x-*-ops-token / x-api-key) \u2014 pick the token identity the route accepts (tenant vs non-tenant)."
-      }
-    ]
-  },
-  "capture/extension-domain-policy-get.json": {
-    "hash": "40e4eea61d811addf37e1beb1d69294c626ca0dd530a576efd691d19980ce942",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-08T17:41:41",
-    "route": [
-      "GET",
-      "/leadflow/capture/extension/domain-policy"
-    ],
-    "findings": [
-      {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "GET /api/leadflow/capture/extension/domain-policy was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      }
-    ]
-  },
-  "capture/extension-post.json": {
-    "hash": "a9d4fbc211f3860d76fb783a60595a63f8d63b939c4f22bf0c80ed1b9e06f507",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-08T17:41:41",
-    "route": [
-      "POST",
-      "/leadflow/capture/extension"
-    ],
-    "findings": [
-      {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "POST /api/leadflow/capture/extension was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      }
-    ]
-  },
-  "capture/inbox-get.json": {
-    "hash": "f82545e0afd6411c2396b6257c8fae68313f348919d377ea4aeab4eec1f0ce1b",
-    "status": "findings",
-    "findingsCount": 2,
-    "verifiedAt": "2026-08-08T17:41:41",
-    "route": [
-      "GET",
-      "/leadflow/capture/inbox"
-    ],
-    "findings": [
-      {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "GET /api/leadflow/capture/inbox was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      },
-      {
-        "rule": "MUST-70",
-        "severity": "high",
-        "message": "testCases[7] header 'Authorization' holds a literal secret. Move the VALUE to environments[<env>].variables and reference it as {{var:...}} \u2014 a literal is committed to the repo and is the same in every environment (MUST-46)."
-      }
-    ]
-  },
-  "capture/quick-post.json": {
-    "hash": "4729deb56ba213c1ef6a902b9f31fc6695356d2c0502636979d567dd13dcab23",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-08T17:41:41",
-    "route": [
-      "POST",
-      "/leadflow/capture/quick"
-    ],
-    "findings": [
-      {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "POST /api/leadflow/capture/quick was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      }
-    ]
-  },
-  "capture/resolve-post.json": {
-    "hash": "d9ee8969ed81b1fb8029016c6f0af95b3bf4056781be19e852ce1ea44f1d7e3c",
-    "status": "findings",
-    "findingsCount": 2,
-    "verifiedAt": "2026-08-08T17:41:41",
-    "route": [
-      "POST",
-      "/leadflow/capture/:p/resolve"
-    ],
-    "findings": [
-      {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "POST /api/leadflow/capture/:id/resolve was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      },
-      {
-        "rule": "AUTH-HEADER",
-        "severity": "high",
-        "message": "POST /api/leadflow/capture/:id/resolve is protected (requiresAuth/requiresRole/401 errorCase) but no testCase carries an auth header \u2014 the runner sends it unauthenticated (\u2192 401/400). Add the header THIS route requires to each testCase (GET included), valued from the auth producer via {{cache:...}} (+ dependsOn): Authorization: Bearer {{cache:<auth-producer>.token}} for JWT, or the vendor token / api-key header (e.g. x-*-ops-token / x-api-key) \u2014 pick the token identity the route accepts (tenant vs non-tenant)."
-      }
-    ]
-  },
-  "capture/sync-batch-post.json": {
-    "hash": "b82266849893099e3c23ab0a9aa25be926e975ec90c5d5ec37ad1c7d7ba3d976",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-08T17:41:41",
-    "route": [
-      "POST",
-      "/leadflow/capture/sync-batch"
-    ],
-    "findings": [
-      {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "POST /api/leadflow/capture/sync-batch was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      }
-    ]
-  },
-  "imports/center-get.json": {
-    "hash": "6749376bb1d20acacf1733169d6fd6c775f828e6d2f90b8b25e3ba1dd01042a3",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-08T18:01:32",
-    "route": [
-      "GET",
-      "/leadflow/imports/center"
-    ],
-    "findings": [
-      {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "GET /api/leadflow/imports/center was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      }
-    ]
-  },
-  "imports/runs-id-evidence-get.json": {
-    "hash": "60c64871caf1d796fd1b8d9d2863b224813c54f343fd3aa2fc1d6da3f741e35a",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-08T18:01:32",
-    "route": [
-      "GET",
-      "/leadflow/imports/runs/:p/evidence"
-    ],
-    "findings": [
-      {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "GET /api/leadflow/imports/runs/{run_id}/evidence was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      }
-    ]
-  },
-  "imports/runs-id-get.json": {
-    "hash": "f33018c8197111aadba7e76d9b18e45ced53cde9e55f7ba060551e33cfb84c1c",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-08T18:01:32",
-    "route": [
-      "GET",
-      "/leadflow/imports/runs/:p"
-    ],
-    "findings": [
-      {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "GET /api/leadflow/imports/runs/{run_id} was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      }
-    ]
-  },
-  "imports/runs-id-report-post.json": {
-    "hash": "c0fdd085518c906d2d73e3f44dd2d6b9e0146339e80eca6a25bccf4832f5a204",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-08T18:01:32",
-    "route": [
-      "POST",
-      "/leadflow/imports/runs/:p/report"
-    ],
-    "findings": [
-      {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "POST /api/leadflow/imports/runs/{run_id}/report was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
       }
     ]
   }
