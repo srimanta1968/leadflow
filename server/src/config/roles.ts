@@ -83,6 +83,27 @@ export const PERMISSIONS = {
   SOURCE_RECORD_PROMOTE: 'source_record.promote',
   IMPORT_COMMIT: 'import.commit',
   IMPORT_ROLLBACK: 'import.rollback',
+  /**
+   * ELABORATION. Reading a run's register, lineage and governance verdicts.
+   *
+   * SEPARATE FROM `import.commit` because reading is not committing. Gating the
+   * Import Center on the commit grant would mean anyone allowed to LOOK at an
+   * import was also allowed to APPLY one, which is the wrong way round for a
+   * screen whose whole purpose is review before commitment.
+   */
+  IMPORT_RUN_READ: 'import.run_read',
+  /**
+   * ELABORATION. The attestation and evidence bundle behind a restricted run.
+   *
+   * A SECOND, NARROWER GRANT rather than a reuse of `import.run_read`. The
+   * bundle carries the third-party rights attestation — who swore the data was
+   * lawfully obtained, and on what basis — which is the material a complaint or
+   * a regulator asks for, and is a strictly smaller audience than the people who
+   * may watch imports run. Held by the Data Steward, who adjudicates the import,
+   * and the Privacy Officer, who owns the lawful-basis question; it is the one
+   * permission those two share.
+   */
+  IMPORT_EVIDENCE_READ: 'import.evidence_read',
   CONSENT_PURPOSE_MANAGE: 'consent.purpose_manage',
   DSAR_FULFIL: 'dsar.fulfil',
   ERASURE_EXECUTE: 'erasure.execute',
@@ -241,6 +262,8 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
       PERMISSIONS.SOURCE_RECORD_PROMOTE,
       PERMISSIONS.IMPORT_COMMIT,
       PERMISSIONS.IMPORT_ROLLBACK,
+      PERMISSIONS.IMPORT_RUN_READ,
+      PERMISSIONS.IMPORT_EVIDENCE_READ,
       PERMISSIONS.DATA_CONFIGURE,
     ],
     requiresApproval: [PERMISSIONS.LEAD_BULK_EXPORT, PERMISSIONS.AUDIT_DELETE_EVENT],
@@ -258,6 +281,11 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
       PERMISSIONS.SUPPRESSION_OVERRIDE,
       PERMISSIONS.LEGAL_POLICY_APPROVE,
       PERMISSIONS.COMPLIANCE_RULE_CHANGE,
+      // Reading an import's provenance, and the rights attestation behind it.
+      // NOT import.commit — a Privacy Officer audits the lawful basis of an
+      // import, they do not decide whether the business wants the data.
+      PERMISSIONS.IMPORT_RUN_READ,
+      PERMISSIONS.IMPORT_EVIDENCE_READ,
     ],
     requiresApproval: [PERMISSIONS.AUDIT_DELETE_EVENT],
     sopBasis:

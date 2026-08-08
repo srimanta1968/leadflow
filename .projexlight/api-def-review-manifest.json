@@ -210,5 +210,73 @@
         "message": "POST /api/leadflow/capture/sync-batch was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
       }
     ]
+  },
+  "imports/center-get.json": {
+    "hash": "6749376bb1d20acacf1733169d6fd6c775f828e6d2f90b8b25e3ba1dd01042a3",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-08T18:01:32",
+    "route": [
+      "GET",
+      "/leadflow/imports/center"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/imports/center was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "imports/runs-id-evidence-get.json": {
+    "hash": "60c64871caf1d796fd1b8d9d2863b224813c54f343fd3aa2fc1d6da3f741e35a",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-08T18:01:32",
+    "route": [
+      "GET",
+      "/leadflow/imports/runs/:p/evidence"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/imports/runs/{run_id}/evidence was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "imports/runs-id-get.json": {
+    "hash": "f33018c8197111aadba7e76d9b18e45ced53cde9e55f7ba060551e33cfb84c1c",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-08T18:01:32",
+    "route": [
+      "GET",
+      "/leadflow/imports/runs/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/imports/runs/{run_id} was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "imports/runs-id-report-post.json": {
+    "hash": "c0fdd085518c906d2d73e3f44dd2d6b9e0146339e80eca6a25bccf4832f5a204",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-08T18:01:32",
+    "route": [
+      "POST",
+      "/leadflow/imports/runs/:p/report"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/imports/runs/{run_id}/report was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
   }
 }

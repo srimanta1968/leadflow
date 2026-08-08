@@ -72,7 +72,13 @@ describe('the audit vocabulary', () => {
     // 2 more for the conversation intelligence pipeline: the eligibility CHECK
     // is separate because it happens when there is no recording to attach it to,
     // and a check that blocked a call leaves no other trace anywhere.
-    expect(allAuditEventNames()).toHaveLength(48);
+    // 2 more for the Import Center's read surface. An import read is a
+    // disclosure — an import names what happened to whose data — so who looked
+    // is part of the record. Two names rather than one: reading the run
+    // register and reading the rights ATTESTATION behind a run are different
+    // disclosures, and a single name would make "who read who swore this data
+    // was lawfully obtained" unanswerable, which is the one a complaint asks.
+    expect(allAuditEventNames()).toHaveLength(50);
     expect(isAuditEventName('capture.created.v1')).toBe(true);
     expect(isAuditEventName('sla.breached.v1')).toBe(true);
     expect(isAuditEventName('lead.routed.v1')).toBe(true);

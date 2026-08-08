@@ -106,7 +106,7 @@
       "endpoint": "/api/leadflow/closed-won/start",
       "method": "POST",
       "missing": [
-        "negative testCase for 1 errorCase(s) (MUST-64): 400/VALIDATION_ERROR"
+        "negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN"
       ]
     },
     {
@@ -122,7 +122,7 @@
       "endpoint": "/api/leadflow/sagas/{run_id}",
       "method": "GET",
       "missing": [
-        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+        "negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN"
       ]
     },
     {

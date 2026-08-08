@@ -33,6 +33,18 @@ export const AUDIT_EVENTS = {
   CAPTURE_PROMOTED: 'capture.promoted.v1',
   IMPORT_RUN_COMMITTED: 'import.run.committed.v1',
   IMPORT_RUN_ROLLED_BACK: 'import.run.rolled_back.v1',
+  /** A run's register, lineage or completed-run report was read. */
+  IMPORT_RUN_INSPECTED: 'import.run.inspected.v1',
+  /**
+   * The rights attestation and evidence bundle behind a run was read.
+   *
+   * A SEPARATE EVENT from `inspected`, deliberately. "Somebody looked at the
+   * import queue" and "somebody read the attestation naming who swore this data
+   * was lawfully obtained" are different disclosures, and an audit that spells
+   * them the same way cannot answer the second question — which is the one a
+   * complaint actually asks.
+   */
+  IMPORT_EVIDENCE_EXPORTED: 'import.evidence.exported.v1',
   IDENTITY_LINK_VERIFIED: 'identity.link.verified.v1',
   IDENTITY_LINK_RETRACTED: 'identity.link.retracted.v1',
   CONSENT_RECEIPT_ISSUED: 'consent.receipt.issued.v1',

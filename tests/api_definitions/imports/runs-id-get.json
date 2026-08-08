@@ -1,0 +1,84 @@
+{
+  "name": "GET /api/leadflow/imports/runs/{run_id} - run detail with lineage, verdicts and exception count",
+  "description": "The run drill-in: the run itself, a SUMMARY of the created-entity lineage, the governance verdicts the dry run recorded, and how many rows were excepted.\n\nLINEAGE IS SUMMARISED, NOT STREAMED. A committed run can create tens of thousands of lineage rows, and the drill-in needs the SHAPE of them - how many contacts, how many links, how many already reversed - not the rows themselves. Returning them all would make the screen slower the more successful the import was, which is precisely backwards.\n\nGOVERNANCE VERDICTS COME FROM THE DRY RUN VERBATIM, including the ones that PASSED. A panel listing only failures cannot distinguish 'every check passed' from 'no checks ran', and those are very different states for an import nobody has looked at yet.\n\n404 AND 'UPSTREAM DOWN' ARE DIFFERENT ANSWERS and are never conflated: a run that does not exist is a 404, a store that cannot be reached is a 200 that says so. Collapsing them would let an outage look like a deleted import.\n\nDEGRADES TO AN HONEST 200, NEVER A 502. When ProjexCloud is not configured the response carries upstream_available:false and empty collections rather than an error page - the same choice the Capture Inbox makes, and for the same reason: a screen that renders nothing and says why leaves the operator able to use the rest of the product, and that matters most during exactly the outage that produces it. This is what the suite observes in dev, so the happy path asserts success:true rather than a populated body.\n\nrequiresRole:[\"data_steward\"] and NO testCase pins an Authorization header. import.run_read is held by the Data Steward and the Privacy Officer; the suite's default identity bridges to sales_rep and would only ever see 403. The runner swaps to testCredentials.data_steward (qa.steward@leadflow.test, local role `steward`). A pinned header would take PRECEDENCE over that token and defeat the swap (MUST-71), which is why the 401 cases are documented in errorCases rather than authored - they are middleware behaviour identical across every route and are covered by the definitions that declare no role.\n\nWHAT THE SUITE OBSERVES IS THE 404, and expectedStatus states that rather than an aspirational 200. No LeadFlow route creates an import run - runs are created in sdk-import, and the Import wizard drives it directly - so there is no producer to chain from and no seeded run to read. The id therefore comes from {{var:absent_import_run_id}} and the assertion is the not-found branch, which is a REAL branch worth holding: it is the one that proves an upstream 404 is reported as a missing run rather than as an outage. Point the variable at a seeded run in an environment that has one and the same call returns the populated 200 the description above describes.",
+  "endpoint": "/api/leadflow/imports/runs/{run_id}",
+  "method": "GET",
+  "taskId": "16e54e8c-590d-41d1-9494-9249519c107f",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "data_steward"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "16e54e8c-590d-41d1-9494-9249519c107f#AC2",
+    "16e54e8c-590d-41d1-9494-9249519c107f#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "data.run.status": [
+      "draft",
+      "previewing",
+      "mapping",
+      "dry_run",
+      "committing",
+      "complete",
+      "quarantined",
+      "rolled_back"
+    ],
+    "data.lineage.by_action": [
+      "created",
+      "linked",
+      "updated",
+      "asserted",
+      "reversed"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "NEGATIVE: a well-formed run id that sdk-import reports as absent",
+      "coversCriterion": "16e54e8c-590d-41d1-9494-9249519c107f#AC2",
+      "pathParams": {
+        "run_id": "{{var:absent_import_run_id}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND"
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Not authored as a testCase: it can only be expressed by pinning a header, which would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify. Not authored, for the same reason as above."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller's roles do not grant import.run_read, which is held by the Data Steward and the Privacy Officer. NOT reachable while this definition runs under requiresRole, and kept because it is a real branch the default suite identity receives."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No import run with that id",
+      "when": "sdk-import is reachable and reports no such run. NOT reachable in an environment with no gateway configured, where the endpoint answers 200 with upstream_available:false instead - which is exactly the distinction these endpoints preserve rather than collapse."
+    }
+  ]
+}

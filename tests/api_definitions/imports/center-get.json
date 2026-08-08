@@ -1,0 +1,68 @@
+{
+  "name": "GET /api/leadflow/imports/center - the whole Import Center in one call",
+  "description": "Composes the run register, the mapping-template library and connector availability into ONE response, so the Import Center screen makes a single call instead of fanning out to three SDKs from the browser.\n\nONE CALL PER SCREEN IS THE POINT, not an optimisation. Three browser calls means three round trips over the operator's network, three chances to half-render, and a status tile that can disagree with the register beneath it because the two reads were taken a second apart. Composing server-side makes the screen consistent by construction: status_counts are derived from the SAME run list that is returned, so they cannot drift from it.\n\nThe three upstreams are issued CONCURRENTLY and each degrades on its own. A connector outage empties the connector tiles and leaves the run register intact, because the register is what the screen is FOR - losing it because a different SDK was restarting would be our fault presented as theirs.\n\nDEGRADES TO AN HONEST 200, NEVER A 502. When ProjexCloud is not configured the response carries upstream_available:false and empty collections rather than an error page - the same choice the Capture Inbox makes, and for the same reason: a screen that renders nothing and says why leaves the operator able to use the rest of the product, and that matters most during exactly the outage that produces it. This is what the suite observes in dev, so the happy path asserts success:true rather than a populated body.\n\nrequiresRole:[\"data_steward\"] and NO testCase pins an Authorization header. import.run_read is held by the Data Steward and the Privacy Officer; the suite's default identity bridges to sales_rep and would only ever see 403. The runner swaps to testCredentials.data_steward (qa.steward@leadflow.test, local role `steward`). A pinned header would take PRECEDENCE over that token and defeat the swap (MUST-71), which is why the 401 cases are documented in errorCases rather than authored - they are middleware behaviour identical across every route and are covered by the definitions that declare no role.",
+  "endpoint": "/api/leadflow/imports/center",
+  "method": "GET",
+  "taskId": "16e54e8c-590d-41d1-9494-9249519c107f",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "data_steward"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "16e54e8c-590d-41d1-9494-9249519c107f#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "data.runs[].status": [
+      "draft",
+      "previewing",
+      "mapping",
+      "dry_run",
+      "committing",
+      "complete",
+      "quarantined",
+      "rolled_back"
+    ],
+    "data.templates[].kind": [
+      "certified",
+      "custom"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The composed Import Center",
+      "coversCriterion": "16e54e8c-590d-41d1-9494-9249519c107f#AC4",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Not authored as a testCase: it can only be expressed by pinning a header, which would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify. Not authored, for the same reason as above."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller's roles do not grant import.run_read, which is held by the Data Steward and the Privacy Officer. NOT reachable while this definition runs under requiresRole, and kept because it is a real branch the default suite identity receives."
+    }
+  ]
+}

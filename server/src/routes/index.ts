@@ -10,6 +10,7 @@ import analyticsRoutes from './analyticsRoutes';
 import { authzRoutes } from '../platform/policy';
 import { intakeRoutes } from '../features/intake';
 import { captureRoutes } from '../features/capture';
+import { importsRoutes } from '../features/imports';
 import { aiRoutes } from '../features/ai';
 import { conversationRoutes } from '../features/conversation';
 import { sdkHealthRoutes } from '../platform/sdkGateway';
@@ -36,6 +37,10 @@ router.use('/analytics', analyticsRoutes);
 router.use('/leadflow/authz', authzRoutes);
 router.use('/leadflow/intake', intakeRoutes);
 router.use('/leadflow/capture', captureRoutes);
+// Behind `authenticate` inside the router itself, like every other governed
+// surface: governed() reads roles from the session, which only exists once
+// authenticate has run.
+router.use('/leadflow/imports', importsRoutes);
 router.use('/leadflow/ai', aiRoutes);
 router.use('/leadflow/calls', conversationRoutes);
 router.use('/leadflow/platform', sdkHealthRoutes);

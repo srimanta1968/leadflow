@@ -1,46 +1,30 @@
 {
-  "updatedAt": "2026-08-08T17:41:41",
-  "scope": "capture",
+  "updatedAt": "2026-08-08T18:01:32",
+  "scope": "imports",
   "gaps": [
     {
-      "file": "tests/api_definitions/capture/extension-domain-policy-get.json",
+      "file": "tests/api_definitions/imports/center-get.json",
       "rules": [
         "CODE-MATCH"
       ],
       "findingsCount": 1
     },
     {
-      "file": "tests/api_definitions/capture/extension-post.json",
+      "file": "tests/api_definitions/imports/runs-id-evidence-get.json",
       "rules": [
         "CODE-MATCH"
       ],
       "findingsCount": 1
     },
     {
-      "file": "tests/api_definitions/capture/inbox-get.json",
-      "rules": [
-        "CODE-MATCH",
-        "MUST-70"
-      ],
-      "findingsCount": 2
-    },
-    {
-      "file": "tests/api_definitions/capture/quick-post.json",
+      "file": "tests/api_definitions/imports/runs-id-get.json",
       "rules": [
         "CODE-MATCH"
       ],
       "findingsCount": 1
     },
     {
-      "file": "tests/api_definitions/capture/resolve-post.json",
-      "rules": [
-        "AUTH-HEADER",
-        "CODE-MATCH"
-      ],
-      "findingsCount": 2
-    },
-    {
-      "file": "tests/api_definitions/capture/sync-batch-post.json",
+      "file": "tests/api_definitions/imports/runs-id-report-post.json",
       "rules": [
         "CODE-MATCH"
       ],
@@ -50,7 +34,7 @@
   "missingDefinitions": [],
   "captureSyncIssues": 0,
   "summary": {
-    "withFindings": 6,
-    "findingsCount": 8
+    "withFindings": 4,
+    "findingsCount": 4
   }
 }
