@@ -397,3 +397,64 @@ export const SUPPRESSION_SOURCES: StrategyOption[] = [
  */
 export const SUPPRESSION_RULE =
   'Most restrictive wins. If any source suppresses a contact point it stays suppressed — an import can add a suppression, never lift one.';
+
+/* ------------------------------------------------------------------------ */
+/*  Step 10: dry run, governance checks, commit                              */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * A governance check's verdict.
+ *
+ * THREE VALUES, NOT TWO. `review` is the interesting one: the check did not
+ * fail, but it found something a person should look at before thousands of rows
+ * land. Collapsing it into `pass` hides it; collapsing it into `fail` blocks
+ * imports that are perfectly legitimate. So it blocks the commit until somebody
+ * ACKNOWLEDGES it by name — which is a decision with an owner, rather than a
+ * warning everybody scrolls past.
+ */
+export type CheckVerdict = 'pass' | 'review' | 'fail';
+
+export interface GovernanceCheck {
+  key: string;
+  label: string;
+  verdict: CheckVerdict;
+  detail: string;
+}
+
+/** How long a committed run stays reversible, per the mockup. */
+export const ROLLBACK_WINDOW_HOURS = 24;
+
+/**
+ * Why a rollback is no longer available.
+ *
+ * AC4. The window is not the only thing that closes it: once a DOWNSTREAM
+ * GOVERNED ACTION has happened — a message sent, a consent receipt issued, a
+ * lead assigned and worked — the import is no longer the only author of what
+ * exists. Reversing it then would retract records that a person has since acted
+ * on, and would leave the sent message referring to a contact that no longer
+ * exists. So the moment such an action occurs the rollback closes, even if the
+ * 24 hours have not elapsed.
+ */
+export type RollbackBlockedReason = 'window_expired' | 'downstream_action' | 'already_rolled_back' | null;
+
+export const ROLLBACK_BLOCKED_TEXT: Record<Exclude<RollbackBlockedReason, null>, string> = {
+  window_expired: `The ${ROLLBACK_WINDOW_HOURS}-hour rollback window has closed. Retracting individual records is still possible through Data Review.`,
+  downstream_action: 'A downstream governed action has already occurred on these records — a message sent, a consent receipt issued, or a lead assigned and worked. Rolling back now would retract records somebody has since acted on, and would leave that action referring to something that no longer exists.',
+  already_rolled_back: 'This run has already been rolled back.',
+};
+
+/**
+ * The commit plan, stated before the button is pressed.
+ *
+ * IDEMPOTENCY IS ON THE RUN, THE FILE AND THE CROSSWALK together. The run id
+ * alone would let the same file commit twice under two runs; the fingerprint
+ * alone would block a legitimate re-import of a corrected file; the crosswalk is
+ * what stops a row landing twice when the same external id arrives from two
+ * sources. All three, or a retry after a timeout creates a second copy of
+ * everybody.
+ */
+export const COMMIT_PLAN = [
+  'One atomic batch. It lands whole or not at all — there is no partial import to reconcile afterwards.',
+  'Idempotent on run id + file fingerprint + source crosswalk, so a retry after a timeout cannot create a second copy of anybody.',
+  'Correlated events for import, mapping, resolution, entity, relationship, suppression and exception — one causation chain, so any record can be traced back to the row it came from.',
+];

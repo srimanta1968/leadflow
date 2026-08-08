@@ -122,6 +122,20 @@ export interface WizardState {
   consentEvidence: string;
   /** Keys from SUPPRESSION_SOURCES. Merged most-restrictive-wins. */
   suppressionSources: string[];
+
+  /* ---------------------------------------------- step 10: commit */
+
+  /**
+   * Governance checks the operator has explicitly acknowledged, by key.
+   *
+   * A `review` verdict blocks the commit until it appears here. Acknowledgement
+   * is per check and by name deliberately: a single "I have read the warnings"
+   * tick is a decision with no owner and no record of WHICH warning was
+   * accepted.
+   */
+  acknowledgedChecks: string[];
+  /** True once the local dry run has been performed. Cleared by any edit upstream. */
+  dryRunComplete: boolean;
 }
 
 export const EMPTY_WIZARD_STATE: WizardState = {
@@ -153,6 +167,8 @@ export const EMPTY_WIZARD_STATE: WizardState = {
   consentSource: 'none',
   consentEvidence: '',
   suppressionSources: ['existing', 'provider'],
+  acknowledgedChecks: [],
+  dryRunComplete: false,
 };
 
 /** Field names that must never be written, whatever a future edit adds. */

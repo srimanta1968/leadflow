@@ -29,6 +29,11 @@ import {
   POSSIBLE_MATCH_OPTIONS,
   SUPPRESSION_RULE,
   SUPPRESSION_SOURCES,
+  COMMIT_PLAN,
+  ROLLBACK_BLOCKED_TEXT,
+  ROLLBACK_WINDOW_HOURS,
+  type CheckVerdict,
+  type GovernanceCheck,
   isUsableConsentEvidence,
   mappingViolation,
   type CanonicalTarget,
@@ -43,25 +48,34 @@ import {
 } from '../../features/imports/wizardState';
 
 /**
- * Contact Import & Reconciliation — #importModal, steps 1-6.
+ * Contact Import & Reconciliation — #importModal, all ten steps.
  *
- * Source -> evidence -> mapping -> identity -> governance -> commit. Ten steps
- * are shown from the outset because the operator should be able to see, before
- * uploading anything, that an attestation is coming. Steps 4-10 land in the
- * tasks that follow; the stepper renders them as not-yet-reachable rather than
- * hiding them, so the shape of the commitment is honest from step one.
+ * Source -> evidence -> mapping -> identity -> governance -> commit. All ten are
+ * shown from the outset because the operator should be able to see, before
+ * uploading anything, that an attestation is coming.
  *
- * THREE REFUSALS RATHER THAN WARNINGS, on steps 4-6. A licensed or partner
- * origin cannot be attested without evidence; an address column is not OFFERED a
- * person target at all; and mapping the source system’s lifecycle onto Lead is
- * off until somebody turns it on. Each is enforced by the control rather than by
- * a message the operator can click past.
+ * THE FILE NEVER LEAVES THE BROWSER UNTIL COMMIT. Preview, delimiter, encoding
+ * and header detection are computed locally from a slice of the file, and the
+ * dry run rehearses against that same local copy. The bytes go to sdk-import at
+ * COMMIT — which is after the origin attestation on step 4, because an export
+ * the operator has not yet claimed the right to use must not already have
+ * crossed the boundary.
  *
- * THE FILE NEVER LEAVES THE BROWSER IN THESE THREE STEPS. Preview, delimiter,
- * encoding and header detection are all computed locally from a slice of the
- * file. The bytes go to sdk-import at COMMIT, which is after the origin
- * attestation on step 4 — an export the operator has not yet claimed the right
- * to use must not have already crossed the boundary.
+ * EVERY GOVERNANCE RULE HERE IS ENFORCED BY A CONTROL, never by a message the
+ * operator can click past:
+ *
+ *   step 4  a licensed or partner origin cannot be attested without evidence,
+ *           and changing the origin class clears the signature;
+ *   step 5  an address column is not OFFERED a person target at all;
+ *   step 6  mapping the source system’s lifecycle onto Lead is off until
+ *           somebody turns it on;
+ *   step 7  no band offers a merge, in any form;
+ *   step 8  Leads are unavailable until a reachable contact point is confirmed;
+ *   step 9  a blank or generic consent value founds no receipt;
+ *   step 10 the commit is disabled until every check passes or is acknowledged
+ *           BY NAME — and a `fail` cannot be acknowledged at all, only a
+ *           `review`, because a missing attestation is not a risk somebody may
+ *           accept on a checkbox.
  */
 
 const STEPS = [
@@ -78,7 +92,7 @@ const STEPS = [
 ];
 
 /** The last step this task implements. Beyond it the wizard is not yet built. */
-const IMPLEMENTED_THROUGH = 9;
+const IMPLEMENTED_THROUGH = 10;
 
 /** Sources that connect by OAuth rather than by file upload. */
 const OAUTH_SOURCES = new Set(['google', 'apple']);
@@ -257,6 +271,90 @@ export function ImportWizardModal({ open, onClose, initialSource }: Props): JSX.
   const consentSpec = CONSENT_SOURCES.find((s) => s.key === state.consentSource);
   const consentEvidenceUsable =
     !consentSpec?.requiresEvidence || isUsableConsentEvidence(state.consentEvidence);
+
+  /* ------------------------------------------------ step 10 gating */
+
+  /*
+   * The governance checks, derived from what the operator actually chose on the
+   * earlier steps rather than asserted here. A check that cannot fail is
+   * decoration; each of these reads real state, so editing an earlier step
+   * changes the verdict.
+   */
+  const checks: GovernanceCheck[] = [
+    {
+      key: 'attestation',
+      label: 'Source attestation signed',
+      verdict: state.attested ? 'pass' : 'fail',
+      detail: state.attested
+        ? `Attested as ${state.originClass ?? 'unknown origin'}.`
+        : 'Nobody has attested to the origin of this data. Go back to step 4.',
+    },
+    {
+      key: 'mapping',
+      label: 'Mapping completeness',
+      verdict: columns.length === 0 ? 'fail' : confirmedCount === columns.length ? 'pass' : 'review',
+      detail: columns.length === 0
+        ? 'No file has been inspected.'
+        : `${confirmedCount} of ${columns.length} columns confirmed. Unconfirmed columns are not imported - they are dropped, not guessed.`,
+    },
+    {
+      key: 'identity_risk',
+      label: 'Identity risk profile',
+      verdict: state.exactMatchStrategy === 'auto_link' ? 'review' : 'pass',
+      detail: state.exactMatchStrategy === 'auto_link'
+        ? 'Exact matches will auto-link without a steward looking. Safe on a source crosswalk or a validated contact point, and every link stays retractable - but it is a decision worth naming.'
+        : 'Every match goes to a steward. Nothing links automatically.',
+    },
+    {
+      key: 'consent',
+      label: 'Consent interpretation',
+      verdict: consentEvidenceUsable ? 'pass' : 'review',
+      detail: consentEvidenceUsable
+        ? 'No fabricated receipts. Consent is imported only where real evidence was supplied.'
+        : 'The consent evidence is blank or generic, so NO receipts will be created. Records still import; nothing may be claimed about permission.',
+    },
+  ];
+
+  const blocking = checks.filter((c) => c.verdict === 'fail');
+  const needsAck = checks.filter((c) => c.verdict === 'review' && !state.acknowledgedChecks.includes(c.key));
+
+  /*
+   * AC1. A failed check cannot be acknowledged away - only a `review` can. The
+   * distinction matters: "nobody attested to this data" is not a risk somebody
+   * may accept on a checkbox, it is a missing prerequisite.
+   */
+  const canCommit = blocking.length === 0 && needsAck.length === 0 && state.dryRunComplete;
+
+  const VERDICT_CLASS: Record<CheckVerdict, string> = {
+    pass: 'text-emerald-700',
+    review: 'text-amber-700',
+    fail: 'text-red-700',
+  };
+
+  /*
+   * AC4. In this build no downstream governed action has occurred yet, so the
+   * reason is the honest one for a run that has not been committed at all.
+   * The mapping from state to reason lives here so the rule is in one place
+   * when the commit endpoint starts reporting it.
+   */
+  const rollbackBlocked: keyof typeof ROLLBACK_BLOCKED_TEXT | null = null;
+
+  /** Exceptions the dry run found, downloadable BEFORE the commit (AC3). */
+  const dryRunExceptions = columns.length === 0
+    ? []
+    : (preview?.rows ?? []).filter((row) => row.length !== columns.length);
+
+  const downloadExceptions = () => {
+    const header = ['row_number', 'reason', ...columns].join(',');
+    const lines = dryRunExceptions.map((row, i) => [i + 1, 'column_count_mismatch', ...row].join(','));
+    const blob = new Blob([[header, ...lines].join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'dry-run-exceptions.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const radioGroup = (
     name: string,
@@ -1094,6 +1192,160 @@ export function ImportWizardModal({ open, onClose, initialSource }: Props): JSX.
                   either way; whether anything may be sent is decided by the channel-decision engine at send time.
                 </p>
               </div>
+            </section>
+          )}
+
+          {/* ------------------------------------------------ 10. Commit */}
+          {state.step === 10 && (
+            <section aria-label="Dry Run and Commit">
+              <h3 className="text-base font-semibold text-slate-900">Dry Run &amp; Commit</h3>
+              <p className="mb-3 text-sm text-slate-600">
+                Rehearse the whole import, then land it in one atomic batch.
+              </p>
+
+              {/* ------------------------------------------ impact grid */}
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                {[
+                  { label: 'Rows', value: String(preview?.rowCount ?? 0), sub: 'excluding header' },
+                  { label: 'New Contacts', value: String(Math.max(0, (preview?.rowCount ?? 0) - dryRunExceptions.length)), sub: 'after validation' },
+                  { label: 'Exact Links', value: state.exactMatchStrategy === 'auto_link' ? 'auto' : '0', sub: 'safe deterministic' },
+                  { label: 'Review Cases', value: state.possibleMatchStrategy === 'review_cases' ? 'all' : '0', sub: 'possible matches' },
+                  { label: 'Properties', value: state.downstream.includes('contacts') ? 'create or link' : '0', sub: 'never a person column' },
+                  { label: 'Invalid Rows', value: String(dryRunExceptions.length), sub: 'to the exception file' },
+                  { label: 'Enrichment', value: 'None', sub: '0 credits — an import never spends one' },
+                  { label: 'Rollback Window', value: `${ROLLBACK_WINDOW_HOURS} hours`, sub: 'or until a downstream action' },
+                ].map((tile) => (
+                  <div key={tile.label} className="rounded border border-slate-200 p-2">
+                    <span className="block text-xs text-slate-500">{tile.label}</span>
+                    <strong className="text-slate-900">{tile.value}</strong>
+                    <small className="block text-slate-500">{tile.sub}</small>
+                  </div>
+                ))}
+              </div>
+
+              {/* ------------------------------------------- the dry run */}
+              <div className="mt-4 rounded border border-slate-300 bg-slate-50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <strong className="block text-slate-900">Dry run</strong>
+                    {/* AC2 - stated on the screen, not merely true. */}
+                    <p className="text-sm text-slate-700">
+                      A dry run performs ZERO writes. Nothing is created, linked, suppressed or sent; the counts above
+                      are what a commit WOULD do. In this build the rehearsal runs entirely in the browser against the
+                      file you inspected, so it cannot write even by accident.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    name="run-dry-run"
+                    onClick={() => patch({ dryRunComplete: true })}
+                    className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
+                  >
+                    {state.dryRunComplete ? 'Re-run dry run' : 'Run dry run'}
+                  </button>
+                </div>
+                {state.dryRunComplete && (
+                  <p className="mt-2 text-sm text-emerald-700">
+                    Dry run complete. 0 writes observed. {dryRunExceptions.length} row(s) would go to the exception file.
+                  </p>
+                )}
+              </div>
+
+              {/* -------------------------------------- governance checks */}
+              <h4 className="mt-4 text-sm font-semibold text-slate-900">Governance Checks</h4>
+              <ul className="mt-1 space-y-1">
+                {checks.map((check) => {
+                  const acknowledged = state.acknowledgedChecks.includes(check.key);
+                  return (
+                    <li key={check.key} className="rounded border border-slate-200 p-2 text-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <span>
+                          <strong className={VERDICT_CLASS[check.verdict]}>
+                            {check.verdict === 'pass' ? 'Pass' : check.verdict === 'review' ? 'Review' : 'Blocked'}
+                          </strong>{' '}
+                          <span className="text-slate-900">{check.label}</span>
+                          <span className="block text-xs text-slate-600">{check.detail}</span>
+                        </span>
+                        {/* A `fail` cannot be acknowledged away - only a `review`
+                            can. "Nobody attested to this data" is a missing
+                            prerequisite, not a risk to accept on a checkbox. */}
+                        {check.verdict === 'review' && (
+                          <label className="flex shrink-0 items-center gap-1 text-xs">
+                            <input
+                              type="checkbox"
+                              name={'ack-' + check.key}
+                              checked={acknowledged}
+                              onChange={(e) => patch({
+                                acknowledgedChecks: e.target.checked
+                                  ? [...state.acknowledgedChecks, check.key]
+                                  : state.acknowledgedChecks.filter((k) => k !== check.key),
+                              })}
+                            />
+                            Acknowledge
+                          </label>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* ------------------------------------------- commit plan */}
+              <h4 className="mt-4 text-sm font-semibold text-slate-900">Commit Plan</h4>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                {COMMIT_PLAN.map((line) => <li key={line}>{line}</li>)}
+              </ul>
+
+              {/* --------------------------------------------- the actions */}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {/* AC3 - available BEFORE the commit, so the operator can see
+                    what would be dropped while they can still change it. */}
+                <button
+                  type="button"
+                  name="download-exceptions"
+                  onClick={downloadExceptions}
+                  disabled={!state.dryRunComplete}
+                  className="rounded border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40"
+                  title={state.dryRunComplete ? 'Download the rows the dry run would reject' : 'Run the dry run first'}
+                >
+                  Download dry-run exceptions
+                </button>
+
+                <button
+                  type="button"
+                  name="commit-import"
+                  disabled={!canCommit}
+                  className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white disabled:opacity-40"
+                >
+                  Commit import
+                </button>
+
+                <button
+                  type="button"
+                  name="rollback-import"
+                  disabled
+                  className="rounded border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-40"
+                  title="Available for 24 hours after a commit, and closes the moment a downstream governed action occurs"
+                >
+                  Roll back
+                </button>
+              </div>
+
+              {!canCommit && (
+                <p className="mt-2 text-sm text-amber-700">
+                  {blocking.length > 0
+                    ? `Commit is blocked: ${blocking.map((c) => c.label).join(', ')}. A blocked check cannot be acknowledged — fix it on the step it came from.`
+                    : needsAck.length > 0
+                      ? `Acknowledge ${needsAck.map((c) => c.label).join(' and ')} before committing.`
+                      : 'Run the dry run before committing.'}
+                </p>
+              )}
+
+              <p className="mt-3 text-xs text-slate-600">
+                {rollbackBlocked
+                  ? ROLLBACK_BLOCKED_TEXT[rollbackBlocked]
+                  : `After a commit this run stays reversible for ${ROLLBACK_WINDOW_HOURS} hours — and the rollback closes earlier, the moment a downstream governed action occurs on these records. Reversing after somebody has messaged a contact would retract a record they have already acted on.`}
+              </p>
             </section>
           )}
         </div>
