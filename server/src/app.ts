@@ -7,6 +7,7 @@ import routes from './routes';
 import { dataService } from './services/DataService';
 import { runMigrations } from './db/migrationRunner';
 import { seedVerticalProfile } from './db/verticalSeed';
+import { advancePipeline, dispatchOutbox, registerEventReceiver } from './platform/events';
 import { seedDevAdmin, seedDevSteward } from './db/devSeed';
 import { provisionAuditEventTypes } from './platform/audit/eventTypeProvisioner';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -162,6 +163,48 @@ async function bootstrap(): Promise<void> {
       `[app] roles provisioned: ${roles.created} created, ${roles.alreadyPresent} already present, ${roles.failed} failed`
     );
   }
+
+  /*
+   * Register the webhook receiver with sdk-webhook.
+   *
+   * Reports `skipped` and returns rather than throwing when the receiver URL,
+   * the signing key ref or the tenant is unset — which is every developer
+   * machine. A boot that dies because an optional integration is unconfigured is
+   * a worse failure than the integration being off.
+   */
+  const receiver = await registerEventReceiver();
+  if (receiver.attempted) {
+    console.log(
+      `[app] event receiver ${receiver.endpointId ?? 'unregistered'}: `
+      + `${receiver.subscribed.length} subscribed, ${receiver.refused.length} refused`,
+    );
+    for (const r of receiver.refused) {
+      console.error(`[app] subscription refused for ${r.eventType}: ${r.reason}`);
+    }
+  } else {
+    console.log(`[app] event receiver not registered: ${receiver.skipped}`);
+  }
+
+  /*
+   * The two background ticks.
+   *
+   * unref() on both, so a pending timer never holds the process open during a
+   * shutdown — a interval that keeps node alive turns SIGTERM into a hang, and
+   * the container gets SIGKILLed mid-write instead.
+   *
+   * Errors are logged and swallowed on purpose: a failed tick must not become an
+   * unhandled rejection that takes the API down with it. Both operations are
+   * idempotent, so the next tick simply tries again.
+   */
+  const outboxTimer = setInterval(() => {
+    dispatchOutbox().catch((e: Error) => console.error('[outbox] dispatch failed:', e.message));
+  }, config.outbox.tickMs);
+  outboxTimer.unref();
+
+  const projectionTimer = setInterval(() => {
+    advancePipeline().catch((e: Error) => console.error('[events] advance failed:', e.message));
+  }, config.outbox.tickMs);
+  projectionTimer.unref();
 
   const server = app.listen(PORT, () => {
     console.log(`LeadFlow API listening on port ${PORT} (${config.nodeEnv})`);

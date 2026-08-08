@@ -1,0 +1,55 @@
+{
+  "name": "POST /api/leadflow/events/projexcloud - the ProjexCloud delivery receiver",
+  "description": "Receives a ProjexCloud webhook delivery, verifies its HMAC, records it in the event log and acknowledges. The projection is folded AFTER the response.\n\nNOT BEARER-AUTHENTICATED, and that is deliberate rather than an omission (MUST-52 exempts signed webhooks). The caller is ProjexCloud, not a person: it holds no session and never will. Its credential is an HMAC over the exact bytes, which is strictly stronger here than a bearer token because it also proves the payload was not altered in transit.\n\nTHE SIGNED STRING IS `${timestamp}.${event_id}.${raw_body}`, transcribed from sdk-webhook's hmacSigner rather than guessed, and sent as `X-Projexcloud-Signature: t=<unix>,v1=<hex>` with the algorithm in `X-Projexcloud-Algo` and the id in `X-Projexcloud-Event-Id`. The event id being INSIDE the signature is what stops a captured delivery being replayed as a different event - and it is the same id we deduplicate on, so the two cannot be separated.\n\nANSWERS 200 FOR EVERY VERDICT EXCEPT A BAD SIGNATURE. Senders retry on any non-2xx, so refusing a payload we have permanently rejected makes them redeliver it on a schedule we do not control, forever. A failed signature is the one case that MUST be non-2xx: it is the only signal telling the sender their key is wrong, and swallowing it with 200 leaves a misconfigured integration looking healthy while nothing lands.\n\nIDEMPOTENT ON THE EVENT ID (AC2). At-least-once means a redelivery is routine, not exotic. The log's primary key is the producer's own event id, so the second delivery writes no row and no handler runs; the sender still gets 200, because a consistent answer is what stops the retry loop.\n\nA REFUSED DELIVERY IS STILL RECORDED, with signature_verified=false, and is never projected. 'Never arrived' and 'arrived and we rejected it' are different incidents, and during an outage that difference is the whole investigation.\n\nFAILS CLOSED when no signing secret is configured: every delivery is refused rather than trusted, because an unverifiable event that reaches the projections is indistinguishable from a real one afterwards.\n\nQA NOTE: the api runner cannot compute a valid HMAC, so only the refusal paths are exercised here. The signed path is proved by tests/unit/eventConsumer.test.ts against the producer's exact algorithm, and was verified live - signed 200, redelivered 200 with one log row, forged 401, four-thousand-second replay 401.",
+  "endpoint": "/api/leadflow/events/projexcloud",
+  "method": "POST",
+  "taskId": "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974",
+  "featureId": "1bb439b6-5cec-42fa-a6d5-418b1c0296d6",
+  "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": false,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 401,
+  "coversCriterion": [
+    "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974#AC2"
+  ],
+  "testCases": [
+    {
+      "name": "NEGATIVE: an unsigned delivery is refused",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "payload": {
+        "event_type": "{{static:crm.deal.stage_changed.v1}}",
+        "subject_id": "{{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a delivery with a signature header but no event id",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {
+        "X-Projexcloud-Signature": "t=1800000000,v1={{dynamic:uuid}}"
+      },
+      "payload": {
+        "event_type": "{{static:crm.deal.stage_changed.v1}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "X-Projexcloud-Signature header is missing",
+      "when": "the delivery carries no signature, no event id, a malformed signature header, a signature that does not match the body, a timestamp outside the 300-second window, or arrives while no signing secret is configured. All are refused with 401 so the sender learns its key or clock is wrong; every other verdict answers 200 to stop an unbounded retry loop."
+    }
+  ]
+}

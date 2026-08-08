@@ -1,0 +1,69 @@
+{
+  "name": "GET /api/leadflow/events/outbox/dlq - outbound writes that gave up",
+  "description": "Lists outbox rows parked after exhausting their retries, with the attempt count and the last error (AC4).\n\nWHY AN OUTBOX EXISTS AT ALL. A local write and a ProjexCloud write cannot share a transaction, so a crash between them loses one of the two - silently, and in the direction that hurts most: we recorded a lead nobody upstream knows about. Writing the intent locally in the SAME transaction as the local change makes the pair recoverable, and the dispatcher retries until the SDK acknowledges.\n\nTHE IDEMPOTENCY KEY IS STORED, NOT MINTED AT SEND TIME. That single choice is what makes at-least-once safe: every retry presents the same key, so the SDK recognises the second attempt as the same intention. A key generated in the dispatcher would make each retry a fresh write, and the outbox would become a duplicate generator with excellent uptime.\n\nPARKED, NOT DROPPED, AND NOT RETRIED FOREVER. A row failing its ninth attempt is failing for a reason retrying will not fix, and leaving it pending hides the working rows behind it. This endpoint is what makes the parked ones countable - a dead letter nobody can list is a silent data-loss channel.\n\nBehind authenticate; the rows carry an SDK, a path and an error, not personal values. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/events/outbox/dlq",
+  "method": "GET",
+  "taskId": "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974",
+  "featureId": "1bb439b6-5cec-42fa-a6d5-418b1c0296d6",
+  "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "testCases": [
+    {
+      "name": "Lists parked outbound deliveries",
+      "coversCriterion": "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974#AC4",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Verified against the running server rather than assumed."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify. Distinct from UNAUTHENTICATED because the caller's fix differs: attach a token versus refresh one."
+    }
+  ]
+}

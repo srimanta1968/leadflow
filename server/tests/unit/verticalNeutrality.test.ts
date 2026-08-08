@@ -146,6 +146,9 @@ describe('no SDK-owned domain table is duplicated locally', () => {
       'leadflow_kpi_definition', 'leadflow_certification_score',
       'leadflow_operating_rhythm_digest', 'leadflow_purpose_taxonomy_map',
       'leadflow_routing_config', 'leadflow_outbox',
+      // 016 — the event log and what is derived from it.
+      'leadflow_event_log', 'leadflow_projection_checkpoint',
+      'leadflow_event_dead_letter', 'leadflow_pipeline_projection',
     ];
     const missing = expected.filter((t) => !tables.includes(t));
     expect(missing.join('\n')).toBe('');
@@ -262,9 +265,13 @@ describe('the schema self-provisions and is safe to re-run', () => {
       'leadflow_close_reason',
       'leadflow_dashboard_rollup',
       'leadflow_disposition_code',
+      'leadflow_event_dead_letter',
+      'leadflow_event_log',
       'leadflow_kpi_definition',
       'leadflow_operating_rhythm_digest',
       'leadflow_outbox',
+      'leadflow_pipeline_projection',
+      'leadflow_projection_checkpoint',
       'leadflow_purpose_taxonomy_map',
       'leadflow_routing_config',
       'leadflow_saved_view',

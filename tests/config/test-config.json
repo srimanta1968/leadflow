@@ -15,7 +15,9 @@
       "apiUrl": "http://localhost:3010/api",
       "variables": {
         "test_password": "LeadFlow!Test2026",
-        "_test_password_note": "Shared by the register and login api_definitions. A password is never returned in a response, so login cannot capture it from register and both must reference this one value. Declared per environment, not globally: a password is secret-shaped, and a global would apply this dev value to every environment."
+        "_test_password_note": "Shared by the register and login api_definitions. A password is never returned in a response, so login cannot capture it from register and both must reference this one value. Declared per environment, not globally: a password is secret-shaped, and a global would apply this dev value to every environment.",
+        "absent_outbox_delivery_id": "00000000-0000-4000-8000-00000000dead",
+        "_absent_outbox_delivery_id_note": "A well-formed UUID that deliberately matches NO parked outbox row, for the 404 case on POST /api/leadflow/events/outbox/{id}/replay. Declared as a variable rather than {{dynamic:uuid}} because MUST-36 bans a generated id in a foreign-key position, and rightly: a random id in a path is indistinguishable from a producer that was never wired. There is no producer here by design - a dead-letter row cannot be created through the API, only reached by exhausting retries - so the no-producer form is the correct one."
       },
       "portals": {
         "leadflow": {
@@ -31,7 +33,9 @@
       "_port_note": "5173 is the Vite app and 3010 is the Express API — NOT 3000/5000. Port 3000 on this machine serves ProjexCloud's Next.js app and answers 200, so pointing the UI runner there does not fail fast: it loads someone else's application and every step fails with a confusing 'element not found'. Port 5000 is not listening at all. Confirmed by title: :3000 is 'ProjexCloud', :5173 is 'LeadFlow — The AI Revenue Operating System'.",
       "variables": {
         "test_password": "LeadFlow!Test2026",
-        "_test_password_note": "Shared by the register and login api_definitions. A password is never returned in a response, so login cannot capture it from register and both must reference this one value. Declared per environment, not globally: a password is secret-shaped, and a global would apply this dev value to every environment."
+        "_test_password_note": "Shared by the register and login api_definitions. A password is never returned in a response, so login cannot capture it from register and both must reference this one value. Declared per environment, not globally: a password is secret-shaped, and a global would apply this dev value to every environment.",
+        "absent_outbox_delivery_id": "00000000-0000-4000-8000-00000000dead",
+        "_absent_outbox_delivery_id_note": "A well-formed UUID that deliberately matches NO parked outbox row, for the 404 case on POST /api/leadflow/events/outbox/{id}/replay. Declared as a variable rather than {{dynamic:uuid}} because MUST-36 bans a generated id in a foreign-key position, and rightly: a random id in a path is indistinguishable from a producer that was never wired. There is no producer here by design - a dead-letter row cannot be created through the API, only reached by exhausting retries - so the no-producer form is the correct one."
       },
       "portals": {
         "leadflow": {
@@ -45,7 +49,9 @@
       "baseUrl": "<CHANGE_ME>",
       "apiUrl": "<CHANGE_ME>",
       "variables": {
-        "test_password": "<CHANGE_ME>"
+        "test_password": "<CHANGE_ME>",
+        "absent_outbox_delivery_id": "00000000-0000-4000-8000-00000000dead",
+        "_absent_outbox_delivery_id_note": "A well-formed UUID that deliberately matches NO parked outbox row, for the 404 case on POST /api/leadflow/events/outbox/{id}/replay. Declared as a variable rather than {{dynamic:uuid}} because MUST-36 bans a generated id in a foreign-key position, and rightly: a random id in a path is indistinguishable from a producer that was never wired. There is no producer here by design - a dead-letter row cannot be created through the API, only reached by exhausting retries - so the no-producer form is the correct one."
       },
       "portals": {
         "leadflow": {
@@ -59,7 +65,9 @@
       "baseUrl": "<CHANGE_ME>",
       "apiUrl": "<CHANGE_ME>",
       "variables": {
-        "test_password": "<CHANGE_ME>"
+        "test_password": "<CHANGE_ME>",
+        "absent_outbox_delivery_id": "00000000-0000-4000-8000-00000000dead",
+        "_absent_outbox_delivery_id_note": "A well-formed UUID that deliberately matches NO parked outbox row, for the 404 case on POST /api/leadflow/events/outbox/{id}/replay. Declared as a variable rather than {{dynamic:uuid}} because MUST-36 bans a generated id in a foreign-key position, and rightly: a random id in a path is indistinguishable from a producer that was never wired. There is no producer here by design - a dead-letter row cannot be created through the API, only reached by exhausting retries - so the no-producer form is the correct one."
       },
       "portals": {
         "leadflow": {
@@ -73,7 +81,9 @@
       "baseUrl": "<CHANGE_ME>",
       "apiUrl": "<CHANGE_ME>",
       "variables": {
-        "test_password": "<CHANGE_ME>"
+        "test_password": "<CHANGE_ME>",
+        "absent_outbox_delivery_id": "00000000-0000-4000-8000-00000000dead",
+        "_absent_outbox_delivery_id_note": "A well-formed UUID that deliberately matches NO parked outbox row, for the 404 case on POST /api/leadflow/events/outbox/{id}/replay. Declared as a variable rather than {{dynamic:uuid}} because MUST-36 bans a generated id in a foreign-key position, and rightly: a random id in a path is indistinguishable from a producer that was never wired. There is no producer here by design - a dead-letter row cannot be created through the API, only reached by exhausting retries - so the no-producer form is the correct one."
       },
       "portals": {
         "leadflow": {
@@ -88,7 +98,9 @@
       "apiUrl": "http://localhost:3010",
       "variables": {
         "test_password": "LeadFlow!Test2026",
-        "_test_password_note": "Mirrors environments.dev.variables. Both keys describe this same local machine, so the dev password is correct here; it is still declared per environment rather than globally so it can never reach qa, staging or production."
+        "_test_password_note": "Mirrors environments.dev.variables. Both keys describe this same local machine, so the dev password is correct here; it is still declared per environment rather than globally so it can never reach qa, staging or production.",
+        "absent_outbox_delivery_id": "00000000-0000-4000-8000-00000000dead",
+        "_absent_outbox_delivery_id_note": "A well-formed UUID that deliberately matches NO parked outbox row, for the 404 case on POST /api/leadflow/events/outbox/{id}/replay. Declared as a variable rather than {{dynamic:uuid}} because MUST-36 bans a generated id in a foreign-key position, and rightly: a random id in a path is indistinguishable from a producer that was never wired. There is no producer here by design - a dead-letter row cannot be created through the API, only reached by exhausting retries - so the no-producer form is the correct one."
       },
       "portals": {
         "leadflow": {

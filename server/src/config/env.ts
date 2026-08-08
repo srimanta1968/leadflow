@@ -46,6 +46,16 @@ export interface AppConfig {
     stewardEmail: string;
     stewardPassword: string;
   };
+  outbox: {
+    /**
+     * How often the outbox dispatcher and the projection consumer tick.
+     *
+     * Both are catch-up mechanisms rather than the primary path — the receiver
+     * advances projections inline and callers enqueue synchronously — so this
+     * only bounds how long a MISSED one waits, not normal latency.
+     */
+    tickMs: number;
+  };
   projexCloud: {
     gatewayUrl: string;
     apiKey: string;
@@ -60,6 +70,32 @@ export interface AppConfig {
      */
     rootTenantId: string;
     appId: string;
+    /**
+     * Shared secret for verifying INBOUND ProjexCloud webhook deliveries.
+     *
+     * Distinct from apiKey, which authenticates LeadFlow when it calls OUT. This
+     * one proves a delivery arriving here really came from ProjexCloud, and it
+     * has to be separate: a single value used in both directions means anybody
+     * who can read our outbound credential can forge inbound events.
+     *
+     * Empty fails CLOSED — the receiver refuses every delivery rather than
+     * trusting whatever arrives, because an unverifiable event that reaches the
+     * projections is indistinguishable from a real one afterwards.
+     */
+    webhookSecret: string;
+    /**
+     * A REFERENCE to the signing key, never the key itself.
+     *
+     * sdk-webhook resolves the ref through its own key resolver; sending the
+     * literal secret would put it in the producer's request log for no benefit.
+     */
+    webhookSigningKeyRef: string;
+    /**
+     * Where ProjexCloud should POST deliveries. Must be https:// — sdk-webhook
+     * refuses plain http, and rightly: the HMAC proves origin, not secrecy, and
+     * the payloads carry personal data.
+     */
+    webhookReceiverUrl: string;
     /**
      * The sdk-policy policy evaluated for browser-capture domain restrictions.
      *
@@ -159,6 +195,9 @@ export const config: AppConfig = {
   // ProjexCloud SDK gateway — the source of every horizontal capability.
   // When gatewayUrl/apiKey are unset the gateway client reports itself
   // unconfigured and callers apply their documented local fallback.
+  outbox: {
+    tickMs: Number(process.env.OUTBOX_TICK_MS || 15000),
+  },
   projexCloud: {
     gatewayUrl: process.env.PROJEXCLOUD_GATEWAY_URL || '',
     apiKey: process.env.PROJEXCLOUD_API_KEY || '',
@@ -173,6 +212,9 @@ export const config: AppConfig = {
     // entirely when empty, so a gateway that scopes by tenant alone is
     // unaffected.
     appId: process.env.PROJEXCLOUD_APP_ID || '',
+    webhookSecret: process.env.PROJEXCLOUD_WEBHOOK_SECRET || '',
+    webhookSigningKeyRef: process.env.PROJEXCLOUD_WEBHOOK_SIGNING_KEY_REF || '',
+    webhookReceiverUrl: process.env.PROJEXCLOUD_WEBHOOK_RECEIVER_URL || '',
     capturePolicyId: process.env.PROJEXCLOUD_CAPTURE_POLICY_ID || '',
     timeoutMs: parseInt(process.env.PROJEXCLOUD_TIMEOUT_MS || '8000', 10),
     identity: {

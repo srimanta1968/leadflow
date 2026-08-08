@@ -297,6 +297,34 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
     rationale:
       'Configuration — the tenant\'s routing preferences. Holds no subject data of its own: a rule pinning a territory to a representative stores that representative\'s id, and users is where that is cleared.',
   },
+  {
+    surface: 'leadflow_event_log',
+    method: 'delete',
+    personalColumns: ['payload'],
+    rationale:
+      'THE SURFACE WITH THE SHARPEST TENSION IN THE SCHEMA. The payload is whatever ProjexCloud sent — a reply body, a name on a booking, a payment descriptor — so it is personal data. It is also the substrate the projections are REBUILT from, which means redacting it is not enough and deleting it is not optional: leave the rows and the next `POST /api/leadflow/events/rebuild` faithfully reconstructs the erased person into leadflow_pipeline_projection, turning an erasure into a scheduled resurrection. Rows for the subject are therefore DELETED, and a rebuild afterwards is correct precisely because it produces a projection in which they do not appear. What is NOT lost is the audit trail: this table is a replay substrate, not the ledger — sdk-audit holds the immutable record that the events arrived and that the erasure was performed, and that record must outlive the data it acted on.',
+  },
+  {
+    surface: 'leadflow_pipeline_projection',
+    method: 'delete',
+    personalColumns: [],
+    rationale:
+      'Purely derived — every column is a fold of the event log, and no writer other than the consumer touches it. Deleted rather than redacted because a redacted projection row is a row the next rebuild would immediately overwrite from the log, so redaction here would be undone automatically. Deleting it alongside the log rows is what makes the erasure hold across a rebuild rather than survive only until the next one.',
+  },
+  {
+    surface: 'leadflow_event_dead_letter',
+    method: 'delete',
+    personalColumns: ['payload'],
+    rationale:
+      'Holds the full payload of an event a handler could not process, which is the same personal data as the log and kept for longer by definition — a dead letter sits until somebody looks at it. Easy to miss precisely because it is the failure path: an erasure that clears the happy path and leaves the parked copies has cleared the smaller half.',
+  },
+  {
+    surface: 'leadflow_projection_checkpoint',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'One row per projection holding a sequence number and a rebuild flag. Deliberately NOT reset during an erasure: rewinding the checkpoint would re-fold the log from zero, and the point of the erasure is that those rows are gone rather than that they are reprocessed.',
+  },
 ];
 
 /** Surfaces that actually require an erasure action. */

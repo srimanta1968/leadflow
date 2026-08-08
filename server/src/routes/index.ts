@@ -13,6 +13,7 @@ import { captureRoutes } from '../features/capture';
 import { aiRoutes } from '../features/ai';
 import { conversationRoutes } from '../features/conversation';
 import { sdkHealthRoutes } from '../platform/sdkGateway';
+import { eventRoutes as platformEventRoutes } from '../platform/events';
 
 /**
  * Root API router, mounted at `/api`.
@@ -37,5 +38,6 @@ router.use('/leadflow/capture', captureRoutes);
 router.use('/leadflow/ai', aiRoutes);
 router.use('/leadflow/calls', conversationRoutes);
 router.use('/leadflow/platform', sdkHealthRoutes);
+router.use('/leadflow/events', platformEventRoutes);
 
 export default router;

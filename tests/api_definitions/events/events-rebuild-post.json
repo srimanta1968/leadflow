@@ -1,0 +1,70 @@
+{
+  "name": "POST /api/leadflow/events/rebuild - recompute the projection from the log",
+  "description": "Discards the pipeline projection and folds it again from the event log, from sequence zero (AC3).\n\nTHE ONLY HONEST FIX FOR A PROJECTION BUG. Hand-patching a derived table leaves it agreeing with nothing - not the log it came from, not the next rebuild - and the patch is invisible to everyone who comes later. Recomputing from what actually happened is reproducible and self-documenting.\n\nSAFE BECAUSE THE FOLD IS PURE. apply(state, event) reaches for no clock, no database and no randomness, so replaying the same events in the same order gives byte-identical output. That property is what makes this endpoint a repair tool rather than a second way to corrupt the data.\n\nThe checkpoint is marked `rebuilding` for the duration, so a restart part-way through does not present a half-built projection as current. Unverified events are skipped on a rebuild exactly as they are on the live path - a delivery whose signature failed is evidence that something tried to reach us, never a fact about a lead.\n\n200 rather than 202: the rebuild completes before answering, so the caller can read the result rather than poll for it. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/events/rebuild",
+  "method": "POST",
+  "taskId": "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974",
+  "featureId": "1bb439b6-5cec-42fa-a6d5-418b1c0296d6",
+  "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 2,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974#AC3"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "testCases": [
+    {
+      "name": "Rebuilds and reports what it applied",
+      "coversCriterion": "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974#AC3",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {},
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Verified against the running server rather than assumed."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify. Distinct from UNAUTHENTICATED because the caller's fix differs: attach a token versus refresh one."
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "name": "GET /api/leadflow/events/status - how far the consumer has got",
+  "description": "Advances the pipeline projection and reports where it now stands: how many events were applied, how many were dead-lettered, the checkpoint sequence, and a stable fingerprint of the whole projection.\n\nTHE FINGERPRINT IS THE ACCEPTANCE CRITERION MADE OBSERVABLE (AC1). 'Killing the consumer mid-stream and restarting produces byte-identical projection state' is only checkable if the state has a stable identity, so it is an md5 over the projection's columns ordered by subject - not a row-to-JSON, which would depend on physical row order and on how the driver serialises a timestamp.\n\nADVANCING ON A READ is deliberate. The consumer is a catch-up mechanism rather than the primary path - the receiver folds inline and a background tick covers the rest - so making the status call advance means an operator asking 'where are we?' cannot be told a number that is stale because nothing has polled recently. It is idempotent: a second call applies nothing.\n\nBehind authenticate rather than governed: the payload is sequences and counts, with no subject to make a governed decision about. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/events/status",
+  "method": "GET",
+  "taskId": "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974",
+  "featureId": "1bb439b6-5cec-42fa-a6d5-418b1c0296d6",
+  "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974#AC1"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "captureResponse": {
+    "events.status.response.data.checkpoint": "data.checkpoint"
+  },
+  "testCases": [
+    {
+      "name": "Reports the checkpoint and a projection fingerprint",
+      "coversCriterion": "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974#AC1",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Verified against the running server rather than assumed."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify. Distinct from UNAUTHENTICATED because the caller's fix differs: attach a token versus refresh one."
+    }
+  ]
+}

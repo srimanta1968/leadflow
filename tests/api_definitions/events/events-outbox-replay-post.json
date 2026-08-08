@@ -1,0 +1,86 @@
+{
+  "name": "POST /api/leadflow/events/outbox/:id/replay - put a parked delivery back in the queue",
+  "description": "Moves one dead-lettered outbox row back to pending and immediately drains the queue (AC4).\n\nATTEMPTS RESET TO ZERO, because an operator replaying a row has usually fixed the cause; carrying the old count would send it straight back to the dead letter after a single further failure, which makes the recovery path useless exactly when it is needed.\n\nTHE ROW KEEPS ITS IDEMPOTENCY KEY. A replay of something that DID land upstream - the classic case, where the write succeeded and the acknowledgement was lost - is recognised by the SDK as the same intention rather than written twice. Reissuing the key here would turn the recovery tool into the duplicate generator it exists to prevent.\n\n404 RATHER THAN 409 for an id that is not parked. From the caller's point of view there is no parked delivery with that id, whether because it never existed or because it has already been replayed, and both mean the same thing: nothing here to act on.\n\nBehind authenticate. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/events/outbox/{id}/replay",
+  "method": "POST",
+  "taskId": "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974",
+  "featureId": "1bb439b6-5cec-42fa-a6d5-418b1c0296d6",
+  "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 2,
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "testCases": [
+    {
+      "name": "NEGATIVE: an id with no parked delivery",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{var:absent_outbox_delivery_id}}"
+      },
+      "payload": {},
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "pathParams": {
+        "id": "{{var:absent_outbox_delivery_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "pathParams": {
+        "id": "{{var:absent_outbox_delivery_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Verified against the running server rather than assumed."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify. Distinct from UNAUTHENTICATED because the caller's fix differs: attach a token versus refresh one."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No parked outbox delivery with that id",
+      "when": "the id matches no row in the dead letter - either it never existed or it has already been replayed. Both are answered the same way because from the caller's side they are the same fact."
+    }
+  ]
+}
