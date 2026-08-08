@@ -35,8 +35,10 @@ Feature: Import Center screen
   @login:default
   Scenario: All eight supported sources are offered, with the mockup's wording
     When I navigate to "/app/import"
-    Then I should see "Import Center"
-    And I should see "Source-Specific Ingestion & Reconciliation"
+    # NOT "Import Center" - that string is both the h1 AND the sidebar nav
+    # link, and the runner resolved the <a> and tried to FILL it. The eyebrow
+    # is unique to the page, so it identifies the screen unambiguously.
+    Then I should see "Source-Specific Ingestion & Reconciliation"
     And I should see "Connect a supported source, upload a source-native export, or map any custom CSV."
     And I should see "Google Contacts"
     And I should see "Apple Contacts"
@@ -96,9 +98,15 @@ Feature: Import Center screen
   @portal:leadflow
   @login:default
   Scenario: The register is reported as unavailable rather than as empty
-    # "There are no runs" and "we could not ask" are different facts, and this
-    # environment can produce either. Whichever it is, the table says which -
-    # an empty table with no explanation is the one outcome that would be wrong.
+    # "There are no runs" and "we could not ask" are DIFFERENT FACTS, and an
+    # empty table with no explanation is the one outcome that would be wrong.
+    #
+    # This environment runs without the ProjexCloud gateway, so sdk-import is
+    # genuinely unreachable and the register takes the UNAVAILABLE branch. That
+    # is the branch asserted here. When the gateway IS up and returns no runs,
+    # the same table says "No runs under <filter>" instead - the point of the
+    # scenario is that it never just renders an unexplained blank.
     When I navigate to "/app/import"
     Then I should see "Import Runs"
-    And I should see "No runs under"
+    And I should see "Could not reach the import store, so the register is unavailable rather than empty."
+    And I should see "Could not reach the template library."
