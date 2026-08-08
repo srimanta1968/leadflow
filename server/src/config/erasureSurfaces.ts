@@ -89,7 +89,7 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
     method: 'no_subject_data',
     personalColumns: [],
     rationale:
-      'DELIBERATE FINDING, not an omission. LeadFlow stores no rollup table: AnalyticsService aggregates over the leads table at query time, so once leads is redacted the dashboard reflects it on the next read with nothing further to shred. Recorded because the task brief names dashboard rollups as a surface, and the honest answer is that this app does not have one.',
+      'No rollup table of its own for the query-time dashboard: AnalyticsService aggregates over the leads table at read time, so once leads is redacted the dashboard reflects it on the next read. This entry USED to say LeadFlow had no rollup table AT ALL, which stopped being true when migration 015 added leadflow_dashboard_rollup - see that surface below. Kept under its own name because the erasure certificate names it, and a line that simply disappeared would read as a skipped check rather than a corrected one.',
   },
   {
     surface: 'template_merge_cache',
@@ -216,6 +216,86 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
     personalColumns: [],
     rationale:
       'The append-only chain of custody: stage, actor, a detail line, a hash and a timestamp. Actors are operators or services, cleared through the users surface, and the detail lines are written about the PIPELINE rather than about the person — no transcript text, no contact point. AND IT COULD NOT BE ERASED EVEN IF IT HELD SOMETHING: migration 014 installs a trigger that refuses UPDATE and DELETE, because a chain the application can rewrite is not a chain. That is a deliberate constraint on erasure and it is the right one — the record of who handled a recording must outlive the recording, or the erasure itself becomes unprovable. Any future column here must therefore be non-personal by construction.',
+  },
+  {
+    surface: 'leadflow_outbox',
+    method: 'delete',
+    personalColumns: ['payload'],
+    rationale:
+      'THE SURFACE MOST EASILY MISSED, because the data is only passing through. A pending row holds the full body of a write on its way to a ProjexCloud SDK — a name, an email, a phone number — and it sits there for as long as the dispatcher has not succeeded, which during an outage is hours. Erasing the lead while a queued row still describes them would re-send the erased person upstream on the next retry, turning an erasure into a delayed re-creation. DELETED rather than redacted: an outbox row is an INTENT, and an intent with its payload nulled is not a smaller intent, it is a broken one the dispatcher would retry forever. A dispatched row is equally deletable — the record of what was sent belongs in the audit ledger, which is sdk-audit\'s surface, not this one.',
+  },
+  {
+    surface: 'leadflow_dashboard_rollup',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'Aggregates only: a KPI key, a window, a numeric value and a sample size. scope_id holds a team or owner id rather than a personal value, and it is cleared transitively through users. A rollup that named individuals would need a different method entirely; listed explicitly so adding such a column is a visible change to this file rather than a silent gap.',
+  },
+  {
+    surface: 'leadflow_operating_rhythm_digest',
+    method: 'delete',
+    personalColumns: ['payload'],
+    rationale:
+      'The management digest embeds a SNAPSHOT — "these five leads are at risk", by name — so it carries personal data that outlives the records it was drawn from. Deleted rather than redacted, because a digest whose payload is nulled proves only that a digest happened, and the question worth answering (was the Monday review produced?) is still answerable from the period index. Regenerating one after an erasure is correct: it should describe the world after the erasure, not before it.',
+  },
+  {
+    surface: 'leadflow_certification_score',
+    method: 'redact',
+    personalColumns: ['assessed_by'],
+    rationale:
+      'Operators are data subjects too. subject_id points at users and is cleared there, but assessed_by is free text that in practice holds an assessor\'s email. REDACTED rather than deleted: routing consults whether a certification is current, and deleting the row would silently make a certified representative ineligible as a side effect of somebody else\'s erasure request.',
+  },
+  {
+    surface: 'leadflow_saved_view',
+    method: 'delete',
+    personalColumns: ['filters'],
+    rationale:
+      'A saved view stores a QUESTION, and a question can name a person — "everything for dana@example.com" is an ordinary saved filter. The value is personal data even though no column is named for it. Deleted rather than redacted because a view whose filter is nulled MATCHES EVERYTHING, which is worse than the view not existing: an operator opens it expecting a narrow queue and is handed the whole table.',
+  },
+  {
+    surface: 'leadflow_template_library',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'Templates, not messages. The body holds merge placeholders; the rendered result containing a real name is transient and never stored here. A real person\'s details typed into a template is a content error rather than a schema one, and the approval step is where that is caught.',
+  },
+  {
+    surface: 'leadflow_stage_config',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale: 'Configuration — the ten SOP §06 stages and their entry/exit evidence rules.',
+  },
+  {
+    surface: 'leadflow_disposition_code',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale: 'Configuration — the contact-outcome vocabulary.',
+  },
+  {
+    surface: 'leadflow_close_reason',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale: 'Configuration — why a record closed won or lost.',
+  },
+  {
+    surface: 'leadflow_kpi_definition',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale: 'Configuration — KPI labels, units, direction and targets.',
+  },
+  {
+    surface: 'leadflow_purpose_taxonomy_map',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'Maps a consent purpose key to this vertical\'s wording. The KEY is shared with ProjexCloud and the label is copy; neither identifies anybody. The consent RECEIPTS that reference these keys are sdk-consent\'s surface, not this one.',
+  },
+  {
+    surface: 'leadflow_routing_config',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'Configuration — the tenant\'s routing preferences. Holds no subject data of its own: a rule pinning a territory to a representative stores that representative\'s id, and users is where that is cleared.',
   },
 ];
 

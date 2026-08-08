@@ -6,6 +6,7 @@ import { config } from './config/env';
 import routes from './routes';
 import { dataService } from './services/DataService';
 import { runMigrations } from './db/migrationRunner';
+import { seedVerticalProfile } from './db/verticalSeed';
 import { seedDevAdmin, seedDevSteward } from './db/devSeed';
 import { provisionAuditEventTypes } from './platform/audit/eventTypeProvisioner';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -92,6 +93,17 @@ const PORT = config.port || 3000;
  */
 async function bootstrap(): Promise<void> {
   await runMigrations();
+
+  // The vertical profile is projected into its config tables immediately after
+  // the schema exists and before anything serves. A screen that reads a stage
+  // label from an unseeded table renders a blank pipeline, which looks like a
+  // data problem rather than a boot-order one.
+  const vertical = await seedVerticalProfile();
+  console.log(
+    `[app] vertical profile: ${vertical.stages} stages, ${vertical.dispositions} dispositions, `
+    + `${vertical.closeReasons} close reasons, ${vertical.kpis} KPIs, ${vertical.purposes} purposes`
+    + (vertical.retired > 0 ? `, ${vertical.retired} retired` : ''),
+  );
 
   // Non-production only, and inert unless credentials are configured. Gives the
   // API contract suite a caller holding the governed roles, so it can test the
@@ -197,9 +209,21 @@ async function bootstrap(): Promise<void> {
   process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-bootstrap().catch((error: Error) => {
-  console.error('[app] startup failed:', error.message);
-  process.exit(1);
-});
+/*
+ * ONLY WHEN THIS MODULE IS THE ENTRY POINT.
+ *
+ * bootstrap() runs migrations, seeds and provisioners — DDL and writes. Calling
+ * it at module scope means merely IMPORTING app.ts provisions a database, so a
+ * test that wanted the express app for one route assertion would silently
+ * migrate whatever schema its environment happened to point at. Nothing imports
+ * it that way today; this makes that stay true rather than remain a coincidence,
+ * and it is what lets `export default app` be safe to consume.
+ */
+if (require.main === module) {
+  bootstrap().catch((error: Error) => {
+    console.error('[app] startup failed:', error.message);
+    process.exit(1);
+  });
+}
 
 export default app;

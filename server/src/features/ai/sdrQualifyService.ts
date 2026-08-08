@@ -10,6 +10,7 @@ import { AppError, ErrorCodes } from '../../utils/errors';
 import { assertOfferTruth } from './offerTruth';
 import { appendAuditEntry } from '../../platform/audit/auditLog';
 import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
+import { BRAND } from '../../config/verticalProfile';
 
 /**
  * The AI SDR module.
@@ -254,18 +255,18 @@ function renderDraft(
     ? `about ${campaign}`
     : lead.source
       ? `through ${lead.source}`
-      : 'about Lynked Up Pro';
+      : `about ${BRAND.tradingName}`;
 
   if (channel === 'sms') {
     // One CTA, and the identification the SOP requires on an outbound message.
     return {
       subject: null,
-      body: `Hi ${firstName}, this is Lynked Up Pro following up on your enquiry ${reference}. Is now a good time for a short call, or would later today suit you better? Reply STOP to opt out.`,
+      body: `Hi ${firstName}, this is ${BRAND.tradingName} following up on your enquiry ${reference}. Is now a good time for a short call, or would later today suit you better? Reply STOP to opt out.`,
     };
   }
 
   return {
-    subject: 'We received your Lynked Up Pro request',
+    subject: `We received your ${BRAND.tradingName} request`,
     body: [
       `Hi ${firstName},`,
       '',
