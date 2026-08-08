@@ -90,6 +90,38 @@ export interface WizardState {
 
   /** Keyed by TRANSFORM_STEPS[].key. Absent means the spec's default applies. */
   transforms: Record<string, boolean>;
+
+  /* ----------------------------------------------- step 7: identity */
+
+  /**
+   * What happens to each match band.
+   *
+   * There is no 'merge' value here and there is no option that produces one.
+   * LeadFlow links; it never destroys one record into another.
+   */
+  exactMatchStrategy: string;
+  possibleMatchStrategy: string;
+  noMatchStrategy: string;
+
+  /* ------------------------------------------------- step 8: access */
+
+  accessScope: string;
+  ownerStrategy: string;
+  /** Keys from DOWNSTREAM_OPTIONS. 'leads' is gated on the qualification mapping. */
+  downstream: string[];
+
+  /* ------------------------------------------------ step 9: consent */
+
+  consentSource: string;
+  /**
+   * The notice version, timestamp or receipt reference behind the consent.
+   *
+   * Checked with isUsableConsentEvidence: blank or generic values produce NO
+   * receipt rather than a receipt whose evidence reads 'unknown'.
+   */
+  consentEvidence: string;
+  /** Keys from SUPPRESSION_SOURCES. Merged most-restrictive-wins. */
+  suppressionSources: string[];
 }
 
 export const EMPTY_WIZARD_STATE: WizardState = {
@@ -112,6 +144,15 @@ export const EMPTY_WIZARD_STATE: WizardState = {
   attested: false,
   mappings: {},
   transforms: {},
+  exactMatchStrategy: 'all_to_review',
+  possibleMatchStrategy: 'review_cases',
+  noMatchStrategy: 'canonical',
+  accessScope: 'private',
+  ownerStrategy: 'unassigned',
+  downstream: ['contacts'],
+  consentSource: 'none',
+  consentEvidence: '',
+  suppressionSources: ['existing', 'provider'],
 };
 
 /** Field names that must never be written, whatever a future edit adds. */

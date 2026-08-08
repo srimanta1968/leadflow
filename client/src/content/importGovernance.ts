@@ -229,3 +229,171 @@ export const TRANSFORM_STEPS: TransformStepSpec[] = [
       'OFF BY DEFAULT. Another system’s "qualified" is not this one’s, and importing it silently would drop thousands of records into a pipeline stage nobody assessed them for — they would then be worked, messaged and counted in forecasts on a judgement no human made. Enable it only when the source stages have actually been reconciled with ours.',
   },
 ];
+
+/* ------------------------------------------------------------------------ */
+/*  Steps 7-9: identity, access, consent                                     */
+/* ------------------------------------------------------------------------ */
+
+export interface StrategyOption {
+  key: string;
+  label: string;
+  detail: string;
+}
+
+/**
+ * What to do with each match band.
+ *
+ * NOTE WHAT IS ABSENT: there is no merge option, in any band, and that absence
+ * is the whole of AC1. LeadFlow LINKS records; it never destroys one into
+ * another. A merge is irreversible by construction — once two source records
+ * are collapsed you can no longer tell which assertion came from which, so a
+ * mistaken merge cannot be undone even in principle. A link keeps both source
+ * records and their evidence, which is exactly why a verified link CAN be
+ * retracted and the projections replayed. Offering merge "just for the obvious
+ * cases" would put the one irreversible act in the product behind the least
+ * scrutinised click on the screen.
+ */
+export const EXACT_MATCH_OPTIONS: StrategyOption[] = [
+  {
+    key: 'auto_link',
+    label: 'Auto-link safe exact matches',
+    detail: 'On a source crosswalk, or an exactly validated phone or email, under the tenant risk profile. Both source records are kept and the link is retractable.',
+  },
+  {
+    key: 'all_to_review',
+    label: 'Send all to review',
+    detail: 'Nothing links automatically. Every match becomes a steward case, however exact it looks.',
+  },
+];
+
+export const POSSIBLE_MATCH_OPTIONS: StrategyOption[] = [
+  {
+    key: 'review_cases',
+    label: 'Create review cases',
+    detail: 'The source is preserved at P2 with an evidence comparison for the steward.',
+  },
+  {
+    key: 'provisional',
+    label: 'Import separately as provisional entities',
+    detail: 'Each becomes its own provisional entity carrying a candidate link, resolved later.',
+  },
+  {
+    key: 'skip',
+    label: 'Skip, retaining only the exception file',
+    detail: 'Nothing is created. The rows stay in the exception file so the decision stays auditable.',
+  },
+];
+
+export const NO_MATCH_OPTIONS: StrategyOption[] = [
+  {
+    key: 'canonical',
+    label: 'Create canonical entity after validation',
+    detail: 'The standard path for a clean row that matches nothing existing.',
+  },
+  {
+    key: 'provisional_only',
+    label: 'Create provisional only',
+    detail: 'Requires steward verification before the record is treated as canonical.',
+  },
+];
+
+export const ACCESS_SCOPES: StrategyOption[] = [
+  { key: 'private', label: 'Private to importer', detail: 'Only you can see these records until you widen the scope.' },
+  { key: 'teams', label: 'Selected teams', detail: 'Shared with named teams, still subject to field masks and export permissions.' },
+  { key: 'organization', label: 'Entire organization', detail: 'Visible org-wide, subject to field masks and export permissions.' },
+];
+
+export const OWNER_STRATEGIES: StrategyOption[] = [
+  { key: 'preserve', label: 'Preserve mapped source owner', detail: 'Uses the owner column from the file, where one was mapped.' },
+  { key: 'named', label: 'Named user', detail: 'Everything imported is owned by one person.' },
+  { key: 'round_robin', label: 'Round robin by team', detail: 'Distributed across a team through sdk-assignment rotation.' },
+  { key: 'unassigned', label: 'Unassigned queue', detail: 'Parked for routing to pick up, so nothing is silently owned by nobody.' },
+];
+
+/**
+ * Fields that must be mapped and confirmed before Leads may be created.
+ *
+ * AC3, and the reason is the save gate rather than tidiness: a Lead in this
+ * product must have an owner, a next action and an intended outcome. A row with
+ * no reachable contact point cannot support any of that, so creating Leads from
+ * it manufactures records that are broken the moment anybody opens them — and
+ * they are worked, messaged and counted in forecasts in the meantime.
+ */
+export const LEAD_QUALIFICATION_TARGETS: readonly CanonicalTarget[] = [
+  'contact.email',
+  'contact.phone',
+];
+
+export const DOWNSTREAM_OPTIONS: StrategyOption[] = [
+  { key: 'contacts', label: 'Contacts and Property relationships', detail: 'The default. Contacts and their ASSOCIATED_WITH property links.' },
+  { key: 'leads', label: 'Leads', detail: 'Only available once the qualification fields are mapped and confirmed.' },
+  { key: 'prospect_list', label: 'Add to a prospect list', detail: 'Membership only. Campaign eligibility is evaluated separately at send time and is never inherited from an import.' },
+];
+
+/**
+ * How consent arrives with an import.
+ *
+ * `requiresEvidence` marks the options that cannot produce a receipt from a
+ * blank or generic value — AC2. A receipt is the artefact you produce when
+ * somebody later asks "on what basis did you contact me". "Imported", "n/a" or
+ * an empty cell answers that with nothing, so it must not become a receipt at
+ * all: the honest outcome is no consent record, not a receipt whose evidence
+ * field reads "unknown".
+ */
+export const CONSENT_SOURCES: (StrategyOption & { requiresEvidence: boolean })[] = [
+  {
+    key: 'none',
+    label: 'No consent is being imported',
+    detail: 'Records land with no consent record. Outreach is decided by the channel-decision engine at send time.',
+    requiresEvidence: false,
+  },
+  {
+    key: 'mapped_evidence',
+    label: 'Consent evidence is mapped from the file',
+    detail: 'A column carries the notice version, timestamp or receipt reference. Rows whose value is blank or generic produce NO receipt.',
+    requiresEvidence: true,
+  },
+  {
+    key: 'documented',
+    label: 'Consent is documented outside the file',
+    detail: 'A reference to the notice or agreement covering this population.',
+    requiresEvidence: true,
+  },
+];
+
+/** Values that look like evidence but say nothing, so cannot found a receipt. */
+const GENERIC_EVIDENCE = new Set([
+  '', 'n/a', 'na', 'none', 'unknown', 'imported', 'import', 'yes', 'true', '1',
+  'consent', 'consented', 'opt in', 'opt-in', 'optin', 'legacy', 'existing', '-', '--',
+]);
+
+/**
+ * Whether a consent evidence value can found a receipt.
+ *
+ * "yes" is the interesting rejection: it is the single most common value in a
+ * consent column, and it carries no notice version, no timestamp and no record
+ * of what the person was actually told — which is precisely what a receipt has
+ * to state.
+ */
+export function isUsableConsentEvidence(value: string): boolean {
+  return !GENERIC_EVIDENCE.has(value.trim().toLowerCase());
+}
+
+export const SUPPRESSION_SOURCES: StrategyOption[] = [
+  { key: 'file', label: 'Suppression flags in this file', detail: 'Unsubscribe, do-not-call or bounce columns mapped from the import.' },
+  { key: 'existing', label: 'Existing LeadFlow suppressions', detail: 'Anything already suppressed here stays suppressed.' },
+  { key: 'provider', label: 'Provider suppression lists', detail: 'Bounces and complaints held by the sending providers.' },
+];
+
+/**
+ * The merge rule for suppression across sources.
+ *
+ * AC4, and it only ever tightens. If ANY source says do not contact, the answer
+ * is do not contact — a later import cannot lift a suppression, because the
+ * person who unsubscribed did not change their mind by appearing in somebody's
+ * spreadsheet. Anything else lets a stale vendor file quietly re-enable outreach
+ * to a person who has already refused it, which is the exact sequence that
+ * produces complaints.
+ */
+export const SUPPRESSION_RULE =
+  'Most restrictive wins. If any source suppresses a contact point it stays suppressed — an import can add a suppression, never lift one.';

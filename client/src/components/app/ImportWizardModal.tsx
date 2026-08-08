@@ -19,6 +19,17 @@ import {
   PERMITTED_USES,
   PLACE_TARGETS,
   TRANSFORM_STEPS,
+  ACCESS_SCOPES,
+  CONSENT_SOURCES,
+  DOWNSTREAM_OPTIONS,
+  EXACT_MATCH_OPTIONS,
+  LEAD_QUALIFICATION_TARGETS,
+  NO_MATCH_OPTIONS,
+  OWNER_STRATEGIES,
+  POSSIBLE_MATCH_OPTIONS,
+  SUPPRESSION_RULE,
+  SUPPRESSION_SOURCES,
+  isUsableConsentEvidence,
   mappingViolation,
   type CanonicalTarget,
   type OriginClass,
@@ -67,7 +78,7 @@ const STEPS = [
 ];
 
 /** The last step this task implements. Beyond it the wizard is not yet built. */
-const IMPLEMENTED_THROUGH = 6;
+const IMPLEMENTED_THROUGH = 9;
 
 /** Sources that connect by OAuth rather than by file upload. */
 const OAUTH_SOURCES = new Set(['google', 'apple']);
@@ -227,6 +238,45 @@ export function ImportWizardModal({ open, onClose, initialSource }: Props): JSX.
     state.mappings[column] ?? { ...suggestTarget(column), confirmed: false };
 
   const confirmedCount = columns.filter((c) => state.mappings[c]?.confirmed).length;
+
+  /* --------------------------------------------- steps 8 and 9 gating */
+
+  /*
+   * AC3. Leads are offered only once a reachable contact point is mapped AND
+   * confirmed. A Lead must carry an owner, a next action and an intended
+   * outcome; a row with no email or phone can support none of those, so
+   * creating Leads from it manufactures records that are broken the moment
+   * anybody opens them - and they are worked and forecast on meanwhile.
+   */
+  const qualificationMapped = columns.some((c) => {
+    const m = state.mappings[c];
+    return m?.confirmed && LEAD_QUALIFICATION_TARGETS.includes(m.target);
+  });
+
+  /* AC2. A generic or blank value founds no receipt. */
+  const consentSpec = CONSENT_SOURCES.find((s) => s.key === state.consentSource);
+  const consentEvidenceUsable =
+    !consentSpec?.requiresEvidence || isUsableConsentEvidence(state.consentEvidence);
+
+  const radioGroup = (
+    name: string,
+    options: { key: string; label: string; detail: string }[],
+    value: string,
+    onPick: (key: string) => void
+  ) => (
+    <div className="space-y-1">
+      {options.map((o) => (
+        <label key={o.key} className="flex items-start gap-2 rounded border border-slate-200 p-2 text-sm">
+          <input type="radio" name={name} value={o.key} checked={value === o.key}
+            onChange={() => onPick(o.key)} className="mt-0.5" />
+          <span>
+            <strong className="text-slate-900">{o.label}</strong>
+            <span className="block text-xs text-slate-600">{o.detail}</span>
+          </span>
+        </label>
+      ))}
+    </div>
+  );
 
   const badge = (d: { confidence: string; reason: string }) => (
     <small className={`block ${CONFIDENCE_CLASS[d.confidence] ?? 'text-slate-500'}`}>
@@ -895,6 +945,157 @@ export function ImportWizardModal({ open, onClose, initialSource }: Props): JSX.
               </div>
             </section>
           )}
+
+          {/* ---------------------------------------------- 7. Identity */}
+          {state.step === 7 && (
+            <section aria-label="Identity Resolution Strategy">
+              <h3 className="text-base font-semibold text-slate-900">Identity Resolution Strategy</h3>
+              <p className="mb-3 text-sm text-slate-600">
+                Choose what happens to each match band. {preview?.rowCount ?? 0} rows will be evaluated.
+              </p>
+
+              <h4 className="mt-3 text-sm font-medium text-slate-800">Exact Matches</h4>
+              {radioGroup('exact-match', EXACT_MATCH_OPTIONS, state.exactMatchStrategy, (k) => patch({ exactMatchStrategy: k }))}
+
+              <h4 className="mt-3 text-sm font-medium text-slate-800">Possible Matches</h4>
+              {radioGroup('possible-match', POSSIBLE_MATCH_OPTIONS, state.possibleMatchStrategy, (k) => patch({ possibleMatchStrategy: k }))}
+
+              <h4 className="mt-3 text-sm font-medium text-slate-800">No Match</h4>
+              {radioGroup('no-match', NO_MATCH_OPTIONS, state.noMatchStrategy, (k) => patch({ noMatchStrategy: k }))}
+
+              {/* AC1. The absence of a merge option is the point; saying so
+                  plainly is how the operator knows it was a decision. */}
+              <div className="mt-4 rounded border border-slate-300 bg-slate-50 p-3 text-sm">
+                <strong className="block text-slate-900">There is no destructive merge.</strong>
+                <p className="text-slate-700">
+                  LeadFlow links records, it never destroys one into another. A merge cannot be undone even in
+                  principle — once two source records are collapsed, which assertion came from which is gone. Both
+                  source records are always kept, which is exactly why a verified link can be retracted and the
+                  downstream projections replayed.
+                </p>
+              </div>
+            </section>
+          )}
+
+          {/* ------------------------------------------------ 8. Access */}
+          {state.step === 8 && (
+            <section aria-label="Visibility Ownership and Downstream Creation">
+              <h3 className="text-base font-semibold text-slate-900">Visibility, Ownership &amp; Downstream Creation</h3>
+              <p className="mb-3 text-sm text-slate-600">Who can see these records, who owns them, and what gets created.</p>
+
+              <h4 className="mt-3 text-sm font-medium text-slate-800">Access Scope</h4>
+              {radioGroup('access-scope', ACCESS_SCOPES, state.accessScope, (k) => patch({ accessScope: k }))}
+
+              <h4 className="mt-3 text-sm font-medium text-slate-800">Default Record Owner</h4>
+              {radioGroup('owner-strategy', OWNER_STRATEGIES, state.ownerStrategy, (k) => patch({ ownerStrategy: k }))}
+
+              <h4 className="mt-3 text-sm font-medium text-slate-800">Downstream Creation</h4>
+              <div className="space-y-1">
+                {DOWNSTREAM_OPTIONS.map((o) => {
+                  const leadsBlocked = o.key === 'leads' && !qualificationMapped;
+                  return (
+                    <label key={o.key} className="flex items-start gap-2 rounded border border-slate-200 p-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name={'downstream-' + o.key}
+                        checked={state.downstream.includes(o.key)}
+                        disabled={leadsBlocked}
+                        onChange={(e) => patch({
+                          downstream: e.target.checked
+                            ? [...state.downstream, o.key]
+                            : state.downstream.filter((d) => d !== o.key),
+                        })}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <strong className="text-slate-900">{o.label}</strong>
+                        <span className="block text-xs text-slate-600">{o.detail}</span>
+                        {leadsBlocked && (
+                          <span className="mt-1 block text-xs text-amber-700">
+                            Unavailable: no reachable contact point is mapped and confirmed yet. A Lead must carry an
+                            owner, a next action and an intended outcome, and a row with no email or phone can support
+                            none of them.
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* ----------------------------------------------- 9. Consent */}
+          {state.step === 9 && (
+            <section aria-label="Consent Preference and Suppression Import">
+              <h3 className="text-base font-semibold text-slate-900">Consent, Preference &amp; Suppression Import</h3>
+              <p className="mb-3 text-sm text-slate-600">What may be claimed about permission, and what must be honoured.</p>
+
+              <h4 className="mt-3 text-sm font-medium text-slate-800">Consent evidence</h4>
+              {radioGroup('consent-source', CONSENT_SOURCES, state.consentSource, (k) => patch({ consentSource: k }))}
+
+              {consentSpec?.requiresEvidence && (
+                <label className="mt-2 block text-sm">
+                  <span className="text-slate-700">Notice version, timestamp or receipt reference</span>
+                  <input
+                    name="consent-evidence"
+                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+                    placeholder="e.g. privacy-notice v4.2, captured 2026-03-11"
+                    value={state.consentEvidence}
+                    onChange={(e) => patch({ consentEvidence: e.target.value })}
+                  />
+                  {!consentEvidenceUsable && (
+                    /* AC2 - a blank or generic value founds no receipt. "yes" is
+                       the common one, and it carries no notice version, no
+                       timestamp and no record of what the person was told. */
+                    <small className="block text-amber-700">
+                      No consent receipt will be created. A value like “yes”, “imported” or a blank cell does not say
+                      what the person was told or when, which is exactly what a receipt has to state.
+                    </small>
+                  )}
+                  {consentEvidenceUsable && state.consentEvidence.trim() !== '' && (
+                    <small className="block text-emerald-700">A receipt will be created citing this evidence.</small>
+                  )}
+                </label>
+              )}
+
+              <h4 className="mt-4 text-sm font-medium text-slate-800">Suppression sources</h4>
+              <div className="space-y-1">
+                {SUPPRESSION_SOURCES.map((o) => (
+                  <label key={o.key} className="flex items-start gap-2 rounded border border-slate-200 p-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name={'suppression-' + o.key}
+                      checked={state.suppressionSources.includes(o.key)}
+                      onChange={(e) => patch({
+                        suppressionSources: e.target.checked
+                          ? [...state.suppressionSources, o.key]
+                          : state.suppressionSources.filter((s) => s !== o.key),
+                      })}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <strong className="text-slate-900">{o.label}</strong>
+                      <span className="block text-xs text-slate-600">{o.detail}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="mt-2 rounded border border-slate-300 bg-slate-50 p-2 text-sm">
+                <strong className="block text-slate-900">Most restrictive wins</strong>
+                <p className="text-slate-700">{SUPPRESSION_RULE}</p>
+              </div>
+
+              <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-2 text-sm">
+                <strong className="block text-amber-900">Unknown is not granted.</strong>
+                <p className="text-amber-800">
+                  A missing consent value means no permission was recorded, not that permission exists. Records import
+                  either way; whether anything may be sent is decided by the channel-decision engine at send time.
+                </p>
+              </div>
+            </section>
+          )}
         </div>
 
         <footer className="flex items-center justify-between border-t border-slate-200 p-3">
@@ -924,7 +1125,12 @@ export function ImportWizardModal({ open, onClose, initialSource }: Props): JSX.
               title={state.step === 2 && !preview ? 'Choose a file first — it is previewed locally' : undefined}
               className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white disabled:opacity-40"
             >
-              {state.step >= IMPLEMENTED_THROUGH ? 'Origin — not built yet' : 'Next'}
+              {/* Names the NEXT step rather than a hardcoded one, so raising
+                  IMPLEMENTED_THROUGH cannot leave the label pointing at a step
+                  that has since been built — which it already had once. */}
+              {state.step >= IMPLEMENTED_THROUGH
+                ? `${STEPS[IMPLEMENTED_THROUGH] ?? 'Commit'} — not built yet`
+                : 'Next'}
             </button>
           </div>
         </footer>
