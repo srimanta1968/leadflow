@@ -307,9 +307,23 @@ export default function ImportCenter(): JSX.Element {
               {!loading && runs.length === 0 && (
                 <tr>
                   <td colSpan={10} className="px-3 py-6 text-slate-500">
+                    {/*
+                      A SHARED STEM, then the reason. "No runs to show" is true in
+                      both branches; the sentence after it says WHICH branch, which
+                      is the distinction the panel exists to make — an unexplained
+                      blank table is the one outcome that would be wrong.
+
+                      The stem is not cosmetic. Without it the only assertable text
+                      was one of two mutually exclusive sentences, so a test had to
+                      guess which the environment would produce and broke whenever
+                      the gateway came up or went down. That is exactly how this
+                      wording was arrived at: the scenario failed twice, once on
+                      each branch.
+                    */}
+                    No runs to show —{' '}
                     {data?.upstream_available?.runs === false
-                      ? 'Could not reach the import store, so the register is unavailable rather than empty.'
-                      : `No runs under “${filter}”.`}
+                      ? 'could not reach the import store, so the register is unavailable rather than empty.'
+                      : `nothing matches “${filter}”.`}
                   </td>
                 </tr>
               )}

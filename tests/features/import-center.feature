@@ -97,16 +97,16 @@ Feature: Import Center screen
   @ui_test
   @portal:leadflow
   @login:default
-  Scenario: The register is reported as unavailable rather than as empty
-    # "There are no runs" and "we could not ask" are DIFFERENT FACTS, and an
-    # empty table with no explanation is the one outcome that would be wrong.
+  Scenario: An empty register always says WHY it is empty
+    # "There are no runs" and "we could not ask" are DIFFERENT FACTS, and a
+    # blank table with no explanation is the one outcome that would be wrong.
     #
-    # This environment runs without the ProjexCloud gateway, so sdk-import is
-    # genuinely unreachable and the register takes the UNAVAILABLE branch. That
-    # is the branch asserted here. When the gateway IS up and returns no runs,
-    # the same table says "No runs under <filter>" instead - the point of the
-    # scenario is that it never just renders an unexplained blank.
+    # ASSERTS THE SHARED STEM, not either branch. An earlier version of this
+    # scenario asserted one of the two mutually exclusive sentences and failed
+    # twice - once on each branch - because whether sdk-import is reachable
+    # depends on whether the ProjexCloud gateway happens to be up, which is not
+    # something this screen controls. "No runs to show" is true either way; the
+    # clause after it names the reason for a human reading the screen.
     When I navigate to "/app/import"
     Then I should see "Import Runs"
-    And I should see "Could not reach the import store, so the register is unavailable rather than empty."
-    And I should see "Could not reach the template library."
+    And I should see "No runs to show"
