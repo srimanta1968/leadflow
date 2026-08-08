@@ -1,0 +1,101 @@
+{
+  "name": "POST /api/leadflow/intake/orchestrate - raw signal to acknowledged assigned lead",
+  "description": "Runs the ten-step intake saga under ONE idempotency key and ONE causation chain: source record, contact parse, identity resolve, CRM contact, CRM deal, lead score, assignment, SLA clock, NEXT action, acknowledgement. Every step declares an explicit compensation.\n\n200, NOT 201, AND THAT IS DELIBERATE. A replay of the same source event creates nothing and returns the ORIGINAL ids, so 201 would be a lie on the second call - and the caller cannot know in advance which call it is making. The body carries `replayed` instead.\n\nTHE IDEMPOTENCY KEY IS THE PROVIDER'S EVENT ID, not one LeadFlow mints: `intake:{platform}:{sourceEventId}`. A key generated here would be unique per call, which is exactly the wrong property - the point is that two deliveries of one event collapse. Both halves are required for that reason, and their absence is a 400 rather than a silent default.\n\nREPLAY PRODUCES EXACTLY ONE OF EACH ARTIFACT because the second attempt performs NO WORK AT ALL, rather than doing the work and deduplicating afterwards. A concurrent second delivery takes the same branch: the run row is claimed with ON CONFLICT DO NOTHING, so whoever loses the race reads the winner's output.\n\nCOMPENSATION RUNS IN REVERSE OVER COMPLETED STEPS ONLY. Undoing a step that never ran is how a rollback causes the damage it exists to prevent. A compensation that itself fails is recorded and the rollback CONTINUES - stopping there would orphan every earlier step because a later one could not be undone, turning one orphan into a chain. Each compensation is a forward action: you do not un-create a CRM contact, you retire it.\n\nTHE ACKNOWLEDGEMENT IS OPTIONAL. If the message fails, the lead still exists, is assigned, has a clock and a NEXT action - tearing all of that down over an undelivered email destroys good work over the least consequential step in the chain. It also goes through the channel decision like every other send: being first does not exempt it from consent.\n\nBehind authenticate and governed on lead.work_assigned. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/intake/orchestrate",
+  "method": "POST",
+  "taskId": "d40c77c6-310f-4b96-a3cb-28e11a4c4409",
+  "featureId": "3dbff372-0a8d-4ca4-89a6-ce87d732d79c",
+  "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 400,
+  "coversCriterion": [
+    "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC1",
+    "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC2"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "testCases": [
+    {
+      "name": "NEGATIVE: no sourceEventId, so a replay could never be recognised",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "platform": "{{static:web_form}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no platform, the other half of the idempotency key",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "sourceEventId": "{{dynamic:uuid}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Verified live: without authenticate the caller has no roles at all and governed() refuses with a message about the policy bundle, which points at the wrong thing entirely."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify"
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "sourceEventId and platform are both required - together they are the idempotency key",
+      "when": "either half of the idempotency key is absent. Not defaulted: without both, a redelivery cannot be recognised as one, which is the single property this endpoint exists to provide."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller's roles do not grant lead.work_assigned. NOT COVERED BY A DATASET, and deliberately kept rather than deleted: the suite has exactly one identity (register then login, local role `user`, bridging to sales_rep) and that role HOLDS this grant, so no negative dataset can reach a 403 without a second seeded account the runner does not have. Documented because it is a real response the handler returns; removing it to satisfy a coverage check would hide a real branch. The refusal path is proved live - the endpoint was probed before `authenticate` was mounted, when rolesFor() returned an empty array, and answered exactly this."
+    }
+  ]
+}

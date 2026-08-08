@@ -3,6 +3,7 @@ import { SdkGatewayClient } from '../platform/sdkGateway';
 import { eventStream } from './EventStream';
 import { AppError } from '../utils/errors';
 import { SlaAlert, SlaAlertChannel, SlaAlertKind, SlaAlertState } from '../types';
+import { compose } from '../orchestration/channelDecision';
 
 /**
  * Roles treated as managers for breach escalation.
@@ -161,6 +162,30 @@ export class SlaAlertService {
       return { delivered: false, error: null };
     }
 
+    /*
+     * THROUGH THE COMPOSER, like every other send path.
+     *
+     * An escalation goes to a MANAGER, not to the customer, so consent and
+     * deliverability do not apply - and that exemption is exactly why this call
+     * has to be made rather than assumed. `audience: 'internal'` records the
+     * reason in the decision ledger, so an audit sees a decision that was taken
+     * instead of a check that was quietly skipped. Tenant policy still applies:
+     * an organisation can legitimately forbid out-of-hours escalation.
+     */
+    const decision = await compose({
+      subjectRef: row.lead_id,
+      channel: 'email',
+      audience: 'internal',
+      correlationId: row.correlation_id ?? undefined,
+      decidedBy: 'SlaAlertService',
+    });
+    if (decision.verdict === 'deny') {
+      // NOT DELIVERED, and the reason is the composer's own words rather than a
+      // paraphrase - the alert stays pending and visible in-app, which is the
+      // same behaviour as an unconfigured gateway.
+      return { delivered: false, error: decision.reasons[0]?.text ?? 'Channel decision denied' };
+    }
+
     try {
       const result = await SdkGatewayClient.call({
         sdk: 'sdk-notification',
@@ -170,6 +195,8 @@ export class SlaAlertService {
         idempotencyKey: row.id,
         correlationId: row.correlation_id ?? undefined,
         body: {
+          // The decision this send is authorised by. No decision, no send.
+          channel_decision_id: decision.id,
           template:
             row.kind === 'manager_breach' ? 'lead_sla_breached' : 'lead_sla_at_risk',
           urgency: row.kind === 'manager_breach' ? 'high' : 'normal',

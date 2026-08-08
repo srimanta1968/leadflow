@@ -1,0 +1,144 @@
+{
+  "name": "POST /api/leadflow/channel-decision/bulk - the same question for many subjects",
+  "description": "Composes a decision per entry and returns them in request order, with allow/review/denied counts.\n\nEVERY ENTRY IS VALIDATED BEFORE ANY DECISION IS COMPOSED. A malformed entry at position 400 would otherwise leave 399 decisions already written to the ledger for a request that then answers 400 - records of decisions nobody asked for, attached to a call that failed.\n\nCAPPED AT 500 WITH A STATED NUMBER, never a silent truncation. Answering 200 for the first 500 of 5,000 would let a campaign send to the other 4,500 with no decision behind them at all, which is precisely the bypass this endpoint exists to prevent.\n\nCOMPOSED SEQUENTIALLY, not in parallel. Five hundred entries fired at once is two thousand simultaneous calls across four SDKs, which trips their rate limits and then the circuit breaker - turning a routine campaign check into an outage for every other feature sharing those SDKs.\n\nOrder is preserved so a caller can zip requests to decisions positionally rather than matching on subjectRef, which breaks the moment the same subject appears twice.\n\nBehind authenticate and governed on message.send_approved. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/channel-decision/bulk",
+  "method": "POST",
+  "taskId": "d40c77c6-310f-4b96-a3cb-28e11a4c4409",
+  "featureId": "3dbff372-0a8d-4ca4-89a6-ce87d732d79c",
+  "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 2,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC3",
+    "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "requests[].channel": [
+      "email",
+      "sms",
+      "call",
+      "social",
+      "push"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Decides for several subjects and reports the verdict counts",
+      "coversCriterion": "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC4",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "requests": [
+          {
+            "subjectRef": "{{dynamic:uuid}}",
+            "channel": "email",
+            "purposeKey": "inspection_estimate"
+          },
+          {
+            "subjectRef": "{{dynamic:uuid}}",
+            "channel": "sms",
+            "purposeKey": "appointment_updates"
+          }
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: an empty request list",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "requests": []
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: one malformed entry rejects the WHOLE batch before anything is written",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "requests": [
+          {
+            "subjectRef": "{{dynamic:uuid}}",
+            "channel": "email",
+            "purposeKey": "inspection_estimate"
+          },
+          {
+            "channel": "sms"
+          }
+        ]
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Verified live: without authenticate the caller has no roles at all and governed() refuses with a message about the policy bundle, which points at the wrong thing entirely."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify"
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "requests must be a non-empty array",
+      "when": "requests is absent, not an array, empty, longer than 500 entries, or any entry is missing subjectRef or carries an unknown channel. The whole batch is refused so no partial ledger is written."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller's roles do not grant message.send_approved. NOT COVERED BY A DATASET for the same reason as above: the suite's single identity bridges to sales_rep, which holds this grant. Kept rather than deleted because it is a real response; verified live during development when the router was missing `authenticate` and every caller therefore had no roles at all."
+    }
+  ]
+}

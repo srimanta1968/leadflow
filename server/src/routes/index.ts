@@ -14,6 +14,7 @@ import { aiRoutes } from '../features/ai';
 import { conversationRoutes } from '../features/conversation';
 import { sdkHealthRoutes } from '../platform/sdkGateway';
 import { eventRoutes as platformEventRoutes } from '../platform/events';
+import { orchestrationRoutes } from '../orchestration';
 
 /**
  * Root API router, mounted at `/api`.
@@ -39,5 +40,6 @@ router.use('/leadflow/ai', aiRoutes);
 router.use('/leadflow/calls', conversationRoutes);
 router.use('/leadflow/platform', sdkHealthRoutes);
 router.use('/leadflow/events', platformEventRoutes);
+router.use('/leadflow', orchestrationRoutes);
 
 export default router;

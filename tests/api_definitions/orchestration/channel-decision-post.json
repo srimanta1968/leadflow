@@ -1,0 +1,156 @@
+{
+  "name": "POST /api/leadflow/channel-decision - may we contact this person, this way?",
+  "description": "The ONE authority every send path must ask. Composes sdk-consent, sdk-policy, sdk-deliverability and sdk-notification's quiet-hours and frequency window into a single allow|review|deny with an ORDERED reason list, and writes the decision to a ledger.\n\n200 EVEN FOR A DENY. The question was answered, and 'no' is a successful answer to 'may I?' - a 403 would make a correct refusal look like the caller lacked permission to ask it.\n\nAN UNREACHABLE CHECK IS `review`, NEVER `allow`. This is the most consequential rule in the composer: treating an unreachable consent service as permission is how a system messages somebody who revoked it, and 'we could not ask' is not 'they said yes'. It is not deny either, because a blanket outage would silently stop every legitimate message with nobody ever seeing it - review puts it in front of a person, which is the honest answer to 'we do not know'. Verified live: with the SDKs unreachable the verdict is review and `degraded` is true.\n\nA MISSING PURPOSE IS A DENY, not a default. A purpose is the basis on which somebody agreed to be contacted, so choosing one for them invents that basis - and it would then appear in the consent record as though it had been stated.\n\nTHE REASONS ARE ORDERED AND RENDERED VERBATIM. The FIRST blocking reason is what an operator acts on, so a set would lose the only part of the answer that tells them what to do. The check order is the reading order - consent, policy, deliverability, timing - so the most fundamental objection appears first. Each reason carries a machine `code` for metrics and a `text` written as a sentence for the screen; the UI never translates a code.\n\n`audience: internal` skips consent and deliverability because neither applies to messaging a colleague - and SAYS SO in the reason list, so an audit sees a decision that was taken rather than a check that was quietly skipped. Tenant policy still applies.\n\nBehind authenticate and governed on message.send_approved. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/channel-decision",
+  "method": "POST",
+  "taskId": "d40c77c6-310f-4b96-a3cb-28e11a4c4409",
+  "featureId": "3dbff372-0a8d-4ca4-89a6-ce87d732d79c",
+  "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC3",
+    "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "channel": [
+      "email",
+      "sms",
+      "call",
+      "social",
+      "push"
+    ],
+    "audience": [
+      "prospect",
+      "internal"
+    ],
+    "data.verdict": [
+      "allow",
+      "review",
+      "deny"
+    ]
+  },
+  "captureResponse": {
+    "orchestration.channelDecision.response.data.id": "data.id"
+  },
+  "testCases": [
+    {
+      "name": "Answers with a verdict and an ordered reason list",
+      "coversCriterion": "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC4",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subjectRef": "{{dynamic:uuid}}",
+        "channel": "{{static:email}}",
+        "purposeKey": "{{static:inspection_estimate}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "An internal recipient states the exemption rather than skipping silently",
+      "coversCriterion": "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC3",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subjectRef": "{{dynamic:uuid}}",
+        "channel": "{{static:email}}",
+        "audience": "{{static:internal}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: a channel the composer does not know",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subjectRef": "{{dynamic:uuid}}",
+        "channel": "{{static:carrier-pigeon}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no subjectRef, so there is nobody to decide about",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "channel": "{{static:sms}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Verified live: without authenticate the caller has no roles at all and governed() refuses with a message about the policy bundle, which points at the wrong thing entirely."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify"
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "channel must be one of: email, sms, call, social, push",
+      "when": "subjectRef is absent or blank, or channel is missing or not one of the five. Verified against the running server rather than assumed."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller's roles do not grant message.send_approved. NOT COVERED BY A DATASET for the same reason as above: the suite's single identity bridges to sales_rep, which holds this grant. Kept rather than deleted because it is a real response; verified live during development when the router was missing `authenticate` and every caller therefore had no roles at all."
+    }
+  ]
+}

@@ -325,6 +325,27 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
     rationale:
       'One row per projection holding a sequence number and a rebuild flag. Deliberately NOT reset during an erasure: rewinding the checkpoint would re-fold the log from zero, and the point of the erasure is that those rows are gone rather than that they are reprocessed.',
   },
+  {
+    surface: 'leadflow_saga_run',
+    method: 'delete',
+    personalColumns: ['input', 'output'],
+    rationale:
+      'The input is the raw intake signal — a name, an email, a phone number, whatever the provider sent — and the output holds the ids of everything created from it. Both are personal data, and the input is a SECOND COPY of what the source record already holds, which is easy to miss precisely because it was only ever meant as a debugging aid. Deleted rather than redacted: a saga run with its input nulled cannot be replayed or reconciled, so a redacted row is a row that has lost the only reason to keep it. The audit ledger in sdk-audit records that the intake happened and that the erasure was performed; that record is what must outlive the data, not this one.',
+  },
+  {
+    surface: 'leadflow_saga_step',
+    method: 'delete',
+    personalColumns: ['result'],
+    rationale:
+      'One row per step, and the results carry the parsed contact — the parse_contact step exists precisely to turn a raw payload into a name, an email and a phone number, so its result row is the most concentrated personal data in the schema. Cascades from leadflow_saga_run via the foreign key, which is the intended behaviour rather than an accident: the steps have no meaning apart from their run, and deleting the run without them would leave orphans holding the very data the erasure targeted.',
+  },
+  {
+    surface: 'leadflow_channel_decision',
+    method: 'redact',
+    personalColumns: ['reasons'],
+    rationale:
+      'REDACTED, NOT DELETED, and this is the one place in the schema where that is the harder call. The row proves somebody was allowed — or refused — to be contacted, and on what basis; deleting it destroys the evidence that a refusal was honoured, which is exactly the record a complaint or a regulator asks for. subject_ref is a pointer cleared through the subject surfaces. The `reasons` text is written for a human and can quote a value ("that address is suppressed after a bounce"), so it is nulled while the verdict, the timestamp and which checks ran are kept. What survives is the fact that a decision was made and what it was; what goes is the sentence that might name the person.',
+  },
 ];
 
 /** Surfaces that actually require an erasure action. */
