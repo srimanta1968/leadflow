@@ -1,4 +1,5 @@
 import type { DelimiterValue, EncodingChoice } from './csvPreview';
+import type { CanonicalTarget, OriginClass } from '../../content/importGovernance';
 
 /**
  * Import wizard state that survives a reload.
@@ -53,6 +54,42 @@ export interface WizardState {
    * file is still attached.
    */
   fileName: string | null;
+
+  /* ------------------------------------------------- step 4: origin */
+
+  originClass: OriginClass | null;
+  sourceOwner: string;
+  collectionPeriod: string;
+  permittedUses: string[];
+  jurisdiction: string;
+  licenceReference: string;
+  /** The evidence document's NAME. Like the import file, the bytes stay local. */
+  evidenceFileName: string | null;
+  /**
+   * Whether the attester has signed.
+   *
+   * Deliberately part of the persisted draft so a reload does not silently drop
+   * a signature — but see `canAttest` in the wizard: this can only be set while
+   * the evidence rule is satisfied, and it is CLEARED whenever the origin class
+   * changes, because a signature attests to a specific claim.
+   */
+  attested: boolean;
+
+  /* ------------------------------------------------ step 5: mapping */
+
+  /**
+   * One entry per source column, keyed by column name.
+   *
+   * `confirmed` is the whole point and mirrors sdk-import's FieldMapping: a
+   * suggestion is inert until a human sets it, and the commit path reads only
+   * confirmed mappings, so an unreviewed suggestion can never land data.
+   */
+  mappings: Record<string, { target: CanonicalTarget; confidence: number; reason: string; confirmed: boolean }>;
+
+  /* ---------------------------------------------- step 6: transform */
+
+  /** Keyed by TRANSFORM_STEPS[].key. Absent means the spec's default applies. */
+  transforms: Record<string, boolean>;
 }
 
 export const EMPTY_WIZARD_STATE: WizardState = {
@@ -65,6 +102,16 @@ export const EMPTY_WIZARD_STATE: WizardState = {
   credentialReference: '',
   location: '',
   fileName: null,
+  originClass: null,
+  sourceOwner: '',
+  collectionPeriod: '',
+  permittedUses: [],
+  jurisdiction: '',
+  licenceReference: '',
+  evidenceFileName: null,
+  attested: false,
+  mappings: {},
+  transforms: {},
 };
 
 /** Field names that must never be written, whatever a future edit adds. */
