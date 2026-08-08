@@ -19,6 +19,7 @@ import {
   RunPresentationStatus,
 } from '../../content/importSources';
 import { chipClass } from '../../design-system/tokens';
+import { ImportWizardModal } from '../../components/app/ImportWizardModal';
 
 /**
  * Import Center — #view-import.
@@ -173,6 +174,16 @@ export default function ImportCenter(): JSX.Element {
 
   const connectorsKnown = data?.upstream_available?.connectors !== false;
 
+  /* The wizard, and which tile opened it. A source tile is a shortcut INTO the
+   * wizard rather than a separate flow — the wizard still asks for the source on
+   * step 1, it just arrives with the answer already filled in. */
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardSource, setWizardSource] = useState<string | null>(null);
+  const openWizard = useCallback((sourceKind: string | null) => {
+    setWizardSource(sourceKind);
+    setWizardOpen(true);
+  }, []);
+
   return (
     <div className="space-y-8" data-testid="import-center">
       {/* ------------------------------------------------------------ hero */}
@@ -194,6 +205,7 @@ export default function ImportCenter(): JSX.Element {
           <button
             type="button"
             name="start-import"
+            onClick={() => openWizard(null)}
             className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
           >
             Start Import
@@ -213,6 +225,10 @@ export default function ImportCenter(): JSX.Element {
             <article
               key={source.kind}
               data-source={source.kind}
+              onClick={() => openWizard(source.kind)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openWizard(source.kind); }}
               data-available={usable ? 'yes' : unknown ? 'unknown' : 'no'}
               className={`rounded-lg border p-3 ${
                 usable ? 'border-slate-200' : 'border-dashed border-slate-300 bg-slate-50'
@@ -408,6 +424,12 @@ export default function ImportCenter(): JSX.Element {
           )}
         </div>
       </section>
+
+      <ImportWizardModal
+        open={wizardOpen}
+        initialSource={wizardSource}
+        onClose={() => { setWizardOpen(false); void load(); }}
+      />
 
       {/* --------------------------------------------------------- drill-in */}
       {openRunId && (
