@@ -26,6 +26,7 @@ Feature: Import wizard steps 4-6 - Origin, Mapping, Transform
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:f53b06ba-b80a-47d2-ab18-7b487c97dcf9
   Scenario: A licensed origin cannot be attested without evidence attached
     When I navigate to "/app/import"
     And I click "Start Import"
@@ -51,6 +52,7 @@ Feature: Import wizard steps 4-6 - Origin, Mapping, Transform
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:16fe7f4e-f3da-4add-8109-76436cffff1f
   Scenario: Evidence is demanded for a licensed origin and optional otherwise
     # The right to hold licensed data comes from a document somebody else wrote.
     # For every other class the attester speaks about their own organisation's
@@ -68,6 +70,7 @@ Feature: Import wizard steps 4-6 - Origin, Mapping, Transform
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:a7ce0801-ee56-4710-acdc-0993e916b94d
   Scenario: Every mapping suggestion shows confidence and a reason
     # An assistant that cannot say WHY cannot be checked, and one shown without a
     # confidence invites the operator to accept every row without reading it.
@@ -93,6 +96,7 @@ Feature: Import wizard steps 4-6 - Origin, Mapping, Transform
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:8695eb8e-f7bc-486a-ba42-fdbb9a15581c
   Scenario: Mapping the source lifecycle onto Lead is off until enabled
     # Another system's "qualified" is not this one's. Importing it silently
     # would drop thousands of records into a stage nobody assessed them for -

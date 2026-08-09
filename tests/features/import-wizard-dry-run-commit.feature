@@ -24,6 +24,7 @@ Feature: Import wizard step 10 - Dry run, governance checks and commit
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:990d25a7-adb7-4a68-a78d-7dd0c0e70f10
   Scenario: Commit is blocked while the attestation is missing
     # Reaching step 10 without signing step 4 must not be committable, and the
     # screen must say which check blocks it and that it cannot be waved through.
@@ -43,6 +44,7 @@ Feature: Import wizard step 10 - Dry run, governance checks and commit
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:ce1f4afd-b38d-429e-ba75-8fd21e672ae4
   Scenario: The dry run states plainly that it writes nothing
     When I navigate to "/app/import"
     And I click "Start Import"
@@ -58,6 +60,7 @@ Feature: Import wizard step 10 - Dry run, governance checks and commit
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:291e8887-ba1a-4a29-9cf1-288997cf6590
   Scenario: The exception file is available before the commit, not after
     # The operator has to be able to see what would be dropped while they can
     # still change it. Offering it only after the commit is offering a receipt
@@ -76,6 +79,7 @@ Feature: Import wizard step 10 - Dry run, governance checks and commit
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:335ad1f4-6de1-4ea3-9fe8-cd8fecba30ff
   Scenario: The impact grid and commit plan are stated before committing
     When I navigate to "/app/import"
     And I click "Start Import"

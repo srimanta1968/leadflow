@@ -1,5 +1,5 @@
-@feature_id:041938ca-bef0-42ec-91a3-b4f2834a2a6e
-@epic_id:import-center
+@feature_id:01724402-1fc2-45e4-90e4-f6c46286286f
+@epic_id:8eca7fd1-6541-4863-81ec-bf170938403d
 Feature: Import Center screen
   Source tiles, the run register and the reusable mapping-template library, as
   #view-import draws them.
@@ -33,6 +33,7 @@ Feature: Import Center screen
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:6d7c1639-e7f8-4b50-bb96-9ce631ae9e0b
   Scenario: All eight supported sources are offered, with the mockup's wording
     When I navigate to "/app/import"
     # NOT "Import Center" - that string is both the h1 AND the sidebar nav
@@ -59,6 +60,7 @@ Feature: Import Center screen
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:a06e5a91-7ed7-4387-9842-df5f216cb179
   Scenario: An unconnected source is shown as unavailable rather than hidden
     # A tile dropped because nobody connected it reads as "not supported" - the
     # operator concludes the product cannot do the thing they came to do. Shown
@@ -76,6 +78,7 @@ Feature: Import Center screen
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:8a526394-3d8c-49b3-a15b-7ff11781cc40
   Scenario: The run register offers the mockup's columns and segmented filter
     When I navigate to "/app/import"
     Then I should see "Import Runs"
@@ -97,6 +100,7 @@ Feature: Import Center screen
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:aed9ed3a-d1af-4442-964a-621315ab0967
   Scenario: An empty register always says WHY it is empty
     # "There are no runs" and "we could not ask" are DIFFERENT FACTS, and a
     # blank table with no explanation is the one outcome that would be wrong.

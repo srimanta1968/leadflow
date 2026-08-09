@@ -27,6 +27,7 @@ Feature: Import wizard steps 1-3 - Source, Connect, Preview
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:b5aad321-b2e1-429f-ab53-c46b7f1205a0
   Scenario: The file is inspected in the browser, with nothing uploaded
     # The bytes must not cross the boundary before the operator attests to the
     # origin on step 4. "Load sample CSV" builds a real File and walks exactly
@@ -51,6 +52,7 @@ Feature: Import wizard steps 1-3 - Source, Connect, Preview
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:dea1191f-d3f4-492f-909c-e2feef628e81
   Scenario: Every detection states how sure it is
     # A delimiter guess presented as fact is worse than no guess: the operator
     # accepts it, the mapping shifts by a column, and the damage surfaces long
@@ -71,6 +73,7 @@ Feature: Import wizard steps 1-3 - Source, Connect, Preview
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:3535f423-8457-4e58-8260-678a9743be02
   Scenario: An API source asks for a credential reference, never a credential
     # The field takes the NAME of a vault-backed secret. sdk-secrets resolves it
     # server-side at commit, so there is nothing in this browser for a shared or
@@ -94,6 +97,7 @@ Feature: Import wizard steps 1-3 - Source, Connect, Preview
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:9b6d34eb-c95f-418a-9755-4bb699fdf83d
   Scenario: The draft survives a reload, but the file contents do not
     # Ten steps is a long way to lose. The draft is kept in sessionStorage; the
     # file bytes deliberately are not, and the wizard says so rather than

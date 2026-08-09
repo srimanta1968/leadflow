@@ -22,6 +22,7 @@ Feature: Import wizard steps 7-9 - Identity, Access, Consent
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:e8d208de-652d-4326-b8a5-121cb01677c7
   Scenario: No band offers a destructive merge, and the screen says so
     When I navigate to "/app/import"
     And I click "Start Import"
@@ -46,6 +47,7 @@ Feature: Import wizard steps 7-9 - Identity, Access, Consent
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:d8706636-c4e8-4ea1-9dcb-b2e448b74ef9
   Scenario: Leads cannot be created until a reachable contact point is confirmed
     # A Lead must carry an owner, a next action and an intended outcome. A row
     # with no email or phone supports none of those, so creating Leads from it
@@ -71,6 +73,7 @@ Feature: Import wizard steps 7-9 - Identity, Access, Consent
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:ab429295-8a8f-48f6-90e0-755e08000008
   Scenario: A generic consent value produces no receipt
     # "yes" is the single most common value in a consent column and it carries
     # no notice version, no timestamp and no record of what the person was
@@ -91,6 +94,7 @@ Feature: Import wizard steps 7-9 - Identity, Access, Consent
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:69ab125d-c854-4f3c-80b6-7634728259a6
   Scenario: Suppression merges most-restrictive-wins across every source
     # An import can add a suppression but never lift one. The person who
     # unsubscribed did not change their mind by appearing in a spreadsheet.
