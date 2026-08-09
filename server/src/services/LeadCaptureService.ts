@@ -109,6 +109,26 @@ export class LeadCaptureService {
         method: 'POST',
         idempotencyKey: row.id,
         correlationId,
+        // A SHORT LEASH ON THE MOST LATENCY-SENSITIVE PATH IN THE PRODUCT.
+        //
+        // The catch below already treats a failed assertion as deferrable -
+        // "reconcile later rather than failing a capture the prospect has no way
+        // to retry" - but on the platform default of 8s it took EIGHT SECONDS to
+        // reach that conclusion, with a prospect watching a spinner on a
+        // marketing form. Deciding to tolerate a failure slowly is not tolerance.
+        //
+        // Measured cold: 4.8s for the first capture, 0.19s for every one after,
+        // because the first call pays the timeout and the circuit then opens and
+        // fails fast. The person who pays that cost is the first prospect after
+        // an outage starts - the one whose form submission is least replaceable.
+        //
+        // 1.5s is chosen against the healthy case, not the broken one: a
+        // reachable gateway answers this in milliseconds, so the cap only ever
+        // bites when the assertion was going to fail anyway. The lead row is
+        // already committed above and `asserted_upstream: false` is a supported
+        // outcome the Capture Inbox already renders, so nothing is lost by
+        // giving up sooner - only waiting is.
+        timeoutMs: 1_500,
         body: {
           // REQUIRED by sdk-source-record, and app-scoped: a capture belongs to
           // this app, not to the customer's other products.
