@@ -23,7 +23,7 @@ const { execFileSync } = require('child_process');
 // Git delta computed HERE, on the host, and sent to the MCP.
 //
 // The MCP runs in a container with the worktree bind-mounted, and git through that mount
-// is pathological: `git diff --name-status HEAD` measured >200s on ProjexCloud versus
+// is pathological: `git diff --name-status HEAD` measured >200s on a large repo versus
 // 0.179s natively. So pre_commit_regression_check could never complete on its own and the
 // MUST-32 gate silently never ran. This bridge is a plain node process on the host, where
 // those commands are instant — so it answers instead of asking.
@@ -214,7 +214,7 @@ const TOOLS = [
   },
   {
     name: 'projexlight_get_sdk_api',
-    description: 'ProjexCloud SDK reuse: fetch the full spec (method, path, requiresAuth, payload_shape, fieldEnums, dependsOn) for ONE endpoint from the bundled SDK catalog. Call this only when about to integrate a specific endpoint you found in mcp-server/data/sdk-catalog-index.json — avoids loading the whole catalog.',
+    description: 'SDK reuse: fetch the full spec (method, path, requiresAuth, payload_shape, fieldEnums, dependsOn) for ONE endpoint from THIS project\'s bundled SDK catalog, when it ships one. Call it only when about to integrate a specific endpoint you already found in mcp-server/data/sdk-catalog-index.json — it avoids loading the whole catalog. A project without that file has no catalog and does not use this tool.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -335,6 +335,15 @@ const TOOLS = [
   {
     name: 'projexlight_get_api_definition_rules',
     description: 'Refresh the STRICT api-definition authoring contract (variable forms {{cache}}/{{dynamic}}/{{static}}/{{baseUrl}}/{{var:name}}, MUST rules incl. FK->cache, complete payload, fieldEnums, statusTransitions, no static headers). ALWAYS call this before creating or editing any file under tests/api_definitions/ — especially if your instruction context was compacted or you are unsure of the rules.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'projexlight_get_ui_feature_rules',
+    description: 'Refresh the STRICT UI/BDD feature-file authoring contract (mandatory tags @feature_id/@scenario_id/@scenario_type:UI/@ui_test/@portal/@login, the portals + authRealms model, relative-path navigation, and the rule that a quoted string is a SELECTOR KEY copied from the component rather than a label you invent). ALWAYS call this before creating or editing any file under tests/features/ (MUST-55) — especially if your context was compacted. The UI counterpart of projexlight_get_api_definition_rules.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -1559,6 +1568,7 @@ const TOOL_ENDPOINTS = {
   'projexlight_complete_task': { method: 'POST', path: '/api/instruction/complete' },
   'projexlight_get_rules': { method: 'GET', path: '/api/instruction/rules' },
   'projexlight_get_api_definition_rules': { method: 'GET', path: '/api/rules/api-definition' },
+  'projexlight_get_ui_feature_rules': { method: 'GET', path: '/api/rules/ui-feature' },
   'projexlight_review_api_definitions': { method: 'POST', path: '/api/instruction/review-api-definitions' },
   'projexlight_review_ui_features': { method: 'POST', path: '/api/instruction/review-ui-features' },
   'projexlight_review_task_delta': { method: 'POST', path: '/api/instruction/review-task-delta' },
@@ -1650,9 +1660,9 @@ function makeHttpRequest(method, path, body = null) {
     // nothing more. It used to gate PROJECT CONTEXT as well, and that was the defect:
     // '/api/test/start' matches none of these prefixes, so every API-testing call reached
     // the MCP carrying NO projectId and NO projectPath. The server had nothing to resolve
-    // and fell back to WORKSPACE_PATH — the OWNER project. A LeadFlow test run therefore
-    // executed ProjexCloud's 677 api_definitions against port 4000, produced 152,000 lines
-    // with zero LeadFlow endpoints in them, and reported success.
+    // and fell back to WORKSPACE_PATH — the OWNER project. A GUEST project's test run
+    // therefore executed the OWNER's api_definitions against the guest's port, produced
+    // six figures of output with zero guest endpoints in it, and reported success.
     //
     // projexlight_set_context could not rescue it either: every bridge call is
     // independent and the MCP holds no per-session project state, so context has to ride
