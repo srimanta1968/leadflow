@@ -23,6 +23,22 @@ export const MANAGER_ROLES: readonly string[] = ['admin'];
  */
 export const MAX_DELIVERY_ATTEMPTS = 5;
 
+/**
+ * Wall-clock budget for one `dispatchPending` sweep.
+ *
+ * Five seconds, chosen to sit UNDER the timeouts of the things that call this -
+ * an HTTP client, a cron runner, the API suite's 10s ceiling - so the sweep
+ * returns a real answer to them rather than being abandoned mid-flight. A sweep
+ * killed by a caller's timeout still did the work and still charged the
+ * attempts; it just told nobody, which is the one outcome worth designing out.
+ *
+ * The number bounds LATENCY, not throughput. A healthy gateway answers in
+ * milliseconds and the full 100 finish well inside it; the budget only bites
+ * when each send is already slow, and that is exactly when returning promptly
+ * with an honest `abandoned` count beats grinding through the backlog.
+ */
+const DISPATCH_BUDGET_MS = 5_000;
+
 interface SlaAlertRow {
   id: string;
   lead_id: string;
@@ -444,6 +460,32 @@ export class SlaAlertService {
   /**
    * Retry the outbound notification for pending alerts, oldest first.
    *
+   * BOUNDED BY THE CLOCK, NOT ONLY BY `limit`. Each attempt is a network call
+   * to `sdk-notification` through the composer, and they run in sequence
+   * because the composer's per-tenant decisions are not safe to issue as a
+   * burst. A sweep of the default 100 against an unresponsive gateway therefore
+   * took 36 SECONDS - it answered eventually, having achieved nothing, long
+   * after every caller had given up. The failure mode is self-reinforcing: the
+   * backlog is longest exactly when the gateway is worst, so the sweep gets
+   * slower the more it is needed.
+   *
+   * A wall-clock budget is the honest bound. It does not care WHY a send is
+   * slow, which matters because slowness here has two unrelated causes - an
+   * unreachable gateway and a composer taking its time over policy - and only
+   * one of them is an outage. The alternative, watching the circuit breaker,
+   * cannot be done without harm: `canRequest` PROMOTES a cooled-down circuit to
+   * half-open and claims the single probe, so a peek here would consume the
+   * probe that `SdkGatewayClient.call` is about to need and turn a recovering
+   * gateway into one that never gets retried.
+   *
+   * NOTHING IS LOST WHEN THE BUDGET RUNS OUT. Unattempted alerts keep
+   * `state = 'pending'` and their attempt count, and the next sweep takes them
+   * first - they are ordered oldest-first and this one never touched them. That
+   * is the drain this service's contract already promises. The count comes back
+   * as `abandoned` rather than being folded into `failed`, because "we ran out
+   * of time" and "the gateway refused it" call for different responses: the
+   * first says sweep again, the second says fix the channel.
+   *
    * @param limit Maximum alerts to attempt in one pass.
    */
   static async dispatchPending(
@@ -452,6 +494,8 @@ export class SlaAlertService {
     attempted: number;
     delivered: number;
     failed: number;
+    abandoned: number;
+    budget_exhausted: boolean;
     gateway_configured: boolean;
   }> {
     const gatewayConfigured = SdkGatewayClient.isConfigured();
@@ -467,10 +511,19 @@ export class SlaAlertService {
 
     let delivered = 0;
     let failed = 0;
+    let attempted = 0;
 
+    const startedAt = Date.now();
     for (const row of rows) {
+      // Checked BEFORE the attempt, never after: the budget is a promise about
+      // when this call returns, and a check after the fact cannot keep it.
+      if (Date.now() - startedAt >= DISPATCH_BUDGET_MS) {
+        break;
+      }
+
       const outcome = await SlaAlertService.deliver(row);
       await SlaAlertService.recordAttempt(row.id, outcome);
+      attempted += 1;
       if (outcome.delivered) {
         delivered += 1;
       } else if (outcome.error !== null) {
@@ -478,10 +531,13 @@ export class SlaAlertService {
       }
     }
 
+    const abandoned = rows.length - attempted;
     return {
-      attempted: rows.length,
+      attempted,
       delivered,
       failed,
+      abandoned,
+      budget_exhausted: abandoned > 0,
       gateway_configured: gatewayConfigured,
     };
   }

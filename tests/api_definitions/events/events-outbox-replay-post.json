@@ -1,7 +1,7 @@
 {
   "name": "POST /api/leadflow/events/outbox/:id/replay - put a parked delivery back in the queue",
   "description": "Moves one dead-lettered outbox row back to pending and immediately drains the queue (AC4).\n\nATTEMPTS RESET TO ZERO, because an operator replaying a row has usually fixed the cause; carrying the old count would send it straight back to the dead letter after a single further failure, which makes the recovery path useless exactly when it is needed.\n\nTHE ROW KEEPS ITS IDEMPOTENCY KEY. A replay of something that DID land upstream - the classic case, where the write succeeded and the acknowledgement was lost - is recognised by the SDK as the same intention rather than written twice. Reissuing the key here would turn the recovery tool into the duplicate generator it exists to prevent.\n\n404 RATHER THAN 409 for an id that is not parked. From the caller's point of view there is no parked delivery with that id, whether because it never existed or because it has already been replayed, and both mean the same thing: nothing here to act on.\n\nBehind authenticate. QA: depends on register and login.",
-  "endpoint": "/api/leadflow/events/outbox/{id}/replay",
+  "endpoint": "/api/leadflow/events/outbox/:id/replay",
   "method": "POST",
   "taskId": "d1bdc64e-d2f7-4ba1-837e-1dec92c6e974",
   "featureId": "1bb439b6-5cec-42fa-a6d5-418b1c0296d6",
