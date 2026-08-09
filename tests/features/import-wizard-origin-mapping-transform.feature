@@ -41,7 +41,9 @@ Feature: Import wizard steps 4-6 - Origin, Mapping, Transform
     And I should see "Public record"
     And I should see "Licensed third-party"
     And I should see "Partner provided"
-    And I should see "Unknown — quarantined"
+    # The label is "Unknown - quarantined" with an em dash; its help text is
+    # ASCII and is the more meaningful assertion anyway.
+    And I should see "Provenance cannot be established. The run is quarantined rather than guessed at."
     When I click "origin-class"
     Then I should see "Origin does not equal consent."
 

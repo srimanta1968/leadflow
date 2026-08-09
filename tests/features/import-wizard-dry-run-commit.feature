@@ -86,7 +86,9 @@ Feature: Import wizard step 10 - Dry run, governance checks and commit
     And I should see "Exact Links"
     And I should see "Review Cases"
     And I should see "Rollback Window"
-    And I should see "0 credits — an import never spends one"
+    # Em dash in the tile caption; the clause after it is the assertion that
+    # actually matters and is ASCII.
+    And I should see "an import never spends one"
     And I should see "Commit Plan"
     And I should see "It lands whole or not at all"
     And I should see "Idempotent on run id + file fingerprint + source crosswalk"

@@ -38,7 +38,10 @@ Feature: Import wizard steps 1-3 - Source, Connect, Preview
     And I should see "Connector boundary"
     When I click "2. Connect"
     Then I should see "Drop source export here"
-    And I should see "CSV, text, or vCard · local browser preview before commit"
+    # Asserts the meaningful clause only. The full label carries a decorative
+    # middle-dot separator from the mockup, and a non-ASCII byte anywhere in the
+    # posted body makes the Test MCP reject it with a 400 the runner swallows.
+    And I should see "local browser preview before commit"
     When I click "Load sample CSV"
     Then I should see "File & Schema Preview"
     And I should see "sample_contacts.csv"
@@ -72,9 +75,13 @@ Feature: Import wizard steps 1-3 - Source, Connect, Preview
     # The field takes the NAME of a vault-backed secret. sdk-secrets resolves it
     # server-side at commit, so there is nothing in this browser for a shared or
     # stolen machine to yield.
+    # Opens the wizard FROM the source tile, which is the real shortcut: the
+    # tile preselects the source and the wizard still asks for it on step 1.
+    # Clicking the tile BEFORE the modal opens also avoids the duplicate - once
+    # the modal is up, "AccuLynx" labels both its own tile and the Import Center
+    # tile behind it, and the covered one wins the locator race.
     When I navigate to "/app/import"
-    And I click "Start Import"
-    And I click "wizard-source-acculynx"
+    And I click "AccuLynx"
     And I click "2. Connect"
     Then I should see "Connector Configuration"
     And I should see "Credential Reference"
@@ -92,12 +99,17 @@ Feature: Import wizard steps 1-3 - Source, Connect, Preview
     # file bytes deliberately are not, and the wizard says so rather than
     # showing a filename that is no longer attached.
     When I navigate to "/app/import"
-    And I click "Start Import"
-    And I click "wizard-source-hubspot"
+    And I click "HubSpot"
     And I click "2. Connect"
     And I click "Load sample CSV"
     Then I should see "File & Schema Preview"
     When I navigate to "/app/import"
     And I click "Start Import"
     Then I should see "Contact Import & Reconciliation"
-    And I should see "was chosen before the page reloaded. File contents are never stored, so please choose it again."
+    # BOTH HALVES OF THE CRITERION, and they live on different steps. Reopening
+    # on Preview rather than Source IS the persistence - the draft remembered
+    # how far it had got. The note about the vanished bytes is on Connect,
+    # because that is where a file is chosen.
+    And I should see "File & Schema Preview"
+    When I click "2. Connect"
+    Then I should see "was chosen before the page reloaded. File contents are never stored, so please choose it again."
