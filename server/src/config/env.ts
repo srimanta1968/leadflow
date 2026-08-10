@@ -45,6 +45,8 @@ export interface AppConfig {
     adminPassword: string;
     stewardEmail: string;
     stewardPassword: string;
+    privacyEmail: string;
+    privacyPassword: string;
   };
   outbox: {
     /**
@@ -204,6 +206,8 @@ export const config: AppConfig = {
     // endpoints with any identity — every dataset answers 403.
     stewardEmail: process.env.DEV_STEWARD_EMAIL || '',
     stewardPassword: process.env.DEV_STEWARD_PASSWORD || '',
+    privacyEmail: process.env.DEV_PRIVACY_EMAIL || '',
+    privacyPassword: process.env.DEV_PRIVACY_PASSWORD || '',
   },
 
   // ProjexCloud SDK gateway — the source of every horizontal capability.

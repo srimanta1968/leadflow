@@ -8,7 +8,7 @@ import { dataService } from './services/DataService';
 import { runMigrations } from './db/migrationRunner';
 import { seedVerticalProfile } from './db/verticalSeed';
 import { advancePipeline, dispatchOutbox, registerEventReceiver } from './platform/events';
-import { seedDevAdmin, seedDevSteward } from './db/devSeed';
+import { seedDevAdmin, seedDevPrivacyOfficer, seedDevSteward } from './db/devSeed';
 import { provisionAuditEventTypes } from './platform/audit/eventTypeProvisioner';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { platformSession } from './platform/auth';
@@ -122,6 +122,8 @@ async function bootstrap(): Promise<void> {
   // those endpoints, so every dataset answers 403 and the refusal looks like a
   // product bug rather than a missing test identity.
   const stewardSeed = await seedDevSteward();
+  const privacySeed = await seedDevPrivacyOfficer();
+  void privacySeed;
   if (stewardSeed.attempted) {
     console.log(`[app] dev steward ${stewardSeed.created ? 'created' : 'already present'}`);
   } else if (config.nodeEnv !== 'production') {

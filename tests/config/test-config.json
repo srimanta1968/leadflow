@@ -159,6 +159,13 @@
       "_role_requirement": "MUST HOLD users.role='steward', which LOCAL_ROLE_BRIDGE maps to the data_steward SOP role. An admin caller is NOT a substitute — admin bridges to revenue_operations + sales_manager + sales_rep, none of which holds these grants, which is why every capture-resolve dataset answered 403.",
       "email": "qa.steward@leadflow.test",
       "password": "LeadFlow!Test2026"
+    },
+    "privacy_officer": {
+      "_status": "Read by the runner's role swap for any definition declaring requiresRole:[\"privacy_officer\"]. Without it those endpoints answer 403 and the runner warns that no credential is configured.",
+      "email": "qa.privacy@leadflow.test",
+      "password": "LeadFlow!Test2026",
+      "_why_separate": "NOT the admin or steward account. consent.purpose_manage, dsar.fulfil and erasure.execute are held by privacy_officer alone, and the local role `privacy` bridges to it - so a caller either holds these grants or does not. Seeded automatically at boot by seedDevPrivacyOfficer (DEV_PRIVACY_EMAIL / DEV_PRIVACY_PASSWORD).",
+      "_scope": "dev only. The .test TLD is reserved by RFC 2606, so this address can never receive mail or collide with a customer."
     }
   }
 }

@@ -116,6 +116,23 @@ export async function seedDevSteward(): Promise<DevSeedResult> {
   );
 }
 
+/**
+ * Seed the QA privacy officer. Mirrors seedDevSteward for the same reason: the
+ * consent and data-rights grants sit with privacy_officer alone, so a caller
+ * either holds them or does not - never by being an admin.
+ */
+export async function seedDevPrivacyOfficer(): Promise<DevSeedResult> {
+  return seedDevUser(
+    config.devSeed.privacyEmail,
+    config.devSeed.privacyPassword,
+    'privacy',
+    'dev-privacy',
+    'Dev',
+    'Privacy',
+    'DEV_PRIVACY_EMAIL / DEV_PRIVACY_PASSWORD are not set'
+  );
+}
+
 export async function seedDevAdmin(): Promise<DevSeedResult> {
   if (config.nodeEnv === 'production') {
     return { attempted: false, created: false, skipped: 'NODE_ENV is production' };

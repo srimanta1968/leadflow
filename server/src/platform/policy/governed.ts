@@ -99,6 +99,24 @@ const LOCAL_ROLE_BRIDGE: Record<string, string[]> = {
   // or does not — `users.role` is a single column, so this is a SEPARATE account,
   // never an elevation of the admin one.
   steward: ['data_steward'],
+  /*
+   * `privacy` added for the same reason `client_success` was, and resolved the
+   * OPPOSITE way for a reason worth stating.
+   *
+   * privacy_officer holds consent.purpose_manage, dsar.fulfil and
+   * erasure.execute, and NO local role bridged to it, so the entire consent and
+   * data-rights surface was unreachable by every user — dead code wearing a
+   * permission check, exactly the gap noted above.
+   *
+   * But it is NOT folded into `admin`. client_success could be, because
+   * accepting a handoff is ordinary operational work an admin plausibly does.
+   * Revoking a consent receipt and executing an erasure are not: they are the
+   * acts a regulator asks about by name, and an audit that cannot distinguish
+   * "the Privacy Officer revoked this" from "one of forty admins did" has lost
+   * the only fact that mattered. So it follows `steward` — its own local role,
+   * its own account, held or not held.
+   */
+  privacy: ['privacy_officer'],
 };
 
 /**
