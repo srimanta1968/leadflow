@@ -756,7 +756,27 @@ UNKNOWN_STATUS_COUNT=0
 # The poll then never sees a terminal status, burns its whole budget and reports
 # a timeout - which reads as "the test run hung" when the run had in fact
 # finished. run-dev-tests.sh already scopes its calls this way; this one did not.
-STATUS_URL="${MCP_SERVER_URL}/api/test/status?projectPath=$(url_encode_path "${PROJECT_PATH}")"
+# FIRST RUN HAS NO REGISTRY, and scoping would break it.
+#
+# Before a project is registered there is no registry file and no entry to
+# resolve, so a scoped call has nothing to match and the server cannot answer
+# for a path it has never heard of. In that state the UNSCOPED call is correct:
+# with a single project the container resolves it to /workspace by default,
+# which IS this project, and that is exactly how a fresh checkout works before
+# setup-all.sh has ever run.
+#
+# So the selector is added only when it can help. It is needed once a SECOND
+# project shares the container, and that is precisely when the unscoped call
+# starts answering 409 ambiguous. Detecting the ambiguity rather than assuming
+# it keeps day one working and day two correct.
+STATUS_URL="${MCP_SERVER_URL}/api/test/status"
+STATUS_PROBE=$(curl -s --max-time 10 "${STATUS_URL}" 2>/dev/null || echo "")
+case "$STATUS_PROBE" in
+    *'"status"'*'"ambiguous"'*|*'Multiple projects have API test state'*)
+        # More than one project registered here, so say which one we mean.
+        STATUS_URL="${MCP_SERVER_URL}/api/test/status?projectPath=$(url_encode_path "${PROJECT_PATH}")"
+        ;;
+esac
 
 while [ $WAIT_TIME -lt $API_TEST_MAX_WAIT ]; do
     sleep "$API_TEST_POLL_INTERVAL"
