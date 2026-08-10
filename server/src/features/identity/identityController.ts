@@ -253,11 +253,6 @@ identityRoutes.get(
           reason:
             'EmpiMetrics exposes no count of rejected candidates, and no time-bounded counter at all, so "this month" cannot be derived.',
         },
-        {
-          metric: 'median_review_minutes',
-          reason:
-            'EMPI records no adjudication latency. Deriving it from the age of open cases would invert the meaning — an unworked queue would report an improving median.',
-        },
       ];
 
       res.status(200).json({
@@ -271,7 +266,22 @@ identityRoutes.get(
             exact_auto_links: null,
             kept_separate: null,
             retracted_links: asNumber(m?.merge_reversals),
-            median_review_minutes: null,
+            /*
+             * NO LONGER A GAP. This tile returned null because EmpiMetrics
+             * recorded no adjudication latency at all; ProjexCloud added it
+             * after we reported that, measured created_at -> decided_at rather
+             * than backfilled. A null median still means NOTHING SETTLED in the
+             * window, never "review was instant".
+             */
+            median_review_minutes: asNumber(m?.review_latency?.median_minutes),
+            review_latency: m?.review_latency
+              ? {
+                  window_days: asNumber(m.review_latency.window_days),
+                  settled_count: asNumber(m.review_latency.settled_count),
+                  median_minutes: asNumber(m.review_latency.median_minutes),
+                  p90_minutes: asNumber(m.review_latency.p90_minutes),
+                }
+              : null,
             resolver_calibration: m
               ? { ece: asNumber(m.calibration_ece), drift_alert: m.drift_alert === true }
               : null,
@@ -600,10 +610,6 @@ identityRoutes.get(
             {
               metric: 'kept_separate_rate',
               reason: 'EMPI exposes no rejected-candidate counter, so the kept-separate share cannot be derived.',
-            },
-            {
-              metric: 'high_risk_precision',
-              reason: 'Needs adjudicated outcomes per confidence band, which EMPI records for calibration but does not expose.',
             },
           ],
           /* AC2 — the sweep, its verdict, and what it compared against. */

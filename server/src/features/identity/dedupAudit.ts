@@ -165,7 +165,14 @@ export async function runDailyDedupAudit(tenantId: string): Promise<AuditRun> {
     auto_link_rate: null as number | null,
     kept_separate_rate: null as number | null,
     false_link_rate: metrics.available ? falseLinkRate : null,
-    high_risk_precision: null as number | null,
+    /*
+     * NO LONGER A GAP either. Carried verbatim from EMPI's own per-band
+     * outcomes rather than recomputed, for the same reason as ECE: a second
+     * implementation would disagree at the third decimal and have operators
+     * chasing our arithmetic. NULL where nothing was adjudicated in the band -
+     * 0 would read as "the matcher is always wrong there".
+     */
+    high_risk_precision: metrics.available ? num(m?.high_risk_precision) : null,
     calibration_ece: metrics.available ? num(m?.calibration_ece) : null,
     profile_version_id: profile?.version_id ?? null,
   };
@@ -180,9 +187,18 @@ export async function runDailyDedupAudit(tenantId: string): Promise<AuditRun> {
         drift_detected, drift_detail, upstream_available)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10)
      ON CONFLICT (tenant_id, ran_on) DO UPDATE SET
-       profile_version_id = EXCLUDED.profile_version_id,
-       false_link_rate    = EXCLUDED.false_link_rate,
-       calibration_ece    = EXCLUDED.calibration_ece,
+       profile_version_id  = EXCLUDED.profile_version_id,
+       false_link_rate     = EXCLUDED.false_link_rate,
+       calibration_ece     = EXCLUDED.calibration_ece,
+       -- Every measured column, not a subset. The first version updated only
+       -- the three that had sources at the time, so when high_risk_precision
+       -- gained one upstream the same-day row could never pick it up: the
+       -- sweep is idempotent per UTC day, so a re-run silently kept the old
+       -- NULL and the report read "not measured" against live data. A partial
+       -- DO UPDATE turns idempotency into staleness.
+       auto_link_rate      = EXCLUDED.auto_link_rate,
+       kept_separate_rate  = EXCLUDED.kept_separate_rate,
+       high_risk_precision = EXCLUDED.high_risk_precision,
        drift_detected     = EXCLUDED.drift_detected,
        drift_detail       = EXCLUDED.drift_detail,
        upstream_available = EXCLUDED.upstream_available,

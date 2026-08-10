@@ -35,6 +35,27 @@ export interface EmpiMetricsRow {
   calibration_ece?: number;
   confidence_distribution?: { band?: string; count?: number }[];
   drift_alert?: boolean;
+  /**
+   * Adjudication latency, added upstream after we reported the tile had no
+   * source. `median_minutes` NULL means nothing settled in the window - NOT
+   * that review was instant - so it is carried through as null rather than 0.
+   */
+  review_latency?: {
+    window_days?: number;
+    settled_count?: number;
+    median_minutes?: number | null;
+    p90_minutes?: number | null;
+  } | null;
+  /** Precision per confidence band. `precision` NULL means nothing adjudicated
+   *  in that band; 0 would read as "the matcher is always wrong there". */
+  band_outcomes?: {
+    band?: string;
+    labeled?: number;
+    true_positive?: number;
+    false_positive?: number;
+    precision?: number | null;
+  }[];
+  high_risk_precision?: number | null;
 }
 
 const asArray = <T>(body: unknown, key: string): T[] => {
