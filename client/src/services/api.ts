@@ -725,6 +725,48 @@ export interface IdentityDecisionResult {
   both_records_retained?: boolean;
 }
 
+
+/** One consent receipt in the register. */
+export interface ConsentReceipt {
+  receipt_id: string | null;
+  person_id: string | null;
+  purpose_id: string | null;
+  processor: string | null;
+  jurisdiction: string | null;
+  granted_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+  status: 'active' | 'expiring' | 'revoked';
+}
+
+/** One channel's suppression count, reconciled against the provider. */
+export interface SuppressionChannel {
+  channel: string;
+  /** Null means NOT MEASURED - the provider was unreachable. Never zero. */
+  count: number | null;
+  provider_reachable: boolean;
+  reconciled: boolean;
+  note: string | null;
+}
+
+/** Everything #view-consent renders, from one call. */
+export interface ConsentOverview {
+  expiring_within_days: number;
+  kpis: {
+    active_receipts: number;
+    expiring_soon: number;
+    revoked: number;
+    sms_permitted: Record<string, unknown> | null;
+    bounce_events: number | null;
+  };
+  receipts: ConsentReceipt[];
+  register: { source: string; limit: number; truncated: boolean; note: string };
+  suppressions: SuppressionChannel[];
+  purposes: string[];
+  purpose_taxonomy_gap: { reason: string; rejected_alternative: string } | null;
+  upstream_available: Record<string, boolean>;
+}
+
 export const api = {
   /** Create an account and receive a session token. */
   register: (payload: {
@@ -981,6 +1023,27 @@ export const api = {
     request<IdentityReviewQueue>(
       `/leadflow/identity/review-queue${band ? `?band=${encodeURIComponent(band)}` : ''}`
     ),
+
+  /**
+   * The Consent & Preferences screen, composed server-side.
+   *
+   * The expiring window goes to the SERVER rather than being applied here: the
+   * tiles and the register must describe the same window, and filtering in the
+   * browser would leave the counters describing a period the table no longer
+   * shows.
+   */
+  consentOverview: (expiringWithinDays?: number) =>
+    request<ConsentOverview>(
+      `/leadflow/consent/overview${expiringWithinDays ? `?expiring_within_days=${expiringWithinDays}` : ''}`
+    ),
+
+  /** Withdraw one receipt. Never optimistic - the row updates on confirmation. */
+  revokeConsentReceipt: (receiptId: string, reason: string) =>
+    request<{ receipt_id: string; revoked: boolean; cascade: Record<string, unknown> }>(
+      `/leadflow/consent/receipts/${encodeURIComponent(receiptId)}/revoke`,
+      { method: 'POST', body: JSON.stringify({ reason }) }
+    ),
+
 
   /** Record (or defer) a steward's verdict on one candidate link. */
   identityDecision: (linkId: string, decision: string, reason: string) =>

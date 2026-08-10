@@ -21,6 +21,7 @@ import SlaSettings from './pages/app/SlaSettings';
 import Analytics from './pages/app/Analytics';
 import ImportCenter from './pages/app/ImportCenter';
 import IdentityReview from './pages/app/IdentityReview';
+import ConsentPreferences from './pages/app/ConsentPreferences';
 import NotFound from './pages/NotFound';
 
 /**
@@ -69,6 +70,7 @@ export default function App() {
               <Route path="sla" element={<SlaSettings />} />
               <Route path="import" element={<ImportCenter />} />
               <Route path="identity" element={<IdentityReview />} />
+              <Route path="consent" element={<ConsentPreferences />} />
               <Route path="analytics" element={<Analytics />} />
             </Route>
 
