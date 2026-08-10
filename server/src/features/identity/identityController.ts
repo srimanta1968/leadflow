@@ -100,8 +100,31 @@ interface MetricGap {
   reason: string;
 }
 
-const asNumber = (value: unknown): number | null =>
-  typeof value === 'number' && Number.isFinite(value) ? value : null;
+/**
+ * A number from upstream, whether it arrives as one or as a string.
+ *
+ * POSTGRES NUMERIC CROSSES JSON AS A STRING, and this cost the screen its whole
+ * point. `confidence` is NUMERIC in empi.candidate_link, so it arrives as
+ * "0.930"; a number-only guard returned null, the `?? 0` fallback made it 0, and
+ * bandOf(0) called it LOW. Every candidate link therefore rendered as low risk
+ * with a score of 0.00 — on a queue whose entire purpose is risk triage, the
+ * most dangerous case was displayed as the safest.
+ *
+ * It survived review because the queue was empty in every environment we had:
+ * no rows, no wrong rows. It appeared within seconds of the first seeded
+ * candidate link, which is the case for seeded fixtures in one line.
+ *
+ * A string is parsed, NaN and Infinity are still null, and null still means NOT
+ * MEASURED rather than zero.
+ */
+const asNumber = (value: unknown): number | null => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
 
 /**
  * Minutes since a case was raised.
