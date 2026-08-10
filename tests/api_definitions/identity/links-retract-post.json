@@ -1,0 +1,85 @@
+{
+  "name": "POST /api/leadflow/identity/links/:merge_id/retract - reverse a link, replay projections, verify the chain",
+  "description": "Retracts a verified identity link: emits the compensating event, replays the projections it invalidated, then asks sdk-audit whether the chain still verifies.\n\nTHE REASON IS MANDATORY HERE THOUGH UPSTREAM MAKES IT OPTIONAL. sdk-identity-resolver declares its unmerge body as { reason?: string }, so the platform will accept a retraction nobody explained. That is precisely the record an auditor needs most - somebody undid a link a steward had verified - so AC4 is enforced on this side rather than hoped for on the other.\n\nNOTHING IS DELETED. unmergeRecords INSERTS a second merge_event with kind 'unmerge' and reverses_merge_id pointing at the original, which stays exactly where it was. An audit trail records that a thing was undone, not that it never happened, and a retraction that erased the link it reverses would destroy the evidence the link was ever made. The response states this as nothing_deleted rather than leaving it to be inferred.\n\nTHE REPLAY IS SCOPED TO THE SUBJECT, never the tenant. A tenant-wide replay to undo one link would rebuild every projection the tenant has - enormously more work, and enormously more blast radius than the retraction justifies.\n\nTHE CHAIN IS VERIFIED AFTER THE REPLAY AND REPORTED WHATEVER IT SAYS (AC3). A retraction that quietly broke the audit chain is worse than one that failed outright: the first leaves a tenant believing their trail is intact.\n\nAN UNKNOWN MERGE ID ANSWERS 502, NOT 404, AND THAT IS UPSTREAM'S DOING. sdk-identity-resolver raises 'empi: merge <id> not found' into its 500 handler instead of answering 404, so a caller's bad id arrives here as a server error carrying callerFault:false. This definition states the 502 that actually happens rather than a 404 that never comes. It is deliberately NOT string-matched into a 404 on this side: inferring a caller fault from an upstream error message is how a genuine outage gets reported as a bad request. Raised for ProjexCloud to answer 404 instead.\n\nrequiresRole:[\"data_steward\"] and NO testCase pins an Authorization header (MUST-71). QA: depends on register and login.",
+  "endpoint": "/api/leadflow/identity/links/:merge_id/retract",
+  "method": "POST",
+  "taskId": "34c9cabe-fb00-4487-a48c-8356c92a47ba",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "data_steward"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 400,
+  "coversCriterion": [
+    "34c9cabe-fb00-4487-a48c-8356c92a47ba#AC2",
+    "34c9cabe-fb00-4487-a48c-8356c92a47ba#AC3",
+    "34c9cabe-fb00-4487-a48c-8356c92a47ba#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {},
+  "testCases": [
+    {
+      "name": "NEGATIVE: a retraction with no reason is refused, though upstream would accept it",
+      "coversCriterion": "34c9cabe-fb00-4487-a48c-8356c92a47ba#AC4",
+      "pathParams": {
+        "merge_id": "{{var:absent_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR"
+    },
+    {
+      "name": "NEGATIVE: an unknown merge id surfaces upstream's failure rather than a fabricated 404",
+      "coversCriterion": "34c9cabe-fb00-4487-a48c-8356c92a47ba#AC2",
+      "pathParams": {
+        "merge_id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "reason": "Linked on a name variant that turned out to be two different people."
+      },
+      "expectedStatus": 502,
+      "expectedResponse": {
+        "success": false,
+        "code": "UPSTREAM_UNAVAILABLE"
+      },
+      "testType": "negative",
+      "coversErrorCase": "502|UPSTREAM_UNAVAILABLE"
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason is required to retract a link",
+      "when": "no reason accompanies the retraction. Enforced here BECAUSE upstream does not - its body declares reason optional, so the platform would record a reversal nobody explained."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer. Not authored as a testCase: pinning it would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold identity.merge_review. Not reachable while this definition runs under requiresRole."
+    },
+    {
+      "status": 502,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "message": "sdk-identity-resolver returned 500: empi: merge <id> not found",
+      "when": "the merge id does not exist, OR the resolver is genuinely unavailable. The two are INDISTINGUISHABLE from here because upstream answers 500 for an absent merge rather than 404 - see the description."
+    }
+  ]
+}

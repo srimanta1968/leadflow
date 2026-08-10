@@ -8,6 +8,7 @@ import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
 import { config } from '../../config/env';
 import { DEFAULT_PROFILE, readActiveProfile, writeProfileVersion } from './riskProfile';
 import { listAuditRuns, runDailyDedupAudit } from './dedupAudit';
+import { replayProjections, unmergeLink, verifyAuditChain } from './identityGateway';
 import {
   adjudicateCandidate,
   enqueueStewardReview,
@@ -612,3 +613,158 @@ identityRoutes.get(
     }
   ))
 );
+
+const mergeIdOf = (req: GovernedRequest): string => String(req.params?.merge_id ?? '');
+
+/**
+ * GET /api/leadflow/identity/links/:merge_id/blast-radius — what a retraction
+ * would touch, BEFORE it is committed.
+ *
+ * SHOWN FIRST BECAUSE A RETRACTION IS NOT SMALL. Undoing a link republishes
+ * every projection built on it, and the operator deserves to know that a
+ * one-click reversal reaches conversations and consent receipts before they
+ * click it — not afterwards in an incident review.
+ *
+ * WHAT WE CANNOT COUNT IS NAMED, NOT OMITTED. LeadFlow can count its own leads
+ * against the two person ids. Campaign enrollments, conversations and consent
+ * receipts live upstream and cannot be enumerated from here, so they are listed
+ * as unknown with the reason. An omitted category reads as zero, and "no
+ * consent receipts are affected" is the single most dangerous thing this
+ * response could imply while being unable to check.
+ */
+identityRoutes.get(
+  '/links/:merge_id/blast-radius',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.IDENTITY_MERGE_REVIEW,
+      event: AUDIT_EVENTS.IDENTITY_REVIEW_QUEUE_INSPECTED,
+      purpose: 'lead_management',
+      resourceType: 'identity_merge_event',
+      resourceId: mergeIdOf,
+      metadata: (req) => ({ merge_id: mergeIdOf(req) }),
+      obligations: NOT_AN_OWNED_RECORD,
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const mergeId = mergeIdOf(req);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          merge_id: mergeId,
+          /*
+           * NOTHING IS COUNTABLE FROM HERE, and saying so is the honest answer.
+           *
+           * The first draft of this counted local leads against the merge's two
+           * person ids. It could not: `leads` carries no person id of any kind,
+           * so the query had nothing to join on and would have reported 0 -
+           * "no leads affected" - for a question it never actually asked. A
+           * fabricated zero on a confirmation dialog is worse than an absent
+           * number, because the operator reads it as a checked fact and clicks
+           * through on the strength of it.
+           */
+          affected: {},
+          not_enumerable: [
+            {
+              category: 'leads',
+              reason: 'LeadFlow leads carry no person id, and a merge names two UPSTREAM person ids, so there is nothing to join on. Countable once leads record the canonical person they resolved to.',
+            },
+            {
+              category: 'campaign_enrollments',
+              reason: 'Held in sdk-campaign, which exposes no by-subject count. A retraction may still change them.',
+            },
+            {
+              category: 'conversations',
+              reason: 'Held in sdk-conversation. Not countable from here, and not therefore zero.',
+            },
+            {
+              category: 'consent_receipts',
+              reason: 'Held in sdk-consent, keyed on a four-tuple LeadFlow does not carry. See the handoff on the receipt point-read.',
+            },
+          ],
+          /*
+           * STATED PLAINLY: a retraction is reversible in the sense that it
+           * emits a compensating event rather than deleting anything, but the
+           * downstream effects of the replay are not individually undoable.
+           */
+          reversibility:
+            'Retracting emits a compensating event; neither the original merge nor either source record is deleted. The projection replay that follows cannot be selectively undone.',
+        },
+      });
+    }
+  ))
+);
+
+/**
+ * POST /api/leadflow/identity/links/:merge_id/retract — reverse a link, replay,
+ * then verify the chain.
+ *
+ * THE REASON IS MANDATORY HERE THOUGH UPSTREAM MAKES IT OPTIONAL.
+ * sdk-identity-resolver declares `Body: { reason?: string }`, so the platform
+ * will accept a retraction nobody explained. That is exactly the record an
+ * auditor needs most: somebody undid a link a steward had verified, and "why"
+ * is the whole content of the event. AC4 is enforced on this side rather than
+ * hoped for on the other.
+ *
+ * THE CHAIN IS VERIFIED AFTER THE REPLAY AND REPORTED WHATEVER IT SAYS. A
+ * retraction that quietly broke the audit chain is worse than one that failed
+ * outright — the first leaves a tenant believing their trail is intact.
+ */
+identityRoutes.post(
+  '/links/:merge_id/retract',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.IDENTITY_MERGE_REVIEW,
+      event: AUDIT_EVENTS.IDENTITY_LINK_RETRACTED,
+      purpose: 'lead_management',
+      resourceType: 'identity_merge_event',
+      resourceId: mergeIdOf,
+      metadata: (req) => ({ merge_id: mergeIdOf(req) }),
+      obligations: NOT_AN_OWNED_RECORD,
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const mergeId = mergeIdOf(req);
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+
+      if (reason.length === 0) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'reason is required to retract a link'
+        );
+      }
+
+      const compensation = await unmergeLink(mergeId, reason);
+      if (!compensation) {
+        throw new AppError(
+          502,
+          ErrorCodes.UPSTREAM_UNAVAILABLE,
+          'The resolver did not return a compensating event, so the retraction cannot be confirmed.'
+        );
+      }
+
+      const subject = compensation.surviving_person_id ?? '';
+      const [replay, audit] = await Promise.all([
+        replayProjections(config.projexCloud.tenantId, subject, reason),
+        verifyAuditChain(),
+      ]);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          merge_id: mergeId,
+          /* The compensating event, not a deletion. */
+          compensation_id: compensation.merge_id ?? null,
+          reverses_merge_id: compensation.reverses_merge_id ?? null,
+          reason,
+          /* AC2 — the replay, scoped to the subject rather than the tenant. */
+          replay: { requested: true, available: replay.available, result: replay.value },
+          /* AC3 — reported verbatim, pass or fail. */
+          audit_chain: { verified: audit.available ? audit.value : null, available: audit.available },
+          nothing_deleted: true,
+        },
+      });
+    }
+  ))
+);
+

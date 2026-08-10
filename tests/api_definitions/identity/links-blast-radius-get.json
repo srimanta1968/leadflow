@@ -1,0 +1,58 @@
+{
+  "name": "GET /api/leadflow/identity/links/:merge_id/blast-radius - what a retraction would touch, before it is committed",
+  "description": "The confirmation step behind AC1: what undoing this link would reach, shown BEFORE anything is undone.\n\nSHOWN FIRST BECAUSE A RETRACTION IS NOT SMALL. Reversing a link republishes every projection built on it, and an operator deserves to know that a one-click reversal reaches conversations and consent receipts before they click it, not afterwards in an incident review.\n\nEVERY CATEGORY IT CANNOT COUNT IS NAMED, AND `affected` IS EMPTY RATHER THAN FULL OF ZEROS. The first draft of this counted local leads against the merge's two person ids. It could not: `leads` carries no person id of any kind and a merge names two UPSTREAM person ids, so the query had nothing to join on and would have answered 0 - 'no leads affected' - for a question it never actually asked. A fabricated zero on a confirmation dialog is worse than an absent number, because the operator reads it as a checked fact and clicks through on the strength of it. Campaign enrollments, conversations and consent receipts live in sdk-campaign, sdk-conversation and sdk-consent respectively and cannot be enumerated from here either, so each is listed with the reason it is unknown.\n\nLEADS BECOME COUNTABLE the day a lead records the canonical person it resolved to. Until then the honest answer is that we do not know, which is why the category is listed rather than dropped - an omitted category reads as zero.\n\nTHE REVERSIBILITY SENTENCE IS PART OF THE ANSWER, not decoration. Retracting emits a compensating event and deletes nothing - neither the original merge nor either source record - but the projection replay that follows cannot be selectively undone, and a screen that says 'reversible' without that qualifier is overpromising to somebody about to act on it.\n\nrequiresRole:[\"data_steward\"] and NO testCase pins an Authorization header (MUST-71). QA: depends on register and login.",
+  "endpoint": "/api/leadflow/identity/links/:merge_id/blast-radius",
+  "method": "GET",
+  "taskId": "34c9cabe-fb00-4487-a48c-8356c92a47ba",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "data_steward"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "34c9cabe-fb00-4487-a48c-8356c92a47ba#AC1"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "data.not_enumerable.category": [
+      "leads",
+      "campaign_enrollments",
+      "conversations",
+      "consent_receipts"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The blast radius names every category it cannot count instead of reporting zeros",
+      "coversCriterion": "34c9cabe-fb00-4487-a48c-8356c92a47ba#AC1",
+      "pathParams": {
+        "merge_id": "{{var:absent_uuid}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive"
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer. Not authored as a testCase: pinning it would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold identity.merge_review. Not reachable while this definition runs under requiresRole."
+    }
+  ]
+}

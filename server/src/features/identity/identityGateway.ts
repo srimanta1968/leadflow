@@ -172,3 +172,96 @@ export async function adjudicateCandidate(
     status: result.data?.data?.link?.status ?? null,
   };
 }
+
+/** A compensating unmerge event, as `MergeEvent` returns it. */
+export interface CompensationRow {
+  merge_id?: string;
+  link_id?: string | null;
+  surviving_person_id?: string;
+  merged_person_id?: string;
+  kind?: string;
+  reverses_merge_id?: string | null;
+  decided_by?: string | null;
+  reason?: string | null;
+  created_at?: string;
+}
+
+/**
+ * Reverse a link by emitting a compensating event.
+ *
+ * NOTHING IS DELETED, here or upstream. `unmergeRecords` INSERTS a second
+ * merge_event with kind 'unmerge' and reverses_merge_id pointing at the
+ * original, which stays exactly where it was. An audit trail records that a
+ * thing was undone, not that it never happened - and a retraction that erased
+ * the link it reverses would destroy the evidence that the link was ever made.
+ */
+export async function unmergeLink(
+  mergeId: string,
+  reason: string
+): Promise<CompensationRow | null> {
+  const result = await SdkGatewayClient.call<{ data?: { merge?: CompensationRow } }>({
+    sdk: 'sdk-identity-resolver',
+    path: `/api/empi/merges/${encodeURIComponent(mergeId)}/unmerge`,
+    method: 'POST',
+    idempotencyKey: `unmerge:${mergeId}`,
+    body: { reason },
+  });
+  return result.data?.data?.merge ?? null;
+}
+
+/**
+ * Rebuild the projections a retraction invalidated.
+ *
+ * SCOPED TO THE SUBJECT, never the tenant. A tenant-wide replay to undo one
+ * link would rebuild every projection the tenant has, which is both enormously
+ * more work and enormously more blast radius than the retraction justifies.
+ */
+export async function replayProjections(
+  tenantId: string,
+  subjectRef: string,
+  reason: string
+): Promise<Reached<Record<string, unknown> | null>> {
+  if (!SdkGatewayClient.isConfigured()) return unreachable(null);
+  try {
+    const result = await SdkGatewayClient.call<{ data?: Record<string, unknown> }>({
+      sdk: 'sdk-projection',
+      path: '/api/projection/replay',
+      method: 'POST',
+      idempotencyKey: `replay:${subjectRef}`,
+      body: {
+        tenant_id: tenantId,
+        subject_ref: subjectRef,
+        trigger: 'retraction',
+        reason,
+        scope: 'subject',
+      },
+    });
+    if (!result.delivered) return unreachable(null);
+    return { value: result.data?.data ?? null, available: true };
+  } catch {
+    return unreachable(null);
+  }
+}
+
+/**
+ * Ask sdk-audit whether the chain still verifies.
+ *
+ * ASKED AFTER THE REPLAY, and the answer is reported whatever it says. A
+ * retraction that quietly broke the audit chain is far worse than one that
+ * failed outright: the first leaves a tenant believing their trail is intact.
+ */
+export async function verifyAuditChain(): Promise<Reached<Record<string, unknown> | null>> {
+  if (!SdkGatewayClient.isConfigured()) return unreachable(null);
+  try {
+    const result = await SdkGatewayClient.call<{ data?: Record<string, unknown> }>({
+      sdk: 'sdk-audit',
+      path: '/api/audit/verify',
+      method: 'POST',
+      body: {},
+    });
+    if (!result.delivered) return unreachable(null);
+    return { value: result.data?.data ?? null, available: true };
+  } catch {
+    return unreachable(null);
+  }
+}
