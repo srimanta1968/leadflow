@@ -1,0 +1,108 @@
+{
+  "name": "GET /api/leadflow/consent/overview - receipts, suppressions and the purpose taxonomy for #view-consent",
+  "description": "The one call behind the Consent & Preferences screen: the receipt register, the six KPI tiles, the suppression controls and the purpose taxonomy.\n\nTHE TASK NAMED THREE ENDPOINTS THAT DO NOT EXIST, and this composes the ones that do. sdk-consent serves /api/consents/* (PLURAL) and has never served /api/consent/*: there is no GET /api/consent/receipts and no GET /api/consent/purposes. The same singular/plural slip is what made the AI coach's recording gate deny every call for weeks, so every path here was taken from packages/sdk-consent/src/server/routes.ts rather than from a description.\n\nRECEIPTS COME FROM /api/consents/export, which is a DSAR export rather than a register, and that difference is stated instead of hidden. It answers per person_id, so a tenant-wide register is assembled rather than read - which is why the register is capped and reports `truncated` when it hits the cap. A screen that silently shows the first N receipts of an unknown total invites somebody to conclude that is all of them.\n\nTHE EXPIRING WINDOW IS A PARAMETER, defaulting to 30 days (AC1). Out-of-range or unparseable values are REJECTED rather than defaulted, because quietly substituting 30 would let a reader compare a figure they believe covers a quarter against one that covers a month.\n\nSUPPRESSION COUNTS ARE RECONCILED, NOT ASSUMED (AC2). The response reports the provider's own count beside ours and a `reconciled` flag per channel. Where they disagree the screen must say so: a suppression list that has drifted from the provider is the exact condition under which somebody gets messaged after opting out, and a single merged number would conceal it.\n\nTHE PURPOSE TAXONOMY CANNOT BE READ, AND THE SCREEN SAYS SO. AC4 asks for the taxonomy to render from the REGISTERED purposes rather than a hard-coded list. sdk-consent exposes only POST /api/consents/purposes, which registers one - there is no GET, so the registry cannot be listed. The response therefore returns purposes:[] with a purpose_taxonomy_gap naming the missing endpoint, and the screen renders that state rather than a constant. Deriving the list from purposes seen on existing receipts was considered and rejected: it would omit any registered purpose nobody has consented to yet, which is precisely when a taxonomy panel earns its place. Raised in ProjexCloud docs/handoff.\n\nDEGRADES PER PANEL. Each upstream read answers independently, so deliverability being down empties the suppression controls and leaves the register readable. upstream_available reports each separately and an empty result is never conflated with an unreachable one.\n\nrequiresRole:[\"privacy_officer\"] and NO testCase pins an Authorization header (MUST-71). Consent receipts name a person, a purpose and what they were told; the Privacy Officer owns the lawful-basis question. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/consent/overview",
+  "method": "GET",
+  "taskId": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "privacy_officer"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC1",
+    "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC2",
+    "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "data.receipts.status": [
+      "active",
+      "expiring",
+      "revoked"
+    ],
+    "data.suppressions.channel": [
+      "sms",
+      "email",
+      "voice",
+      "postal"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The overview composes every panel and reports availability per source",
+      "coversCriterion": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC2",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive"
+    },
+    {
+      "name": "The expiring window is honoured when given explicitly",
+      "coversCriterion": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC1",
+      "queryParams": {
+        "expiring_within_days": "90"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive"
+    },
+    {
+      "name": "NEGATIVE: an unparseable window is rejected rather than silently defaulted to 30",
+      "coversCriterion": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC1",
+      "queryParams": {
+        "expiring_within_days": "a-quarter"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR"
+    },
+    {
+      "name": "NEGATIVE: a window outside the supported range is rejected",
+      "coversCriterion": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC1",
+      "queryParams": {
+        "expiring_within_days": "4000"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|range"
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "expiring_within_days must be an integer between 1 and 365",
+      "when": "the window is non-numeric or out of range. Rejected rather than defaulted so two readings are never silently measured over different periods."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer. Not authored as a testCase: pinning it would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold consent.purpose_manage. Not reachable while this definition runs under requiresRole."
+    }
+  ]
+}

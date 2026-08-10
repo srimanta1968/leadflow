@@ -12,6 +12,7 @@ import { intakeRoutes } from '../features/intake';
 import { captureRoutes } from '../features/capture';
 import { importsRoutes } from '../features/imports';
 import { identityRoutes } from '../features/identity';
+import { consentRoutes } from '../features/consent';
 import { aiRoutes } from '../features/ai';
 import { conversationRoutes } from '../features/conversation';
 import { sdkHealthRoutes } from '../platform/sdkGateway';
@@ -43,6 +44,7 @@ router.use('/leadflow/capture', captureRoutes);
 // authenticate has run.
 router.use('/leadflow/imports', importsRoutes);
 router.use('/leadflow/identity', identityRoutes);
+router.use('/leadflow/consent', consentRoutes);
 router.use('/leadflow/ai', aiRoutes);
 router.use('/leadflow/calls', conversationRoutes);
 router.use('/leadflow/platform', sdkHealthRoutes);
