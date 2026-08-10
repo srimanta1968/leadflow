@@ -734,6 +734,11 @@ else
     echo -e "   ${GREEN}✓ Tests started (ID: ${TEST_RUN_ID})${NC}"
 fi
 
+# Percent-encode a path for a query string, without needing python or jq.
+url_encode_path() {
+    printf '%s' "$1" | sed -e 's|%|%25|g' -e 's| |%20|g'
+}
+
 # Step 2: Poll for completion
 # On Windows/Git Bash, curl can hang in git hooks. We work around this by:
 # 1. Creating a temp file for output
@@ -741,7 +746,17 @@ fi
 # 3. Using exec to fully replace the shell process
 WAIT_TIME=0
 UNKNOWN_STATUS_COUNT=0
-STATUS_URL="${MCP_SERVER_URL}/api/test/status"
+# SCOPED TO THIS PROJECT, always. One Dev MCP container serves several projects
+# (/workspace plus the /projects/additionalN slots), and an unscoped status call
+# answers 409 "ambiguous" listing them rather than picking one:
+#
+#   {"status":"ambiguous","projects":[...],"message":"Multiple projects have API
+#    test state in this container. Pass ?projectId=<id> (or ?projectPath=<path>)"}
+#
+# The poll then never sees a terminal status, burns its whole budget and reports
+# a timeout - which reads as "the test run hung" when the run had in fact
+# finished. run-dev-tests.sh already scopes its calls this way; this one did not.
+STATUS_URL="${MCP_SERVER_URL}/api/test/status?projectPath=$(url_encode_path "${PROJECT_PATH}")"
 
 while [ $WAIT_TIME -lt $API_TEST_MAX_WAIT ]; do
     sleep "$API_TEST_POLL_INTERVAL"
