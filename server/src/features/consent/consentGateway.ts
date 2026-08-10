@@ -133,3 +133,62 @@ export async function revokeReceipt(
   });
   return result.data?.data ?? null;
 }
+
+/**
+ * Encrypt the signature blob before anything stores it.
+ *
+ * A WRITE THAT MUST NOT DEGRADE. If the vault is unreachable the receipt is not
+ * issued at all: a consent receipt whose signature never got encrypted is worse
+ * than no receipt, because it looks complete to everyone who reads it later.
+ *
+ * @returns The ciphertext reference the receipt keeps. The raw image is never
+ *          returned, never persisted here, and never logged.
+ */
+export async function encryptSignature(dataUrl: string): Promise<string | null> {
+  const result = await SdkGatewayClient.call<{ data?: { ciphertext?: string; ref?: string } }>({
+    sdk: 'sdk-vault',
+    path: '/api/vault/encrypt',
+    method: 'POST',
+    body: { plaintext: dataUrl, purpose: 'consent_signature' },
+  });
+  return result.data?.data?.ref ?? result.data?.data?.ciphertext ?? null;
+}
+
+/** Record the capture as evidence, so the receipt can be defended later. */
+export async function captureEvidence(payload: Record<string, unknown>): Promise<string | null> {
+  const result = await SdkGatewayClient.call<{ data?: { id?: string } }>({
+    sdk: 'sdk-evidence',
+    path: '/api/evidence/capture',
+    method: 'POST',
+    body: payload,
+  });
+  return result.data?.data?.id ?? null;
+}
+
+/**
+ * Grant the receipt.
+ *
+ * `purpose_id` IS SINGULAR UPSTREAM, and that is what makes blanket consent
+ * impossible rather than merely discouraged. Every required field is sent
+ * explicitly - validateGrantConsent demands person_id, purpose_id, processor,
+ * app_id, jurisdiction and granted_by_actor, and a missing one is a 400 that
+ * would read here as "consent service rejected the receipt".
+ */
+export async function grantReceipt(input: {
+  person_id: string;
+  purpose_id: string;
+  processor: string;
+  app_id: string;
+  jurisdiction: string;
+  granted_by_actor: string;
+  expires_at?: string;
+}): Promise<Record<string, unknown> | null> {
+  const result = await SdkGatewayClient.call<{ data?: Record<string, unknown> }>({
+    sdk: 'sdk-consent',
+    path: '/api/consents',
+    method: 'POST',
+    idempotencyKey: `grant:${input.person_id}:${input.purpose_id}`,
+    body: input,
+  });
+  return result.data?.data ?? null;
+}

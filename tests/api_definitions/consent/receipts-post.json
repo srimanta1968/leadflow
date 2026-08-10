@@ -1,0 +1,136 @@
+{
+  "name": "POST /api/leadflow/consent/receipts - issue one signed, purpose-specific consent receipt",
+  "description": "Issues a consent receipt from the Capture Consent modal (#consentModal): one subject, ONE purpose, the channels agreed for it, the notice they were shown, and the signature evidence.\n\nONE PURPOSE PER RECEIPT IS STRUCTURAL, NOT A RULE WE ENFORCE (AC1). sdk-consent's validateGrantConsent takes a singular `purpose_id`, so a receipt cannot carry two purposes even if a caller wanted it to - blanket consent is impossible by construction rather than by validation. This endpoint mirrors that: `purpose_id` is a single string and an array is rejected. A screen that let an operator tick four purposes and issue one receipt would be issuing a permission nobody granted.\n\nPROMOTIONAL OFFERS IS ITS OWN PURPOSE, NEVER A CHANNEL (AC4). It is the one purpose people most often did not intend to agree to, and bundling it as a checkbox under a service purpose is precisely how that happens: somebody consents to job updates and finds themselves on a marketing list. Sending it as a channel is rejected with a message that says why, rather than being silently dropped - a silent drop leaves the operator believing they captured it.\n\nTHE SIGNATURE IS ENCRYPTED BEFORE IT IS STORED, AND IS NOT SEARCHABLE (AC2). The image goes to sdk-vault POST /api/vault/encrypt and only the returned ciphertext reference is kept; the raw data URL is never persisted and never logged. It is deliberately excluded from any contact-search projection - a signature is evidence for a specific dispute, not an attribute of a person to be browsed.\n\nTHE NOTICE IS RECORDED AS SHOWN, NOT AS NAMED (AC3). notice_hash, the displayed text, the language, the device and the capturing representative are all required. \"Which version did they see\" is the first question asked when a consent is challenged, and a template id alone cannot answer it: templates change, and the one on file today may not be the words on the screen that day.\n\nDEGRADES NOWHERE. Every part of this is a WRITE. If the vault cannot encrypt the signature, or sdk-consent cannot record the receipt, this answers an error rather than a partial success - a receipt without its evidence is worse than no receipt, because it looks complete.\n\nrequiresRole:[\"privacy_officer\"] and NO testCase pins an Authorization header (MUST-71). QA: depends on register and login.",
+  "endpoint": "/api/leadflow/consent/receipts",
+  "method": "POST",
+  "taskId": "787d4f44-9abd-41cd-b589-9c02e793a9df",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "privacy_officer"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 400,
+  "coversCriterion": [
+    "787d4f44-9abd-41cd-b589-9c02e793a9df#AC1",
+    "787d4f44-9abd-41cd-b589-9c02e793a9df#AC3",
+    "787d4f44-9abd-41cd-b589-9c02e793a9df#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "data.capture_method": [
+      "in_person_signature",
+      "secure_link",
+      "web_form",
+      "recorded_verbal",
+      "imported_receipt"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "NEGATIVE: two purposes on one receipt are refused - no blanket consent",
+      "coversCriterion": "787d4f44-9abd-41cd-b589-9c02e793a9df#AC1",
+      "payload": {
+        "person_id": "{{var:absent_uuid}}",
+        "purpose_id": ["service_updates", "marketing"],
+        "channels": ["email"],
+        "jurisdiction": "GB",
+        "notice_hash": "sha256:0000",
+        "notice_text": "We will contact you about your job.",
+        "notice_language": "en",
+        "capture_method": "web_form",
+        "captured_by": "qa.privacy@leadflow.test"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|purpose"
+    },
+    {
+      "name": "NEGATIVE: promotional offers sent as a channel is refused, not silently dropped",
+      "coversCriterion": "787d4f44-9abd-41cd-b589-9c02e793a9df#AC4",
+      "payload": {
+        "person_id": "{{var:absent_uuid}}",
+        "purpose_id": "service_updates",
+        "channels": ["email", "promotional_offers"],
+        "jurisdiction": "GB",
+        "notice_hash": "sha256:0000",
+        "notice_text": "We will contact you about your job.",
+        "notice_language": "en",
+        "capture_method": "web_form",
+        "captured_by": "qa.privacy@leadflow.test"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|promotional"
+    },
+    {
+      "name": "NEGATIVE: a receipt with no notice evidence is refused",
+      "coversCriterion": "787d4f44-9abd-41cd-b589-9c02e793a9df#AC3",
+      "payload": {
+        "person_id": "{{var:absent_uuid}}",
+        "purpose_id": "service_updates",
+        "channels": ["email"],
+        "jurisdiction": "GB",
+        "capture_method": "web_form",
+        "captured_by": "qa.privacy@leadflow.test"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|notice"
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "purpose_id must be a single purpose; a receipt covers exactly one",
+      "when": "purpose_id is an array or absent. Mirrors sdk-consent, whose validateGrantConsent takes a singular purpose_id - blanket consent is impossible upstream and must not be constructible here either."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "promotional_offers is a separate purpose, not a channel",
+      "when": "promotional_offers appears in channels. Refused loudly rather than dropped: a silent drop leaves the operator believing they captured a marketing permission they did not."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "notice_hash, notice_text and notice_language are required",
+      "when": "any part of the notice evidence is missing. A template id cannot answer 'which words did they see', because templates change."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer. Not authored as a testCase: pinning it would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold consent.purpose_manage."
+    },
+    {
+      "status": 502,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "message": "The signature could not be encrypted, so the receipt was not issued.",
+      "when": "sdk-vault or sdk-consent is unreachable. Deliberately NOT a partial success: a receipt without its evidence is worse than no receipt, because it looks complete."
+    }
+  ]
+}

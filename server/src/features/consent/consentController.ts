@@ -5,7 +5,11 @@ import { AppError, ErrorCodes } from '../../utils/errors';
 import { governed, type GovernedRequest } from '../../platform/policy/governed';
 import { PERMISSIONS } from '../../config/roles';
 import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
+import { config } from '../../config/env';
 import {
+  captureEvidence,
+  encryptSignature,
+  grantReceipt,
   listBounceEvents,
   listReceipts,
   listSuppressions,
@@ -244,6 +248,164 @@ consentRoutes.post(
             note: 'Suppression propagation is driven upstream by that event; this response confirms the revocation, not the fan-out.',
           },
           result,
+        },
+      });
+    }
+  ))
+);
+
+/** The one purpose that is never a channel. */
+const PROMOTIONAL_PURPOSE = 'promotional_offers';
+
+/** Capture methods the modal offers, mirroring the mockup. */
+const CAPTURE_METHODS = [
+  'in_person_signature',
+  'secure_link',
+  'web_form',
+  'recorded_verbal',
+  'imported_receipt',
+] as const;
+
+/**
+ * POST /api/leadflow/consent/receipts — issue one signed, purpose-specific receipt.
+ *
+ * FOUR REFUSALS, and each exists because the alternative produces a permission
+ * nobody granted.
+ */
+consentRoutes.post(
+  '/receipts',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.CONSENT_PURPOSE_MANAGE,
+      event: AUDIT_EVENTS.CONSENT_RECEIPT_ISSUED,
+      purpose: 'compliance',
+      resourceType: 'consent_receipt',
+      metadata: (req) => ({
+        purpose_id: String((req.body as Record<string, unknown>)?.purpose_id ?? ''),
+        capture_method: String((req.body as Record<string, unknown>)?.capture_method ?? ''),
+      }),
+      obligations: NOT_AN_OWNED_RECORD,
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const b = (req.body ?? {}) as Record<string, unknown>;
+
+      /*
+       * AC1 — ONE PURPOSE, and an array is refused rather than reduced to its
+       * first element. sdk-consent's validateGrantConsent takes a singular
+       * purpose_id, so a multi-purpose receipt cannot exist upstream; quietly
+       * taking [0] here would issue a receipt for one purpose while the
+       * operator believed they had captured four.
+       */
+      if (Array.isArray(b.purpose_id) || typeof b.purpose_id !== 'string' || !b.purpose_id.trim()) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'purpose_id must be a single purpose; a receipt covers exactly one'
+        );
+      }
+
+      const channels = Array.isArray(b.channels) ? b.channels.map(String) : [];
+
+      /*
+       * AC4 — PROMOTIONAL OFFERS IS A PURPOSE, NOT A CHANNEL, and sending it as
+       * one is refused LOUDLY. It is the permission people most often did not
+       * intend to give: somebody agrees to job updates and finds themselves on
+       * a marketing list. Dropping it silently would leave the operator
+       * believing they had captured it, so the refusal names the reason.
+       */
+      if (channels.includes(PROMOTIONAL_PURPOSE)) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'promotional_offers is a separate purpose, not a channel'
+        );
+      }
+
+      /*
+       * AC3 — THE NOTICE AS SHOWN, not as named. "Which version did they see"
+       * is the first question when a consent is challenged, and a template id
+       * cannot answer it because templates change: the one on file today may
+       * not be the words that were on the screen that day.
+       */
+      const noticeHash = typeof b.notice_hash === 'string' ? b.notice_hash.trim() : '';
+      const noticeText = typeof b.notice_text === 'string' ? b.notice_text.trim() : '';
+      const noticeLang = typeof b.notice_language === 'string' ? b.notice_language.trim() : '';
+      if (!noticeHash || !noticeText || !noticeLang) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'notice_hash, notice_text and notice_language are required'
+        );
+      }
+
+      const method = String(b.capture_method ?? '');
+      if (!CAPTURE_METHODS.includes(method as (typeof CAPTURE_METHODS)[number])) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          `capture_method must be one of ${CAPTURE_METHODS.join(', ')}`
+        );
+      }
+
+      /*
+       * AC2 — THE SIGNATURE IS ENCRYPTED BEFORE ANYTHING KEEPS IT, and only the
+       * reference is retained. The raw data URL is never persisted and never
+       * logged; it is evidence for a specific dispute, not an attribute of a
+       * person to be browsed, so it is excluded from every contact projection.
+       */
+      let signatureRef: string | null = null;
+      if (typeof b.signature_data_url === 'string' && b.signature_data_url.length > 0) {
+        signatureRef = await encryptSignature(b.signature_data_url);
+        if (!signatureRef) {
+          throw new AppError(
+            502,
+            ErrorCodes.UPSTREAM_UNAVAILABLE,
+            'The signature could not be encrypted, so the receipt was not issued.'
+          );
+        }
+      }
+
+      const receipt = await grantReceipt({
+        person_id: String(b.person_id ?? ''),
+        purpose_id: b.purpose_id,
+        processor: config.projexCloud.tenantId,
+        app_id: config.projexCloud.appId || 'leadflow',
+        jurisdiction: String(b.jurisdiction ?? ''),
+        granted_by_actor: String(b.captured_by ?? req.session?.userId ?? ''),
+        expires_at: typeof b.expires_at === 'string' ? b.expires_at : undefined,
+      });
+
+      if (!receipt) {
+        throw new AppError(
+          502,
+          ErrorCodes.UPSTREAM_UNAVAILABLE,
+          'sdk-consent did not confirm the receipt, so it cannot be reported as issued.'
+        );
+      }
+
+      const evidenceId = await captureEvidence({
+        kind: 'consent_signature',
+        notice_hash: noticeHash,
+        notice_language: noticeLang,
+        capture_method: method,
+        device: String(b.device ?? ''),
+        representative: String(b.captured_by ?? ''),
+        signature_ref: signatureRef,
+      }).catch(() => null);
+
+      res.status(201).json({
+        success: true,
+        data: {
+          receipt,
+          purpose_id: b.purpose_id,
+          channels,
+          /* The reference, never the image. */
+          signature_ref: signatureRef,
+          signature_searchable: false,
+          notice: { hash: noticeHash, language: noticeLang, text: noticeText },
+          capture_method: method,
+          evidence_id: evidenceId,
+          note: 'Final channel authorization is re-evaluated at use time. This receipt permits a purpose; it does not bypass suppression.',
         },
       });
     }
