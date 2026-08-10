@@ -202,6 +202,26 @@ export function IdentityCandidateModal({
           they are the same person; both source records are retained and the assertion can
           be retracted.
         </p>
+        {/*
+         * SCOPE, STATED BECAUSE THE SCREEN OTHERWISE IMPLIES OTHERWISE BY SILENCE.
+         *
+         * ProjexCloud scoped every EMPI read and write by tenant, but was explicit
+         * that `merge_event.tenant_id` is ATTRIBUTION, NOT ISOLATION: a merge acts
+         * on `identity.person`, which is L1 and deliberately global, so a link
+         * decided here changes a person another tenant may also see. The column
+         * records who decided, which makes the act attributable and reversible; it
+         * does not make the effect local, and no filtering could.
+         *
+         * A steward reading "Verify Link" with no scope note would reasonably
+         * assume the effect stopped at their own data. Saying nothing is how that
+         * assumption forms, so it is said.
+         */}
+        <p className="text-soft mt-2 text-sm">
+          Scope: this decision is recorded against your tenant, but a person record is
+          shared across the platform. A link verified here can change a person other
+          tenants also see — the record shows who decided, not that the effect is
+          confined here.
+        </p>
       </div>
     </div>
   );
