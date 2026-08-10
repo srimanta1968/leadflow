@@ -1,0 +1,69 @@
+{
+  "name": "GET /api/leadflow/identity/calibration - resolver calibration, the four rates, and the daily dedup audit trail",
+  "description": "The calibration report behind the risk-tuning surface: how well the resolver's confidence matches reality, the four rates the SOP asks for, the policy version in force, and the history of the daily dedup audit.\n\nEVERY RATE IS NULL-OR-MEASURED, NEVER NULL-AS-ZERO. A rate of 0 means the audit ran and found none; null means it could not be measured because the resolver was unreachable. Those call for opposite responses - 'nothing auto-linked today' is a fact about the data, 'we could not ask' is an incident - and a report that spells them the same way cannot be acted on. The response carries upstream_available so a reader never has to infer which they are looking at.\n\nCALIBRATION IS CARRIED VERBATIM from sdk-identity-resolver's own calibration_ece rather than recomputed here. A second implementation of expected calibration error would disagree with the service that queues the candidates at the third decimal place, and the operator would be told the resolver is drifting when the only thing drifting is our arithmetic. drift_alert comes across the same way.\n\nHIGH-RISK PRECISION AND FALSE-LINK RATE COME FROM THE AUDIT, NOT FROM A LIVE COUNT. They are properties of a WINDOW - decisions settled since the last audit - so they are read from leadflow_dedup_audit_run rather than computed per request. A request-time count would move every time somebody refreshed the screen and could never be compared against yesterday.\n\nTHE POLICY VERSION IS RETURNED WITH THE RATES, deliberately. Rates that moved because somebody raised the auto-link threshold are not the resolver drifting, and without the version in force a reader cannot tell those apart - which is the single most likely wrong conclusion this screen could produce.\n\nrequiresRole:[\"data_steward\"] and NO testCase pins an Authorization header (MUST-71). QA: depends on register and login.",
+  "endpoint": "/api/leadflow/identity/calibration",
+  "method": "GET",
+  "taskId": "53ad2a40-7b69-4b76-b393-2e2359764ae8",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "data_steward"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "53ad2a40-7b69-4b76-b393-2e2359764ae8#AC2",
+    "53ad2a40-7b69-4b76-b393-2e2359764ae8#AC3"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {},
+  "testCases": [
+    {
+      "name": "The report answers with calibration, the four rates and the audit trail",
+      "coversCriterion": "53ad2a40-7b69-4b76-b393-2e2359764ae8#AC3",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive"
+    },
+    {
+      "name": "NEGATIVE: an unparseable window is rejected rather than silently defaulted",
+      "coversCriterion": "53ad2a40-7b69-4b76-b393-2e2359764ae8#AC2",
+      "queryParams": {
+        "days": "a-fortnight"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR"
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "days must be an integer between 1 and 90",
+      "when": "the window is absent-but-present, non-numeric or out of range. Quietly substituting a default would let a reader compare a 7-day figure against a 90-day one believing both covered the same period."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent or not Bearer. Not authored as a testCase: pinning a header would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold identity.merge_review. Not reachable while this runs under requiresRole."
+    }
+  ]
+}

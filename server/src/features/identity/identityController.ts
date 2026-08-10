@@ -7,6 +7,7 @@ import { PERMISSIONS } from '../../config/roles';
 import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
 import { config } from '../../config/env';
 import { DEFAULT_PROFILE, readActiveProfile, writeProfileVersion } from './riskProfile';
+import { listAuditRuns, runDailyDedupAudit } from './dedupAudit';
 import {
   adjudicateCandidate,
   enqueueStewardReview,
@@ -494,6 +495,118 @@ identityRoutes.put(
           reason: version.reason,
           /* AC1 — live from this instant, with no deploy. */
           effective_at: version.created_at,
+        },
+      });
+    }
+  ))
+);
+
+/**
+ * GET /api/leadflow/identity/calibration — the resolver report and audit trail.
+ *
+ * Runs today's audit if it has not run, so opening the report is never a stale
+ * read; the sweep is idempotent on the UTC day, so doing so cannot double-open a
+ * case. THE POLICY VERSION IS RETURNED WITH THE RATES because rates that moved
+ * on a threshold change are not the resolver drifting, and nothing else on this
+ * response lets a reader tell those apart.
+ */
+identityRoutes.get(
+  '/calibration',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.IDENTITY_MERGE_REVIEW,
+      event: AUDIT_EVENTS.IDENTITY_REVIEW_QUEUE_INSPECTED,
+      purpose: 'lead_management',
+      resourceType: 'identity_calibration',
+      metadata: () => ({ surface: 'identity_calibration' }),
+      obligations: NOT_AN_OWNED_RECORD,
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const raw = req.query?.days;
+      let days = 30;
+      if (raw !== undefined && raw !== '') {
+        /*
+         * REJECTED, NOT DEFAULTED. Quietly substituting 30 for an unparseable
+         * window would let a reader compare a figure they believe covers a
+         * fortnight against one that covers a month.
+         */
+        const parsed = Number(raw);
+        if (!Number.isInteger(parsed) || parsed < 1 || parsed > 90) {
+          throw new AppError(
+            400,
+            ErrorCodes.VALIDATION_ERROR,
+            'days must be an integer between 1 and 90'
+          );
+        }
+        days = parsed;
+      }
+
+      const tenant = config.projexCloud.tenantId;
+      const today = await runDailyDedupAudit(tenant);
+      const [history, profile] = await Promise.all([
+        listAuditRuns(tenant, days),
+        readActiveProfile(tenant),
+      ]);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          window_days: days,
+          /* AC3 — carried verbatim from sdk-identity-resolver, never recomputed. */
+          calibration: {
+            ece: today.calibration_ece,
+            drift_alert: today.calibration_ece !== null && today.calibration_ece > 0.15,
+          },
+          rates: {
+            auto_link_rate: today.auto_link_rate,
+            false_link_rate: today.false_link_rate,
+            kept_separate_rate: today.kept_separate_rate,
+            high_risk_precision: today.high_risk_precision,
+          },
+          /*
+           * Named so a null is never read as a zero. EmpiMetrics exposes no
+           * per-decision outcomes, so two of the four rates have no source and
+           * say so rather than being derived from counters that do not mean it.
+           */
+          rate_gaps: [
+            {
+              metric: 'auto_link_rate',
+              reason: 'EMPI exposes no count of decisions taken without a human, only the candidate links that needed one.',
+            },
+            {
+              metric: 'kept_separate_rate',
+              reason: 'EMPI exposes no rejected-candidate counter, so the kept-separate share cannot be derived.',
+            },
+            {
+              metric: 'high_risk_precision',
+              reason: 'Needs adjudicated outcomes per confidence band, which EMPI records for calibration but does not expose.',
+            },
+          ],
+          /* AC2 — the sweep, its verdict, and what it compared against. */
+          audit: {
+            ran_on: today.ran_on,
+            drift_detected: today.drift_detected,
+            drift_detail: today.drift_detail,
+            case_link_id: today.case_link_id,
+          },
+          /* AC4's other half: which policy these numbers were measured under. */
+          policy: profile
+            ? {
+                version_id: profile.version_id,
+                auto_link_threshold: profile.auto_link_threshold,
+                review_floor: profile.review_floor,
+                effective_at: profile.created_at,
+              }
+            : null,
+          history: history.map((run) => ({
+            ran_on: run.ran_on,
+            false_link_rate: run.false_link_rate,
+            calibration_ece: run.calibration_ece,
+            drift_detected: run.drift_detected,
+            profile_version_id: run.profile_version_id,
+            upstream_available: run.upstream_available,
+          })),
+          upstream_available: { metrics: today.upstream_available },
         },
       });
     }
