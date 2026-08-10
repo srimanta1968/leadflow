@@ -58,6 +58,15 @@ export const AUDIT_EVENTS = {
    * neither.
    */
   IDENTITY_REVIEW_QUEUE_INSPECTED: 'identity.review_queue.inspected.v1',
+  /**
+   * The auto-link policy changed.
+   *
+   * A first-class event rather than a config note, because this decides what the
+   * system may do to people's records with NOBODY watching. Every link made
+   * afterwards was made under this rule, so the entry is what ties a later
+   * complaint to the threshold in force at the time.
+   */
+  IDENTITY_RISK_PROFILE_CHANGED: 'identity.risk_profile.changed.v1',
   IDENTITY_LINK_VERIFIED: 'identity.link.verified.v1',
   IDENTITY_LINK_RETRACTED: 'identity.link.retracted.v1',
   CONSENT_RECEIPT_ISSUED: 'consent.receipt.issued.v1',

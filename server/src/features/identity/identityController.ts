@@ -6,6 +6,7 @@ import { governed, type GovernedRequest } from '../../platform/policy/governed';
 import { PERMISSIONS } from '../../config/roles';
 import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
 import { config } from '../../config/env';
+import { DEFAULT_PROFILE, readActiveProfile, writeProfileVersion } from './riskProfile';
 import {
   adjudicateCandidate,
   enqueueStewardReview,
@@ -387,6 +388,112 @@ identityRoutes.post(
              creates no merge event, and nothing needs reversing. */
           reversibility_ref: result.merge_id,
           both_records_retained: true,
+        },
+      });
+    }
+  ))
+);
+
+/** Bands are confidences, so both ends live in 0..1 inclusive. */
+const inUnitRange = (value: number): boolean => Number.isFinite(value) && value >= 0 && value <= 1;
+
+/**
+ * PUT /api/leadflow/identity/risk-profile — change the auto-link policy.
+ *
+ * A WRITE IS AN INSERT. Each change appends a version and supersedes the last,
+ * so "what was the threshold when this link was made, and who set it" stays
+ * answerable. Reverting is another insert rather than a delete: the record shows
+ * a decision was reconsidered instead of pretending it never happened.
+ *
+ * TAKES EFFECT WITHOUT A DEPLOY because the policy is read from the database per
+ * request. Raising a threshold tightens what may link unattended on the very
+ * next call.
+ */
+identityRoutes.put(
+  '/risk-profile',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.IDENTITY_MERGE_REVIEW,
+      event: AUDIT_EVENTS.IDENTITY_RISK_PROFILE_CHANGED,
+      purpose: 'lead_management',
+      resourceType: 'identity_risk_profile',
+      metadata: (req) => ({
+        auto_link_threshold: (req.body as Record<string, unknown>)?.auto_link_threshold,
+        review_floor: (req.body as Record<string, unknown>)?.review_floor,
+      }),
+      obligations: NOT_AN_OWNED_RECORD,
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const current = await readActiveProfile(config.projexCloud.tenantId);
+      const base = current ?? DEFAULT_PROFILE;
+
+      const threshold = body.auto_link_threshold === undefined
+        ? base.auto_link_threshold
+        : Number(body.auto_link_threshold);
+      const floor = body.review_floor === undefined ? base.review_floor : Number(body.review_floor);
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+
+      /*
+       * A CHANGE WITH NO STATED REASON IS INDISTINGUISHABLE FROM A MISTAKE.
+       * This one alters what the system will do to real records with nobody
+       * watching, and "why" is the first thing asked about afterwards.
+       */
+      if (reason.length === 0) {
+        throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'reason is required');
+      }
+
+      if (!inUnitRange(threshold) || !inUnitRange(floor)) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'auto_link_threshold and review_floor must be between 0 and 1'
+        );
+      }
+
+      /*
+       * Inverted bands describe a policy where every case is at once
+       * auto-linkable and below review, which nobody means. Rejected here AND
+       * constrained in the schema, so a writer that bypasses this route cannot
+       * leave an incoherent policy behind.
+       */
+      if (floor > threshold) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'review_floor must be at or below auto_link_threshold'
+        );
+      }
+
+      const version = await writeProfileVersion(config.projexCloud.tenantId, {
+        auto_link_threshold: threshold,
+        review_floor: floor,
+        crosswalk_auto_links:
+          body.crosswalk_auto_links === undefined
+            ? base.crosswalk_auto_links
+            : body.crosswalk_auto_links === true,
+        phone_and_property_auto_links:
+          body.phone_and_property_auto_links === undefined
+            ? base.phone_and_property_auto_links
+            : body.phone_and_property_auto_links === true,
+        weights: (body.weights as Record<string, unknown>) ?? base.weights,
+        reason,
+        created_by_user_id: req.session?.userId ?? '',
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          version_id: version.version_id,
+          auto_link_threshold: version.auto_link_threshold,
+          review_floor: version.review_floor,
+          crosswalk_auto_links: version.crosswalk_auto_links,
+          phone_and_property_auto_links: version.phone_and_property_auto_links,
+          /* AC4 — the version this replaced, so the chain reads backwards. */
+          supersedes_version_id: version.supersedes_version_id,
+          reason: version.reason,
+          /* AC1 — live from this instant, with no deploy. */
+          effective_at: version.created_at,
         },
       });
     }

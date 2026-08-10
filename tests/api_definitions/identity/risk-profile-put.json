@@ -1,0 +1,122 @@
+{
+  "name": "PUT /api/leadflow/identity/risk-profile - change the auto-link policy, as a new version",
+  "description": "Sets the tenant's risk-tiered auto-link policy: the confidence at or above which a match may link with NO human involved, the floor below which a candidate is not worth a steward's time, the two deterministic bypasses, and the per-feature weights handed to the resolver.\n\nA WRITE IS AN INSERT, NEVER AN UPDATE. Each change appends a new version and supersedes the previous one. The question asked after a bad link is never 'what is the threshold' - it is 'what was the threshold WHEN this link was made, and who set it', and an update in place destroys the only evidence the rule used to be different. Reverting is therefore also an insert: it copies an earlier version forward rather than deleting the mistake, so the record shows a decision was reconsidered rather than pretending it never happened. That is AC4 held by the schema, not by a handler remembering to write history.\n\nTAKES EFFECT WITHOUT A DEPLOY (AC1) because the policy is read from the database per request rather than from config or an environment variable. The response carries the new version_id and the effective_at, so a caller can prove which version answered.\n\nA REASON IS REQUIRED and is not decoration. Raising the auto-link threshold changes what the system is willing to do to real people's records with nobody watching; a change with no stated reason is indistinguishable from a mistake, and it is the first thing asked about afterwards.\n\nBANDS MUST BE ORDERED. A review floor above the auto-link threshold describes a policy where every case is simultaneously auto-linkable and below review, which nobody means - rejected at 400 rather than stored and puzzled over later. The database enforces it too (risk_profile_bands_ordered), so a direct writer cannot bypass the API and leave an incoherent policy behind.\n\nrequiresRole:[\"data_steward\"] and NO testCase pins an Authorization header (MUST-71). identity.merge_review is reused rather than a new grant invented: deciding what may link without a human is the same authority as adjudicating an individual link, and arguably a larger one. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/identity/risk-profile",
+  "method": "PUT",
+  "taskId": "53ad2a40-7b69-4b76-b393-2e2359764ae8",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "data_steward"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "53ad2a40-7b69-4b76-b393-2e2359764ae8#AC1",
+    "53ad2a40-7b69-4b76-b393-2e2359764ae8#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "captureResponse": {
+    "identity-risk-profile.update.response.data.version_id": "data.version_id"
+  },
+  "fieldEnums": {},
+  "testCases": [
+    {
+      "name": "A threshold change lands as a new version and reports it",
+      "coversCriterion": "53ad2a40-7b69-4b76-b393-2e2359764ae8#AC1",
+      "payload": {
+        "auto_link_threshold": 0.95,
+        "review_floor": 0.7,
+        "reason": "Raised after two false links on name-variant matches this quarter."
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive"
+    },
+    {
+      "name": "NEGATIVE: a change with no reason is refused",
+      "coversCriterion": "53ad2a40-7b69-4b76-b393-2e2359764ae8#AC4",
+      "payload": {
+        "auto_link_threshold": 0.92,
+        "review_floor": 0.7
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|reason"
+    },
+    {
+      "name": "NEGATIVE: a review floor above the auto-link threshold is refused",
+      "coversCriterion": "53ad2a40-7b69-4b76-b393-2e2359764ae8#AC1",
+      "payload": {
+        "auto_link_threshold": 0.7,
+        "review_floor": 0.95,
+        "reason": "Deliberately incoherent bands, to prove they are rejected."
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|bands"
+    },
+    {
+      "name": "NEGATIVE: a threshold outside 0..1 is refused",
+      "coversCriterion": "53ad2a40-7b69-4b76-b393-2e2359764ae8#AC1",
+      "payload": {
+        "auto_link_threshold": 1.4,
+        "review_floor": 0.7,
+        "reason": "Out of range, to prove the bound is enforced."
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|range"
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason is required",
+      "when": "no reason accompanies the change. A policy change with no stated author intent cannot be assessed later."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "review_floor must be at or below auto_link_threshold",
+      "when": "the bands are inverted. Also enforced by the risk_profile_bands_ordered constraint."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "auto_link_threshold and review_floor must be between 0 and 1",
+      "when": "either band is outside the confidence range the resolver produces."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent or not Bearer. Not authored as a testCase: pinning a header would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold identity.merge_review. Not reachable while this runs under requiresRole."
+    }
+  ]
+}
