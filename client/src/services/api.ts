@@ -674,6 +674,45 @@ export interface ResolveCaptureResult {
   reversible: boolean;
 }
 
+
+/** One case in the identity steward queue. */
+export interface IdentityReviewCase {
+  link_id: string | null;
+  risk_band: 'high' | 'medium' | 'low';
+  model_score: number;
+  not_auto_linkable: true;
+  person_id_a: string | null;
+  person_id_b: string | null;
+  status: string | null;
+  provenance: Record<string, unknown> | null;
+  created_at: string | null;
+  age_minutes: number | null;
+  sla_breached: boolean | null;
+}
+
+/** A tile the mockup asks for that EMPI has no metric behind. */
+export interface IdentityMetricGap {
+  metric: string;
+  reason: string;
+}
+
+/** Everything the Identity Review screen renders, from one call. */
+export interface IdentityReviewQueue {
+  kpis: {
+    review_cases: { total: number | null; high_risk: number | null };
+    exact_auto_links: number | null;
+    kept_separate: number | null;
+    retracted_links: number | null;
+    median_review_minutes: number | null;
+    resolver_calibration: { ece: number | null; drift_alert: boolean } | null;
+  };
+  metric_gaps: IdentityMetricGap[];
+  cases: IdentityReviewCase[];
+  sla: { review_minutes: number };
+  band: string | null;
+  upstream_available: { candidate_links: boolean; metrics: boolean };
+}
+
 export const api = {
   /** Create an account and receive a session token. */
   register: (payload: {
@@ -917,6 +956,20 @@ export const api = {
    * it. Three separate browser calls would reintroduce exactly that drift.
    */
   importCenter: () => request<ImportCenter>('/leadflow/imports/center'),
+
+  /**
+   * The steward queue and its tiles, composed server-side.
+   *
+   * The band filter is passed to the SERVER rather than applied here: the KPI
+   * counts and the rows have to describe the same slice, and filtering in the
+   * browser would leave the tiles counting a queue the table is no longer
+   * showing.
+   */
+  identityReviewQueue: (band?: string) =>
+    request<IdentityReviewQueue>(
+      `/leadflow/identity/review-queue${band ? `?band=${encodeURIComponent(band)}` : ''}`
+    ),
+
 
   /** One run: its lineage summary, governance verdicts and exception count. */
   importRun: (runId: string) =>

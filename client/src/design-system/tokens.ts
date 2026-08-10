@@ -28,11 +28,13 @@ export const font = raw.font;
 export const SEMANTIC = raw.semantic;
 export const ORIGIN_CLASS_ROLE = raw.originClassRole;
 export const TRUST_STATE_ROLE = raw.trustStateRole;
+export const RISK_BAND_ROLE = raw.riskBandRole;
 export const CAPTURE_SOURCE_TOKEN = raw.captureSourceToken;
 
 export type SemanticRole = keyof typeof raw.semantic;
 export type OriginClass = keyof typeof raw.originClassRole;
 export type TrustState = keyof typeof raw.trustStateRole;
+export type RiskBand = keyof typeof raw.riskBandRole;
 export type CaptureSource = keyof typeof raw.captureSourceToken;
 export type ColorToken = keyof typeof raw.color;
 
@@ -77,6 +79,23 @@ export function originChipClass(origin: string): string {
 export function trustChipClass(state: string): string {
   const role = (TRUST_STATE_ROLE as Record<string, SemanticRole>)[state];
   return chipClass(role ?? 'warning');
+}
+
+/**
+ * The chip for an identity candidate's risk band.
+ *
+ * Note the inversion against `trustChipClass`: there, green is the top of a
+ * ladder; here green is the SAFE end. A high-confidence candidate is the
+ * dangerous one — it is the case most likely to be waved through, and merging
+ * two people who are not the same is the error this queue exists to prevent.
+ *
+ * An unmapped band falls back to `blocked` rather than to a neutral tone, on
+ * the same principle as `originChipClass`: an unrecognised risk reading as
+ * calm is the one failure mode worth guarding against.
+ */
+export function riskChipClass(band: string): string {
+  const role = (RISK_BAND_ROLE as Record<string, SemanticRole>)[band];
+  return chipClass(role ?? 'blocked');
 }
 
 /** The bare fill used by the capture-source breakdown bars. */

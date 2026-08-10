@@ -1,0 +1,262 @@
+import { Router, type Response } from 'express';
+import { asyncHandler } from '../../middleware/errorHandler';
+import { authenticate } from '../../middleware/auth';
+import { AppError, ErrorCodes } from '../../utils/errors';
+import { governed, type GovernedRequest } from '../../platform/policy/governed';
+import { PERMISSIONS } from '../../config/roles';
+import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
+import {
+  listOpenCandidateLinks,
+  readEmpiMetrics,
+  type CandidateLinkRow,
+  type EmpiMetricsRow,
+} from './identityGateway';
+
+/**
+ * The Identity Review screen's read surface: one endpoint, one screen.
+ *
+ * READS ARE GOVERNED, not merely authenticated. A candidate link names two
+ * people the resolver believes might be the same, beside the evidence for it.
+ * Opening the queue is therefore a disclosure about real people whether or not
+ * anything is decided, so who looked belongs in the record.
+ */
+export const identityRoutes: Router = Router();
+
+identityRoutes.use(authenticate);
+
+/**
+ * The queue is tenant-scoped and belongs to no individual, so `own_record_only`
+ * is deferred rather than discharged — the same reasoning the Import Center
+ * states, for the same kind of surface.
+ */
+const NOT_AN_OWNED_RECORD = {
+  own_record_only: {
+    kind: 'defer' as const,
+    because:
+      'a candidate link belongs to the tenant whose records were matched, not to an individual owner',
+  },
+};
+
+/** Risk bands, mirrored from `bandRange()` in sdk-identity-resolver's empiService. */
+const BANDS = ['high', 'medium', 'low'] as const;
+export type RiskBand = (typeof BANDS)[number];
+
+/** The review clock the queue's ages are measured against. */
+const REVIEW_SLA_MINUTES = 15;
+
+/** How many cases one page of the queue carries; upstream clamps to 500 itself. */
+const QUEUE_LIMIT = 200;
+
+/**
+ * The band a confidence falls in.
+ *
+ * COPIED, NOT CHOSEN. The thresholds are sdk-identity-resolver's own — high at
+ * 0.9 and up, medium from 0.7, low below it. Picking our own boundaries would
+ * let the screen call a case medium while the service that queued it treats it
+ * as high, and the steward would be working to a risk ordering nothing else in
+ * the platform agrees with.
+ */
+export function bandOf(confidence: number): RiskBand {
+  if (confidence >= 0.9) return 'high';
+  if (confidence >= 0.7) return 'medium';
+  return 'low';
+}
+
+/** Sort weight: high first. */
+const BAND_RANK: Record<RiskBand, number> = { high: 0, medium: 1, low: 2 };
+
+/** One case as the screen renders it. */
+interface ReviewCase {
+  link_id: string | null;
+  risk_band: RiskBand;
+  model_score: number;
+  /**
+   * True for every case here, and stated rather than implied. Everything in
+   * this queue is a POSSIBLY_SAME match — the deterministic and crosswalk
+   * matches never become candidate links at all, they are linked outright. A
+   * steward who reads a 0.97 as "basically certain, just click it" has misread
+   * the screen, and the annotation is what stops that.
+   */
+  not_auto_linkable: true;
+  person_id_a: string | null;
+  person_id_b: string | null;
+  status: string | null;
+  provenance: Record<string, unknown> | null;
+  created_at: string | null;
+  age_minutes: number | null;
+  /** Past the review clock. Null when the case carries no usable timestamp. */
+  sla_breached: boolean | null;
+}
+
+/** A tile the mockup asks for that EMPI cannot answer. */
+interface MetricGap {
+  metric: string;
+  reason: string;
+}
+
+const asNumber = (value: unknown): number | null =>
+  typeof value === 'number' && Number.isFinite(value) ? value : null;
+
+/**
+ * Minutes since a case was raised.
+ *
+ * @returns Whole minutes, or null when the timestamp is missing or unparseable
+ *          — which is reported as an unknown age rather than as zero. A case
+ *          with no readable clock rendering as "0m" would sort to the top of
+ *          its band and read as brand new, when it is the one case whose age
+ *          nobody can vouch for.
+ */
+function ageMinutes(createdAt: string | undefined, now: number): number | null {
+  if (!createdAt) return null;
+  const raised = Date.parse(createdAt);
+  if (Number.isNaN(raised)) return null;
+  return Math.max(0, Math.floor((now - raised) / 60_000));
+}
+
+/** Projects one upstream row into the screen's case shape. */
+function toCase(row: CandidateLinkRow, now: number): ReviewCase {
+  const confidence = asNumber(row.confidence) ?? 0;
+  const age = ageMinutes(row.created_at, now);
+  return {
+    link_id: row.link_id ?? null,
+    risk_band: bandOf(confidence),
+    model_score: confidence,
+    not_auto_linkable: true,
+    person_id_a: row.person_id_a ?? null,
+    person_id_b: row.person_id_b ?? null,
+    status: row.status ?? null,
+    provenance: row.provenance ?? null,
+    created_at: row.created_at ?? null,
+    age_minutes: age,
+    sla_breached: age === null ? null : age > REVIEW_SLA_MINUTES,
+  };
+}
+
+/**
+ * Risk first, then oldest within the band.
+ *
+ * THE SORT IS OURS BECAUSE UPSTREAM'S IS NOT THIS. `queryCandidateLinksByBand`
+ * orders by `confidence DESC` alone, which puts a case raised a minute ago above
+ * one raised an hour ago whenever it is fractionally more confident. That is a
+ * ranking of the model's certainty, not a work queue: it starves the oldest case
+ * in every band, and the oldest case is the one at risk of breaching the review
+ * clock.
+ *
+ * A case with an UNKNOWN age sorts last within its band rather than first. It
+ * cannot be shown to be urgent, and promoting it on a missing value would let a
+ * malformed timestamp jump the queue.
+ */
+function byRiskThenAge(a: ReviewCase, b: ReviewCase): number {
+  const band = BAND_RANK[a.risk_band] - BAND_RANK[b.risk_band];
+  if (band !== 0) return band;
+  if (a.age_minutes === null) return b.age_minutes === null ? 0 : 1;
+  if (b.age_minutes === null) return -1;
+  return b.age_minutes - a.age_minutes;
+}
+
+/**
+ * GET /api/leadflow/identity/review-queue — the steward's queue and its tiles.
+ *
+ * The two upstream reads are issued CONCURRENTLY and degrade independently, so
+ * metrics being down empties the tiles and leaves the queue workable.
+ */
+identityRoutes.get(
+  '/review-queue',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.IDENTITY_MERGE_REVIEW,
+      event: AUDIT_EVENTS.IDENTITY_REVIEW_QUEUE_INSPECTED,
+      purpose: 'lead_management',
+      resourceType: 'identity_review_queue',
+      metadata: (req) => ({ surface: 'identity_review', band: (req.query?.band as string) ?? 'all' }),
+      obligations: NOT_AN_OWNED_RECORD,
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const requested = req.query?.band;
+      const band = typeof requested === 'string' && requested.length > 0 ? requested : undefined;
+
+      /*
+       * REJECTED, NOT IGNORED. Silently dropping an unrecognised band would
+       * return the WHOLE queue to a steward who asked for one slice of it, and
+       * a screen headed "High risk" listing everything is a worse answer than
+       * an error — they would work it believing the low-confidence cases were
+       * the urgent ones.
+       */
+      if (band !== undefined && !BANDS.includes(band as RiskBand)) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          `band must be one of ${BANDS.join(', ')}`
+        );
+      }
+
+      const [links, metrics] = await Promise.all([
+        listOpenCandidateLinks(band, QUEUE_LIMIT),
+        readEmpiMetrics(),
+      ]);
+
+      const now = Date.now();
+      const cases = links.value.map((row) => toCase(row, now)).sort(byRiskThenAge);
+      const m: EmpiMetricsRow | null = metrics.value;
+
+      const distribution = Array.isArray(m?.confidence_distribution)
+        ? m!.confidence_distribution!
+        : [];
+      const highRisk = distribution.find((entry) => entry.band === 'high');
+
+      /*
+       * THE THREE TILES EMPI CANNOT ANSWER, NAMED RATHER THAN FABRICATED.
+       *
+       * A dash the operator can ask about beats a plausible number nobody can
+       * source. Median Review is the one worth refusing hardest: the obvious
+       * fake is the median age of OPEN cases, which reads as a service level
+       * while measuring its inverse — a queue nobody has touched has a rising
+       * median that would render as improving performance.
+       */
+      const metricGaps: MetricGap[] = [
+        {
+          metric: 'exact_auto_links',
+          reason:
+            'EMPI records only POSSIBLY_SAME candidates. Deterministic and crosswalk matches are linked without ever becoming a candidate link, so nothing upstream counts them.',
+        },
+        {
+          metric: 'kept_separate',
+          reason:
+            'EmpiMetrics exposes no count of rejected candidates, and no time-bounded counter at all, so "this month" cannot be derived.',
+        },
+        {
+          metric: 'median_review_minutes',
+          reason:
+            'EMPI records no adjudication latency. Deriving it from the age of open cases would invert the meaning — an unworked queue would report an improving median.',
+        },
+      ];
+
+      res.status(200).json({
+        success: true,
+        data: {
+          kpis: {
+            review_cases: {
+              total: asNumber(m?.unresolved_candidate_links),
+              high_risk: asNumber(highRisk?.count),
+            },
+            exact_auto_links: null,
+            kept_separate: null,
+            retracted_links: asNumber(m?.merge_reversals),
+            median_review_minutes: null,
+            resolver_calibration: m
+              ? { ece: asNumber(m.calibration_ece), drift_alert: m.drift_alert === true }
+              : null,
+          },
+          metric_gaps: metricGaps,
+          cases,
+          sla: { review_minutes: REVIEW_SLA_MINUTES },
+          band: band ?? null,
+          upstream_available: {
+            candidate_links: links.available,
+            metrics: metrics.available,
+          },
+        },
+      });
+    }
+  ))
+);

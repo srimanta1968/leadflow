@@ -45,6 +45,19 @@ export const AUDIT_EVENTS = {
    * complaint actually asks.
    */
   IMPORT_EVIDENCE_EXPORTED: 'import.evidence.exported.v1',
+  /**
+   * Somebody opened the steward queue and saw who might be whom.
+   *
+   * Recorded even though nothing was decided. A candidate link names two people
+   * the system believes MIGHT be the same, next to the evidence for it — so the
+   * queue discloses a probabilistic claim about real people to whoever opens it,
+   * and that disclosure is the event, not the adjudication that may follow.
+   * Kept distinct from `verified` for the same reason `import.run.inspected` is
+   * distinct from `import.evidence.exported`: "who looked" and "who decided" are
+   * different questions and an audit that spells them the same way can answer
+   * neither.
+   */
+  IDENTITY_REVIEW_QUEUE_INSPECTED: 'identity.review_queue.inspected.v1',
   IDENTITY_LINK_VERIFIED: 'identity.link.verified.v1',
   IDENTITY_LINK_RETRACTED: 'identity.link.retracted.v1',
   CONSENT_RECEIPT_ISSUED: 'consent.receipt.issued.v1',
