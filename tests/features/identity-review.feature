@@ -30,6 +30,7 @@ Feature: Identity Review screen and steward case queue
   @ui_test
   @portal:leadflow
   @login:data_steward
+  @scenario_id:6db3d561-ab49-4b03-9f3d-9bf98f44d595
   Scenario: The queue states that merge is unavailable, not merely absent
     # The epic's whole premise. An absence nobody documents reads as an
     # oversight rather than a decision, and a steward who assumes a merge button
@@ -44,6 +45,7 @@ Feature: Identity Review screen and steward case queue
   @ui_test
   @portal:leadflow
   @login:data_steward
+  @scenario_id:b178d381-3b69-490e-ba72-903af82b97d2
   Scenario: All six tiles from the mockup are present with their captions
     When I navigate to "/app/identity"
     Then I should see "Review Cases"
@@ -60,6 +62,7 @@ Feature: Identity Review screen and steward case queue
   @ui_test
   @portal:leadflow
   @login:data_steward
+  @scenario_id:9554dce1-a108-426f-ba79-5f1faa0441df
   Scenario: A tile with no upstream metric says so instead of showing zero
     # Three of the six tiles have no metric behind them - EmpiMetrics carries no
     # count of exact auto-links, no time-bounded kept-separate figure and no
@@ -74,6 +77,7 @@ Feature: Identity Review screen and steward case queue
   @ui_test
   @portal:leadflow
   @login:data_steward
+  @scenario_id:404cc903-1c7c-4f57-b0e6-9561bd038daa
   Scenario: An empty queue always says WHY it is empty
     # One stem, two endings, so the assertion holds whichever branch renders.
     # "Nothing to review" during a resolver outage is the message that stops an
@@ -85,6 +89,7 @@ Feature: Identity Review screen and steward case queue
   @ui_test
   @portal:leadflow
   @login:data_steward
+  @scenario_id:ae83cd79-eb4f-43b7-83e6-bcdeae32374a
   Scenario: The risk filter is offered as bands, not as a free text search
     # Filtering happens on the SERVER so the tiles and the rows describe the
     # same slice. A client-side filter would leave the counters describing a
