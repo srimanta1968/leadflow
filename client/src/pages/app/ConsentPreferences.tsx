@@ -3,6 +3,7 @@ import { api, ApiError, ConsentOverview } from '../../services/api';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { failureFor } from '../../content/messages';
 import { chipClass } from '../../design-system/tokens';
+import { CaptureConsentModal } from '../../components/app/CaptureConsentModal';
 
 /**
  * Consent & Preferences — #view-consent, "Purpose-Specific Permission & Suppression".
@@ -30,6 +31,7 @@ export default function ConsentPreferences() {
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
   const { notify } = useToast();
 
   const load = useCallback(() => {
@@ -70,7 +72,16 @@ export default function ConsentPreferences() {
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Consent &amp; Preferences</h1>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-semibold">Consent &amp; Preferences</h1>
+          <button
+            type="button"
+            onClick={() => setCapturing(true)}
+            className="border-line rounded border px-3 py-1 text-sm"
+          >
+            Capture Consent
+          </button>
+        </div>
         <p className="text-soft max-w-3xl">
           Purpose-specific permission and suppression. A receipt records what a person was
           told and what they agreed to, for one purpose on one channel. Policy makes the
@@ -227,6 +238,13 @@ export default function ConsentPreferences() {
           guarantee a send.
         </p>
       </section>
+
+      {capturing && (
+        <CaptureConsentModal
+          onClose={() => setCapturing(false)}
+          onIssued={load}
+        />
+      )}
     </div>
   );
 }

@@ -1037,6 +1037,19 @@ export const api = {
       `/leadflow/consent/overview${expiringWithinDays ? `?expiring_within_days=${expiringWithinDays}` : ''}`
     ),
 
+  /**
+   * Issue one signed, purpose-specific receipt.
+   *
+   * purpose_id is a SINGLE string, matching sdk-consent's grant. The modal uses
+   * a radio group so an array cannot be produced here at all - blanket consent
+   * is not expressible on the screen, rather than rejected after the fact.
+   */
+  issueConsentReceipt: (body: Record<string, unknown>) =>
+    request<{ receipt_id?: string; signature_ref: string | null; signature_searchable: boolean }>(
+      '/leadflow/consent/receipts',
+      { method: 'POST', body: JSON.stringify(body) }
+    ),
+
   /** Withdraw one receipt. Never optimistic - the row updates on confirmation. */
   revokeConsentReceipt: (receiptId: string, reason: string) =>
     request<{ receipt_id: string; revoked: boolean; cascade: Record<string, unknown> }>(
