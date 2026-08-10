@@ -171,8 +171,26 @@ export class SdkGatewayClient {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           grant_type: 'client_credentials',
-          // The application owns the key, so the application id is the client.
-          client_id: config.projexCloud.appId,
+          /*
+           * NO client_id, DELIBERATELY. The key itself already names its
+           * application — the gateway resolves the app from the secret — so
+           * sending the field adds nothing and gives us a second place to be
+           * wrong about identity.
+           *
+           * And we WERE wrong about it. This sent `config.projexCloud.appId`,
+           * which is PROJEXCLOUD_APP_ID (`leadflow-dev-af4bd2`, the tenant's
+           * app-scope header value). The exchange resolves client_id as the
+           * application SLUG, which is `leadflow-web`, so every exchange
+           * answered 401 invalid_client. That was latent rather than harmless:
+           * a `pk_` key ALWAYS takes this branch, so the moment the credential
+           * moved to the self-renewing shape it would have failed every
+           * endpoint rather than the six that were already failing.
+           *
+           * Verified by ProjexCloud against the live gateway: appId -> 401,
+           * slug -> 200, omitted -> 200. Omitted is chosen because it cannot
+           * drift out of step with the application record the way a copied
+           * identifier can.
+           */
           client_secret: apiKey,
         }),
         signal: controller.signal,
