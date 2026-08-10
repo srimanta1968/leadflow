@@ -1,0 +1,83 @@
+{
+  "name": "POST /api/leadflow/consent/receipts/:receipt_id/revoke - withdraw one consent receipt",
+  "description": "Withdraws consent for one receipt, through sdk-consent's POST /api/consents/:receipt_id/revoke.\n\nTHE PATH IS PLURAL, AND THE TASK SAID SINGULAR. It specified POST /api/consent/receipts/:receipt_id/revoke; sdk-consent has only ever served /api/consents/:receipt_id/revoke. The same singular/plural slip made the AI coach's recording gate deny every call for weeks, and it read as an outage rather than a typo. Taken from packages/sdk-consent/src/server/routes.ts.\n\nTHIS WRITE NEVER DEGRADES, though every read on this feature does. The overview answers honestly when upstream is unreachable - empty panels, upstream_available:false - but a revocation must not: reporting success when nothing was revoked tells a person they have been removed when they have not, and they have no reason to check again. That is the worst outcome available anywhere in this feature. If sdk-consent does not confirm, this answers 502 and the screen keeps the receipt active.\n\nA REASON IS REQUIRED. A withdrawal with no stated reason is the one audit entry a regulator will ask about and find empty. The screen prompts for it as a courtesy so the operator is not bounced by a 400, but the guarantee lives here.\n\nTHE CASCADE IS NAMED, NOT CLAIMED (AC3). Revoking emits consent.receipt.revoked.v1, which sdk-data-rights fans out to the erasure surfaces. LeadFlow does not perform that fan-out and must not imply it verified one, so the response reports what it actually knows - the revocation was accepted - and names the event responsible for the propagation rather than asserting the propagation happened.\n\nrequiresRole:[\"privacy_officer\"] and NO testCase pins an Authorization header (MUST-71). consent.purpose_manage is held by privacy_officer alone; the local role `privacy` bridges to it and testCredentials.privacy_officer is the account the runner swaps to. Verified live: 200 as the privacy officer, 403 as both data_steward and admin. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/consent/receipts/:receipt_id/revoke",
+  "method": "POST",
+  "taskId": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "privacy_officer"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 400,
+  "coversCriterion": [
+    "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC3"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {},
+  "testCases": [
+    {
+      "name": "NEGATIVE: a withdrawal with no reason is refused",
+      "coversCriterion": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC3",
+      "pathParams": {
+        "receipt_id": "{{var:absent_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR"
+    },
+    {
+      "name": "NEGATIVE: an unconfirmed revocation is reported as failed, never as done",
+      "coversCriterion": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC3",
+      "pathParams": {
+        "receipt_id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "reason": "Subject withdrew consent by reply to the last campaign."
+      },
+      "expectedStatus": 502,
+      "expectedResponse": {
+        "success": false,
+        "code": "UPSTREAM_UNAVAILABLE"
+      },
+      "testType": "negative",
+      "coversErrorCase": "502|UPSTREAM_UNAVAILABLE"
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason is required to revoke consent",
+      "when": "no reason accompanies the withdrawal. A revocation with no stated reason is the audit entry a regulator asks about and finds empty."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer. Not authored as a testCase: pinning it would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold consent.purpose_manage. Verified live for data_steward and admin, which is the least-privilege separation working as intended."
+    },
+    {
+      "status": 502,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "message": "sdk-consent did not confirm the revocation, so it cannot be reported as revoked.",
+      "when": "sdk-consent is unreachable or answers without a confirmation. Deliberately NOT degraded to a success: a person told they were removed when they were not has no reason to check again."
+    }
+  ]
+}
