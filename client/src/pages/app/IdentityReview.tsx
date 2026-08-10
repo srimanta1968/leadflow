@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, ApiError, IdentityReviewQueue } from '../../services/api';
+import { api, ApiError, IdentityReviewCase, IdentityReviewQueue } from '../../services/api';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { failureFor } from '../../content/messages';
 import { chipClass, riskChipClass } from '../../design-system/tokens';
+import { IdentityCandidateModal } from '../../components/app/IdentityCandidateModal';
 
 /**
  * Identity Review — #view-identity, "Link-Over-Merge Stewardship".
@@ -39,6 +40,8 @@ export default function IdentityReview() {
   const [data, setData] = useState<IdentityReviewQueue | null>(null);
   const [band, setBand] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState<IdentityReviewCase | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const { notify } = useToast();
 
   useEffect(() => {
@@ -60,7 +63,7 @@ export default function IdentityReview() {
     return () => {
       cancelled = true;
     };
-  }, [band, notify]);
+  }, [band, notify, reloadKey]);
 
   const gapFor = useMemo(() => {
     const map = new Map((data?.metric_gaps ?? []).map((gap) => [gap.metric, gap.reason]));
@@ -167,7 +170,7 @@ export default function IdentityReview() {
                   )}
                 </td>
                 <td>
-                  <button type="button" className="text-brand">
+                  <button type="button" className="text-brand" onClick={() => setOpen(row)}>
                     Compare
                   </button>
                 </td>
@@ -190,6 +193,14 @@ export default function IdentityReview() {
           </p>
         )}
       </section>
+
+      {open && (
+        <IdentityCandidateModal
+          candidate={open}
+          onClose={() => setOpen(null)}
+          onDecided={() => setReloadKey((n) => n + 1)}
+        />
+      )}
     </div>
   );
 }

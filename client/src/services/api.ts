@@ -713,6 +713,18 @@ export interface IdentityReviewQueue {
   upstream_available: { candidate_links: boolean; metrics: boolean };
 }
 
+
+/** What a recorded steward decision answers with. */
+export interface IdentityDecisionResult {
+  link_id: string;
+  decision: string;
+  recorded: boolean;
+  status?: string | null;
+  /** The merge_id `unmerge` takes. Null means nothing to undo, never "lost". */
+  reversibility_ref: string | null;
+  both_records_retained?: boolean;
+}
+
 export const api = {
   /** Create an account and receive a session token. */
   register: (payload: {
@@ -969,6 +981,14 @@ export const api = {
     request<IdentityReviewQueue>(
       `/leadflow/identity/review-queue${band ? `?band=${encodeURIComponent(band)}` : ''}`
     ),
+
+  /** Record (or defer) a steward's verdict on one candidate link. */
+  identityDecision: (linkId: string, decision: string, reason: string) =>
+    request<IdentityDecisionResult>(
+      `/leadflow/identity/candidates/${encodeURIComponent(linkId)}/decision`,
+      { method: 'POST', body: JSON.stringify({ decision, reason }) }
+    ),
+
 
 
   /** One run: its lineage summary, governance verdicts and exception count. */
