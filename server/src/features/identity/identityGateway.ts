@@ -1,4 +1,5 @@
-import { degradingRead, Reached } from '../../platform/sdkGateway/degradingRead';
+import { degradingRead, unreachable, type Reached } from '../../platform/sdkGateway/degradingRead';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 
 /**
  * Typed reads of sdk-identity-resolver's EMPI surface.
@@ -81,4 +82,93 @@ export async function readEmpiMetrics(): Promise<Reached<EmpiMetricsRow | null>>
       return metrics && typeof metrics === 'object' ? (metrics as EmpiMetricsRow) : null;
     }
   );
+}
+
+/** The resolver's own account of a match, from POST /api/resolver/explain. */
+export interface ResolverExplanation {
+  score?: number;
+  rules?: { rule?: string; matched?: boolean; weight?: string | number; detail?: string }[];
+  features?: Record<string, unknown>;
+  explanation?: string;
+}
+
+/**
+ * Ask the resolver why it proposed this link.
+ *
+ * A WRITE VERB FOR A READ, which is why this does not use `degradingRead`:
+ * `/api/resolver/explain` is a POST because the signal bundle goes in the body,
+ * but it changes nothing. It still degrades rather than throwing — a modal that
+ * cannot show the reasoning must say so and keep the evidence table, not fail
+ * the whole screen, because the steward can still read the comparison.
+ */
+export async function explainResolution(linkId: string): Promise<Reached<ResolverExplanation | null>> {
+  if (!SdkGatewayClient.isConfigured()) {
+    return unreachable(null);
+  }
+  try {
+    const result = await SdkGatewayClient.call<{ data?: unknown }>({
+      sdk: 'sdk-identity-resolver',
+      path: '/api/resolver/explain',
+      method: 'POST',
+      body: { link_id: linkId },
+    });
+    if (!result.delivered) {
+      return unreachable(null);
+    }
+    const bag = (result.data?.data ?? {}) as Record<string, unknown>;
+    const explanation = (bag.explanation ?? bag) as ResolverExplanation;
+    return { value: explanation, available: true };
+  } catch {
+    return unreachable(null);
+  }
+}
+
+/**
+ * Put a candidate in front of a steward, producing the approval step a decision
+ * is later recorded against.
+ *
+ * @returns The pending step ids; the first is the one the decision uses.
+ */
+export async function enqueueStewardReview(
+  linkId: string,
+  routeId: string
+): Promise<{ pending_step_ids: string[] }> {
+  const result = await SdkGatewayClient.call<{ data?: { pending_step_ids?: string[] } }>({
+    sdk: 'sdk-identity-resolver',
+    path: `/api/empi/candidate-links/${encodeURIComponent(linkId)}/steward-review`,
+    method: 'POST',
+    idempotencyKey: `steward-review:${linkId}`,
+    body: { route_id: routeId },
+  });
+  return { pending_step_ids: result.data?.data?.pending_step_ids ?? [] };
+}
+
+/**
+ * Record the steward's decision.
+ *
+ * `approve` writes a merge EVENT — an assertion that these two are the same —
+ * and does NOT collapse the records: `mergeRecords` only inserts into
+ * `empi.merge_event` and flips the link's status. Both person ids survive
+ * inside the event, which is precisely what lets `unmerge` reverse it. The
+ * returned `merge_id` is that reversibility reference.
+ */
+export async function adjudicateCandidate(
+  linkId: string,
+  stepId: string,
+  decision: 'approve' | 'reject',
+  reason: string
+): Promise<{ merge_id: string | null; status: string | null }> {
+  const result = await SdkGatewayClient.call<{
+    data?: { link?: { status?: string }; merge?: { merge_id?: string } | null };
+  }>({
+    sdk: 'sdk-identity-resolver',
+    path: `/api/empi/candidate-links/${encodeURIComponent(linkId)}/adjudicate`,
+    method: 'POST',
+    idempotencyKey: `adjudicate:${linkId}:${stepId}`,
+    body: { step_id: stepId, decision, reason },
+  });
+  return {
+    merge_id: result.data?.data?.merge?.merge_id ?? null,
+    status: result.data?.data?.link?.status ?? null,
+  };
 }

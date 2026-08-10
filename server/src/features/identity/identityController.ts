@@ -5,7 +5,10 @@ import { AppError, ErrorCodes } from '../../utils/errors';
 import { governed, type GovernedRequest } from '../../platform/policy/governed';
 import { PERMISSIONS } from '../../config/roles';
 import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
+import { config } from '../../config/env';
 import {
+  adjudicateCandidate,
+  enqueueStewardReview,
   listOpenCandidateLinks,
   readEmpiMetrics,
   type CandidateLinkRow,
@@ -255,6 +258,135 @@ identityRoutes.get(
             candidate_links: links.available,
             metrics: metrics.available,
           },
+        },
+      });
+    }
+  ))
+);
+
+/** The three things a steward can do with a candidate. */
+const DECISIONS = ['verify_link', 'keep_separate', 'defer'] as const;
+type StewardDecision = (typeof DECISIONS)[number];
+
+/** What each local decision means upstream. `defer` never leaves this process. */
+const UPSTREAM: Record<StewardDecision, 'approve' | 'reject' | null> = {
+  verify_link: 'approve',
+  keep_separate: 'reject',
+  defer: null,
+};
+
+const linkIdOf = (req: GovernedRequest): string => String(req.params?.link_id ?? '');
+
+/**
+ * POST /api/leadflow/identity/candidates/:link_id/decision — settle one case.
+ *
+ * VERIFY LINK DOES NOT COLLAPSE THE RECORDS, and the naming upstream actively
+ * suggests otherwise. `approve` calls `mergeRecords`, which only INSERTs into
+ * `empi.merge_event` and flips the candidate's status — neither person row is
+ * deleted or rewritten, and both ids survive inside the event. That is what
+ * makes the decision reversible: `unmerge` reverses it by emitting a
+ * compensating event against the `merge_id` returned here. The response carries
+ * that id as `reversibility_ref` so the caller never has to infer it.
+ *
+ * A REASON IS REQUIRED FOR EVERY RECORDED DECISION. The steward is asserting
+ * that two records are or are not the same person, against a model that already
+ * declined to decide; "why" is the only part of that a later reader can assess.
+ * Defer alone needs none — deferring asserts nothing.
+ */
+identityRoutes.post(
+  '/candidates/:link_id/decision',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.IDENTITY_MERGE_REVIEW,
+      event: AUDIT_EVENTS.IDENTITY_LINK_VERIFIED,
+      purpose: 'lead_management',
+      resourceType: 'identity_candidate_link',
+      resourceId: linkIdOf,
+      metadata: (req) => ({
+        link_id: linkIdOf(req),
+        decision: String((req.body as Record<string, unknown>)?.decision ?? ''),
+      }),
+      obligations: NOT_AN_OWNED_RECORD,
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const decision = String(body.decision ?? '') as StewardDecision;
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+      const linkId = linkIdOf(req);
+
+      if (!DECISIONS.includes(decision)) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          `decision must be one of ${DECISIONS.join(', ')}`
+        );
+      }
+
+      const upstream = UPSTREAM[decision];
+
+      if (upstream === null) {
+        /*
+         * DEFER IS LOCAL AND WRITES NOTHING UPSTREAM. The case stays open and
+         * stays in the queue, which is the whole point — deferring is declining
+         * to decide, and recording it as a decision would take the case out of
+         * the queue on the strength of a steward saying "not now".
+         */
+        res.status(200).json({
+          success: true,
+          data: { link_id: linkId, decision, recorded: false, reversibility_ref: null },
+        });
+        return;
+      }
+
+      if (reason.length === 0) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'reason is required for a recorded decision'
+        );
+      }
+
+      /*
+       * REFUSED, NOT FAKED, when no approval route is configured. A decision
+       * needs a step id, a step id needs an enqueued review, and an enqueued
+       * review needs a route. Without one the adjudication cannot be witnessed
+       * by anything durable — and an unrecorded decision is worse than a blocked
+       * one, because the case leaves the steward's queue with no reversibility
+       * reference to undo it by. 503 rather than 500: nothing is broken, a
+       * prerequisite is absent.
+       */
+      const routeId = config.projexCloud.stewardRouteId;
+      if (!routeId) {
+        throw new AppError(
+          503,
+          ErrorCodes.UPSTREAM_UNAVAILABLE,
+          'No steward approval route is configured, so this decision cannot be recorded or reversed. Set PROJEXCLOUD_STEWARD_ROUTE_ID.'
+        );
+      }
+
+      const { pending_step_ids } = await enqueueStewardReview(linkId, routeId);
+      const stepId = pending_step_ids[0];
+      if (!stepId) {
+        throw new AppError(
+          503,
+          ErrorCodes.UPSTREAM_UNAVAILABLE,
+          'The approval route produced no pending step, so there is nothing to record this decision against.'
+        );
+      }
+
+      const result = await adjudicateCandidate(linkId, stepId, upstream, reason);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          link_id: linkId,
+          decision,
+          recorded: true,
+          status: result.status,
+          /* AC4 — the id `unmerge` needs. Null on keep_separate: a rejection
+             creates no merge event, and nothing needs reversing. */
+          reversibility_ref: result.merge_id,
+          both_records_retained: true,
         },
       });
     }

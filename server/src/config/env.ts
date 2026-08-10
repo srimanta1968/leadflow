@@ -105,6 +105,20 @@ export interface AppConfig {
      * against a rule nobody wrote.
      */
     capturePolicyId: string;
+    /**
+     * The sdk-approval route a steward decision is submitted through.
+     *
+     * Its ABSENCE is meaningful in the opposite direction to `capturePolicyId`:
+     * with no route, a decision cannot be RECORDED upstream at all, because
+     * `enqueueStewardReview` requires a route_id and `adjudicateCandidate`
+     * requires the step it produces. So the modal must refuse the decision and
+     * say why, rather than let a steward believe they have settled a case that
+     * nothing durable witnessed. An unrecorded adjudication is worse than a
+     * blocked one: the case leaves their queue and no reversibility reference
+     * exists to undo it by.
+     */
+    stewardRouteId: string;
+
     timeoutMs: number;
     /**
      * ProjexCloud `sdk-identity`, the issuer of the session tokens this app
@@ -216,6 +230,7 @@ export const config: AppConfig = {
     webhookSigningKeyRef: process.env.PROJEXCLOUD_WEBHOOK_SIGNING_KEY_REF || '',
     webhookReceiverUrl: process.env.PROJEXCLOUD_WEBHOOK_RECEIVER_URL || '',
     capturePolicyId: process.env.PROJEXCLOUD_CAPTURE_POLICY_ID || '',
+    stewardRouteId: process.env.PROJEXCLOUD_STEWARD_ROUTE_ID || '',
     timeoutMs: parseInt(process.env.PROJEXCLOUD_TIMEOUT_MS || '8000', 10),
     identity: {
       issuerUrl: process.env.PROJEXCLOUD_IDENTITY_URL || '',
