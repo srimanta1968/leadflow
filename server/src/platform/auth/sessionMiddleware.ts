@@ -5,6 +5,8 @@ import { AppError } from '../../utils/errors';
 import { ALLOWED_ALGORITHMS, JwksCache } from './jwksCache';
 import { OidcDiscovery } from './oidcDiscovery';
 import { PlatformRequest, toPlatformSession } from './sessionContext';
+import { linkPlatformIdentity } from './identityLinkage';
+import type { AuthenticatedRequest } from '../../middleware/auth';
 
 /**
  * Paths that carry no session because they are how a caller GETS one, plus the
@@ -114,7 +116,7 @@ export async function verifyPlatformToken(token: string) {
  * locally-issued tokens until the platform identity provider is wired up.
  */
 export function platformSession(
-  req: PlatformRequest,
+  req: PlatformRequest & AuthenticatedRequest,
   _res: Response,
   next: NextFunction
 ): void {
@@ -132,6 +134,31 @@ export function platformSession(
   verifyPlatformToken(token)
     .then((session) => {
       req.platformSession = session;
+
+      /*
+       * BIND THE LOCAL ROW TO THE PLATFORM IDENTITY LAYERS, once we know them.
+       *
+       * `007_persona_identity` added platform_person_id, platform_persona_id and
+       * platform_tenant_id to `users` and NOTHING wrote them - the architecture
+       * was in the migration and absent from the data. This is the one place
+       * where the local user and the platform session are both in hand, so it is
+       * the only honest place to record the correspondence.
+       *
+       * FIRE AND FORGET, DELIBERATELY. The linkage is bookkeeping: a request
+       * must not fail, or wait, because a correspondence could not be written.
+       * The failure is logged rather than swallowed silently, because a linkage
+       * that never lands leaves a column that looks populated for some users and
+       * not others - and that is harder to notice than one that is empty
+       * throughout.
+       */
+      const localUserId = req.session?.userId;
+      if (localUserId) {
+        void linkPlatformIdentity(localUserId, session).catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error('[sessionMiddleware] identity linkage deferred:', message);
+        });
+      }
+
       next();
     })
     .catch(next);
