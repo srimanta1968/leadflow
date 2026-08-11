@@ -74,6 +74,17 @@ export const AUDIT_EVENTS = {
   SUPPRESSION_APPLIED: 'suppression.applied.v1',
   ENRICHMENT_REQUESTED: 'enrichment.requested.v1',
   ENRICHMENT_SETTLED: 'enrichment.settled.v1',
+  /**
+   * The capability register and the tenant's credit posture were read.
+   *
+   * A SEPARATE EVENT from `requested`, on the same reasoning that separates
+   * `import.run.inspected` from the commit: the register names which contacts
+   * somebody asked a paid question about, so opening it is a disclosure even
+   * when nothing is spent. "Who looked" and "who spent" are different questions,
+   * and an audit that spells them the same way can answer neither.
+   */
+  ENRICHMENT_QUEUE_INSPECTED: 'enrichment.queue.inspected.v1',
+  DATA_REVIEW_QUEUE_INSPECTED: 'review.queue.inspected.v1',
   PII_REVEALED: 'pii.revealed.v1',
   RELATIONSHIP_ESTABLISHED: 'relationship.established.v1',
   RELATIONSHIP_ENDED: 'relationship.ended.v1',

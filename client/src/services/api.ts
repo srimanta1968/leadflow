@@ -1252,7 +1252,73 @@ export const api = {
   /** Everything the Data Credits drawer renders, in one call. */
   creditsSummary: (signal?: AbortSignal) =>
     request<CreditsSummary>('/leadflow/credits/summary', { signal }),
+
+  /**
+   * The Data Review queue and its eight tiles, in one call.
+   *
+   * Both filters go to the SERVER rather than being applied in the browser, so
+   * the counts always describe the same window the rows came from.
+   */
+  dataReviewCases: (
+    filters: { risk?: string; family?: string } = {},
+    signal?: AbortSignal,
+  ) => {
+    const query = new URLSearchParams();
+    if (filters.risk && filters.risk !== 'all') query.set('risk', filters.risk);
+    if (filters.family && filters.family !== 'all') query.set('family', filters.family);
+    const suffix = query.toString();
+    return request<DataReviewCases>(
+      `/leadflow/data-review/cases${suffix ? `?${suffix}` : ''}`,
+      { signal },
+    );
+  },
 };
+
+export type DataReviewRisk = 'high' | 'medium' | 'low';
+export type DataReviewFamily = 'identity' | 'source_rights' | 'consent' | 'relationship';
+/** How close a case is to breaching. `breached` is distinct from `critical`. */
+export type SlaBand = 'breached' | 'critical' | 'warning' | 'ok' | 'unknown';
+
+export interface DataReviewCaseType {
+  key: string;
+  label: string;
+  description: string;
+  family: DataReviewFamily;
+  owner_role: string;
+  /** Null, never 0, when the register could not be read. */
+  count: number | null;
+}
+
+export interface DataReviewCase {
+  case_id: string | null;
+  case_type: string | null;
+  case_type_label: string;
+  /** Null for a case type this screen has no tile for. Kept, never dropped. */
+  family: DataReviewFamily | null;
+  risk: DataReviewRisk;
+  entity: string | null;
+  issue: string | null;
+  evidence_summary: string | null;
+  /** The durable half of ownership; present even when the person is not. */
+  owner_role: string | null;
+  owner: string | null;
+  sla_minutes_remaining: number | null;
+  sla_band: SlaBand;
+  status: string;
+  opened_at: string | null;
+}
+
+export interface DataReviewCases {
+  case_types: DataReviewCaseType[];
+  cases: DataReviewCase[];
+  case_count: number;
+  risk_counts: Record<string, number>;
+  family_counts: Record<string, number>;
+  filters: { risk: string; family: string };
+  known_case_types: string[];
+  upstream_available: { register: boolean; sla: boolean; owners: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
 
 export interface EnrichmentEligibility {
   eligible: boolean;

@@ -23,6 +23,7 @@ import ImportCenter from './pages/app/ImportCenter';
 import IdentityReview from './pages/app/IdentityReview';
 import ConsentPreferences from './pages/app/ConsentPreferences';
 import EnrichmentQueue from './pages/app/EnrichmentQueue';
+import DataReview from './pages/app/DataReview';
 import NotFound from './pages/NotFound';
 
 /**
@@ -73,6 +74,7 @@ export default function App() {
               <Route path="identity" element={<IdentityReview />} />
               <Route path="consent" element={<ConsentPreferences />} />
               <Route path="enrichment" element={<EnrichmentQueue />} />
+              <Route path="data-review" element={<DataReview />} />
               <Route path="analytics" element={<Analytics />} />
             </Route>
 

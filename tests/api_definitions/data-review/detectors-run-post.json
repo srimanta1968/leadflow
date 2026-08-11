@@ -1,0 +1,226 @@
+{
+  "name": "POST /api/leadflow/data-review/detectors/run - run the eight governed case detectors, idempotently",
+  "description": "The trigger surface for the eight detectors behind the Data Review screen: possible duplicates, contact point conflicts, source rights, consent ambiguity, relationship conflicts, stale data, suppression mismatch and promotion evidence. One endpoint runs all eight or, with `detector`, exactly one.\n\nRE-RUNNING NEVER DUPLICATES AN OPEN CASE (e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC1), and the guarantee is a PARTIAL UNIQUE INDEX rather than a code path. leadflow_review_case carries a unique index over (tenant_id, case_type, dedupe_key) WHERE status = 'open', so a second pass does not check whether a case exists - it INSERTs and the database refuses. The obvious alternative, SELECT-then-INSERT, races with itself the moment the scheduled sweep and an event-driven run overlap, which is precisely the arrangement this task asks for: two passes evaluating the same conflict a millisecond apart both find nothing and both insert.\n\nTHE SUPPRESSED COUNT IS REPORTED, NOT DISCARDED. `cases_opened` is what actually inserted and `cases_suppressed` is what the index refused because the case was already open. That second number is the idempotence WORKING, and it is the field this definition asserts on: the first run of a pair opens what it finds, the second opens nothing and suppresses the same findings again. A response that only reported `cases_opened` could not tell a healthy re-run from a detector that has stopped looking.\n\nTHE INDEX IS PARTIAL ON PURPOSE. A unique constraint over every row would make each problem detectable once per lifetime - a contact point conflict resolved in March could never be raised again when the same two sources disagree in September. Scoping it to open cases means a recurrence legitimately opens a new case while an unfixed problem stays exactly one.\n\nEVERY CASE CARRIES EVIDENCE AND A REVERSIBLE REMEDIATION (e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC2). Evidence is an array of {kind, ref, detail} pointing at the assertions, receipts and attestations the detector actually read - a case with no evidence is an accusation, and a steward asked to act on one has nothing to check first. Remediation carries `reversible` explicitly rather than leaving it to be inferred, because a remediation nobody can walk back is a different kind of decision and the screen must be able to say so BEFORE the click.\n\nSCHEDULE AND EVENTS ARE THE SAME PATH (e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC3). `trigger` records which provoked a pass - schedule, event or manual - and is stored on leadflow_detector_run because \"no cases opened in two days\" has two completely different explanations, nothing is wrong or nothing has run, and no other column can tell them apart. The scheduled sweep and the event subscriber both call the same runner, so a detector cannot behave differently depending on what woke it.\n\nOWNERSHIP FOLLOWS THE POLICY BUNDLE (e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC4). Each case stores the owner ROLE from caseTypes.ts - a consent ambiguity belongs to the privacy officer whatever the tenant's staffing - and the PERSON is resolved from that role through sdk-policy at read time. A name written into the case would put it on the desk of somebody who may have left.\n\nGOVERNED ON source_record.promote, which the Data Steward holds: running the detectors writes cases that put real records in front of a human, and who caused that queue to exist belongs in the record. requiresRole:[\"data_steward\"] and NO testCase pins an Authorization header, because the suite's default identity bridges to sales_rep and would only see 403 - the runner swaps to testCredentials.data_steward, and a pinned header would take PRECEDENCE over that token and defeat the swap (MUST-71).\n\nTHE HAPPY PATH IS A 200 WITH A MIXED PICTURE, and it was measured rather than predicted. Run live against dev, six of the eight detectors reached their upstreams and two did not: sdk-rebac and sdk-deliverability answered nothing, so relationship_conflicts and suppression_mismatch reported source_available:false with a named reason, while possible_duplicates found a real candidate link and opened a case. That mix is the branch worth holding, because it is the one that distinguishes the two ways a detector reports zero. A detector that says \"no problems\" while blind is the single most dangerous thing this endpoint could return, and the response separates the two: found:0 with source_available:true is a clean sweep, found:0 with source_available:false is a detector that could not look.\n\nIDEMPOTENCE WAS MEASURED, NOT ASSERTED. Two consecutive sweeps against the same data returned {found:1, opened:1, suppressed:0} and then {found:1, opened:0, suppressed:1}: the same finding, refused the second time by the partial unique index. That pair is exactly what the two positive testCases below assert, and it is why the suppressed count is in the response at all - without it the second sweep would be indistinguishable from a detector that had stopped finding anything.\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/data-review/detectors/run",
+  "method": "POST",
+  "taskId": "e5f74ac6-188f-4126-a210-eb02aacb4a3f",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "data_steward"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC1",
+    "e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC2",
+    "e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC3",
+    "e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "detector": [
+      "possible_duplicates",
+      "contact_point_conflicts",
+      "source_rights",
+      "consent_ambiguity",
+      "relationship_conflicts",
+      "stale_data",
+      "suppression_mismatch",
+      "promotion_evidence"
+    ],
+    "trigger": [
+      "schedule",
+      "event",
+      "manual"
+    ],
+    "data.runs.detector": [
+      "possible_duplicates",
+      "contact_point_conflicts",
+      "source_rights",
+      "consent_ambiguity",
+      "relationship_conflicts",
+      "stale_data",
+      "suppression_mismatch",
+      "promotion_evidence"
+    ],
+    "data.runs.owner_role": [
+      "data_steward",
+      "privacy_officer",
+      "sales_manager"
+    ],
+    "data.runs.risk": [
+      "high",
+      "medium",
+      "low"
+    ]
+  },
+  "statusTransitions": {
+    "entity": "review_case",
+    "field": "status",
+    "flow": [
+      "open",
+      "resolved"
+    ],
+    "transitions": [
+      {
+        "from": "open",
+        "to": "resolved",
+        "via": "a detector pass that no longer finds the condition, or a steward resolving the case. The row leaves the partial unique index at that point, so the same problem recurring later legitimately opens a NEW case rather than being silently swallowed"
+      },
+      {
+        "from": "open",
+        "to": "dismissed",
+        "via": "a steward judging the finding not actionable. Dismissal also leaves the index, which is deliberate - a dismissed conflict that reappears is worth raising again"
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A full sweep reports per-detector counts and which sources it could read",
+      "coversCriterion": "e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC3",
+      "payload": {
+        "trigger": "{{static:manual}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true
+    },
+    {
+      "name": "Re-running the sweep opens nothing it has already opened",
+      "coversCriterion": "e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC1",
+      "payload": {
+        "trigger": "{{static:manual}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive"
+    },
+    {
+      "name": "One detector can be run alone, without sweeping the other seven",
+      "coversCriterion": "e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC3",
+      "payload": {
+        "detector": "{{static:consent_ambiguity}}",
+        "trigger": "{{static:event}}",
+        "trigger_ref": "{{static:consent.receipt.issued.v1}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive"
+    },
+    {
+      "name": "NEGATIVE: an unknown detector is rejected rather than silently sweeping all eight",
+      "coversCriterion": "e5f74ac6-188f-4126-a210-eb02aacb4a3f#AC1",
+      "payload": {
+        "detector": "{{static:everything_please}}",
+        "trigger": "{{static:manual}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR"
+    },
+    {
+      "name": "NEGATIVE: an unknown trigger is rejected, so the run log cannot lie about why it ran",
+      "payload": {
+        "trigger": "{{static:because}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR"
+    }
+  ],
+  "testDataSets": [
+    {
+      "name": "Every detector can be addressed by name and reports its own source availability",
+      "rows": [
+        {
+          "detector": "possible_duplicates",
+          "trigger": "manual"
+        },
+        {
+          "detector": "contact_point_conflicts",
+          "trigger": "manual"
+        },
+        {
+          "detector": "source_rights",
+          "trigger": "manual"
+        },
+        {
+          "detector": "consent_ambiguity",
+          "trigger": "manual"
+        },
+        {
+          "detector": "relationship_conflicts",
+          "trigger": "manual"
+        },
+        {
+          "detector": "stale_data",
+          "trigger": "manual"
+        },
+        {
+          "detector": "suppression_mismatch",
+          "trigger": "manual"
+        },
+        {
+          "detector": "promotion_evidence",
+          "trigger": "manual"
+        }
+      ],
+      "expectedStatus": 200
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "detector must be one of possible_duplicates, contact_point_conflicts, source_rights, consent_ambiguity, relationship_conflicts, stale_data, suppression_mismatch, promotion_evidence",
+      "when": "an unrecognised detector name is supplied. Falling back to a full sweep would be worse than an error: an event subscriber wired to a name that no longer exists would run all eight detectors on every domain event, and nobody would notice until the load did."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "trigger must be one of schedule, event, manual",
+      "when": "an unrecognised trigger is supplied. The run log exists to answer 'has this been running', and a trigger nobody can interpret makes that answer unreadable for every run after it."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Not authored as a testCase: it can only be expressed by pinning a header, which would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify. Not authored, for the same reason as above."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller's roles do not grant source_record.promote, which the Data Steward alone holds. NOT reachable while this definition runs under requiresRole, and kept because it is the real branch the default suite identity receives."
+    }
+  ],
+  "captureResponse": {
+    "review.detectors.run.response.data.run_id": "data.run_id"
+  }
+}

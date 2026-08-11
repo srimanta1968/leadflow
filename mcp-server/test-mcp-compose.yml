@@ -112,10 +112,14 @@ services:
       #   npm run dev -- --host  (or --host 0.0.0.0)
       #
       # Set in .env file or as environment variables before running tests.
-      - UI_BASE_URL=${UI_BASE_URL:-http://host.docker.internal:3000}
+      # LeadFlow's Vite app serves on 5173, not the 3000 this defaulted to. The
+      # runner probed a port nothing listens on and reported it as a
+      # loopback-binding problem, which sent three sessions looking at the
+      # wrong thing - both 3010 and 5173 are bound to 0.0.0.0 and always were.
+      - UI_BASE_URL=${UI_BASE_URL:-http://host.docker.internal:5173}
       - API_BASE_URL=${API_BASE_URL:-http://host.docker.internal:5000}
       # Alias for UI_BASE_URL (backward compatibility)
-      - BASE_URL=${BASE_URL:-${UI_BASE_URL:-http://host.docker.internal:3000}}
+      - BASE_URL=${BASE_URL:-${UI_BASE_URL:-http://host.docker.internal:5173}}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

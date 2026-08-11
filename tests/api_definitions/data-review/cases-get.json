@@ -1,0 +1,201 @@
+{
+  "name": "GET /api/leadflow/data-review/cases - the unified case queue and its eight tiles",
+  "description": "Everything the Data Review screen (#view-review) renders, from one call: the eight case-type tiles with live counts, the unified queue, and the risk and family segment counts.\n\nONE CALL, THREE UPSTREAMS, DEGRADING INDEPENDENTLY. The incident register, the SLA clocks and the policy role-holders are read CONCURRENTLY. An unreachable policy service empties the owner NAME and leaves every case triageable under its owning role; an unreachable register empties the queue and says so through upstream_available rather than reporting zero cases. Fanning out from the browser would put the tiles and the rows at three different instants behind one screen.\n\nTHE TILES AND THE QUEUE ARE COUNTED FROM THE SAME ROWS (AC1). A tile reading 12 above a filter that finds 9 is the classic failure on a screen like this, and it happens when counts come from an aggregate endpoint and rows from a list. Both are derived from the one register read. All eight tiles ALWAYS render: a type with no open cases is a ZERO, because an absent tile reads as 'we do not check for this'. The count is null rather than 0 when the register could not be read.\n\nTHE TWO FILTERS COMPOSE (AC2). risk and family are independent predicates over the same set, so High + Consent means BOTH rather than whichever was clicked last. Applied server-side so the counts describe the same window the rows came from. Segment counts are computed over the WHOLE window, so a segment count never moves with itself when you select it.\n\nSLA IS A BAND, NOT A RAW NUMBER (AC3). sla_band is decided here - breached | critical | warning | ok | unknown - so the row, any tile and any later export agree on what 'critical' means. `breached` is deliberately separate from `critical`: a case that has already missed its deadline is a different conversation from one about to. The minutes come from sdk-incident's own clock rather than being derived by subtracting timestamps, because the SLA policy decides what the deadline MEANS (business hours, pauses while waiting on a third party) and doing the arithmetic here would invent a different clock from the one the tenant agreed.\n\nOWNERSHIP IS DERIVED FROM POLICY (AC4). What is fixed in the code is the ROLE that adjudicates each case type - consent ambiguity to the privacy officer, duplicates to the data steward, relationship conflicts to the sales manager - and the PERSON is resolved from that role through sdk-policy at read time. A hard-coded name would put a specific human on a queue they may have left. When the policy service is unreachable the row keeps owner_role and owner is null, with a named field_gap, because routing is unaffected and a placeholder name would send somebody to the wrong desk.\n\nEDGE CASES: an unrecognised risk or family is REJECTED rather than ignored, because silently returning the whole register to somebody who asked for one segment gets the queue worked in the wrong order. An incident whose case_type matches no tile is KEPT with a null family - a case the screen has no tile for is still a case somebody has to work, and hiding it is how a governance queue quietly stops being complete. `limit` is clamped to 1..1000.\n\nBehind authenticate and governed on data.configure. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/data-review/cases",
+  "method": "GET",
+  "taskId": "941b1525-519d-4585-8f9c-88b977ebc162",
+  "featureId": "4e9ec7d2-0361-4fb1-aec3-b02fb37fa3da",
+  "epicId": "3d26a52b-753c-4ee4-849c-6433f98473d6",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "941b1525-519d-4585-8f9c-88b977ebc162#AC1",
+    "941b1525-519d-4585-8f9c-88b977ebc162#AC2",
+    "941b1525-519d-4585-8f9c-88b977ebc162#AC3",
+    "941b1525-519d-4585-8f9c-88b977ebc162#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "risk": ["all", "high", "medium", "low"],
+    "family": ["all", "identity", "source_rights", "consent", "relationship"],
+    "data.cases.sla_band": ["breached", "critical", "warning", "ok", "unknown"],
+    "data.case_types.owner_role": ["data_steward", "privacy_officer", "sales_manager"]
+  },
+  "captureResponse": {
+    "dataReview.cases.response.data.case_count": "data.case_count"
+  },
+  "testCases": [
+    {
+      "name": "All eight case-type tiles render with a live count",
+      "coversCriterion": "941b1525-519d-4585-8f9c-88b977ebc162#AC1",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Risk and family compose rather than replacing one another",
+      "coversCriterion": "941b1525-519d-4585-8f9c-88b977ebc162#AC2",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "risk": "high",
+        "family": "consent"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "A single risk segment narrows without touching the type filter",
+      "coversCriterion": "941b1525-519d-4585-8f9c-88b977ebc162#AC2",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "risk": "high"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Every case carries an SLA band and the role that owns it",
+      "coversCriterion": "941b1525-519d-4585-8f9c-88b977ebc162#AC3",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "limit": "50"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "An out-of-range limit is clamped rather than refused",
+      "coversCriterion": "941b1525-519d-4585-8f9c-88b977ebc162#AC4",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "limit": "999999"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: a risk level the queue does not know",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|risk",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "risk": "{{static:catastrophic}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: a case family outside the four",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|family",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "family": "{{static:billing}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "risk must be all or one of: high, medium, low",
+      "when": "the risk filter is outside the vocabulary. Rejected rather than ignored: returning the whole register to somebody who asked for High gets the queue worked in the wrong order."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "family must be all or one of: identity, source_rights, consent, relationship",
+      "when": "the type filter is outside the four families"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer"
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold data.configure",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64: the suite has a single identity and no second-role producer to borrow a token from. Kept as documentation because it is a real response."
+    },
+    {
+      "status": 502,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "message": "the incident register could not be read",
+      "when": "never raised by this endpoint. All three reads DEGRADE - upstream_available reports which ones answered, and field_gaps names the owner column when policy is out - because a review queue that 500s on one absent upstream is a queue nobody can work.",
+      "reproducible": false,
+      "_whyNotReproducible": "Documented to record that this endpoint deliberately does NOT 502, which is the question a reader asks on seeing the degrade paths."
+    }
+  ]
+}
