@@ -1,9 +1,9 @@
 {
   "name": "POST /api/leadflow/channel-decision - may we contact this person, this way?",
-  "description": "The ONE authority every send path must ask. Composes sdk-consent, sdk-policy, sdk-deliverability and sdk-notification's quiet-hours and frequency window into a single allow|review|deny with an ORDERED reason list, and writes the decision to a ledger.\n\n200 EVEN FOR A DENY. The question was answered, and 'no' is a successful answer to 'may I?' - a 403 would make a correct refusal look like the caller lacked permission to ask it.\n\nAN UNREACHABLE CHECK IS `review`, NEVER `allow`. This is the most consequential rule in the composer: treating an unreachable consent service as permission is how a system messages somebody who revoked it, and 'we could not ask' is not 'they said yes'. It is not deny either, because a blanket outage would silently stop every legitimate message with nobody ever seeing it - review puts it in front of a person, which is the honest answer to 'we do not know'. Verified live: with the SDKs unreachable the verdict is review and `degraded` is true.\n\nA MISSING PURPOSE IS A DENY, not a default. A purpose is the basis on which somebody agreed to be contacted, so choosing one for them invents that basis - and it would then appear in the consent record as though it had been stated.\n\nTHE REASONS ARE ORDERED AND RENDERED VERBATIM. The FIRST blocking reason is what an operator acts on, so a set would lose the only part of the answer that tells them what to do. The check order is the reading order - consent, policy, deliverability, timing - so the most fundamental objection appears first. Each reason carries a machine `code` for metrics and a `text` written as a sentence for the screen; the UI never translates a code.\n\n`audience: internal` skips consent and deliverability because neither applies to messaging a colleague - and SAYS SO in the reason list, so an audit sees a decision that was taken rather than a check that was quietly skipped. Tenant policy still applies.\n\nBehind authenticate and governed on message.send_approved. QA: depends on register and login.",
+  "description": "The ONE authority every send path must ask. Composes sdk-consent, sdk-policy, sdk-deliverability and sdk-notification's quiet-hours and frequency window into a single allow|review|deny with an ORDERED reason list, and writes the decision to a ledger.\n\n200 EVEN FOR A DENY. The question was answered, and 'no' is a successful answer to 'may I?' - a 403 would make a correct refusal look like the caller lacked permission to ask it.\n\nAN UNREACHABLE CHECK IS `review`, NEVER `allow`. This is the most consequential rule in the composer: treating an unreachable consent service as permission is how a system messages somebody who revoked it, and 'we could not ask' is not 'they said yes'. It is not deny either, because a blanket outage would silently stop every legitimate message with nobody ever seeing it - review puts it in front of a person, which is the honest answer to 'we do not know'. Verified live: with the SDKs unreachable the verdict is review and `degraded` is true.\n\nA MISSING PURPOSE IS A DENY, not a default. A purpose is the basis on which somebody agreed to be contacted, so choosing one for them invents that basis - and it would then appear in the consent record as though it had been stated.\n\nREASONS GO OUT AS ORDERED SENTENCES, AND NOTHING ELSE (AC2). `reasons` is a list of strings, first-blocking-reason first, rendered verbatim by the Channel Decision rows and the Compose Guardrails panel. The internal machine `code` and the `source` SDK name are kept in the ledger, where metrics and dispute routing need them, and are deliberately absent from the response: a client that switched on CONSENT_NOT_GRANTED would pin an internal constant, and the wording it rendered would then drift from the wording that was actually decided. `source` in particular names the SDK behind the verdict, which is a vendor detail no tenant asked about. Verified live - the response carries decisionRef, verdict, reasons, checksRan, degraded, evaluatedAt and expiresAt, and no other field.\n\nEVERY DECISION STATES WHEN IT STOPS BEING TRUE (AC4). `expiresAt` is written at decide time from the verdict and from whether the decision was degraded: allow holds 5 minutes, review 30, deny 24 hours, and any degraded decision at most 60 seconds. The windows are unequal on purpose - allow is the only verdict that authorises a send, so acting on a stale one messages somebody who withdrew permission, while a stale deny merely re-refuses something almost certainly still refused. Past that instant the decision must be re-derived through POST /api/leadflow/channel-decision/:decisionRef/authorise rather than replayed.\n\nEDGE CASES: `at` is validated, not coerced - a string that does not parse is refused rather than falling back to now, because quiet hours and frequency caps are decided entirely by that value and answering about a different moment returns a verdict that is confidently wrong. `senderIdentityRef` is optional and changes the deliverability answer: an address can be reachable from one sending domain and suppressed from another. `audience:internal` skips consent and deliverability because neither applies to messaging a colleague - and SAYS SO in the reason list, so an audit sees a decision that was taken rather than a check quietly skipped. Tenant policy still applies. The reason list is NEVER empty; an all-clear says so in words.\n\nBehind authenticate and governed on message.send_approved. QA: depends on register and login.",
   "endpoint": "/api/leadflow/channel-decision",
   "method": "POST",
-  "taskId": "d40c77c6-310f-4b96-a3cb-28e11a4c4409",
+  "taskId": "46644b3e-9bf2-4f48-ae79-8bd86ff4e021",
   "featureId": "3dbff372-0a8d-4ca4-89a6-ce87d732d79c",
   "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
@@ -12,8 +12,8 @@
   "priority": 1,
   "expectedStatus": 200,
   "coversCriterion": [
-    "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC3",
-    "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC4"
+    "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC2",
+    "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC4"
   ],
   "dependsOn": [
     "POST /api/auth/register",
@@ -38,12 +38,12 @@
     ]
   },
   "captureResponse": {
-    "orchestration.channelDecision.response.data.id": "data.id"
+    "orchestration.channelDecision.response.data.decisionRef": "data.decisionRef"
   },
   "testCases": [
     {
-      "name": "Answers with a verdict and an ordered reason list",
-      "coversCriterion": "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC4",
+      "name": "Answers with a verdict, an ordered sentence list and an expiry",
+      "coversCriterion": "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC2",
       "capturesResponse": true,
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
@@ -51,7 +51,41 @@
       "payload": {
         "subjectRef": "{{dynamic:uuid}}",
         "channel": "{{static:email}}",
-        "purposeKey": "{{static:inspection_estimate}}"
+        "purposeKey": "{{static:inspection_estimate}}",
+        "senderIdentityRef": "{{static:hello@leadflow.test}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Every decision carries the instant it stops being true",
+      "coversCriterion": "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC4",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subjectRef": "{{dynamic:uuid}}",
+        "channel": "{{static:sms}}",
+        "purposeKey": "{{static:appointment_updates}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "A scheduled send is evaluated against the moment it would go out",
+      "coversCriterion": "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC4",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subjectRef": "{{dynamic:uuid}}",
+        "channel": "{{static:email}}",
+        "purposeKey": "{{static:inspection_estimate}}",
+        "at": "{{dynamic:futuredatetime+8h}}"
       },
       "expectedStatus": 200,
       "expectedResponse": {
@@ -60,7 +94,7 @@
     },
     {
       "name": "An internal recipient states the exemption rather than skipping silently",
-      "coversCriterion": "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC3",
+      "coversCriterion": "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC2",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -76,7 +110,8 @@
     },
     {
       "name": "NEGATIVE: a channel the composer does not know",
-      "coversErrorCase": "400|VALIDATION_ERROR",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|channel",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -92,7 +127,8 @@
     },
     {
       "name": "NEGATIVE: no subjectRef, so there is nobody to decide about",
-      "coversErrorCase": "400|VALIDATION_ERROR",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|subject",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -106,8 +142,32 @@
       }
     },
     {
+      "name": "NEGATIVE: an unparseable `at` is refused, never silently treated as now",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|at",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subjectRef": "{{dynamic:uuid}}",
+        "channel": "{{static:email}}",
+        "purposeKey": "{{static:inspection_estimate}}",
+        "at": "{{static:not-a-date}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
       "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
       "coversErrorCase": "401|UNAUTHENTICATED",
+      "payload": {
+        "subjectRef": "{{dynamic:uuid}}",
+        "channel": "{{static:email}}"
+      },
       "expectedStatus": 401,
       "expectedResponse": {
         "success": false,
@@ -116,9 +176,14 @@
     },
     {
       "name": "NEGATIVE: a bearer token that does not verify",
+      "testType": "negative",
       "coversErrorCase": "401|INVALID_TOKEN",
       "headers": {
         "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "payload": {
+        "subjectRef": "{{dynamic:uuid}}",
+        "channel": "{{static:email}}"
       },
       "expectedStatus": 401,
       "expectedResponse": {
@@ -143,14 +208,28 @@
     {
       "status": 400,
       "code": "VALIDATION_ERROR",
+      "message": "subjectRef is required",
+      "when": "subjectRef is absent or blank. There is nobody to decide about, and defaulting one would attach the decision to the wrong person."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
       "message": "channel must be one of: email, sms, call, social, push",
-      "when": "subjectRef is absent or blank, or channel is missing or not one of the five. Verified against the running server rather than assumed."
+      "when": "channel is missing or outside the five. Verified against the running server rather than assumed."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "at must be an ISO-8601 timestamp",
+      "when": "`at` is present but does not parse. Refused rather than coerced to now: quiet hours and frequency caps are decided entirely by this value, so answering about a different moment returns a verdict that is confidently wrong rather than obviously broken."
     },
     {
       "status": 403,
       "code": "FORBIDDEN",
       "message": "No policy grants this action to the caller's roles.",
-      "when": "the caller's roles do not grant message.send_approved. NOT COVERED BY A DATASET for the same reason as above: the suite's single identity bridges to sales_rep, which holds this grant. Kept rather than deleted because it is a real response; verified live during development when the router was missing `authenticate` and every caller therefore had no roles at all."
+      "when": "the caller's roles do not grant message.send_approved. Verified live during development, when the router was missing `authenticate` and every caller therefore had no roles at all.",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64: no dataset can trigger it. The suite has a single identity, which bridges to sales_rep and holds message.send_approved, and there is no second-role producer to borrow a token from. Sending a deliberately different Authorization header is not an option either - it would be indistinguishable from a genuine permissions bug. Kept as documentation because it is a real response."
     }
   ]
 }

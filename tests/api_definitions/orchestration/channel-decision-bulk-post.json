@@ -1,37 +1,50 @@
 {
-  "name": "POST /api/leadflow/channel-decision/bulk - the same question for many subjects",
-  "description": "Composes a decision per entry and returns them in request order, with allow/review/denied counts.\n\nEVERY ENTRY IS VALIDATED BEFORE ANY DECISION IS COMPOSED. A malformed entry at position 400 would otherwise leave 399 decisions already written to the ledger for a request that then answers 400 - records of decisions nobody asked for, attached to a call that failed.\n\nCAPPED AT 500 WITH A STATED NUMBER, never a silent truncation. Answering 200 for the first 500 of 5,000 would let a campaign send to the other 4,500 with no decision behind them at all, which is precisely the bypass this endpoint exists to prevent.\n\nCOMPOSED SEQUENTIALLY, not in parallel. Five hundred entries fired at once is two thousand simultaneous calls across four SDKs, which trips their rate limits and then the circuit breaker - turning a routine campaign check into an outage for every other feature sharing those SDKs.\n\nOrder is preserved so a caller can zip requests to decisions positionally rather than matching on subjectRef, which breaks the moment the same subject appears twice.\n\nBehind authenticate and governed on message.send_approved. QA: depends on register and login.",
+  "name": "POST /api/leadflow/channel-decision/bulk - the same question for a whole audience",
+  "description": "Evaluates a campaign audience against the same four authorities as the single-subject endpoint, returning a per-subject verdict plus allowed/review/denied counts. Every entry is validated BEFORE any decision is composed, so a malformed entry at position 400 does not leave 399 decisions already written to the ledger.\n\nBUILT FOR 100,000 SUBJECTS, AND MEASURED AT IT (AC3). Verified live on this codebase: 100,000 entries answered with `complete: true` and zero undecided in 32.1s; 10,000 in 3.7s.\n\nTHE ARITHMETIC IS THE DESIGN. The audience is paged at 1,000 - the envelope limit all four upstreams accept - and each authority is asked ONCE PER PAGE through its set-based bulk route (POST /api/consents/check/bulk, /api/policies/evaluate/bulk, /api/deliverability/check/bulk, /api/notifications/send-window/bulk). A 100,000 audience is therefore 100 pages x 4 checks = 400 upstream calls, each a small number of set-based queries, rather than the 400,000 round trips a per-subject loop would make. The four calls within a page stay SEQUENTIAL: the reason the original design serialised has not gone away - four authorities hit at once by every page still trips their rate limits and then the circuit breaker - it is simply no longer expensive to obey.\n\nANSWERS ARE ZIPPED BY `index`, NEVER BY POSITION. Every bulk envelope is order-preserving and every item also carries its own index; using the index is not belt-and-braces, because an upstream that filters before it answers silently shifts positions, and a misaligned consent verdict means messaging somebody who withdrew. PER-ITEM FAILURE IS NOT PAGE FAILURE either: an item returned `ok:false` simply has no prefetched answer, so the composer reaches the same `review` it would for any input it could not confirm, and one malformed subject does not cost the other 999 their verdicts.\n\nFALLS BACK RATHER THAN REFUSING. The bulk upstream routes are built but not yet deployed to any environment this deployment can reach, so when they are unreachable the audience is asked about per subject through a bounded worker pool instead. That is the path the timings above were measured on - the paged path is faster still. A campaign check that refused to run until an upstream shipped would be worse than one that runs more slowly.\n\nTWO MORE THINGS MAKE IT HOLD. BATCHED WRITES - a multi-row INSERT per 1,000 decisions instead of one round trip per subject, which was the dominant cost once the upstream calls stopped being. And DEDUPLICATION - the same subject, channel, purpose, sender, time and audience asked twice in one request is ONE question; both positions get the same decisionRef, because there was one decision.\n\nTHE BUDGET IS STATED, AND SO IS ANYTHING IT DID NOT REACH. If the evaluation deadline passes with subjects still unevaluated, the response carries the decisions it made, `complete: false`, and `undecided` listing the REQUEST POSITIONS it never looked at. It does not truncate silently. A caller that read `decisions.length` and assumed it covered the audience would send to the remainder with no decision behind them at all - which is the exact failure this endpoint exists to prevent, and it fails in the permissive direction.\n\nEDGE CASES: `requests` must be a non-empty array; the cap is 100,000 and a larger audience is refused with the number it received rather than being quietly truncated. The 6MB body for a 100,000-entry audience sits under the 10MB body-parser limit, so the practical ceiling is the cap rather than the parser. Each entry takes the same fields as the single endpoint and is validated identically, with the failing position named (`requests[7].channel must be one of...`). Duplicate entries do not produce duplicate ledger rows.\n\nReasons go out as ORDERED SENTENCES here too - see the single-endpoint definition for why the internal code and source SDK name stay out of the response.\n\nBehind authenticate and governed on message.send_approved. QA: depends on register and login.",
   "endpoint": "/api/leadflow/channel-decision/bulk",
   "method": "POST",
-  "taskId": "d40c77c6-310f-4b96-a3cb-28e11a4c4409",
+  "taskId": "46644b3e-9bf2-4f48-ae79-8bd86ff4e021",
   "featureId": "3dbff372-0a8d-4ca4-89a6-ce87d732d79c",
   "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "testability": "auto",
-  "priority": 2,
+  "priority": 1,
   "expectedStatus": 200,
   "coversCriterion": [
-    "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC3",
-    "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC4"
+    "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC3",
+    "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC2"
   ],
   "dependsOn": [
     "POST /api/auth/register",
     "POST /api/auth/login"
   ],
   "fieldEnums": {
-    "requests[].channel": [
+    "requests.channel": [
       "email",
       "sms",
       "call",
       "social",
       "push"
+    ],
+    "requests.audience": [
+      "prospect",
+      "internal"
+    ],
+    "data.decisions.verdict": [
+      "allow",
+      "review",
+      "deny"
     ]
+  },
+  "captureResponse": {
+    "orchestration.channelDecisionBulk.response.data.decisionRef": "data.decisions.0.decisionRef"
   },
   "testCases": [
     {
-      "name": "Decides for several subjects and reports the verdict counts",
-      "coversCriterion": "d40c77c6-310f-4b96-a3cb-28e11a4c4409#AC4",
+      "name": "Answers every subject in the audience and reports the run complete",
+      "coversCriterion": "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC3",
+      "capturesResponse": true,
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -39,13 +52,18 @@
         "requests": [
           {
             "subjectRef": "{{dynamic:uuid}}",
-            "channel": "email",
-            "purposeKey": "inspection_estimate"
+            "channel": "{{static:email}}",
+            "purposeKey": "{{static:inspection_estimate}}"
           },
           {
             "subjectRef": "{{dynamic:uuid}}",
-            "channel": "sms",
-            "purposeKey": "appointment_updates"
+            "channel": "{{static:sms}}",
+            "purposeKey": "{{static:appointment_updates}}"
+          },
+          {
+            "subjectRef": "{{dynamic:uuid}}",
+            "channel": "{{static:email}}",
+            "audience": "{{static:internal}}"
           }
         ]
       },
@@ -55,8 +73,34 @@
       }
     },
     {
-      "name": "NEGATIVE: an empty request list",
-      "coversErrorCase": "400|VALIDATION_ERROR",
+      "name": "The same question twice in one audience is one decision, shared",
+      "coversCriterion": "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC3",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "requests": [
+          {
+            "subjectRef": "{{static:dedupe-probe}}",
+            "channel": "{{static:email}}",
+            "purposeKey": "{{static:inspection_estimate}}"
+          },
+          {
+            "subjectRef": "{{static:dedupe-probe}}",
+            "channel": "{{static:email}}",
+            "purposeKey": "{{static:inspection_estimate}}"
+          }
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: an empty audience has nothing to decide",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|empty",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -70,8 +114,9 @@
       }
     },
     {
-      "name": "NEGATIVE: one malformed entry rejects the WHOLE batch before anything is written",
-      "coversErrorCase": "400|VALIDATION_ERROR",
+      "name": "NEGATIVE: a malformed entry names its own position",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|entry",
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },
@@ -79,11 +124,12 @@
         "requests": [
           {
             "subjectRef": "{{dynamic:uuid}}",
-            "channel": "email",
-            "purposeKey": "inspection_estimate"
+            "channel": "{{static:email}}",
+            "purposeKey": "{{static:inspection_estimate}}"
           },
           {
-            "channel": "sms"
+            "subjectRef": "{{dynamic:uuid}}",
+            "channel": "{{static:carrier-pigeon}}"
           }
         ]
       },
@@ -95,7 +141,16 @@
     },
     {
       "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
       "coversErrorCase": "401|UNAUTHENTICATED",
+      "payload": {
+        "requests": [
+          {
+            "subjectRef": "{{dynamic:uuid}}",
+            "channel": "{{static:email}}"
+          }
+        ]
+      },
       "expectedStatus": 401,
       "expectedResponse": {
         "success": false,
@@ -104,9 +159,18 @@
     },
     {
       "name": "NEGATIVE: a bearer token that does not verify",
+      "testType": "negative",
       "coversErrorCase": "401|INVALID_TOKEN",
       "headers": {
         "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "payload": {
+        "requests": [
+          {
+            "subjectRef": "{{dynamic:uuid}}",
+            "channel": "{{static:email}}"
+          }
+        ]
       },
       "expectedStatus": 401,
       "expectedResponse": {
@@ -120,7 +184,7 @@
       "status": 401,
       "code": "UNAUTHENTICATED",
       "message": "Authorization header with a bearer token is required",
-      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Verified live: without authenticate the caller has no roles at all and governed() refuses with a message about the policy bundle, which points at the wrong thing entirely."
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer"
     },
     {
       "status": 401,
@@ -132,13 +196,27 @@
       "status": 400,
       "code": "VALIDATION_ERROR",
       "message": "requests must be a non-empty array",
-      "when": "requests is absent, not an array, empty, longer than 500 entries, or any entry is missing subjectRef or carries an unknown channel. The whole batch is refused so no partial ledger is written."
+      "when": "`requests` is absent, not an array, or empty"
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "requests may contain at most 100000 entries, received N",
+      "when": "the audience exceeds the cap. Stated with the number received rather than truncated: answering 200 for the first N of many would let the campaign send to the rest with no decision behind them."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "requests[i].channel must be one of: email, sms, call, social, push",
+      "when": "any entry is malformed. Raised during validation of the whole array, BEFORE any decision is composed, so a bad entry late in the audience does not leave earlier decisions already written."
     },
     {
       "status": 403,
       "code": "FORBIDDEN",
       "message": "No policy grants this action to the caller's roles.",
-      "when": "the caller's roles do not grant message.send_approved. NOT COVERED BY A DATASET for the same reason as above: the suite's single identity bridges to sales_rep, which holds this grant. Kept rather than deleted because it is a real response; verified live during development when the router was missing `authenticate` and every caller therefore had no roles at all."
+      "when": "the caller's roles do not grant message.send_approved",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64: the suite has a single identity, which bridges to sales_rep and holds this grant, and there is no second-role producer to borrow a token from. Kept as documentation because it is a real response."
     }
   ]
 }

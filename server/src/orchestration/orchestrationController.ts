@@ -9,7 +9,14 @@ import { orchestrateIntake } from './leadIntakeOrchestrator';
 import { runClosedWon } from './closedWonSaga';
 import { sagaSteps } from './saga';
 import { dataService } from '../services/DataService';
-import { compose, composeBulk, type Channel, type ChannelDecisionInput } from './channelDecision';
+import {
+  compose,
+  evaluateBulk,
+  toPublicDecision,
+  authoriseDispatch,
+  type Channel,
+  type ChannelDecisionInput,
+} from './channelDecision';
 
 export const orchestrationRoutes: Router = Router();
 
@@ -29,6 +36,21 @@ export const orchestrationRoutes: Router = Router();
 orchestrationRoutes.use(authenticate);
 
 const CHANNELS: Channel[] = ['email', 'sms', 'call', 'social', 'push'];
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The largest audience one bulk call may ask about.
+ *
+ * 100,000 is the campaign size the composer is required to answer for, and the
+ * cap is set AT that number rather than below it so a legitimate campaign is
+ * never refused for being the size it actually is. The evaluator protects itself
+ * with a concurrency pool and a time budget instead of a small cap, and reports
+ * anything it could not reach — a smaller cap would just move the same problem
+ * to the caller, who would then split the audience and lose the one guarantee
+ * that matters: that every subject in a send has a decision behind it.
+ */
+const MAX_AUDIENCE = Number(process.env.CHANNEL_DECISION_MAX_AUDIENCE ?? 100_000);
 
 /** Reads one decision request out of a body, or says exactly what is wrong. */
 function readDecisionInput(body: Record<string, unknown>, at: string): ChannelDecisionInput {
@@ -54,11 +76,34 @@ function readDecisionInput(body: Record<string, unknown>, at: string): ChannelDe
    * supplying a value that would then appear in the consent record as though it
    * had been stated.
    */
+  /*
+   * `at` is validated, not coerced.
+   *
+   * Quiet hours and frequency caps are decided ENTIRELY by this value, so a
+   * string that does not parse must not fall back to now: the caller asked about
+   * a specific moment, and answering about a different one returns a verdict that
+   * is confidently wrong rather than obviously broken.
+   */
+  let sendAt: string | undefined;
+  if (body.at !== undefined && body.at !== null) {
+    if (typeof body.at !== 'string' || Number.isNaN(Date.parse(body.at))) {
+      throw new AppError(
+        400,
+        ErrorCodes.VALIDATION_ERROR,
+        `${at}at must be an ISO-8601 timestamp`,
+      );
+    }
+    sendAt = new Date(body.at).toISOString();
+  }
+
   return {
     subjectRef,
     channel,
     audience,
     purposeKey: typeof body.purposeKey === 'string' ? body.purposeKey : undefined,
+    senderIdentityRef:
+      typeof body.senderIdentityRef === 'string' ? body.senderIdentityRef : undefined,
+    at: sendAt,
     tenantId: typeof body.tenantId === 'string' ? body.tenantId : null,
   };
 }
@@ -157,7 +202,13 @@ orchestrationRoutes.post(
       // 200 EVEN FOR A DENY. The question was answered, and "no" is a successful
       // answer to "may I?" — a 403 would make a correct refusal look like the
       // caller lacked permission to ask it.
-      res.status(200).json({ success: true, data: decision });
+      //
+      // toPublicDecision, not the raw decision: `reasons` goes out as ordered
+      // SENTENCES. The internal `code` and the `source` SDK name stay in the
+      // ledger, where metrics and dispute routing need them, and off the wire,
+      // where a client would pin them and then drift from the wording that was
+      // actually decided.
+      res.status(200).json({ success: true, data: toPublicDecision(decision) });
     },
   )),
 );
@@ -188,14 +239,14 @@ orchestrationRoutes.post(
       if (!Array.isArray(raw) || raw.length === 0) {
         throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'requests must be a non-empty array');
       }
-      if (raw.length > 500) {
+      if (raw.length > MAX_AUDIENCE) {
         // A cap with a STATED number rather than a silent truncation. Answering
-        // 200 for the first 500 of 5,000 would let a campaign send to the other
-        // 4,500 with no decision behind them at all.
+        // 200 for the first N of many would let a campaign send to the rest with
+        // no decision behind them at all.
         throw new AppError(
           400,
           ErrorCodes.VALIDATION_ERROR,
-          `requests may contain at most 500 entries, received ${raw.length}`,
+          `requests may contain at most ${MAX_AUDIENCE} entries, received ${raw.length}`,
         );
       }
 
@@ -205,16 +256,76 @@ orchestrationRoutes.post(
         readDecisionInput((entry ?? {}) as Record<string, unknown>, `requests[${i}].`),
       );
 
-      const decisions = await composeBulk(
+      const { decisions, undecided } = await evaluateBulk(
         inputs.map((i) => ({ ...i, decidedBy: req.session?.userId ?? null })),
       );
       res.status(200).json({
         success: true,
         data: {
-          decisions,
+          decisions: decisions.map(toPublicDecision),
           allowed: decisions.filter((d) => d.verdict === 'allow').length,
           review: decisions.filter((d) => d.verdict === 'review').length,
           denied: decisions.filter((d) => d.verdict === 'deny').length,
+          // REPORTED, not omitted. A caller that reads `decisions.length` and
+          // assumes it covers the audience would send to the remainder with no
+          // decision behind them — so the positions the budget did not reach are
+          // named, and `complete` says in one field whether the answer is whole.
+          undecided,
+          complete: undecided.length === 0,
+        },
+      });
+    },
+  )),
+);
+
+/**
+ * POST /api/leadflow/channel-decision/:decisionRef/authorise — the check made at
+ * the moment of dispatch.
+ *
+ * A DECISION IS NOT A TICKET. Holding an id proves the question was asked once;
+ * it says nothing about whether the answer is still true. Between deciding and
+ * dispatching, consent can be revoked, an address suppressed, or a quiet-hours
+ * window entered — and every one of those changes the answer in the restrictive
+ * direction, which is exactly the direction a cached allow gets wrong.
+ *
+ * So a send path calls this immediately before it dispatches, and uses the
+ * decisionRef this returns rather than the one it was holding. Inside the
+ * validity window that is the same id and costs one indexed read; past it the
+ * decision is composed again from current inputs and `reEvaluated` says so.
+ */
+orchestrationRoutes.post(
+  '/channel-decision/:decisionRef/authorise',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.MESSAGE_SEND_APPROVED,
+      event: AUDIT_EVENTS.CAPTURE_NORMALIZED,
+      purpose: 'lead_management',
+      resourceType: 'channel_decision',
+      obligations: {
+        own_record_only: {
+          kind: 'defer',
+          because: 'a decision is about whether a subject may be contacted, not about who owns them',
+        },
+      },
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const { decisionRef } = req.params as { decisionRef: string };
+      if (!UUID_PATTERN.test(decisionRef)) {
+        throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'decisionRef must be a UUID');
+      }
+      const authorisation = await authoriseDispatch(decisionRef);
+      if (!authorisation) {
+        throw new AppError(404, ErrorCodes.NOT_FOUND, `no channel decision ${decisionRef}`);
+      }
+      res.status(200).json({
+        success: true,
+        data: {
+          ...toPublicDecision(authorisation.decision),
+          reEvaluated: authorisation.reEvaluated,
+          // Present only when the presented id has been superseded, so a caller
+          // can follow the change in its own audit trail rather than discovering
+          // later that the id it recorded is no longer the decision in force.
+          supersededRef: authorisation.supersededRef ?? null,
         },
       });
     },

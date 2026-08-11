@@ -1,0 +1,150 @@
+{
+  "name": "POST /api/leadflow/channel-decision/:decisionRef/authorise - the check made at the moment of dispatch",
+  "description": "Re-derives the authority to send, immediately before a send path dispatches. Returns the decision now in force, whether it had to be re-evaluated, and the id it replaced.\n\nA DECISION IS NOT A TICKET (AC4). Holding a decisionRef proves the question was asked once; it says nothing about whether the answer is still true. Between deciding and dispatching, consent can be revoked, an address suppressed, or a quiet-hours window entered - and every one of those changes the answer in the RESTRICTIVE direction, which is exactly the direction a cached allow gets wrong. So a send path calls this last, and dispatches under the decisionRef this returns rather than the one it was holding.\n\nINSIDE THE WINDOW IT IS ONE INDEXED READ. Re-asking four SDKs for an answer given seconds ago is waste, and the validity window is short precisely so that trusting it inside that window is safe: allow holds 5 minutes, review 30, deny 24 hours, any degraded decision at most 60 seconds. `reEvaluated` is false and `decisionRef` comes back unchanged.\n\nPAST IT, THE DECISION IS COMPOSED AGAIN and the response carries a NEW decisionRef with `reEvaluated: true` and `supersededRef` naming the lapsed one, so the caller's audit trail follows the change rather than pointing at an id that is no longer the decision in force. The old row records `superseded_by` for the same reason.\n\nA LAPSED DECISION IS NEITHER REUSED NOR MERELY REJECTED. Reusing it is the cached-allow bug. Refusing it with an error would push callers toward deciding early and dispatching late - the behaviour this endpoint exists to stop - so the honest answer to a fair question is a current answer. Verified live: a decision whose 60-second degraded window had passed came back with a new decisionRef, reEvaluated true, and supersededRef pointing at the original.\n\nEDGE CASES: a decisionRef that is not a UUID is refused 400 before any query, and a well-formed id that does not exist answers 404 rather than composing a decision for a subject nobody named. Re-authorising an already-superseded decision re-evaluates again rather than following the chain, because the current answer is the point, not the history.\n\nBehind authenticate and governed on message.send_approved. QA: depends on register, login and a composed decision.",
+  "endpoint": "/api/leadflow/channel-decision/:decisionRef/authorise",
+  "method": "POST",
+  "taskId": "46644b3e-9bf2-4f48-ae79-8bd86ff4e021",
+  "featureId": "3dbff372-0a8d-4ca4-89a6-ce87d732d79c",
+  "epicId": "4025f9c4-536a-45f9-8b85-9dcaedf3fbff",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 1,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC4",
+    "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC1"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/channel-decision"
+  ],
+  "fieldEnums": {
+    "data.verdict": [
+      "allow",
+      "review",
+      "deny"
+    ]
+  },
+  "captureResponse": {
+    "orchestration.channelDecisionAuthorise.response.data.decisionRef": "data.decisionRef"
+  },
+  "testCases": [
+    {
+      "name": "Authorises a decision and returns the one now in force",
+      "coversCriterion": "46644b3e-9bf2-4f48-ae79-8bd86ff4e021#AC1",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "decisionRef": "{{cache:orchestration.channelDecision.response.data.decisionRef}}"
+      },
+      "payload": {},
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: a decisionRef that is not a UUID is refused before any query",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "decisionRef": "{{var:not_a_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: a well-formed id that does not exist",
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "decisionRef": "{{var:absent_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "params": {
+        "decisionRef": "{{var:absent_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "params": {
+        "decisionRef": "{{var:absent_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer"
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify"
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "decisionRef must be a UUID",
+      "when": "the path id is not a UUID. Refused before any query, so a malformed id cannot reach the database."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "no channel decision <id>",
+      "when": "the id is well-formed but no such decision exists. NOT composed on the spot: authorising an id nobody issued would invent a decision for a subject the caller never named."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller's roles do not grant message.send_approved",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64: the suite has a single identity, which bridges to sales_rep and holds this grant, and there is no second-role producer to borrow a token from. Kept as documentation because it is a real response."
+    }
+  ]
+}
