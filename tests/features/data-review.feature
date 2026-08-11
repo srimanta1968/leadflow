@@ -27,6 +27,7 @@ Feature: Data Review screen - case tiles and unified queue
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:ae28b1af-87a7-4fe5-8a86-2025620598c0
   Scenario: The screen states what a case actually is
     When I navigate to "/app/data-review"
     Then I should see "Field-Level Verification"
@@ -38,6 +39,7 @@ Feature: Data Review screen - case tiles and unified queue
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:adbdbf57-91e4-4495-88fc-499560c09d7a
   Scenario: All eight case types are on screen
     # AC1. Every tile renders even at a count of zero, because an absent tile
     # reads as "we do not check for this" rather than "nothing to review".
@@ -55,6 +57,7 @@ Feature: Data Review screen - case tiles and unified queue
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:0852bbaf-c4d4-4a48-bb30-5a00329ed6d6
   Scenario: Each tile says what the case is, not how to fix it
     When I navigate to "/app/data-review"
     Then I should see "Two records may describe the same person"
@@ -65,6 +68,7 @@ Feature: Data Review screen - case tiles and unified queue
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:66132ddd-8299-4089-a57a-08e50ef3edb6
   Scenario: The queue offers both a risk and a case-type filter
     # AC2 from the operator's side. The two rails are separate controls, so a
     # risk selection never clears the type selection.
@@ -81,6 +85,7 @@ Feature: Data Review screen - case tiles and unified queue
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:b93c3d17-5060-486f-be26-24ac8c6f74fc
   Scenario: Narrowing to high risk keeps the type rail available
     When I navigate to "/app/data-review"
     And I click "risk_high"
@@ -91,6 +96,7 @@ Feature: Data Review screen - case tiles and unified queue
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:42e14ebd-d27f-49a8-b899-7890a1771599
   Scenario: An unread register is not reported as an empty queue
     # The distinction the whole screen is built around. A confident "no cases"
     # during an outage is how a governance queue stops being worked.
