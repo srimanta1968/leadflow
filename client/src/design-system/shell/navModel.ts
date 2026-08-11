@@ -72,8 +72,12 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Identity & trust',
     items: [
-      { label: 'Identity Review', to: '/app/identity', action: 'identity.merge_review', planned: true },
-      { label: 'Consent & Preferences', to: '/app/consent', action: 'consent.purpose_manage', planned: true },
+      // NOT `planned`. Both shipped (TK-3957, TK-3961), both routed in App.tsx,
+      // and both sat here flagged Soon — so the sidebar rendered a finished
+      // screen as an unclickable span. A stale flag in this file is invisible
+      // in review and total for the operator: the screen may as well not exist.
+      { label: 'Identity Review', to: '/app/identity', action: 'identity.merge_review' },
+      { label: 'Consent & Preferences', to: '/app/consent', action: 'consent.purpose_manage' },
       { label: 'Enrichment Queue', to: '/app/enrichment', action: 'data.configure' },
       { label: 'Data Review', to: '/app/data-review', action: 'source_record.promote' },
       { label: 'Audit & History', to: '/app/audit', ungated: 'reading the chain is deliberately open — audit.delete_event is the only gated audit capability, and gating READS would defeat the point of an audit trail' },
