@@ -601,6 +601,40 @@ get_container_workspace() {
         fi
     fi
 
+    # FALLBACK: ask the CONTAINER where this repo is actually mounted.
+    #
+    # The registry lookup above only answers when the entry carries a
+    # `containerPath`, and setup-all.sh does not write one — neither project on
+    # this host has the key, so every call fell through to the `/workspace`
+    # default and the Test MCP read the OWNER's tree. The mount table is the
+    # authoritative answer to "where is this repo inside the container", and it
+    # is available without trusting the registry to have been written correctly.
+    #
+    # Matching folds separators and case for the same reason `norm` does above:
+    # Docker reports the source as the Windows spelling (C:\Users\...) or the
+    # forward-slash one depending on how the mount was declared, and the drive
+    # letter's case is not stable across either.
+    if command -v docker >/dev/null 2>&1; then
+        local mount_path
+        mount_path=$(docker inspect "$TEST_MCP_CONTAINER" \
+            --format '{{range .Mounts}}{{.Source}}|{{.Destination}}{{println}}{{end}}' 2>/dev/null \
+            | awk -F'|' -v want="$unix_path" '
+                function norm(p) {
+                    p = tolower(p)
+                    gsub(/\\/, "/", p)
+                    # C:/Users -> /c/Users, so both spellings compare equal.
+                    if (p ~ /^[a-z]:/) p = "/" substr(p, 1, 1) substr(p, 3)
+                    sub(/\/+$/, "", p)
+                    return p
+                }
+                BEGIN { want = norm(want) }
+                norm($1) == want { print $2; exit }')
+        if [ -n "$mount_path" ]; then
+            echo "$mount_path"
+            return
+        fi
+    fi
+
     # FALLBACK: per-slot .env files, when a host has them but no registry.
     local registered_dir="$SCRIPT_DIR/registered_projects"
     if [ -d "$registered_dir" ]; then

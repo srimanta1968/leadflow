@@ -47,6 +47,20 @@
     @apply rounded-2xl border border-line bg-panel shadow-panel;
   }
 
+  /* The inner card: a tile INSIDE a panel, so it sits on the next surface up
+     and takes a hover affordance because these are almost always clickable
+     (the Data Review case tiles, the Enrichment capability cards).
+
+     THIS RULE WAS MISSING. `lf-card` was already used on two shipped screens
+     and defined in no stylesheet, so both rendered as unstyled divs in the page
+     flow — the identical failure the design-system contract was written after
+     (`className="modal xl"` against a `.modal` that existed nowhere). The guard
+     in tests/unit/designSystemGuard.test.ts checks a fixed list of mockup class
+     names and `lf-card` was not on it; it is now. */
+  .lf-card {
+    @apply rounded-xl border border-line2 bg-panel2 transition-colors duration-150 hover:border-blue/60;
+  }
+
   /* Eyebrow label above a section heading. */
   .lf-eyebrow {
     @apply text-xs font-semibold uppercase tracking-[0.18em] text-muted;

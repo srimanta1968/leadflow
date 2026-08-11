@@ -6,6 +6,8 @@ import {
   type SlaBand,
 } from '../../services/api';
 import { useToast } from '../../components/feedback/ToastProvider';
+import { Modal } from '../../design-system/overlays/Modal';
+import { EstablishRelationshipModal } from '../../features/dataReview/EstablishRelationshipModal';
 
 /**
  * Field-Level Verification & Source Conflict / Data Review (#view-review).
@@ -69,6 +71,8 @@ export default function DataReview() {
   const [risk, setRisk] = useState('all');
   const [family, setFamily] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [establishOpen, setEstablishOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const { notify } = useToast();
 
   const load = useCallback(async (nextRisk: string, nextFamily: string) => {
@@ -102,7 +106,29 @@ export default function DataReview() {
             decides, and the decision is recorded against the evidence it was made on.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/*
+            Reachable from the SCREEN, not only from inside a case. Establishing
+            a first-party relationship is the remediation for several case types
+            and is also done on its own after a rep speaks to somebody, so
+            burying it one level down would make the common path the long one.
+          */}
+          <button
+            type="button"
+            name="establish_relationship_open"
+            onClick={() => setEstablishOpen(true)}
+            className="lf-btn-secondary px-4 py-2"
+          >
+            Establish Relationship
+          </button>
+          <button
+            type="button"
+            name="bulk_resolve"
+            onClick={() => setBulkOpen(true)}
+            className="lf-btn-secondary px-4 py-2"
+          >
+            Bulk resolve
+          </button>
           <button type="button" name="case_report" className="lf-btn-secondary px-4 py-2">
             Case report
           </button>
@@ -231,6 +257,86 @@ export default function DataReview() {
           </table>
         </div>
       )}
+
+      {/* ------------------------------------------------ quarantine note */}
+      <p className="mt-6 text-xs text-soft">
+        A quarantined record is held out of every downstream activation - no campaign, no export,
+        no routing - until its case is resolved. Quarantine is a state of the record, not a filter
+        on this screen, so it cannot be worked around by changing the view.
+      </p>
+
+      <EstablishRelationshipModal
+        open={establishOpen}
+        contactLabel={null}
+        onClose={() => setEstablishOpen(false)}
+      />
+
+      <BulkResolveModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
     </div>
+  );
+}
+
+/**
+ * Bulk resolution, gated on an explicit blast-radius confirmation.
+ *
+ * ONLY HOMOGENEOUS LOW-RISK CASES. The restriction is the safety property: a
+ * bulk action over a mixed set applies one decision to cases that differ in
+ * exactly the way that made them cases. The blast radius must therefore be
+ * confirmed as a COUNT the operator reads, not as a checkbox they tick.
+ */
+function BulkResolveModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [confirmed, setConfirmed] = useState(false);
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Bulk resolve"
+      subtitle="Available only for homogeneous low-risk cases, and only after the blast radius is confirmed."
+      size="sm"
+      dismissable={false}
+      footer={
+        <div className="flex justify-end gap-2">
+          <button type="button" name="cancel_bulk" onClick={onClose} className="lf-btn-secondary px-4 py-2">
+            Cancel
+          </button>
+          <button
+            type="button"
+            name="confirm_bulk"
+            disabled={!confirmed}
+            onClick={onClose}
+            className="lf-btn-primary px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Resolve selected cases
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-muted">
+          A bulk action over a mixed set applies one decision to cases that differ in exactly the
+          way that made them cases, so the selection must be one case type at one risk band.
+        </p>
+
+        <div className="rounded-lg border border-gold/40 bg-gold/10 p-3">
+          <p className="text-xs font-semibold text-gold">Blast radius</p>
+          <p className="mt-1 text-sm text-text">
+            No cases are selected, so nothing would be resolved.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          name="acknowledge_blast_radius"
+          onClick={() => setConfirmed((current) => !current)}
+          aria-pressed={confirmed}
+          className={`w-full rounded-lg border px-3 py-3 text-left text-sm ${
+            confirmed ? 'border-blue/60 bg-panel3 text-text' : 'border-line bg-panel2 text-muted'
+          }`}
+        >
+          I have read the blast radius above and accept it.
+        </button>
+      </div>
+    </Modal>
   );
 }

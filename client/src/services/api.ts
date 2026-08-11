@@ -1272,7 +1272,595 @@ export const api = {
       { signal },
     );
   },
+
+  /* ------------------------------------------------ contacts workspace */
+
+  /** The Contact 360 header, trust rail and survivorship note, in one call. */
+  contactSummary: (contactId: string, signal?: AbortSignal) =>
+    request<ContactSummary>(`/leadflow/contacts/${encodeURIComponent(contactId)}/summary`, {
+      signal,
+    }),
+
+  /** Everything the six Overview panels render, in one call. */
+  contactOverview: (contactId: string, signal?: AbortSignal) =>
+    request<ContactOverview>(`/leadflow/contacts/${encodeURIComponent(contactId)}/overview`, {
+      signal,
+    }),
+
+  /**
+   * The faceted contact list.
+   *
+   * Every facet goes to the SERVER and is mirrored into the URL by the screen,
+   * so a filtered list is shareable and the counts always describe the window
+   * the rows came from.
+   */
+  contacts: (filters: ContactFacets = {}, signal?: AbortSignal) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      if (value !== undefined && value !== '' && value !== 'all') query.set(key, String(value));
+    }
+    const suffix = query.toString();
+    return request<ContactList>(`/leadflow/contacts${suffix ? `?${suffix}` : ''}`, { signal });
+  },
+
+  /**
+   * Export the contacts a purpose is actually permitted for.
+   *
+   * The purpose is REQUIRED rather than defaulted: an export with no stated
+   * purpose cannot be eligibility-checked against anything, and a default would
+   * silently pick one on the operator's behalf.
+   */
+  exportContacts: (payload: { purpose: string; filters: ContactFacets }) =>
+    request<ContactExportResult>('/leadflow/contacts/export', { method: 'POST', body: payload }),
+
+  /** Saved views — filter definitions, never materialized result sets. */
+  savedViews: (signal?: AbortSignal) =>
+    request<SavedViewList>('/leadflow/saved-views', { signal }),
+
+  /** The sidebar's live counts, refreshed for every pinned view in ONE call. */
+  savedViewCounts: (signal?: AbortSignal) =>
+    request<SavedViewCounts>('/leadflow/saved-views/counts', { signal }),
+
+  createSavedView: (payload: {
+    name: string;
+    description?: string;
+    filters: Record<string, string>;
+    scope: SavedViewScope;
+    pinned?: boolean;
+  }) => request<{ view: SavedView }>('/leadflow/saved-views', { method: 'POST', body: payload }),
+
+  /** The per-contact property relationships, with trust and evidence. */
+  contactProperties: (contactId: string, signal?: AbortSignal) =>
+    request<ContactPropertyList>(
+      `/leadflow/contacts/${encodeURIComponent(contactId)}/properties`,
+      { signal },
+    ),
+
+  /**
+   * Link a property to a person as a CONTEXTUAL ROLE.
+   *
+   * The address is canonicalized upstream before the relationship is written,
+   * which is why this takes a raw address rather than an id: resolving it here
+   * would let the browser decide which place a string means.
+   */
+  linkContactProperty: (
+    contactId: string,
+    payload: {
+      address: string;
+      role: string;
+      trust_state: string;
+      valid_from: string;
+      evidence_type: string;
+      evidence_note?: string;
+    },
+  ) => request<LinkPropertyResult>(
+    `/leadflow/contacts/${encodeURIComponent(contactId)}/properties/link`,
+    { method: 'POST', body: payload },
+  ),
+
+  /** The contextual relationship neighbourhood, for the graph and its table. */
+  contactRelationships: (contactId: string, signal?: AbortSignal) =>
+    request<RelationshipGraph>(
+      `/leadflow/contacts/${encodeURIComponent(contactId)}/relationships`,
+      { signal },
+    ),
+
+  /** Contact points, source assertions and the governed-action timeline. */
+  contactProvenance: (contactId: string, signal?: AbortSignal) =>
+    request<ContactProvenance>(
+      `/leadflow/contacts/${encodeURIComponent(contactId)}/provenance`,
+      { signal },
+    ),
+
+  /** The unified thread plus the live compose guardrail verdict. */
+  contactConversations: (contactId: string, signal?: AbortSignal) =>
+    request<ContactConversations>(
+      `/leadflow/contacts/${encodeURIComponent(contactId)}/conversations`,
+      { signal },
+    ),
+
+  /** Enrollment history with the verdict evaluated at EXECUTION time. */
+  campaignEnrollments: (contactId: string, signal?: AbortSignal) =>
+    request<CampaignEnrollmentList>(
+      `/leadflow/contacts/${encodeURIComponent(contactId)}/campaign-enrollments`,
+      { signal },
+    ),
+
+  /** The correlated audit narrative for a subject — not a log tail. */
+  auditTimeline: (subjectRef: string, signal?: AbortSignal) =>
+    request<AuditTimeline>(
+      `/leadflow/audit/timeline?subject_ref=${encodeURIComponent(subjectRef)}`,
+      { signal },
+    ),
+
+  /** The blast radius of a reversible action, computed before anything commits. */
+  reversalPreview: (payload: { subject_ref: string; action: string }) =>
+    request<ReversalPreview>('/leadflow/audit/reversals/preview', {
+      method: 'POST',
+      body: payload,
+    }),
+
+  /** The portable, independently verifiable evidence package. */
+  evidenceBundle: (payload: { subject_ref: string; include: string[] }) =>
+    request<EvidenceBundle>('/leadflow/audit/evidence-bundle', { method: 'POST', body: payload }),
+
+  /* ------------------------------------------- routing, coverage, capacity */
+
+  /** The versioned routing configuration: predicates, bands and matchers. */
+  routingConfig: (signal?: AbortSignal) =>
+    request<RoutingConfig>('/leadflow/routing/config', { signal }),
+
+  /** Why THIS lead went to THIS rep, step by step. */
+  routingTrace: (leadId: string, signal?: AbortSignal) =>
+    request<RoutingTrace>(`/leadflow/leads/${encodeURIComponent(leadId)}/routing-trace`, { signal }),
+
+  /**
+   * Replay a historical window through a CANDIDATE configuration.
+   *
+   * Zero side effects by contract: no assignment, no notification, no clock.
+   */
+  simulateRouting: (payload: { window_days: number; config_version: string | null }) =>
+    request<RoutingSimulation>('/leadflow/routing/simulate', { method: 'POST', body: payload }),
+
+  /** Distribution skew and starvation across the rep pool. */
+  fairShareAudit: (signal?: AbortSignal) =>
+    request<FairShareAudit>('/leadflow/routing/fair-share-audit', { signal }),
+
+  /** Schedules, holidays, on-call, opening validation and the gap detector. */
+  coverageConsole: (signal?: AbortSignal) =>
+    request<CoverageConsole>('/leadflow/coverage/console', { signal }),
+
+  /** Records the 8:45am checklist with the manager's confirmation. */
+  recordOpeningValidation: (payload: {
+    checks: Record<string, boolean>;
+    overnight_queue_cleared: boolean;
+    manager_confirmed: boolean;
+  }) => request<{ recorded_at: string | null }>('/leadflow/coverage/opening-validation', {
+    method: 'POST',
+    body: payload,
+  }),
+
+  /* ------------------------------------------------- pipeline and NEXT */
+
+  pipelineBoard: (signal?: AbortSignal) =>
+    request<PipelineBoard>('/leadflow/pipeline/board', { signal }),
+
+  overdueNextActions: (signal?: AbortSignal) =>
+    request<OverdueNextActions>('/leadflow/next-actions/overdue', { signal }),
+
+  /* --------------------------------------------------- communications */
+
+  /** The unified inbox: one chronological thread across every channel. */
+  inbox: (filter?: string, signal?: AbortSignal) =>
+    request<UnifiedInbox>(`/leadflow/inbox${filter && filter !== 'all' ? `?filter=${encodeURIComponent(filter)}` : ''}`, { signal }),
+
+  /* ------------------------------------------------------- meetings */
+
+  bookLive: (payload: {
+    contact_ref: string;
+    starts_at: string;
+    purpose: string;
+    agenda: string;
+    meeting_link?: string;
+  }) => request<BookLiveResult>('/leadflow/meetings/book-live', { method: 'POST', body: payload }),
+
+  /* --------------------------------------------- offers and commercial */
+
+  offerStaleness: (opportunityId: string, signal?: AbortSignal) =>
+    request<OfferStaleness>(
+      `/leadflow/opportunities/${encodeURIComponent(opportunityId)}/offer-staleness`,
+      { signal },
+    ),
+
+  /* ---------------------------------------------------------- handoff */
+
+  handoffDraft: (handoffId: string, signal?: AbortSignal) =>
+    request<HandoffRecord>(`/leadflow/handoffs/${encodeURIComponent(handoffId)}`, { signal }),
+
+  /* ------------------------------------------------------- dashboards */
+
+  leadershipDashboard: (signal?: AbortSignal) =>
+    request<LeadershipDashboard>('/leadflow/dashboards/leadership', { signal }),
+
+  roleDashboard: (role: string, signal?: AbortSignal) =>
+    request<RoleDashboard>(`/leadflow/dashboards/${encodeURIComponent(role)}`, { signal }),
+
+  /* --------------------------------------------------------- workflows */
+
+  workflowDefinitions: (signal?: AbortSignal) =>
+    request<WorkflowDefinitionList>('/leadflow/workflows/definitions', { signal }),
+
+  workflowRuns: (signal?: AbortSignal) =>
+    request<WorkflowRunList>('/leadflow/workflows/runs', { signal }),
+
+  releaseGate: (definitionId: string) =>
+    request<ReleaseGateResult>(
+      `/leadflow/workflows/${encodeURIComponent(definitionId)}/release-gate`,
+      { method: 'POST', body: {} },
+    ),
+
+  /* --------------------------------------------------------- incidents */
+
+  incidents: (signal?: AbortSignal) =>
+    request<IncidentList>('/leadflow/incidents', { signal }),
+
+  /* --------------------------------------- governance and certification */
+
+  certification: (personaId: string, signal?: AbortSignal) =>
+    request<CertificationRecord>(
+      `/leadflow/certification/${encodeURIComponent(personaId)}`,
+      { signal },
+    ),
+
+  goLiveStatus: (signal?: AbortSignal) =>
+    request<GoLiveStatus>('/leadflow/go-live/status', { signal }),
 };
+
+/* ------------------------------------------------------ contacts workspace */
+
+export interface ContactSummaryTrustNode {
+  node: string;
+  state: 'reached' | 'current' | 'pending' | 'blocked';
+  evidence: string | null;
+}
+
+export interface ContactSummary {
+  contact_id: string;
+  canonical_id: string | null;
+  entity_type: string | null;
+  display_name: string | null;
+  /**
+   * How the display name was chosen. Null when the projection could not be
+   * read — which the header states, rather than showing a name with no
+   * provenance as though it were undisputed.
+   */
+  display_name_provenance: { projection: string; source_count: number | null } | null;
+  relationship_label: string | null;
+  organization: string | null;
+  record_owner: { name: string | null; business_unit: string | null } | null;
+  badges: string[];
+  trust_rail: ContactSummaryTrustNode[];
+  saved_at: string | null;
+  upstream_available: { crm: boolean; projection: boolean; source_record: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface ContactabilityComponent {
+  channel: string;
+  eligible: boolean;
+  /** Always present. A component with no reason cannot be argued with. */
+  reason: string;
+}
+
+export interface ContactOverview {
+  identity: {
+    display_name: string | null;
+    survivorship_note: string | null;
+    contextual_role: string | null;
+    /** What the role was confirmed FOR — a role is never global. */
+    role_scope_note: string | null;
+    organization: string | null;
+    record_owner: { name: string | null; business_unit: string | null } | null;
+  };
+  /**
+   * Computed from the live eligibility components below, never a stored field —
+   * a cached contactability score outlives the consent that produced it.
+   */
+  contactability: {
+    score: number | null;
+    basis: string;
+    components: ContactabilityComponent[];
+  };
+  contact_points: { type: string; value: string; label: string | null; eligibility_note: string }[];
+  properties: { label: string; trust_state: string | null; active_work: string | null }[];
+  recent_conversations: { channel: string; summary: string; occurred_at: string | null }[];
+  data_passport: {
+    canonical_person_id: string | null;
+    primary_data_origin: string | null;
+    crosswalk_retention_note: string | null;
+    direct_relationship: { established_at: string | null; method: string | null } | null;
+    last_identity_review: string | null;
+  };
+  channel_decisions: ChannelDecision[];
+  /** From the scoring SDK. An empty list is reported as such, never padded. */
+  recommended_actions: {
+    key: string;
+    label: string;
+    detail: string;
+    /** Null when the action costs nothing. Shown BEFORE invocation. */
+    credit_cost: number | null;
+    source: string;
+  }[];
+  upstream_available: { projection: boolean; decision: boolean; scoring: boolean; credits: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface ContactFacets {
+  entity_type?: string;
+  trust_state?: string;
+  origin?: string;
+  channel_state?: string;
+  owner?: string;
+  q?: string;
+}
+
+export interface ContactRow {
+  contact_id: string;
+  canonical_id: string | null;
+  display_name: string | null;
+  initials: string;
+  trust_state: string | null;
+  role: string | null;
+  contact_point_summary: string | null;
+  property_summary: string | null;
+  origin: string | null;
+  /** The eligibility verdict, always with the reason that produced it. */
+  channel_state: string | null;
+  channel_reason: string | null;
+  owner: string | null;
+  updated_at: string | null;
+}
+
+export interface ContactList {
+  contacts: ContactRow[];
+  total: number;
+  filters: ContactFacets;
+  facets: {
+    entity_types: string[];
+    trust_states: string[];
+    origins: string[];
+    channel_states: string[];
+    owners: string[];
+  };
+  upstream_available: { search: boolean; crm: boolean; source_record: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface ContactExportResult {
+  purpose: string;
+  /** Rows the purpose was actually permitted for, at export time. */
+  exported: number;
+  /** Rows excluded, and why — an export that silently drops rows is a lie. */
+  excluded: { reason: string; count: number }[];
+  audit_ref: string | null;
+  evaluated_at: string | null;
+}
+
+export type SavedViewScope = 'private' | 'team' | 'organization';
+
+export interface SavedView {
+  view_id: string;
+  name: string;
+  description: string | null;
+  /** The FILTER, never a result set. A stored count says "5" forever. */
+  filters: Record<string, string>;
+  scope: SavedViewScope;
+  pinned: boolean;
+  pin_order: number | null;
+  shipped: boolean;
+  owner: string | null;
+}
+
+export interface SavedViewList {
+  views: SavedView[];
+  upstream_available: { saved_queries: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface SavedViewCounts {
+  /** Null, never 0, for a view whose count could not be computed. */
+  counts: Record<string, number | null>;
+  computed_at: string | null;
+  upstream_available: { search: boolean };
+}
+
+export interface ContactPropertyRow {
+  relationship_id: string | null;
+  property_label: string | null;
+  parcel_note: string | null;
+  relationship: string | null;
+  trust_state: 'Confirmed' | 'Candidate' | 'Documented' | null;
+  valid_from: string | null;
+  evidence_summary: string | null;
+  active_work: string | null;
+}
+
+export interface ContactPropertyList {
+  properties: ContactPropertyRow[];
+  upstream_available: { rebac: boolean; geo: boolean; source_record: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface LinkPropertyResult {
+  relationship_id: string | null;
+  /** What the address resolved to upstream, shown before the link is written. */
+  canonical_address: string | null;
+  address_id: string | null;
+  /** Proof the link wrote no property fact onto the Person record. */
+  person_attributes_written: number;
+}
+
+export interface RelationshipNode {
+  node_id: string;
+  label: string;
+  kind: 'person' | 'property' | 'organization' | 'team';
+}
+
+export interface RelationshipEdge {
+  edge_id: string;
+  from_id: string;
+  to_id: string;
+  role: string;
+  trust_state: string | null;
+  valid_from: string | null;
+  valid_to: string | null;
+  evidence_count: number;
+}
+
+export interface RelationshipGraph {
+  center_id: string;
+  nodes: RelationshipNode[];
+  edges: RelationshipEdge[];
+  /** True when traversal stopped at the budget rather than at the graph edge. */
+  budget_exhausted: boolean;
+  traversal_budget: number;
+  upstream_available: { rebac: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface ContactPointRow {
+  contact_point_id: string | null;
+  type: string | null;
+  value: string | null;
+  label: string | null;
+  trust_state: string | null;
+  source: string | null;
+  effective_at: string | null;
+  retrieved_at: string | null;
+  eligibility: string | null;
+  /** Candidates are not operational until a person confirms them. */
+  requires_confirmation: boolean;
+}
+
+export interface ProvenanceAssertionRow {
+  assertion_id: string;
+  assertion: string;
+  value: string;
+  source: string | null;
+  crosswalk_ref: string | null;
+  origin_class: string | null;
+  confidence: number | null;
+  effective_at: string | null;
+  retrieved_at: string | null;
+  status: 'Primary' | 'Survives' | 'Assertion' | 'Superseded';
+  /** Required by the server whenever status is Superseded. */
+  superseded_reason: string | null;
+  evidence_ref: string | null;
+  sensitive: boolean;
+}
+
+export interface ContactProvenance {
+  contact_points: ContactPointRow[];
+  assertions: ProvenanceAssertionRow[];
+  upstream_available: { source_record: boolean; projection: boolean; vault: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface ConversationMessage {
+  message_id: string;
+  channel: string | null;
+  direction: 'inbound' | 'outbound' | 'internal' | null;
+  body: string | null;
+  quoted_body: string | null;
+  purpose: string | null;
+  property_context: string | null;
+  /** The single ordering key, normalized upstream across providers. */
+  occurred_at: string | null;
+  delivery_state: string | null;
+  read_state: string | null;
+  /** Internal notes are never customer-visible, and say so. */
+  customer_visible: boolean;
+}
+
+export interface ChannelDecision {
+  purpose: string;
+  channel: string;
+  verdict: 'allow' | 'review' | 'deny';
+  /** The engine's sentence, rendered verbatim. Never composed in the browser. */
+  reason: string;
+}
+
+export interface ContactConversations {
+  messages: ConversationMessage[];
+  compose_guardrails: ChannelDecision[];
+  upstream_available: { conversation: boolean; decision: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface CampaignEnrollmentRow {
+  enrollment_id: string | null;
+  campaign_name: string | null;
+  campaign_id: string | null;
+  purpose: string | null;
+  enrolled_at: string | null;
+  channels: string[];
+  /** Evaluated at SEND time, never read from a build-time flag. */
+  verdict: 'Eligible' | 'Suppressed' | null;
+  suppression_reason: string | null;
+  response: string | null;
+  outcome: string | null;
+  evidence_ref: string | null;
+}
+
+export interface CampaignEnrollmentList {
+  enrollments: CampaignEnrollmentRow[];
+  evaluated_at: string | null;
+  upstream_available: { campaign: boolean; decision: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface AuditTimelineEntry {
+  event_id: string;
+  title: string;
+  reference: string | null;
+  actor: string | null;
+  policy_decision_ref: string | null;
+  credit_estimate: string | null;
+  occurred_at: string | null;
+  effect: 'permit' | 'deny' | 'requires_approval' | null;
+  evidence_ref: string | null;
+  trace_id: string | null;
+}
+
+export interface AuditTimeline {
+  entries: AuditTimelineEntry[];
+  correlation: {
+    canonical_entity: { value: string | null; note: string };
+    trace: { value: string | null; note: string };
+    policy_bundle: { value: string | null; note: string };
+    consent_epoch: { value: string | null; note: string };
+  };
+  upstream_available: { audit: boolean; trace: boolean; evidence: boolean; policy: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface ReversalPreview {
+  action: string;
+  /** What the reversal would touch, named category by category. */
+  blast_radius: { category: string; count: number | null; detail: string }[];
+  reversible: boolean;
+  /** Why a count is unknown, rather than a confident zero. */
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface EvidenceBundle {
+  bundle_ref: string | null;
+  signature: string | null;
+  /** The algorithm a recipient needs in order to verify independently. */
+  signature_algorithm: string | null;
+  contents: { section: string; included: boolean; detail: string }[];
+  upstream_available: { audit: boolean; evidence: boolean; consent: boolean; trace: boolean };
+}
 
 export type DataReviewRisk = 'high' | 'medium' | 'low';
 export type DataReviewFamily = 'identity' | 'source_rights' | 'consent' | 'relationship';
@@ -1360,4 +1948,368 @@ export interface CreditsSummary {
   ledger_available: boolean;
   export_complete: boolean;
   operator_only_notice: string;
+}
+
+/* ------------------------------------------ routing, coverage and capacity */
+
+/** The four SOP priority bands. P0 is a verified purchase, not a hot lead. */
+export type PriorityBand = 'P0' | 'P1' | 'P2' | 'P3';
+
+export interface RoutingConfig {
+  version: number | null;
+  status: 'draft' | 'published' | null;
+  eligibility_predicates: { key: string; expression: string; description: string }[];
+  /** Band -> the SOP definition it maps to. Never a local re-interpretation. */
+  priority_bands: { band: PriorityBand; definition: string; sources: string[] }[];
+  specialty_matchers: { dimension: string; enabled: boolean; detail: string }[];
+  requires_approval_to_publish: boolean;
+  upstream_available: { assignment: boolean; coverage: boolean; scoring: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface RoutingTraceStep {
+  step: number;
+  name: string;
+  /** Plain language. A manager reads this to answer "why this rep". */
+  explanation: string;
+  outcome: string;
+  candidates_before: number | null;
+  candidates_after: number | null;
+}
+
+export interface RoutingTrace {
+  lead_id: string;
+  steps: RoutingTraceStep[];
+  assigned_to: string | null;
+  /** True when the lead was sent to review instead of being force-assigned. */
+  sent_to_review_queue: boolean;
+  review_reason: string | null;
+  upstream_available: { assignment: boolean; audit: boolean };
+}
+
+export interface RoutingSimulation {
+  window_days: number;
+  leads_replayed: number | null;
+  /** The assertion that makes a simulation safe to run against real leads. */
+  side_effects: { assignments: number; notifications: number; clocks: number };
+  per_rep: {
+    rep: string;
+    actual_volume: number | null;
+    simulated_volume: number | null;
+    actual_p1: number | null;
+    simulated_p1: number | null;
+    time_to_accept_delta: string | null;
+  }[];
+  would_be_breaches: number | null;
+  capacity_violations: number | null;
+  specialty_match_rate: number | null;
+  upstream_available: { assignment: boolean; sla: boolean; analytics: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface FairShareAudit {
+  /** A rep receiving disproportionate volume, or one being starved. */
+  skew: { rep: string; band: PriorityBand; share: number; expected_share: number; verdict: string }[];
+  starved: string[];
+  rotation_healthy: boolean | null;
+  rotation_note: string;
+  upstream_available: { assignment: boolean; analytics: boolean };
+}
+
+export interface CoverageWindow {
+  label: string;
+  starts_at: string;
+  ends_at: string;
+  /** The whole point: a window with no named person is not covered. */
+  covered_by: string | null;
+  gap: boolean;
+}
+
+export interface CoverageConsole {
+  schedules: { rep: string; timezone: string; hours: string; status: string }[];
+  time_off: { rep: string; from: string; to: string; kind: string }[];
+  holiday_calendar: { date: string; name: string }[];
+  manager_on_duty: { date: string; manager: string | null }[];
+  windows: CoverageWindow[];
+  /** Gaps detected BEFORE the window opens, which is the only useful time. */
+  upcoming_gaps: { window: string; starts_at: string; reason: string }[];
+  opening_validation: {
+    checks: { key: string; label: string; passed: boolean | null }[];
+    overnight_queue_cleared: boolean | null;
+    manager_confirmed: boolean | null;
+    recorded_at: string | null;
+  };
+  late_coverage: { roster: string[]; enforced_until: string; note: string };
+  upstream_available: { coverage: boolean; notification: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+/* ------------------------------------------------------------- pipeline */
+
+export interface PipelineCard {
+  record_id: string;
+  title: string;
+  owner: string | null;
+  priority: PriorityBand | null;
+  score: number | null;
+  sla_band: SlaBand;
+  next_action: string | null;
+  next_due_at: string | null;
+  next_minutes_remaining: number | null;
+  offer_version: string | null;
+  age_days: number | null;
+  /** How many times the due date has been pushed. */
+  push_count: number;
+}
+
+export interface PipelineStage {
+  key: string;
+  label: string;
+  /** What must be true to LEAVE this stage. An invalid drop names what is missing. */
+  exit_criteria: string[];
+  cards: PipelineCard[];
+}
+
+export interface PipelineBoard {
+  stages: PipelineStage[];
+  total_open: number;
+  stale: { record_id: string; title: string; days_since_activity: number }[];
+  upstream_available: { crm: boolean; sla: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface OverdueNextActions {
+  overdue: {
+    record_id: string;
+    title: string;
+    owner: string | null;
+    next_action: string | null;
+    minutes_overdue: number | null;
+    manager_alerted: boolean;
+    push_history: { pushed_at: string; reason: string | null; by: string | null }[];
+  }[];
+  repeated_pushers: { record_id: string; push_count: number }[];
+  upstream_available: { crm: boolean };
+}
+
+/* -------------------------------------------------------------- inbox */
+
+export interface InboxThread {
+  thread_id: string;
+  subject: string | null;
+  contact: string | null;
+  channel: string | null;
+  last_message_at: string | null;
+  unread: boolean;
+  awaiting_reply: boolean;
+  sla_at_risk: boolean;
+  needs_review: boolean;
+  owner: string | null;
+}
+
+export interface UnifiedInbox {
+  threads: InboxThread[];
+  filters: { key: string; label: string; count: number | null }[];
+  upstream_available: { conversation: boolean; crm: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+/* ----------------------------------------------------------- meetings */
+
+export interface BookLiveResult {
+  appointment_id: string | null;
+  /** Verified INSIDE the call, before the rep hangs up. */
+  receipt_verified: boolean;
+  confirmation_email_sent: boolean;
+  sms_sent: boolean | null;
+  sms_skipped_reason: string | null;
+  calendar_pushed: boolean;
+  rep_prep_task_id: string | null;
+  content_standard: { field: string; present: boolean }[];
+}
+
+/* ------------------------------------------------------------- offers */
+
+export interface OfferStaleness {
+  stamped_version: string | null;
+  current_version: string | null;
+  /** True when the stamped version is no longer the current one. */
+  stale: boolean;
+  note: string;
+  upstream_available: { offer_catalog: boolean };
+}
+
+/* ------------------------------------------------------------ handoff */
+
+export interface HandoffSection {
+  key: string;
+  label: string;
+  fields: { key: string; label: string; value: string | null; required: boolean }[];
+}
+
+export interface HandoffRecord {
+  handoff_id: string | null;
+  status: string | null;
+  sections: HandoffSection[];
+  /** Every commitment, as a discrete auditable item rather than free text. */
+  promises: { promise_id: string; text: string; made_by: string | null; delivered: boolean | null }[];
+  rejection: { reason: string | null; returned_to: string | null } | null;
+  upstream_available: { handoff: boolean };
+}
+
+/* --------------------------------------------------------- dashboards */
+
+export interface LeadershipSignal {
+  key: string;
+  label: string;
+  /** Null, never 0, when the signal could not be computed. */
+  value: number | null;
+  detail: string;
+  /** Where the tile drills to. A tile with no list is a poster. */
+  drill_to: string;
+  role: 'success' | 'warning' | 'blocked' | 'info' | 'identity';
+}
+
+export interface LeadershipDashboard {
+  signals: LeadershipSignal[];
+  /** The SOP's five success-test questions, answered per record. */
+  success_test: {
+    record_id: string;
+    owner: string | null;
+    last_activity: string | null;
+    next_action: string | null;
+    due_at: string | null;
+    blocker: string | null;
+  }[];
+  kpi_registry_version: string | null;
+  upstream_available: { sla: boolean; crm: boolean; notification: boolean; handoff: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface RoleDashboard {
+  role: string;
+  panels: {
+    key: string;
+    label: string;
+    description: string;
+    metrics: { label: string; value: string | null; detail: string | null }[];
+  }[];
+  /** The same registered definitions every dashboard shares. */
+  kpi_registry_version: string | null;
+  permitted: boolean;
+  denied_reason: string | null;
+  upstream_available: Record<string, boolean>;
+  field_gaps: { field: string; reason: string }[];
+}
+
+/* ---------------------------------------------------------- workflows */
+
+export interface WorkflowDefinitionSummary {
+  definition_id: string;
+  name: string;
+  version: number | null;
+  status: string | null;
+  node_count: number | null;
+  kill_switch_engaged: boolean;
+}
+
+export interface WorkflowDefinitionList {
+  definitions: WorkflowDefinitionSummary[];
+  /** The palette the canvas and the outline view both render. */
+  node_types: { key: string; label: string; description: string }[];
+  upstream_available: { workflow: boolean; flags: boolean; approval: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface WorkflowRunSummary {
+  run_id: string;
+  definition: string | null;
+  version: number | null;
+  subject: string | null;
+  outcome: string | null;
+  started_at: string | null;
+  elapsed_ms: number | null;
+  steps: {
+    name: string;
+    state: string;
+    input_summary: string | null;
+    output_summary: string | null;
+    elapsed_ms: number | null;
+    error: string | null;
+  }[];
+  signals_received: string[];
+  compensation_history: { step: string; compensated_at: string; reason: string }[];
+}
+
+export interface WorkflowRunList {
+  runs: WorkflowRunSummary[];
+  upstream_available: { workflow: boolean; trace: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface ReleaseGateResult {
+  definition_id: string;
+  /** All twelve, always reported - a skipped scenario is not a pass. */
+  scenarios: { key: string; label: string; passed: boolean | null; detail: string }[];
+  passed: boolean;
+  blocks_publish: boolean;
+  evidence_ref: string | null;
+  approval_request_ref: string | null;
+}
+
+/* ---------------------------------------------------------- incidents */
+
+export interface IncidentRow {
+  incident_id: string;
+  severity: string | null;
+  type: string | null;
+  title: string | null;
+  owner: string | null;
+  on_call_role: string | null;
+  status: string | null;
+  opened_at: string | null;
+  affected_records: number | null;
+  /** An incident cannot close until this passes. */
+  verification: { required: boolean; passed: boolean | null; detail: string | null };
+  systemic: boolean;
+}
+
+export interface IncidentList {
+  incidents: IncidentRow[];
+  /** A recurring type escalates to leadership without anybody noticing it. */
+  systemic_patterns: { type: string; occurrences: number; escalated: boolean; detail: string }[];
+  on_call: { incident_type: string; role: string; person: string | null }[];
+  upstream_available: { incident: boolean; sla: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+/* ------------------------------------------- governance and certification */
+
+export interface CertificationRecord {
+  persona_id: string;
+  score: number | null;
+  /** The eight stations of the SOP, with the standard each must meet. */
+  stations: {
+    key: string;
+    label: string;
+    pass_standard: string;
+    score: number | null;
+    passed: boolean | null;
+    simulated_at: string | null;
+  }[];
+  /** Until this passes, the rep receives no live P0 or P1 lead. */
+  gate: { passed: boolean; blocks_p0_p1: boolean; reason: string };
+  upstream_available: { assignment: boolean; approval: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface GoLiveStatus {
+  gates: { key: string; label: string; passed: boolean | null; detail: string }[];
+  signatures: { role: string; name: string | null; signed_at: string | null }[];
+  /** True only with all twelve gates and all five signatures. */
+  ready: boolean;
+  blocked_reason: string | null;
+  audit_ref: string | null;
+  immutable: boolean;
+  upstream_available: { approval: boolean; audit: boolean };
 }
