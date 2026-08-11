@@ -1,0 +1,101 @@
+{
+  "name": "POST /api/leadflow/consent/suppressions/reconcile - the daily provider comparison",
+  "description": "Compares the provider's suppression list against the platform's own, adopts what we clearly missed, and opens a Data Review case when the two disagree (AC3).\n\nWHY IT EXISTS: two systems hold a suppression list and they drift for ordinary reasons - a webhook is lost, a provider dedupes an opt-out we never saw, an operator releases somebody here while the provider still refuses them, a bounce is recorded upstream during an outage of ours. Neither list is wrong so much as incomplete, and the drift produces NO ERROR ANYWHERE. It produces a message that should not have been sent, weeks later. Nothing else in the system would ever notice.\n\nTHE HEALING IS DELIBERATELY ASYMMETRIC, and this is the design decision to read twice. Provider-suppressed / platform-not is ADOPTED IMMEDIATELY: the provider heard something we did not, almost always an opt-out sent directly to them, and waiting for a human to confirm a refusal we already have evidence for means sending in the meantime. Platform-suppressed / provider-not is HELD FOR REVIEW and never auto-released - it would be the same code path in reverse, and it would be a disaster, because a lost provider record would silently un-suppress somebody who opted out. The platform keeps refusing and the case asks a human to re-push it upstream. Both directions are REPORTED either way: adopting quietly would hide how often signals are being lost, which is the thing actually worth fixing.\n\nAN UNREACHABLE PROVIDER OPENS A CASE TOO, at higher severity. A run that compared nothing must never read as a run that found nothing wrong - that is the exact silent failure this endpoint exists to catch, and reporting `divergences: []` for a comparison that never happened would close the question. `provider_reached` is stored alongside the counts, and provider_count is NULL rather than 0 in that case, because absent and zero are different facts. Verified live: with sdk-deliverability unreachable the run answered providerReached:false, divergences:[] and still returned a caseRef.\n\nADOPTED SIGNALS ARE ATTRIBUTED HONESTLY. They are recorded with source 'reconciliation' and dated NOW rather than backdated, because we genuinely do not know when the subject acted - only that the provider knew and we did not. The reason states that the originating signal was never received here.\n\nEDGE CASES: the provider is asked per channel, and a failure on ANY channel makes the whole run unreached rather than partially trusted - a run that compared email but silently skipped SMS and then reported no divergence is worse than no run at all. The platform side compares the DERIVED state, not the raw signal log, so a released subject correctly counts as not suppressed. The case reference falls back to a local identifier when sdk-case is unreachable, so the row always carries something an operator can search for rather than a null that reads as 'no case was needed'.\n\nAn action rather than a resource, hence 200. Exposed as an endpoint rather than left to a timer alone so it can be run on demand when a divergence is suspected, and so its behaviour is testable at all.\n\nrequiresRole:[\"privacy_officer\"] and NO testCase pins an Authorization header (MUST-71). QA: depends on register and login.",
+  "endpoint": "/api/leadflow/consent/suppressions/reconcile",
+  "method": "POST",
+  "taskId": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "privacy_officer"
+  ],
+  "testability": "auto",
+  "priority": 9,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC3"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "data.divergences.direction": [
+      "provider_only",
+      "platform_only"
+    ],
+    "data.divergences.action": [
+      "adopted",
+      "held_for_review"
+    ],
+    "data.divergences.provider_state": [
+      "suppressed",
+      "not_suppressed"
+    ],
+    "data.divergences.platform_state": [
+      "suppressed",
+      "not_suppressed"
+    ]
+  },
+  "captureResponse": {
+    "consent.reconcile.response.data.reconciliationId": "data.reconciliationId"
+  },
+  "testCases": [
+    {
+      "name": "Runs the comparison and records what it found",
+      "coversCriterion": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC3",
+      "capturesResponse": true,
+      "payload": {},
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "An unreachable provider still opens a case rather than reporting all clear",
+      "coversCriterion": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC3",
+      "_note": "No tenant_id: it is optional here and there is no tenant-creating producer in this suite to take one from, so supplying a generated uuid would be a fabricated foreign key (MUST-36). The run scopes to the credential's own tenant, which is what a real scheduled run does anyway.",
+      "payload": {},
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold consent.purpose_manage",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64/MUST-71: it needs a token from a DIFFERENT role, and this definition declares requiresRole so the runner pre-fetches the privacy_officer identity. Pinning a second role's Authorization header alongside requiresRole is what MUST-71 forbids."
+    },
+    {
+      "status": 500,
+      "code": "INTERNAL_ERROR",
+      "message": "the reconciliation could not be written",
+      "when": "the local database is unavailable mid-run",
+      "reproducible": false,
+      "_whyNotReproducible": "An infrastructure fault, not something a request can cause. Emitting a dataset for it would manufacture a permanent failure that buries real regressions."
+    }
+  ]
+}

@@ -1,5 +1,11 @@
 import { dataService } from '../services/DataService';
 import { SdkGatewayClient } from '../platform/sdkGateway';
+import {
+  isSuppressed,
+  suppressedSet,
+  suppressionKey,
+  type StopSignal,
+} from '../features/consent/suppressionLedger';
 
 /**
  * The ONE authority every send path must ask.
@@ -65,6 +71,13 @@ export interface ChannelDecisionInput {
   tenantId?: string | null;
   correlationId?: string;
   decidedBy?: string | null;
+  /**
+   * Suppression already resolved by the caller. The bulk path fills this from
+   * ONE query for the whole page; without it a 100,000 audience would issue
+   * 100,000 lookups, reintroducing per-subject round trips into the exact path
+   * that was rebuilt to remove them.
+   */
+  suppressed?: { suppressed: boolean; signal: StopSignal | null; since: string | null };
 }
 
 export interface ChannelDecision {
@@ -150,6 +163,27 @@ export function toPublicDecision(decision: ChannelDecision): PublicChannelDecisi
   };
 }
 
+/**
+ * What each stop signal SAYS, in the words the operator sees.
+ *
+ * Distinct sentences rather than one generic "suppressed", because the right
+ * next action differs: an unsubscribe may be reversed by the person themselves,
+ * a wrong number means the record is about somebody else entirely and should be
+ * corrected, and a spam complaint is a reputation event the tenant needs to
+ * know about rather than quietly route around.
+ */
+const SUPPRESSION_TEXT: Record<StopSignal, string> = {
+  sms_stop: 'They replied STOP, so we do not contact them on any channel.',
+  sms_help: 'They asked for help. This does not stop contact.',
+  email_unsubscribe: 'They unsubscribed from email.',
+  spam_complaint: 'They marked a message as spam, so we do not email them.',
+  hard_bounce: 'Email to this address permanently failed, so we do not retry it.',
+  dnc_registration: 'They are on a do-not-call register, so we do not call or text them.',
+  wrong_number: 'This number reaches somebody else, so we do not use it.',
+  staff_revocation: 'Somebody here recorded that we must not contact them.',
+  release: 'Contact was restored.',
+};
+
 /** Rank so the strictest verdict wins however the checks are ordered. */
 const SEVERITY: Record<Verdict, number> = { allow: 0, review: 1, deny: 2 };
 
@@ -217,6 +251,44 @@ async function evaluate(
   };
 
   const tenantId = input.tenantId ?? undefined;
+
+  if (audience === 'prospect') {
+    /* --------------------------------------------------- local suppression */
+    /*
+     * ASKED FIRST, AND IT IS A LOCAL READ.
+     *
+     * This is what makes "a STOP produces zero further automated sends within
+     * one tick" true rather than aspirational. Every other check here is an
+     * upstream call, and every upstream call has failure modes that resolve to
+     * `review` — the honest answer for "we could not ask", but the wrong answer
+     * for somebody who has already texted STOP, because a human working the
+     * review queue may well approve it.
+     *
+     * So the stop is written to the local ledger synchronously when it arrives,
+     * and read here from one indexed row. It DENIES outright, it does not
+     * degrade, and it runs before anything that can be slow.
+     */
+    checksRan.push('suppression');
+    const stop = input.suppressed ?? (await isSuppressed(input.subjectRef, input.channel, tenantId));
+    if (stop.suppressed) {
+      reasons.push({
+        code: 'SUPPRESSED',
+        text: SUPPRESSION_TEXT[stop.signal ?? 'staff_revocation']
+          ?? 'They have asked not to be contacted.',
+        source: 'leadflow',
+        effect: 'deny',
+      });
+      verdict = 'deny';
+      /*
+       * RETURNS HERE rather than continuing through the other three checks.
+       * Not an optimisation: once somebody has said stop, asking consent,
+       * policy and deliverability produces reasons that invite an operator to
+       * argue with the refusal ("consent is on file, so why...?"). The reason
+       * list should say the one thing that matters and nothing that softens it.
+       */
+      return { input, audience, verdict, reasons, checksRan, degraded };
+    }
+  }
 
   if (audience === 'prospect') {
     /* ------------------------------------------------------------- consent */
@@ -734,7 +806,28 @@ export async function evaluateBulk(inputs: ChannelDecisionInput[]): Promise<Bulk
   for (let start = 0; start < unique.length; start += BULK_PAGE) {
     if (Date.now() >= deadline) { outOfTime = true; break; }
     const page = unique.slice(start, start + BULK_PAGE);
-    const prefetched = await prefetchPage(page.map((p) => inputs[p]));
+
+    /*
+     * Suppression for the whole page in ONE query, attached to each input
+     * before anything else runs. Left to `evaluate` it would be one indexed
+     * lookup per subject — 100,000 of them for a full audience, which is the
+     * per-subject round trip this path exists to avoid. It is resolved FIRST
+     * because a suppressed subject short-circuits before any upstream call,
+     * so the page's four bulk calls carry only subjects still in play.
+     */
+    const pageInputs = page.map((p) => inputs[p]);
+    const stopped = await suppressedSet(
+      pageInputs.map((i) => ({ subjectRef: i.subjectRef, channel: i.channel })),
+      pageInputs[0]?.tenantId,
+    );
+    for (const input of pageInputs) {
+      const hit = stopped.get(suppressionKey(input.subjectRef, input.channel));
+      input.suppressed = hit
+        ? { suppressed: true, signal: hit.signal, since: hit.since }
+        : { suppressed: false, signal: null, since: null };
+    }
+
+    const prefetched = await prefetchPage(pageInputs);
 
     if (prefetched) {
       // No I/O left to do, so this loop is pure composition.

@@ -1,0 +1,249 @@
+{
+  "name": "POST /api/leadflow/consent/stop-signals - record a stop and cascade it",
+  "description": "ONE ENDPOINT FOR EVERY KIND OF STOP: an inbound SMS STOP, a HELP auto-reply, an email unsubscribe redemption, a spam complaint, a hard bounce, a DNC registration, a wrong-number disposition, a staff-initiated revocation, and the release that reverses one. They differ in where they came from and in which channels they close, and in nothing else - each must be written down, take effect immediately, and cancel the work already queued. Eight endpoints would mean eight places for the cascade to be forgotten, and the one that forgets is the one that sends the message.\n\nSTOP TAKES EFFECT WITHIN ONE TICK, AND THAT IS WHY THE LEDGER IS LOCAL (AC1). The signal is written synchronously before this endpoint answers, and the channel-decision composer reads it FIRST, from one indexed row, and denies outright. Every other check in that composer is an upstream call, and every upstream failure mode resolves to `review` - the honest answer for 'we could not ask', but the wrong answer for somebody who has already texted STOP, because a human working the review queue may well approve it. Verified live: after a STOP, POST /api/leadflow/channel-decision answers deny with checksRan ['suppression'] alone.\n\nA STOP CLOSES EVERY CHANNEL, not the one it arrived on. Somebody who replies STOP has not said 'stop texting me, but email is fine'. Verified live: one sms_stop suppressed email, sms, call, social and push. hard_bounce and spam_complaint scope to email only; dnc_registration and wrong_number to call and sms.\n\nHELP SUPPRESSES NOTHING and says so rather than pretending. The carrier requires an auto-reply to HELP; treating it as an opt-out would silence somebody for asking a question. The response carries signal_id:null and suppressed:false.\n\nTHE EVIDENCE IS KEPT (AC2). The receipt is REVOKED, never deleted - withdrawing permission and destroying the record of what was once agreed are opposite acts, and the second removes the proof that the earlier messages were lawful. The ledger is append-only for the same reason: a release INSERTS rather than erasing the record that they ever asked.\n\nTHE CASCADE REPORTS EACH STEP SEPARATELY. Suppression alone stops anything that ASKS the ledger; it does nothing about work already committed - a sequence with steps queued, an audience the subject is already inside, a notification sitting in the local outbox whose dispatcher does not re-ask the composer. `complete` is true only when no step was left unreachable, because a cascade that cancelled the sequence but could not reach the campaign service is a PARTIAL stop and reporting it as success would hide a channel that can still send. Verified live: with sdk-sequence, sdk-campaign and sdk-deliverability all unreachable the response is complete:false with three `unreachable` steps, and the local outbox cancellation still runs.\n\nEDGE CASES: a release or a staff_revocation MUST carry a reason - 'who un-suppressed this person, and on what basis' is the question asked after somebody who opted out receives a message. A release does NOT run the cascade: there is nothing to stop, and running it would tear down the sequences the release was meant to make possible again. `occurred_at` is validated rather than coerced, because the gap between when the subject acted and when we heard is the window in which we may have sent something we should not have. A signal with its own scope is never widened by the caller naming a channel - a hard bounce is about email whatever the request says.\n\nrequiresRole:[\"privacy_officer\"] and NO testCase pins an Authorization header (MUST-71). QA: depends on register and login.",
+  "endpoint": "/api/leadflow/consent/stop-signals",
+  "method": "POST",
+  "taskId": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "privacy_officer"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC1",
+    "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC2"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "signal": [
+      "sms_stop",
+      "sms_help",
+      "email_unsubscribe",
+      "spam_complaint",
+      "hard_bounce",
+      "dnc_registration",
+      "wrong_number",
+      "staff_revocation",
+      "release"
+    ],
+    "source": [
+      "provider",
+      "staff",
+      "subject",
+      "reconciliation"
+    ],
+    "channel": [
+      "email",
+      "sms",
+      "call",
+      "social",
+      "push",
+      "all"
+    ]
+  },
+  "captureResponse": {
+    "consent.stopSignal.response.data.signal_id": "data.signal_id"
+  },
+  "testCases": [
+    {
+      "name": "An SMS STOP suppresses every channel and cascades",
+      "coversCriterion": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC1",
+      "capturesResponse": true,
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "signal": "sms_stop",
+        "source": "provider",
+        "reason": "inbound STOP received on the carrier webhook"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "The evidence is preserved rather than removed",
+      "coversCriterion": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC2",
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "signal": "staff_revocation",
+        "source": "staff",
+        "reason": "the subject asked us to stop during a call"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "A hard bounce closes email and leaves the other channels alone",
+      "coversCriterion": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC4",
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "signal": "hard_bounce",
+        "source": "provider",
+        "reason": "550 mailbox does not exist"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "HELP is answered, and suppresses nothing",
+      "coversCriterion": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC1",
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "signal": "sms_help",
+        "source": "provider"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: a signal the ledger does not know",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|signal",
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "signal": "{{static:please-stop}}",
+        "source": "provider"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no subject_ref, so there is nobody to suppress",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|subject",
+      "payload": {
+        "signal": "sms_stop",
+        "source": "provider"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: a source outside the four",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|source",
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "signal": "sms_stop",
+        "source": "{{static:somewhere}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: a release with no reason is refused",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|reason",
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "signal": "release",
+        "source": "staff",
+        "channel": "email"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unparseable occurred_at is refused, never coerced to now",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|occurred_at",
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "signal": "sms_stop",
+        "source": "provider",
+        "occurred_at": "{{static:yesterday-ish}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "signal": "sms_stop",
+        "source": "provider"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "when": "subject_ref is absent or blank"
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "signal must be one of: sms_stop, sms_help, email_unsubscribe, spam_complaint, hard_bounce, dnc_registration, wrong_number, staff_revocation, release",
+      "when": "signal is missing or outside the vocabulary. Kept as the raw vocabulary of the source rather than normalised to a boolean, because a hard bounce and a spam complaint call for different operational responses even though both close email."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "source must be one of: provider, staff, subject, reconciliation",
+      "when": "source is missing or outside the four"
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "a release or a staff revocation must carry a reason",
+      "when": "signal is release or staff_revocation and reason is blank. Unexplained releases make 'who un-suppressed this person, and on what basis' unanswerable, which is exactly the question asked after somebody who opted out receives a message."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "occurred_at must be an ISO-8601 timestamp",
+      "when": "occurred_at is present but does not parse. Refused rather than coerced: the gap between when the subject acted and when we recorded it is the window in which we may have sent something we should not have, and a silent fallback to now erases it."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold consent.purpose_manage. VERIFIED LIVE: the qa.operator identity receives exactly this, and qa.privacy succeeds.",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64/MUST-71: triggering it needs a token from a DIFFERENT role, and this definition declares requiresRole so the runner pre-fetches the privacy_officer identity. Pinning a second role's Authorization header alongside requiresRole is exactly what MUST-71 forbids, because the resulting 403 is indistinguishable from a genuine permissions bug."
+    }
+  ]
+}

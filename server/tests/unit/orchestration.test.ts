@@ -275,7 +275,9 @@ describe('the reason list is ordered and renderable verbatim', () => {
     // Same inputs, same order — a set would lose the only part of the answer
     // that tells an operator what to do about it.
     expect(a.reasons.map((r) => r.code)).toEqual(b.reasons.map((r) => r.code));
-    expect(a.checksRan).toEqual(['consent', 'policy', 'deliverability', 'timing']);
+    // `suppression` leads because it is the only LOCAL check: a stop already
+    // recorded must deny before anything that can be slow or unreachable.
+    expect(a.checksRan).toEqual(['suppression', 'consent', 'policy', 'deliverability', 'timing']);
   });
 
   it('writes every decision to the ledger, which is what makes the rule enforceable', async () => {

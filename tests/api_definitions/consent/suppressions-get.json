@@ -1,0 +1,115 @@
+{
+  "name": "GET /api/leadflow/consent/suppressions - the effective state per channel",
+  "description": "Answers 'may we contact this person, and on which channels' for one subject, as five per-channel verdicts plus a single any_suppressed flag.\n\nDERIVED, NOT STORED (AC4). There is no 'currently suppressed' column to read: the ledger is append-only and this endpoint computes the current state from it, using the same rule the channel-decision composer applies. That is the point - a screen that showed one answer while the composer acted on another would be worse than showing nothing, and a stored flag drifts from the signal log the moment either is written without the other.\n\nMOST-RESTRICTIVE WINS, AND THE TIE-BREAK IS THE POINT. Two sources can disagree: a provider webhook says suppressed, a staff member has just pressed release, a reconciliation has inserted a stop dated yesterday. The rule is implemented as the ORDER BY rather than a comparison in application code - `signal = 'release'` sorts LAST within a timestamp, so a stop and a release recorded in the same instant resolve to SUPPRESSED. That is the only safe tie-break: holding a message that could have gone is an inconvenience, and sending one that should have been held is a breach.\n\nPER-CHANNEL, SO A RELEASE CAN BE NARROW. Verified live: a subject suppressed on all five channels by one sms_stop, then released on email alone, reads email:false and sms/call/social/push:true - and the channel-decision composer agrees, answering review on email and deny on sms for the same subject in the same second.\n\nEACH CHANNEL CARRIES THE SIGNAL AND THE INSTANT, not just a boolean. 'Suppressed since when, and because of what' is what an operator needs to answer a subject asking why they stopped hearing from us, and a bare true cannot answer either half.\n\nEDGE CASES: subject_ref is required - there is no list-everything form, because the register of everybody who ever opted out is a disclosure in its own right rather than a browse surface. A subject with no signals at all reads as five channels of suppressed:false with null signal and null since, rather than 404: never having been suppressed is a real and useful answer, not a missing record.\n\nGoverned rather than merely authenticated: reading who opted out is itself a disclosure, so who looked belongs in the record. requiresRole:[\"privacy_officer\"] and NO testCase pins an Authorization header (MUST-71). QA: depends on register, login and a recorded stop signal.",
+  "endpoint": "/api/leadflow/consent/suppressions",
+  "method": "GET",
+  "taskId": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "privacy_officer"
+  ],
+  "testability": "auto",
+  "priority": 9,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/consent/stop-signals"
+  ],
+  "fieldEnums": {
+    "data.channels.channel": [
+      "email",
+      "sms",
+      "call",
+      "social",
+      "push"
+    ],
+    "data.channels.signal": [
+      "sms_stop",
+      "sms_help",
+      "email_unsubscribe",
+      "spam_complaint",
+      "hard_bounce",
+      "dnc_registration",
+      "wrong_number",
+      "staff_revocation",
+      "release"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Reports every channel, with the signal and the instant behind each",
+      "coversCriterion": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC4",
+      "capturesResponse": true,
+      "queryParams": {
+        "subject_ref": "{{dynamic:uuid}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "A subject who never opted out is answered, not 404'd",
+      "coversCriterion": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec#AC4",
+      "queryParams": {
+        "subject_ref": "{{dynamic:uuid}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no subject_ref, so there is nobody to report on",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "queryParams": {},
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "queryParams": {
+        "subject_ref": "{{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "when": "subject_ref is absent or blank. There is deliberately no list-everything form: the register of everybody who ever opted out is a disclosure rather than a browse surface."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold consent.purpose_manage",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64/MUST-71: it needs a token from a DIFFERENT role, and this definition declares requiresRole so the runner pre-fetches the privacy_officer identity. Pinning a second role's Authorization header alongside requiresRole is what MUST-71 forbids."
+    }
+  ]
+}

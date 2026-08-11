@@ -17,6 +17,15 @@ import {
   revokeReceipt,
   type ReceiptRow,
 } from './consentGateway';
+import {
+  effectiveState,
+  recordSignal,
+  type StopSignal,
+  type SuppressionChannel,
+  type SuppressionSource,
+} from './suppressionLedger';
+import { runCascade } from './revocationCascade';
+import { reconcile } from './suppressionReconciliation';
 
 /**
  * The Consent & Preferences read surface (#view-consent).
@@ -410,4 +419,232 @@ consentRoutes.post(
       });
     }
   ))
+);
+
+/*
+ * ---------------------------------------------------------------------------
+ * Suppression: the operational half of consent.
+ *
+ * A receipt says what somebody agreed to. A suppression says we must not
+ * contact them regardless — because they replied STOP, unsubscribed, marked a
+ * message as spam, bounced permanently, registered on a do-not-call list, or
+ * because the number turned out to reach somebody else entirely. The two are
+ * deliberately separate surfaces: a hard bounce suppresses email while consent
+ * remains perfectly valid, and a revoked receipt still leaves the evidence of
+ * what was once agreed.
+ */
+
+const STOP_SIGNALS: StopSignal[] = [
+  'sms_stop', 'sms_help', 'email_unsubscribe', 'spam_complaint', 'hard_bounce',
+  'dnc_registration', 'wrong_number', 'staff_revocation', 'release',
+];
+
+const STOP_SOURCES: SuppressionSource[] = ['provider', 'staff', 'subject', 'reconciliation'];
+
+/**
+ * POST /api/leadflow/consent/stop-signals — record a stop and cascade it.
+ *
+ * ONE ENDPOINT FOR EVERY KIND OF STOP. An inbound SMS STOP, an unsubscribe
+ * redemption, a spam complaint and a staff-initiated revocation differ in where
+ * they came from and in which channels they close, and in nothing else: each
+ * must be written down, must take effect immediately, and must cancel the work
+ * already queued. Splitting them into eight endpoints would mean eight places
+ * for the cascade to be forgotten, and the one that forgets is the one that
+ * sends the message.
+ *
+ * 201 because a signal is a new record, returned with what the cascade actually
+ * managed to stop rather than a bare acknowledgement.
+ */
+consentRoutes.post(
+  '/stop-signals',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.CONSENT_PURPOSE_MANAGE,
+      event: AUDIT_EVENTS.SUPPRESSION_APPLIED,
+      purpose: 'compliance',
+      resourceType: 'suppression_signal',
+      metadata: (req) => ({
+        signal: String((req.body as Record<string, unknown>)?.signal ?? ''),
+        source: String((req.body as Record<string, unknown>)?.source ?? ''),
+      }),
+      obligations: NOT_AN_OWNED_RECORD,
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const b = (req.body ?? {}) as Record<string, unknown>;
+
+      const subjectRef = typeof b.subject_ref === 'string' ? b.subject_ref.trim() : '';
+      if (!subjectRef) {
+        throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'subject_ref is required');
+      }
+      const signal = b.signal as StopSignal;
+      if (!STOP_SIGNALS.includes(signal)) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          `signal must be one of: ${STOP_SIGNALS.join(', ')}`,
+        );
+      }
+      const source = b.source as SuppressionSource;
+      if (!STOP_SOURCES.includes(source)) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          `source must be one of: ${STOP_SOURCES.join(', ')}`,
+        );
+      }
+
+      /*
+       * A RELEASE MUST SAY WHY, and so must a staff revocation. "Who
+       * un-suppressed this person, and on what basis" is the question asked
+       * after somebody who opted out receives a message, and an unexplained
+       * release makes it unanswerable.
+       */
+      const reason = typeof b.reason === 'string' ? b.reason.trim() : '';
+      if (!reason && (signal === 'release' || signal === 'staff_revocation')) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'a release or a staff revocation must carry a reason',
+        );
+      }
+
+      if (b.occurred_at !== undefined && b.occurred_at !== null) {
+        if (typeof b.occurred_at !== 'string' || Number.isNaN(Date.parse(b.occurred_at))) {
+          throw new AppError(
+            400,
+            ErrorCodes.VALIDATION_ERROR,
+            'occurred_at must be an ISO-8601 timestamp',
+          );
+        }
+      }
+
+      const tenantId = typeof b.tenant_id === 'string' ? b.tenant_id : null;
+      const { signalId, channels } = await recordSignal({
+        tenantId,
+        subjectRef,
+        signal,
+        source,
+        channel: typeof b.channel === 'string' ? (b.channel as SuppressionChannel) : undefined,
+        reason: reason || undefined,
+        receiptRef: typeof b.receipt_ref === 'string' ? b.receipt_ref : undefined,
+        occurredAt: typeof b.occurred_at === 'string' ? b.occurred_at : undefined,
+        recordedBy: req.session?.userId ?? null,
+      });
+
+      /*
+       * HELP suppresses nothing, and says so rather than pretending. The
+       * carrier requires an auto-reply to HELP; treating it as an opt-out would
+       * silence somebody for asking a question.
+       */
+      if (!signalId) {
+        res.status(201).json({
+          success: true,
+          data: {
+            signal_id: null,
+            signal,
+            channels: [],
+            suppressed: false,
+            cascade: null,
+            note: 'HELP is a request for information, not an opt-out. Nothing was suppressed.',
+          },
+        });
+        return;
+      }
+
+      /*
+       * THE CASCADE RUNS ONLY FOR A STOP. Releasing somebody must not cancel
+       * their queued work — there is nothing to stop, and running the cascade
+       * on a release would tear down the sequences the release was meant to
+       * make possible again.
+       */
+      const cascade = signal === 'release'
+        ? null
+        : await runCascade({
+          signalId,
+          subjectRef,
+          tenantId,
+          channels,
+          reason: reason || `${signal} recorded from ${source}`,
+          receiptRef: typeof b.receipt_ref === 'string' ? b.receipt_ref : undefined,
+        });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          signal_id: signalId,
+          signal,
+          channels,
+          suppressed: signal !== 'release',
+          cascade,
+          /* The evidence is kept. The guarantee, stated on the wire. */
+          evidence_preserved: true,
+          note: 'The receipt is revoked, never deleted: the record of what was agreed is what proves the earlier messages were lawful.',
+        },
+      });
+    },
+  )),
+);
+
+/**
+ * GET /api/leadflow/consent/suppressions — the effective state per channel.
+ *
+ * Derived from the ledger rather than stored, so the answer follows the same
+ * rule the composer applies: most-restrictive wins, and a suppression beats a
+ * release recorded in the same instant.
+ */
+consentRoutes.get(
+  '/suppressions',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.CONSENT_PURPOSE_MANAGE,
+      event: AUDIT_EVENTS.CONSENT_RECEIPT_ISSUED,
+      purpose: 'compliance',
+      resourceType: 'suppression_signal',
+      obligations: NOT_AN_OWNED_RECORD,
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const subjectRef =
+        typeof req.query.subject_ref === 'string' ? req.query.subject_ref.trim() : '';
+      if (!subjectRef) {
+        throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'subject_ref is required');
+      }
+      const channels = await effectiveState(
+        subjectRef,
+        typeof req.query.tenant_id === 'string' ? req.query.tenant_id : null,
+      );
+      res.status(200).json({
+        success: true,
+        data: {
+          subject_ref: subjectRef,
+          channels,
+          any_suppressed: channels.some((c) => c.suppressed),
+        },
+      });
+    },
+  )),
+);
+
+/**
+ * POST /api/leadflow/consent/suppressions/reconcile — the daily comparison.
+ *
+ * An action rather than a resource, hence 200. Exposed as an endpoint rather
+ * than left to a timer alone so it can be run on demand when a divergence is
+ * suspected, and so its behaviour is testable at all.
+ */
+consentRoutes.post(
+  '/suppressions/reconcile',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.CONSENT_PURPOSE_MANAGE,
+      event: AUDIT_EVENTS.SUPPRESSION_APPLIED,
+      purpose: 'compliance',
+      resourceType: 'suppression_signal',
+      obligations: NOT_AN_OWNED_RECORD,
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const b = (req.body ?? {}) as Record<string, unknown>;
+      const result = await reconcile(typeof b.tenant_id === 'string' ? b.tenant_id : null);
+      res.status(200).json({ success: true, data: result });
+    },
+  )),
 );
