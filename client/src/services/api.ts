@@ -767,6 +767,119 @@ export interface ConsentOverview {
   upstream_available: Record<string, boolean>;
 }
 
+/* --------------------------------------------------------- Enrichment Queue */
+
+/** The four words the register is allowed to say about a request. */
+export type EnrichmentStatus = 'awaiting' | 'processing' | 'complete' | 'blocked';
+
+/** What the policy decided, derived from the upstream state. */
+export type EnrichmentVerdict = 'approval' | 'eligible' | 'denied';
+
+/** How a lookup settled. Only MATCHED is ever charged. */
+export type EnrichmentOutcome = 'MATCHED' | 'NO_MATCH' | 'TECHNICAL_FAILURE' | 'CACHE_HIT';
+
+/** One row of the capability-request register. */
+export interface EnrichmentRequest {
+  request_id: string | null;
+  created_at: string | null;
+  /** Null until the broker projects a contact label. See `field_gaps`. */
+  contact: string | null;
+  /** Rendered as chips. One key today; an array because bulk is next. */
+  capabilities: string[];
+  /** Null until the broker projects request metadata. See `field_gaps`. */
+  purpose: string | null;
+  /** Null until the broker projects the requesting persona. See `field_gaps`. */
+  requested_by: string | null;
+  /** What the tenant was quoted. */
+  estimate: number | null;
+  /** What the tenant was billed. Zero for anything but a match. */
+  credits_charged: number | null;
+  policy_verdict: EnrichmentVerdict;
+  status: EnrichmentStatus;
+  /** The broker's own state, kept so a drill-in never has to un-collapse four. */
+  upstream_status: string | null;
+  outcome: EnrichmentOutcome | null;
+  served_from_cache: boolean;
+  action: string;
+  /**
+   * Why a refusal happened, quoted from the credit ledger rather than composed.
+   * Null on every row that was not refused.
+   */
+  explain_reason: string | null;
+}
+
+/**
+ * One capability card.
+ *
+ * OUTCOME AND PRICE, and nothing about how the answer is obtained. `offered`
+ * false means this tenant holds no entitlement — the card still renders, because
+ * a missing card reads as "not a thing this product does" where an unoffered one
+ * reads as "not enabled for you", and only the second is actionable.
+ */
+export interface EnrichmentCapability {
+  key: string;
+  outcome_label: string;
+  description: string | null;
+  /** Null, never 0, when unoffered. A zero price reads as free. */
+  credit_price: number | null;
+  category: string | null;
+  offered: boolean;
+  /** The governance caveats, carried by every card without exception. */
+  caveats: string[];
+}
+
+/** A tile or a column the mockup asks for that has no upstream source. */
+export interface EnrichmentMetricGap {
+  metric: string;
+  reason: string;
+}
+
+export interface EnrichmentFieldGap {
+  field: string;
+  reason: string;
+}
+
+/**
+ * Everything the Enrichment Queue screen renders, from one call.
+ *
+ * Every count is `null` rather than `0` when the register could not be read. An
+ * empty window is not a score of zero, and the rail renders the two differently.
+ */
+export interface EnrichmentQueue {
+  kpis: {
+    awaiting_approval: { count: number | null; estimated_credits: number | null };
+    /** `provider_fallbacks` is permanently null — see `metric_gaps`. */
+    processing: { count: number | null; provider_fallbacks: number | null };
+    completed_today: { count: number | null; matched: number | null };
+    no_match: { count: number | null; policy: string };
+    cache_reuse: {
+      /** A fraction in 0..1, or null when nothing has settled. */
+      rate: number | null;
+      credits_saved: number | null;
+      settled_count: number | null;
+    };
+    budget_remaining: {
+      available: number | null;
+      reserved: number | null;
+      balance: number | null;
+    };
+  };
+  metric_gaps: EnrichmentMetricGap[];
+  field_gaps: EnrichmentFieldGap[];
+  requests: EnrichmentRequest[];
+  request_count: number;
+  /** Counted over the WHOLE window, so a segment count never moves with itself. */
+  status_counts: Record<string, number>;
+  capabilities: EnrichmentCapability[];
+  status: EnrichmentStatus | null;
+  upstream_available: {
+    capabilities: boolean;
+    requests: boolean;
+    balance: boolean;
+    ledger: boolean;
+  };
+}
+
 export const api = {
   /** Create an account and receive a session token. */
   register: (payload: {
@@ -1085,6 +1198,20 @@ export const api = {
     }),
 
   /**
+   * The Enrichment Queue — tiles, register and catalog — composed server-side.
+   *
+   * The status filter goes to the SERVER for the same reason the identity band
+   * does: the tiles and the rows have to describe the same window. Filtering in
+   * the browser would leave the rail counting a register the table is no longer
+   * showing, and the rail is what an operator clicks to narrow the table.
+   */
+  enrichmentQueue: (status?: EnrichmentStatus, signal?: AbortSignal) =>
+    request<EnrichmentQueue>(
+      `/leadflow/enrichment/queue${status ? `?status=${encodeURIComponent(status)}` : ''}`,
+      { signal }
+    ),
+
+  /**
    * The rights attestation behind a restricted run.
    *
    * Gated more narrowly than the rest of the screen — `import.evidence_read` is
@@ -1093,4 +1220,78 @@ export const api = {
    */
   importRunEvidence: (runId: string) =>
     request<ImportRunEvidence>(`/leadflow/imports/runs/${encodeURIComponent(runId)}/evidence`),
+
+  /**
+   * The LIVE policy verdict behind the Contact Enrichment callout.
+   *
+   * NON-SPENDING, which is why it is a separate call from enrichmentRequest.
+   * The modal re-asks it on every capability tick and every change of business
+   * reason, and holding the tenant's credits to find out whether they may be
+   * held would charge them for changing their mind.
+   */
+  enrichmentEligibility: (payload: {
+    subject_ref: string;
+    capability_keys: string[];
+    purpose: string;
+  }) => request<EnrichmentEligibility>('/leadflow/enrichment/eligibility', {
+    method: 'POST',
+    body: payload,
+  }),
+
+  /** Reserve & Run. Answers `awaiting_approval` when the tier may not spend. */
+  enrichmentRequest: (payload: {
+    subject_ref: string;
+    capability_keys: string[];
+    purpose: string;
+    notes?: string;
+  }) => request<EnrichmentRequestResult>('/leadflow/enrichment/requests', {
+    method: 'POST',
+    body: payload,
+  }),
+
+  /** Everything the Data Credits drawer renders, in one call. */
+  creditsSummary: (signal?: AbortSignal) =>
+    request<CreditsSummary>('/leadflow/credits/summary', { signal }),
 };
+
+export interface EnrichmentEligibility {
+  eligible: boolean;
+  verdict: 'allow' | 'review' | 'deny';
+  headline: string;
+  reason: string;
+  estimated_credits: number;
+  requires_approval: boolean;
+  budget_tier: string;
+  policy_reached: boolean;
+}
+
+export interface EnrichmentRequestResult {
+  status: 'reserved' | 'not_reserved' | 'awaiting_approval';
+  executed: boolean;
+  estimated_credits: number;
+  budget_tier: string;
+  /** Present only when a tier or a threshold stopped the run. */
+  blocked_reason?: string | null;
+  approval_ref?: string | null;
+}
+
+export interface CreditsLedgerRow {
+  request_id: string | null;
+  capability_key: string | null;
+  reserved: number;
+  charged: number;
+  refunded: number;
+  outcome: string | null;
+  served_from_cache: boolean;
+}
+
+export interface CreditsSummary {
+  organization_balance: { balance: number | null; reserved: number | null; available: boolean };
+  current_cycle: { used: number; saved_through_cache: number; available: boolean };
+  capability_usage: { capability: string; credits: number }[];
+  budget_controls: { label: string; detail: string; allowance: string; mode: string }[];
+  ledger_export: CreditsLedgerRow[];
+  ledger_available: boolean;
+  export_complete: boolean;
+  operator_only_notice: string;
+}

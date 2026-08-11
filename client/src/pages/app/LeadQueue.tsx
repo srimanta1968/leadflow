@@ -6,6 +6,8 @@ import { useToast } from '../../components/feedback/ToastProvider';
 import { failureFor } from '../../content/messages';
 import { SOURCE_OPTIONS } from '../../content/leadFields';
 import { subscribeToEvents } from '../../services/eventStream';
+import { ContactEnrichmentModal } from '../../components/app/ContactEnrichmentModal';
+import { DataCreditsDrawer } from '../../components/app/DataCreditsDrawer';
 
 /** Human labels for the source channel enum, from the shared vocabulary. */
 const SOURCE_LABELS = new Map(SOURCE_OPTIONS.map((option) => [option.value as string, option.label]));
@@ -56,6 +58,8 @@ export default function LeadQueue() {
   const [loading, setLoading] = useState(true);
   /** Lead currently being routed, so only that row's button shows progress. */
   const [routingId, setRoutingId] = useState<string | null>(null);
+  const [creditsOpen, setCreditsOpen] = useState(false);
+  const [enrichId, setEnrichId] = useState<string | null>(null);
   /** True once a pushed event has arrived, proving the stream is delivering. */
   const [live, setLive] = useState(false);
 
@@ -167,6 +171,8 @@ export default function LeadQueue() {
     }
   }
 
+  const enriching = leads.find((lead) => lead.id === enrichId) ?? null;
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -194,6 +200,14 @@ export default function LeadQueue() {
             disabled={loading}
           >
             {loading ? 'Loading…' : 'Refresh'}
+          </button>
+          <button
+            type="button"
+            name="credits_and_budgets"
+            onClick={() => setCreditsOpen(true)}
+            className="lf-btn-secondary px-4 py-2"
+          >
+            Credits &amp; Budgets
           </button>
           <Link to="/app/capture" className="lf-btn-primary px-4 py-2">
             Quick Capture
@@ -295,19 +309,43 @@ export default function LeadQueue() {
                 )),
               },
             ]}
-            rowActions={(lead) => (!lead.owner_user_id ? (
-              <button
-                type="button"
-                onClick={() => void routeOne(lead.id)}
-                className="lf-btn-secondary px-3 py-1.5 text-xs"
-                disabled={routingId === lead.id}
-              >
-                {routingId === lead.id ? 'Routing…' : 'Route'}
-              </button>
-            ) : null)}
+            rowActions={(lead) => (
+              <span className="flex items-center gap-2">
+                {!lead.owner_user_id && (
+                  <button
+                    type="button"
+                    onClick={() => void routeOne(lead.id)}
+                    className="lf-btn-secondary px-3 py-1.5 text-xs"
+                    disabled={routingId === lead.id}
+                  >
+                    {routingId === lead.id ? 'Routing…' : 'Route'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  name="request_enrichment"
+                  onClick={() => setEnrichId(lead.id)}
+                  className="lf-btn-secondary px-3 py-1.5 text-xs"
+                >
+                  Enrich
+                </button>
+              </span>
+            )}
           />
         </div>
       ) : null}
+
+      <DataCreditsDrawer open={creditsOpen} onClose={() => setCreditsOpen(false)} />
+
+      {enriching && (
+        <ContactEnrichmentModal
+          open
+          onClose={() => setEnrichId(null)}
+          subjectRef={enriching.id}
+          contactLabel={enriching.name ?? enriching.email ?? enriching.id}
+          contactContext={enriching.email ?? undefined}
+        />
+      )}
     </div>
   );
 }

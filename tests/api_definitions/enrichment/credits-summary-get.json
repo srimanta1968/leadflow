@@ -1,0 +1,133 @@
+{
+  "name": "GET /api/leadflow/credits/summary - everything the Data Credits drawer renders",
+  "description": "Balance, current cycle, capability usage, the four budget tiers and the per-request ledger export, in ONE call.\n\nONE CALL FOR THE WHOLE DRAWER. The three upstream reads are issued CONCURRENTLY and degrade independently, so an unreachable credit account empties the balance tile and leaves Budget Controls readable. Fanning out from the browser would put the balance and the usage at two different instants behind one panel, and a 'saved through cache' figure that does not correspond to the usage printed beside it is worse than an absent one.\n\nTHE FIGURES COME FROM THE CAPABILITY REQUESTS, NOT THE CREDIT LEDGER, and that is a correction made after reading the upstream handler rather than a convenience. `data_credits.credit_ledger` carries entry_no, entry_type, request_id, balance and reserved deltas, reason and created_at - and NO capability key. A Capability Usage breakdown built from it would have nothing to group by. The capability-request projection carries capability_key, credits_reserved, credits_charged, outcome and served_from_cache per request, which is precisely the row AC4 asks the export to contain. The ledger is still read, because its reachability is what tells the drawer whether the export is complete.\n\nAC4 - RESERVATION, ACTUAL CHARGE AND REFUND PER REQUEST. Refund is derived as reserved minus charged, which is exactly what a RELEASE entry returns to the account: the hold that was taken and not spent. A no-match or a technical failure settles at zero charged, so its whole reservation shows as refunded - which is the line a disputed invoice is actually arguing about.\n\nAC3 - THE FOUR TIERS, IN THE DRAWER'S OWN WORDS. Canvassers request-only, Sales representatives 10/day, Sales managers 100/day with a bulk approval threshold of 50, Owner full authority. Served from a local constant rather than read from upstream, because an empty Budget Controls panel reads as 'nobody has any budget' rather than 'we could not ask'. Verified live: all four returned with their mockup wording and their REQUEST_ONLY / DAILY_CAP / FULL modes.\n\nUSAGE COUNTS WHAT WAS CHARGED, NOT WHAT WAS RESERVED. A reservation refunded because the provider found nothing must not appear as usage: the tenant was not charged for it, and showing it would make the breakdown disagree with the cycle total printed directly above it. 'Saved through cache' counts requests actually SERVED FROM CACHE rather than the gap between reserved and charged - that gap also contains no-match refunds and technical failures, and calling those a saving would credit the cache with work it never did.\n\nNO PROVIDER COST IS IN THIS RESPONSE AND NONE CAN BE. Every field is named out by hand rather than spread from an upstream row, so a column added to `provider_binding` cannot arrive by default. The drawer states the same guarantee on screen.\n\nEDGE CASES: `limit` is clamped to 1..1000. An unreachable upstream returns nulls with `available: false` rather than zeros - a finance user reconciling against a zero that meant 'unknown' is the specific harm that avoids - and `export_complete` says in one field whether the export can be trusted as the whole cycle. Verified live with no gateway credential: balance null, available false, export_complete false, and the four tiers still present.\n\nBehind authenticate and governed on data.configure. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/credits/summary",
+  "method": "GET",
+  "taskId": "1ad8a484-6473-49f5-a67b-871d8c51f99f",
+  "featureId": "4eb293bb-49ef-4d8c-89c7-51ffe29a30c1",
+  "epicId": "c889c809-5a56-4eb6-b499-0e940d93c83e",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "1ad8a484-6473-49f5-a67b-871d8c51f99f#AC3",
+    "1ad8a484-6473-49f5-a67b-871d8c51f99f#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "data.budget_controls.mode": [
+      "REQUEST_ONLY",
+      "DAILY_CAP",
+      "FULL"
+    ],
+    "data.capability_usage.capability": [
+      "validate_phone",
+      "validate_email",
+      "find_contact_points",
+      "find_possible_profiles"
+    ]
+  },
+  "captureResponse": {
+    "credits.summary.response.data.export_complete": "data.export_complete"
+  },
+  "testCases": [
+    {
+      "name": "Returns the four budget tiers in the drawer's own words",
+      "coversCriterion": "1ad8a484-6473-49f5-a67b-871d8c51f99f#AC3",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "The export carries reservation, charge and refund per request",
+      "coversCriterion": "1ad8a484-6473-49f5-a67b-871d8c51f99f#AC4",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "limit": "50"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "An out-of-range limit is clamped rather than refused",
+      "coversCriterion": "1ad8a484-6473-49f5-a67b-871d8c51f99f#AC4",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "limit": "999999"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer"
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold data.configure",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64: the suite has a single identity and no second-role producer to borrow a token from. Kept as documentation because it is a real response."
+    },
+    {
+      "status": 502,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "message": "the credit account could not be read",
+      "when": "never raised by this endpoint. The three reads DEGRADE - an unreachable upstream returns nulls with available:false and export_complete:false rather than failing the call, because Budget Controls stays readable and useful when the balance is not.",
+      "reproducible": false,
+      "_whyNotReproducible": "Documented to record that this endpoint deliberately does NOT 502, which is the question a reader asks when they see the other enrichment definitions degrade."
+    }
+  ]
+}

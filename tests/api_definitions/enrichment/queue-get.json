@@ -1,0 +1,204 @@
+{
+  "name": "GET /api/leadflow/enrichment/queue - permissioned data capability queue, credit posture and capability catalog",
+  "description": "The one call behind the Enrichment Queue screen (#view-enrichment, 'Permissioned Data Capabilities'): the six KPI tiles, the capability-request register, and the capability catalog cards. Composed server-side from sdk-data-credits' GET /api/capabilities, GET /api/capability-requests, GET /api/credits/balance and GET /api/credits/ledger, read CONCURRENTLY and degrading per panel.\n\nNO VENDOR IS NAMEABLE THROUGH THIS ENDPOINT, and that is the criterion this definition exists to hold (678f5c6f-b8c3-4238-92e6-df3d94834336#AC1). sdk-data-credits builds its tenant-facing views by NAMING fields rather than spreading rows - provider_binding and provider_attempt are never projected - and this composer does the same on top of it: every field below is written out by hand, so a column added upstream cannot arrive here by default. The Processing tile's 'provider fallback count' from the mockup is therefore returned as NULL with a metric_gaps entry rather than sourced, because the only place that count exists is data_credits.provider_attempt, which is vendor-shaped by construction. A tile that named how often we failed over would leak the shape of the provider chain even without printing a brand.\n\nPOLICY VERDICT IS DERIVED FROM STATUS, NOT INVENTED. PENDING_APPROVAL renders as 'Approval' (the requester's role budget requires a second party), REJECTED renders as 'Denied', and everything else renders as 'Eligible'. A denied row carries `explain_reason` (678f5c6f-b8c3-4238-92e6-df3d94834336#AC2), read from the RELEASE entry sdk-data-credits writes to the credit ledger when a refusal releases the held credits - rejectRequest REFUSES a reason-less refusal, so the reason is guaranteed present upstream and is quoted verbatim here rather than composed. A reason the UI invented would read as authoritative while agreeing with nothing.\n\nCACHE REUSE AND CREDITS SAVED ARE COMPUTED FROM THE ROWS RETURNED, never from a counter (678f5c6f-b8c3-4238-92e6-df3d94834336#AC3). The rate is served_from_cache over the settled requests in the window, and credits_saved is the sum of credits_reserved minus credits_charged across cache-served rows - which is exactly what the tenant was quoted and then not billed. Both are null rather than zero when the register could not be read, because 'we saved you nothing' and 'we could not find out' are different statements and the second must never render as the first.\n\nTHE CATALOG STATES OUTCOME AND PRICE (678f5c6f-b8c3-4238-92e6-df3d94834336#AC4). Each card carries outcome_label, credit_price and the two governance caveats - that a capability does not create consent, and that a returned value needs human confirmation - and carries NO field describing how the answer is obtained. The four cards the mockup names are always present: a capability the tenant is not entitled to comes back with offered:false and credit_price:null, because a card dropped from the grid reads as 'not a thing this product does' where an unoffered card reads as 'not enabled for you', and only the second is actionable.\n\nDEGRADES TO AN HONEST 200 PER PANEL. Each upstream read answers independently, so the balance being unreachable empties the Budget Remaining tile and leaves the register workable. upstream_available reports all four reads separately, and an empty register is never conflated with an unreachable one.\n\nTHREE REGISTER COLUMNS THE MOCKUP ASKS FOR HAVE NO UPSTREAM SOURCE and are reported in field_gaps rather than faked: Contact, Reason/Purpose and Requested by. sdk-data-credits' list projection returns request_id, capability_key, status, outcome, served_from_cache, credits_reserved, credits_charged and created_at, and nothing else - subject_fingerprint is deliberately withheld (a table of everyone every tenant ever looked up is a breach waiting for an excuse), and requested_by_persona_id and metadata are accepted on the POST but never returned on the list. The composer reads all three defensively so the columns light up the day upstream projects them, and names the gap until then. Raised as a handoff.\n\nrequiresRole:[\"admin\"] and NO testCase pins an Authorization header. The route is governed on data.configure, which config/roles.ts grants to Revenue Operations and the Data Steward; the local role bridge maps users.role='admin' onto revenue_operations, so the admin credential is the identity that reaches it. The suite's default identity bridges to sales_rep and would only ever see 403, so the runner swaps to testCredentials.admin - and a pinned header would take PRECEDENCE over that token and defeat the swap (MUST-71). The 401 cases are documented in errorCases rather than authored for that reason.\n\nTHE HAPPY PATH IS THE DEGRADED 200, and expectedStatus says so rather than describing an environment that does not exist. Nothing in LeadFlow creates a capability request - the write surface arrives with the Contact Enrichment modal - and no LeadFlow environment has a provisioned credit account, so what the suite observes is the composed envelope with upstream_available:false, an empty register and the four catalog cards marked offered:false. That is a real branch worth holding: it proves the screen degrades per panel instead of erroring, and it proves the catalog renders without a tenant entitlement. Point this at a tenant with a funded credit account and the same call returns the populated queue described above. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/enrichment/queue",
+  "method": "GET",
+  "taskId": "678f5c6f-b8c3-4238-92e6-df3d94834336",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "admin"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "678f5c6f-b8c3-4238-92e6-df3d94834336#AC1",
+    "678f5c6f-b8c3-4238-92e6-df3d94834336#AC2",
+    "678f5c6f-b8c3-4238-92e6-df3d94834336#AC3",
+    "678f5c6f-b8c3-4238-92e6-df3d94834336#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "status": [
+      "awaiting",
+      "processing",
+      "complete",
+      "blocked"
+    ],
+    "data.status": [
+      "awaiting",
+      "processing",
+      "complete",
+      "blocked"
+    ],
+    "data.requests.status": [
+      "awaiting",
+      "processing",
+      "complete",
+      "blocked"
+    ],
+    "data.requests.policy_verdict": [
+      "approval",
+      "eligible",
+      "denied"
+    ],
+    "data.requests.action": [
+      "Review",
+      "Open",
+      "Result",
+      "Explain"
+    ],
+    "data.requests.upstream_status": [
+      "PENDING_APPROVAL",
+      "APPROVED",
+      "REJECTED",
+      "EXECUTING",
+      "COMPLETED",
+      "FAILED"
+    ],
+    "data.requests.outcome": [
+      "MATCHED",
+      "NO_MATCH",
+      "TECHNICAL_FAILURE",
+      "CACHE_HIT"
+    ],
+    "data.metric_gaps.metric": [
+      "provider_fallbacks"
+    ],
+    "data.field_gaps.field": [
+      "contact",
+      "purpose",
+      "requested_by"
+    ],
+    "data.capabilities.key": [
+      "validate_phone",
+      "validate_email",
+      "find_contact_points",
+      "find_possible_profiles"
+    ]
+  },
+  "statusTransitions": {
+    "entity": "capability_request",
+    "field": "status",
+    "flow": [
+      "PENDING_APPROVAL",
+      "APPROVED",
+      "EXECUTING",
+      "COMPLETED"
+    ],
+    "transitions": [
+      {
+        "from": "PENDING_APPROVAL",
+        "to": "APPROVED",
+        "via": "POST /api/capability-requests/:request_id/approve (sdk-data-credits)"
+      },
+      {
+        "from": "PENDING_APPROVAL",
+        "to": "REJECTED",
+        "via": "POST /api/capability-requests/:request_id/approve with approved:false and a reason (sdk-data-credits) - the refusal releases the held credits and writes the reason this endpoint surfaces as explain_reason"
+      },
+      {
+        "from": "APPROVED",
+        "to": "EXECUTING",
+        "via": "POST /api/capability-requests/:request_id/execute (sdk-data-credits)"
+      },
+      {
+        "from": "EXECUTING",
+        "to": "COMPLETED",
+        "via": "settlement inside sdk-data-credits; only a MATCHED outcome is charged"
+      },
+      {
+        "from": "EXECUTING",
+        "to": "FAILED",
+        "via": "a TECHNICAL_FAILURE settlement inside sdk-data-credits, which is free to the tenant"
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The composed queue answers with per-panel availability rather than an error",
+      "coversCriterion": "678f5c6f-b8c3-4238-92e6-df3d94834336#AC3",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive"
+    },
+    {
+      "name": "The catalog always carries the four named cards, priced or marked unoffered",
+      "coversCriterion": "678f5c6f-b8c3-4238-92e6-df3d94834336#AC4",
+      "queryParams": {
+        "status": "awaiting"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive"
+    },
+    {
+      "name": "NEGATIVE: an unknown status filter is rejected rather than silently ignored",
+      "coversCriterion": "678f5c6f-b8c3-4238-92e6-df3d94834336#AC2",
+      "queryParams": {
+        "status": "everything"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR"
+    }
+  ],
+  "testDataSets": [
+    {
+      "name": "Each presentation status narrows the register without changing the catalog",
+      "rows": [
+        {
+          "status": "awaiting"
+        },
+        {
+          "status": "processing"
+        },
+        {
+          "status": "complete"
+        },
+        {
+          "status": "blocked"
+        }
+      ],
+      "expectedStatus": 200
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "status must be one of awaiting, processing, complete, blocked",
+      "when": "an unrecognised presentation status is supplied. Dropping it would return the WHOLE register to somebody who asked for one slice, and a screen headed 'Awaiting approval' listing completed work is a worse answer than an error - the operator would work it believing the settled requests still needed a decision."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Not authored as a testCase: it can only be expressed by pinning a header, which would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify. Not authored, for the same reason as above."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller's roles do not grant data.configure, which Revenue Operations and the Data Steward hold. NOT reachable while this definition runs under requiresRole:[\"admin\"], and kept because it is the real branch the default suite identity receives."
+    }
+  ]
+}

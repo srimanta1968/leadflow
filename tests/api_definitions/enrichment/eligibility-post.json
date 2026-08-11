@@ -1,0 +1,228 @@
+{
+  "name": "POST /api/leadflow/enrichment/eligibility - the live governance verdict",
+  "description": "The LIVE policy verdict behind the Contact Enrichment callout (AC1). Given the capabilities currently ticked and the business reason currently selected, it answers whether this run is eligible, what it would cost, and which budget tier the requester sits in.\n\nNON-SPENDING, AND THAT IS WHY IT IS A SEPARATE ENDPOINT FROM /requests. The modal re-asks this every time a capability is ticked or the business reason changes, because the verdict genuinely depends on both - 'Find additional contact points' under 'Data quality remediation' is a different question from the same capability under 'Commercial account qualification'. Deriving the callout from the reservation endpoint would mean holding the tenant's credits to find out whether they are allowed to hold them, which charges somebody for changing their mind.\n\n200 EVEN FOR A REFUSAL. The question was answered; 'no' is a successful answer to 'may I?', and a 403 would make a correct refusal look like the caller lacked permission to ask it.\n\nDEGRADES TO `review`, NEVER TO `allow`. An unreachable sdk-policy means we could not ask, and treating that as permission is how a tenant spends money on a lookup a policy would have refused. Verified live with no gateway credential: verdict `review`, policy_reached false, and the reason says a person must approve it. The gateway call is wrapped so an absent credential degrades rather than throwing a 502 the operator cannot act on - that wrapping was added because the first live probe did exactly that.\n\nTHE TIER IS RESOLVED FAIL-CLOSED. A role matching none of the four budget tiers gets Canvassers - request-only - rather than the permissive end; somebody whose role we cannot place must not be handed the organization's purchase authority by default. Verified live: the QA operator resolves to Canvassers and requires_approval comes back true.\n\nEDGE CASES: an unrecognised capability is REJECTED rather than dropped, because quoting an estimate for a smaller run than the operator asked for and then reserving against that quote is worse than refusing outright. The business reason is a closed list rather than free text - it is the basis on which the tenant is about to spend money on somebody's personal data, and an arbitrary string makes the verdict unanswerable and the ledger unauditable. An empty capability list is refused: there is nothing to be eligible for.\n\nBehind authenticate and governed on data.configure. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/enrichment/eligibility",
+  "method": "POST",
+  "taskId": "1ad8a484-6473-49f5-a67b-871d8c51f99f",
+  "featureId": "4eb293bb-49ef-4d8c-89c7-51ffe29a30c1",
+  "epicId": "c889c809-5a56-4eb6-b499-0e940d93c83e",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "1ad8a484-6473-49f5-a67b-871d8c51f99f#AC1"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "capability_keys": [
+      "validate_phone",
+      "validate_email",
+      "find_contact_points",
+      "find_possible_profiles"
+    ],
+    "purpose": [
+      "Inspection lead follow-up",
+      "Existing customer service",
+      "Commercial account qualification",
+      "Data quality remediation"
+    ],
+    "data.verdict": [
+      "allow",
+      "review",
+      "deny"
+    ]
+  },
+  "captureResponse": {
+    "enrichment.eligibility.response.data.verdict": "data.verdict"
+  },
+  "testCases": [
+    {
+      "name": "Answers a verdict, an estimate and the requester's budget tier",
+      "coversCriterion": "1ad8a484-6473-49f5-a67b-871d8c51f99f#AC1",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["validate_phone", "validate_email"],
+        "purpose": "{{static:Inspection lead follow-up}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "A different purpose is a different question, and is answered separately",
+      "coversCriterion": "1ad8a484-6473-49f5-a67b-871d8c51f99f#AC1",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["find_contact_points"],
+        "purpose": "{{static:Data quality remediation}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: a capability the catalog does not know",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|capability",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["{{static:read_their_mind}}"],
+        "purpose": "{{static:Inspection lead follow-up}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no capabilities selected, so there is nothing to be eligible for",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|empty",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": [],
+        "purpose": "{{static:Inspection lead follow-up}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: a business reason outside the governed list",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|purpose",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["validate_phone"],
+        "purpose": "{{static:because I felt like it}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no subject_ref, so there is nobody to decide about",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|subject",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "capability_keys": ["validate_phone"],
+        "purpose": "{{static:Inspection lead follow-up}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["validate_phone"],
+        "purpose": "{{static:Inspection lead follow-up}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["validate_phone"],
+        "purpose": "{{static:Inspection lead follow-up}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "capability_keys must name at least one capability",
+      "when": "capability_keys is absent, not an array, or empty"
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "unknown capability: <key>. Known: validate_phone, validate_email, find_contact_points, find_possible_profiles",
+      "when": "any key is outside the catalog. Rejected rather than dropped: a silently smaller run would be quoted, and then reserved against that quote."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "purpose must be one of: Inspection lead follow-up, Existing customer service, Commercial account qualification, Data quality remediation",
+      "when": "purpose is missing or outside the governed list. It is the basis on which money is about to be spent on somebody's personal data, so it is a closed list rather than free text."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "when": "subject_ref is absent or blank"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer"
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold data.configure",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64: the suite has a single identity and no second-role producer to borrow a token from. Kept as documentation because it is a real response."
+    }
+  ]
+}

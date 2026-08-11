@@ -1,0 +1,212 @@
+{
+  "name": "POST /api/leadflow/enrichment/requests - Reserve and Run",
+  "description": "Holds the credits for an enrichment run and executes it - unless the requester's budget tier may not spend, in which case it holds them and raises an approval instead (AC2).\n\nRESERVE FIRST, EXECUTE SECOND, AND NEVER EXECUTE WHAT A TIER MAY NOT SPEND. When the tier is request-only, or the estimate exceeds its bulk-approval threshold, or the estimate exceeds its daily cap, this answers `status: awaiting_approval` with `executed: false` and the blocking reason in words. Verified live: the QA operator resolves fail-closed to Canvassers and a 2-credit run came back awaiting_approval, executed false, with 'Canvassers may request only; a manager must approve it.'\n\nBLOCKED IN TWO PLACES ON PURPOSE. sdk-data-credits refuses execute with a 409 while an approval is outstanding, and this endpoint refuses to call execute at all. That is deliberate belt-and-braces rather than duplication: the failure it prevents is spending somebody else's money, and a single guard on the far side of a network hop is one outage away from not running.\n\nTHE FINGERPRINT, NEVER THE RAW SUBJECT. Upstream keeps only a subject_fingerprint precisely so a register of everybody every tenant ever looked up cannot accumulate there, and sending the raw value would defeat that from our side. It is a SHA-256 over tenant and subject, so the same contact fingerprints identically across requests - which is what lets the result cache hit at all, and a random value per request would silently disable the no-double-charge guarantee.\n\nEVERY CAPABILITY IS RESERVED SEPARATELY, because they settle separately: one may match, another find nothing and refund, a third hit the cache and charge nothing. A single combined reservation could not express that, and the ledger export is per request for the same reason.\n\nDEGRADES RATHER THAN 502s. An unreachable broker answers `status: not_reserved` with each reservation carrying `reserved: false`, so the modal can say the credits were not held. A generic upstream error would tell the operator nothing they could act on.\n\nEDGE CASES: identical validation to the eligibility endpoint - unknown capability rejected rather than dropped, business reason a closed list, empty selection refused. 201 because a request is a new record whether or not it ran.\n\nBehind authenticate and governed on data.configure. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/enrichment/requests",
+  "method": "POST",
+  "taskId": "1ad8a484-6473-49f5-a67b-871d8c51f99f",
+  "featureId": "4eb293bb-49ef-4d8c-89c7-51ffe29a30c1",
+  "epicId": "c889c809-5a56-4eb6-b499-0e940d93c83e",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "1ad8a484-6473-49f5-a67b-871d8c51f99f#AC2"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "capability_keys": [
+      "validate_phone",
+      "validate_email",
+      "find_contact_points",
+      "find_possible_profiles"
+    ],
+    "purpose": [
+      "Inspection lead follow-up",
+      "Existing customer service",
+      "Commercial account qualification",
+      "Data quality remediation"
+    ],
+    "data.status": [
+      "reserved",
+      "not_reserved",
+      "awaiting_approval"
+    ]
+  },
+  "captureResponse": {
+    "enrichment.request.response.data.status": "data.status"
+  },
+  "testCases": [
+    {
+      "name": "A request-only tier holds the credits and runs nothing",
+      "coversCriterion": "1ad8a484-6473-49f5-a67b-871d8c51f99f#AC2",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["find_contact_points"],
+        "purpose": "{{static:Inspection lead follow-up}}",
+        "notes": "{{static:validate the contact points before the inspection confirmation}}"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Several capabilities are reserved separately, because they settle separately",
+      "coversCriterion": "1ad8a484-6473-49f5-a67b-871d8c51f99f#AC2",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["validate_phone", "validate_email"],
+        "purpose": "{{static:Existing customer service}}"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: a capability the catalog does not know",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|capability",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["{{static:read_their_mind}}"],
+        "purpose": "{{static:Inspection lead follow-up}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: nothing selected, so there is nothing to reserve",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|empty",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": [],
+        "purpose": "{{static:Inspection lead follow-up}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: a business reason outside the governed list",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|purpose",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["validate_phone"],
+        "purpose": "{{static:no particular reason}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["validate_phone"],
+        "purpose": "{{static:Inspection lead follow-up}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{dynamic:uuid}}"
+      },
+      "payload": {
+        "subject_ref": "{{dynamic:uuid}}",
+        "capability_keys": ["validate_phone"],
+        "purpose": "{{static:Inspection lead follow-up}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "capability_keys must name at least one capability",
+      "when": "capability_keys is absent, not an array, or empty"
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "unknown capability: <key>. Known: validate_phone, validate_email, find_contact_points, find_possible_profiles",
+      "when": "any key is outside the catalog"
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "purpose must be one of: Inspection lead follow-up, Existing customer service, Commercial account qualification, Data quality remediation",
+      "when": "purpose is missing or outside the governed list"
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "when": "subject_ref is absent or blank"
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the header is absent or not Bearer"
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify"
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller does not hold data.configure",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64: the suite has a single identity and no second-role producer to borrow a token from."
+    }
+  ]
+}
