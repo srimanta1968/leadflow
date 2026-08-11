@@ -40,12 +40,21 @@ Feature: Contacts screen - filters, canonical table and eligible-only export
   @portal:leadflow
   @login:default
   @scenario_id:45e7c548-b813-4a20-ac53-f925f8692da9
-  Scenario: All five facets are on screen and each is labelled
+  Scenario: Every facet carries a visible field label
     # AC3, first half. The five compose - none of them replaces another. Each
     # carries a VISIBLE label naming the FIELD: a bare select is legible only
     # while it sits at its default, and once it reads "P4" nothing says which
     # facet that is. The label deliberately does not repeat the unset option -
     # the same string in both places puts identical text on screen twice.
+    #
+    # RENAMED from "All five facets are on screen and each is labelled". The
+    # original title asserted the option text "All entity types", which cannot
+    # be found (a closed <select> renders no visible option text); the LLM
+    # healer then cached a nonsense selector against this scenario, and the
+    # contract warns that a cached heal is replayed on every later run - so the
+    # step kept failing with a CSS parse error on a markdown fence even after
+    # the assertion was corrected. The heal is keyed on the scenario, so the
+    # rename retires the poisoned entry.
     When I navigate to "/app/contacts"
     Then I should see "Contacts"
     And I should see "Entity type"

@@ -42,6 +42,8 @@ import WorkflowStudio from './pages/app/WorkflowStudio';
 import WorkflowRuns from './pages/app/WorkflowRuns';
 import Incidents from './pages/app/Incidents';
 import Governance from './pages/app/Governance';
+import Sequences from './pages/app/Sequences';
+import Templates from './pages/app/Templates';
 import NotFound from './pages/NotFound';
 
 /**
@@ -124,6 +126,8 @@ export default function App() {
               <Route path="workflow-runs" element={<WorkflowRuns />} />
               <Route path="incidents" element={<Incidents />} />
               <Route path="governance" element={<Governance />} />
+              <Route path="sequences" element={<Sequences />} />
+              <Route path="templates" element={<Templates />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

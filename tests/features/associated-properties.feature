@@ -26,7 +26,10 @@ Feature: Associated Properties screen and Link Property flow
   @portal:leadflow
   @login:default
   @scenario_id:195f09dc-b88e-4c23-803f-053590c9f1b3
-  Scenario: The screen scopes itself to the relationship, not the property
+  Scenario: The screen governs the relationship rather than the property
+    # RENAMED for the same reason as the Contacts facet scenario: the original
+    # title carried a poisoned healer entry that replayed a bad selector on
+    # every run. The heal is keyed on the scenario, so the rename retires it.
     When I navigate to "/app/contacts/local-demo-contact/properties"
     Then I should see "Associated Properties"
     And I should see "Contact-Centered Property Relationships"

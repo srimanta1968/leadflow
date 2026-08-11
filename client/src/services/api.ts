@@ -1514,7 +1514,89 @@ export const api = {
 
   goLiveStatus: (signal?: AbortSignal) =>
     request<GoLiveStatus>('/leadflow/go-live/status', { signal }),
+
+  /* ------------------------------------------ sequences and templates */
+
+  sequences: (signal?: AbortSignal) =>
+    request<SequenceList>('/leadflow/sequences', { signal }),
+
+  /** Stops every queued step across every enrollment. The loop breaker. */
+  pauseSequence: (sequenceId: string, reason: string) =>
+    request<{ paused: boolean; queued_steps_cancelled: number }>(
+      `/leadflow/sequences/${encodeURIComponent(sequenceId)}/pause`,
+      { method: 'POST', body: { reason } },
+    ),
+
+  templates: (signal?: AbortSignal) =>
+    request<TemplateList>('/leadflow/templates', { signal }),
 };
+
+/* -------------------------------------------- sequences and templates */
+
+/** The playbook's ten triggers. A sequence enters on exactly one. */
+export type SequenceTrigger =
+  | 'immediate_inbound' | 'after_hours' | 'no_answer' | 'callback_confirmed'
+  | 'demo_booked' | 'two_hour_reminder' | 'no_show' | 'decision_checkout'
+  | 'closed_won' | 'breakup';
+
+export interface SequenceStep {
+  step_id: string;
+  order: number;
+  channel: string;
+  delay: string;
+  purpose: string;
+  template_ref: string | null;
+  /** The gate verdict for THIS step, evaluated before it may be enabled. */
+  gate: { verdict: 'allow' | 'review' | 'deny'; reason: string } | null;
+}
+
+export interface SequenceSummary {
+  sequence_id: string;
+  name: string;
+  trigger: SequenceTrigger | null;
+  status: string | null;
+  steps: SequenceStep[];
+  /** Non-null when the whole sequence is stopped, with the reason. */
+  paused: { at: string | null; reason: string; by: string | null } | null;
+  active_enrollments: number | null;
+  /**
+   * Enrollments halted by an inbound reply. The SOP's rule states this twice,
+   * so it is a first-class field rather than something to read out of a log.
+   */
+  reply_paused: { contact: string; replied_at: string | null; task_ref: string | null }[];
+  /** Cancelled by STOP, unsubscribe, complaint, bad number or do-not-contact. */
+  suppressed: { contact: string; reason: string; cancelled_steps: number }[];
+}
+
+export interface SequenceList {
+  sequences: SequenceSummary[];
+  upstream_available: { workflow: boolean; campaign: boolean; decision: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
+
+export interface TemplateRow {
+  template_id: string;
+  trigger: SequenceTrigger | null;
+  channel: string;
+  /** The approved wording. Never edited in place — see `version`. */
+  body: string;
+  merge_fields: string[];
+  /** The ONE thing this message asks for. Two is the defect. */
+  intended_action: string | null;
+  version: number | null;
+  status: 'draft' | 'published' | null;
+  /** Required on channels that mandate one; absent means it cannot publish. */
+  opt_out_affordance: string | null;
+  gate: { verdict: 'allow' | 'review' | 'deny'; reason: string } | null;
+}
+
+export interface TemplateList {
+  templates: TemplateRow[];
+  /** Who owns the final rules, stated rather than implied. */
+  gate_owner: string;
+  upstream_available: { content: boolean; notification: boolean; decision: boolean };
+  field_gaps: { field: string; reason: string }[];
+}
 
 /* ------------------------------------------------------ contacts workspace */
 

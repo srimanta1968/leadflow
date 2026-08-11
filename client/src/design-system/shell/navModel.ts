@@ -94,7 +94,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Routing simulation', to: '/app/routing-simulation', action: 'routing.configure' },
       { label: 'Coverage', to: '/app/coverage', action: 'sla.configure' },
       { label: 'SLA targets', to: '/app/sla', action: 'sla.configure', count: 'captureSlaRisk' },
-      { label: 'Sequences', to: '/app/sequences', action: 'automation.publish', planned: true },
+      { label: 'Sequences', to: '/app/sequences', action: 'automation.publish' },
+      { label: 'Message templates', to: '/app/templates', action: 'message.publish_template' },
       { label: 'Calendar', to: '/app/calendar', action: 'meeting.book' },
       { label: 'Offers', to: '/app/offers', action: 'offer.change_terms' },
       { label: 'Onboarding handoff', to: '/app/handoffs', action: 'handoff.accept' },
@@ -159,4 +160,6 @@ export const SCREEN_SUBTITLE: Record<string, string> = {
   '/app/workflow-runs': 'Runs & release gate — per-step state and the twelve tests',
   '/app/incidents': 'Incidents — severity-ordered, with a verification step to close',
   '/app/governance': 'Governance — post-mortems, certification and go-live',
+  '/app/sequences': 'Sequences — automated follow-up that stops when a human replies',
+  '/app/templates': 'Message templates — the approved library and the SMS gate',
 };
