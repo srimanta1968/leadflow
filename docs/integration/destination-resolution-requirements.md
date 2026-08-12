@@ -69,8 +69,16 @@ shaped like this:
 { tenant_id, recipients: [repUserId], channels: ['in_app','email'], template: 'calendar_synthetic_failure' }
 ```
 
-We pass a subject or persona reference, a template code and a channel list. We
-have never passed a `to:` address, and no LeadFlow screen or worker asks for one.
+We pass a subject or persona reference, a template code and a channel list.
+
+> **Correction (see `destination-resolution-reply-2.md` §0).** An earlier version
+> of this line claimed we have *never* passed a `to:` address. That is wrong.
+> `SlaAlertService` passes `recipient: { user_id, email }`, where the email is
+> joined from LeadFlow's own `users` table. For *colleagues* we already hold the
+> address. The conclusion below is unaffected — no bulk `identity.alias` decrypt,
+> no resolver returning addresses — but the reason is that we already have
+> internal addresses, not that we never handle any.
+
 If `sdk-notification` resolves the destination internally, then:
 
 - no address crosses the boundary,
