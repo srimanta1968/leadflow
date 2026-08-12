@@ -1879,7 +1879,9 @@ export interface ContactList {
     trust_states: string[];
     origins: string[];
     channel_states: string[];
+    /* IDs — the filter matches on these. `owner_names` carries the label. */
     owners: string[];
+    owner_names?: Record<string, string>;
   };
   upstream_available: { search: boolean; crm: boolean; source_record: boolean };
   field_gaps: { field: string; reason: string }[];

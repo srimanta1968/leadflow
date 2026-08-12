@@ -50,6 +50,24 @@ export interface ContactRow {
   owner: string | null; updated_at: string | null;
 }
 
+/**
+ * The facet options the list offers.
+ *
+ * `owners` holds IDs because that is what the filter matches on; `owner_names`
+ * maps each to a label. Two separate fields rather than one list of pairs, so
+ * the other four facets keep the plain string[] shape the client already
+ * renders — and so a filter can never accidentally be keyed on a display name,
+ * which stops being unique the moment two colleagues share one.
+ */
+export interface ContactListFacets {
+  entity_types: string[];
+  trust_states: string[];
+  origins: string[];
+  channel_states: string[];
+  owners: string[];
+  owner_names: Record<string, string>;
+}
+
 const initialsOf = (name: string | null): string => {
   if (!name) return '??';
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -68,7 +86,7 @@ const initialsOf = (name: string | null): string => {
 export async function listContacts(filters: {
   entity_type?: string; trust_state?: string; origin?: string;
   channel_state?: string; owner?: string; q?: string;
-}): Promise<{ rows: ContactRow[]; total: number; facets: Record<string, string[]> }> {
+}): Promise<{ rows: ContactRow[]; total: number; facets: ContactListFacets }> {
   const where: string[] = ['1=1'];
   const params: unknown[] = [];
   const add = (clause: string, value: unknown): void => {
@@ -82,12 +100,20 @@ export async function listContacts(filters: {
 
   const rows = await dataService.query<{
     id: string; name: string | null; email: string | null; source: string | null;
-    stage: string | null; owner_user_id: string | null; updated_at: string | null;
+    stage: string | null; owner_user_id: string | null; owner_name: string | null;
+    updated_at: string | null;
     canonical_email: string | null; canonical_phone: string | null;
   }>(
+    // The owner's NAME, joined. The column is here so a rep can see who to
+    // chase; an id answers a question nobody asked.
     `SELECT l.id, l.name, l.email, l.source, l.stage, l.owner_user_id::text AS owner_user_id,
+            COALESCE(
+              NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+              u.email
+            ) AS owner_name,
             l.updated_at, l.canonical_email, l.canonical_phone
        FROM leads l
+       LEFT JOIN users u ON u.id = l.owner_user_id
       WHERE ${where.join(' AND ')}
       ORDER BY l.updated_at DESC NULLS LAST
       LIMIT 200`,
@@ -98,9 +124,19 @@ export async function listContacts(filters: {
     `SELECT COUNT(*)::text AS v FROM leads l WHERE ${where.join(' AND ')}`, params
   );
 
-  const facetRows = await dataService.query<{ origin: string; owner: string | null; stage: string | null }>(
-    `SELECT DISTINCT COALESCE(source,'unknown') AS origin, owner_user_id::text AS owner, stage
-       FROM leads LIMIT 500`
+  const facetRows = await dataService.query<{
+    origin: string; owner: string | null; owner_name: string | null; stage: string | null;
+  }>(
+    `SELECT DISTINCT COALESCE(l.source,'unknown') AS origin,
+            l.owner_user_id::text AS owner,
+            COALESCE(
+              NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+              u.email
+            ) AS owner_name,
+            l.stage
+       FROM leads l
+       LEFT JOIN users u ON u.id = l.owner_user_id
+      LIMIT 500`
   );
 
   return {
@@ -119,7 +155,7 @@ export async function listContacts(filters: {
       origin: r.source ?? 'unknown',
       channel_state: null,
       channel_reason: null,
-      owner: r.owner_user_id,
+      owner: r.owner_name,
       updated_at: r.updated_at,
     })),
     total: Number(total[0]?.v ?? 0),
@@ -128,7 +164,15 @@ export async function listContacts(filters: {
       trust_states: ['P0', 'P1', 'P2', 'P3', 'P4'],
       origins: [...new Set(facetRows.map((f) => f.origin))].filter(Boolean),
       channel_states: ['eligible', 'review', 'suppressed'],
+      /* The ID remains the option VALUE, because that is what the filter matches
+         on — a label cannot be a filter key without breaking the moment two
+         people share a name. `owner_names` carries the label separately. */
       owners: [...new Set(facetRows.map((f) => f.owner).filter((o): o is string => o !== null))],
+      owner_names: Object.fromEntries(
+        facetRows
+          .filter((f): f is typeof f & { owner: string } => f.owner !== null)
+          .map((f) => [f.owner, f.owner_name ?? f.owner])
+      ),
     },
   };
 }

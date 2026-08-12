@@ -168,6 +168,32 @@ publish_client() {
   sudo mkdir -p "$staging"
   sudo chown "$(id -un):$(id -gn)" "$staging"
   docker cp "$cid:/app/client-dist/." "$staging/"
+
+  # STAMP THE NEW BUILD BEFORE ANYTHING IS PRUNED BY AGE. docker cp preserves
+  # the image's timestamps, and a CACHED build layer carries the mtime of the
+  # build that first produced it — which can be weeks old. Without this the
+  # prune below would delete the bundle it just published.
+  find "$staging" -type f -exec touch {} +
+
+  # CARRY THE PREVIOUS BUILD'S CHUNKS FORWARD. The client is code-split and
+  # lazy-loads a chunk per route, so a browser that loaded index.html BEFORE a
+  # deploy still asks for the old hashed filenames after it. Replacing the web
+  # root wholesale 404s those requests, and React surfaces it as
+  # "Failed to fetch dynamically imported module" — the whole screen dies for
+  # anyone who had the app open, which is precisely the people using it.
+  #
+  # Filenames are content-hashed, so carrying old files forward cannot collide
+  # with new ones: -n never clobbers, and -p keeps the original mtime so the
+  # age-based prune below can retire them.
+  if [ -d "$WEB_ROOT/assets" ]; then
+    sudo cp -rnp "$WEB_ROOT/assets/." "$staging/assets/" 2>/dev/null || true
+    sudo chown -R "$(id -un):$(id -gn)" "$staging"
+  fi
+
+  # Bounded, or every deploy would accumulate the last one forever. A week is
+  # far longer than any open tab survives, and only ever removes files no
+  # current index.html references.
+  find "$staging/assets" -type f -mtime +7 -delete 2>/dev/null || true
   docker rm -v "$cid" >/dev/null
   sudo rm -rf "${WEB_ROOT}.old"
   [ -d "$WEB_ROOT" ] && sudo mv "$WEB_ROOT" "${WEB_ROOT}.old"

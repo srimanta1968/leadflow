@@ -136,12 +136,23 @@ routingWorkspaceRoutes.post(
 routingWorkspaceRoutes.get(
   '/fair-share-audit',
   asyncHandler(async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const rows = await dataService.query<{ owner: string | null; assigned: string; worked: string }>(
-      `SELECT owner_user_id::text AS owner, COUNT(*)::text AS assigned,
-              COUNT(first_response_at)::text AS worked
-         FROM leads
-        WHERE created_at >= now() - interval '30 days' AND owner_user_id IS NOT NULL
-        GROUP BY owner_user_id ORDER BY COUNT(*) DESC`
+    const rows = await dataService.query<{
+      owner: string | null; owner_name: string | null; assigned: string; worked: string;
+    }>(
+      // Grouped by the id, LABELLED by the name. "Who is being starved" is a
+      // question about people, and an answer listing UUIDs cannot be acted on.
+      `SELECT l.owner_user_id::text AS owner,
+              COALESCE(
+                NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+                u.email
+              ) AS owner_name,
+              COUNT(*)::text AS assigned,
+              COUNT(l.first_response_at)::text AS worked
+         FROM leads l
+         LEFT JOIN users u ON u.id = l.owner_user_id
+        WHERE l.created_at >= now() - interval '30 days' AND l.owner_user_id IS NOT NULL
+        GROUP BY l.owner_user_id, u.first_name, u.last_name, u.email
+        ORDER BY COUNT(*) DESC`
     );
     const counts = rows.map((r) => Number(r.assigned));
     const total = counts.reduce((s, n) => s + n, 0);
@@ -153,7 +164,7 @@ routingWorkspaceRoutes.get(
       data: {
         window_days: 30,
         distribution: rows.map((r) => ({
-          owner: r.owner, assigned: Number(r.assigned), worked: Number(r.worked),
+          owner: r.owner_name ?? r.owner, owner_user_id: r.owner, assigned: Number(r.assigned), worked: Number(r.worked),
           share: total === 0 ? 0 : Number((Number(r.assigned) / total).toFixed(4)),
         })),
         mean_per_rep: Number(mean.toFixed(2)),
@@ -161,7 +172,7 @@ routingWorkspaceRoutes.get(
         /* STARVATION IS REPORTED SEPARATELY FROM SKEW. A rep receiving far less
            than the mean is a different problem from the pool being uneven: the
            first is somebody with no pipeline, the second is a tuning question. */
-        starved: rows.filter((r) => Number(r.assigned) < mean * 0.5).map((r) => r.owner),
+        starved: rows.filter((r) => Number(r.assigned) < mean * 0.5).map((r) => r.owner_name ?? r.owner),
         note: 'Reps with zero assignments do not appear in this window at all — they have no rows to group by. The coverage console is where an entirely idle rep shows up.',
       },
     });
@@ -348,18 +359,31 @@ nextActionRoutes.get(
   '/overdue',
   asyncHandler(async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
     const overdue = await dataService.query<Record<string, unknown>>(
-      `SELECT id AS lead_id, name, stage, owner_user_id::text AS owner, next_action, next_due_at,
-              FLOOR(EXTRACT(EPOCH FROM (now() - next_due_at))/3600)::int AS hours_overdue
-         FROM leads
-        WHERE next_due_at IS NOT NULL AND next_due_at < now()
-          AND (stage IS NULL OR stage NOT IN ('closed_won','closed_lost'))
-        ORDER BY next_due_at ASC LIMIT 200`
+      `SELECT l.id AS lead_id, l.name, l.stage,
+              COALESCE(
+                NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+                u.email
+              ) AS owner,
+              l.owner_user_id::text AS owner_user_id, l.next_action, l.next_due_at,
+              FLOOR(EXTRACT(EPOCH FROM (now() - l.next_due_at))/3600)::int AS hours_overdue
+         FROM leads l
+         LEFT JOIN users u ON u.id = l.owner_user_id
+        WHERE l.next_due_at IS NOT NULL AND l.next_due_at < now()
+          AND (l.stage IS NULL OR l.stage NOT IN ('closed_won','closed_lost'))
+        ORDER BY l.next_due_at ASC LIMIT 200`
     );
     const missing = await dataService.query<Record<string, unknown>>(
-      `SELECT id AS lead_id, name, stage, owner_user_id::text AS owner, updated_at
-         FROM leads
-        WHERE next_due_at IS NULL AND (stage IS NULL OR stage NOT IN ('closed_won','closed_lost'))
-        ORDER BY updated_at ASC LIMIT 200`
+      `SELECT l.id AS lead_id, l.name, l.stage,
+              COALESCE(
+                NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+                u.email
+              ) AS owner,
+              l.owner_user_id::text AS owner_user_id, l.updated_at
+         FROM leads l
+         LEFT JOIN users u ON u.id = l.owner_user_id
+        WHERE l.next_due_at IS NULL
+          AND (l.stage IS NULL OR l.stage NOT IN ('closed_won','closed_lost'))
+        ORDER BY l.updated_at ASC LIMIT 200`
     );
 
     res.status(200).json({
