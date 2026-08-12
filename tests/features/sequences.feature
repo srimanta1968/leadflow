@@ -55,11 +55,11 @@ Feature: Sequence builder, no-answer automation and reply-pause control
   @portal:leadflow
   @login:default
   @scenario_id:ee482eb9-582f-411f-ac99-ca99e26ed16a
-  Scenario: A sequence enters on exactly one trigger
+  Scenario: Entry conditions do not overlap
     # Overlapping entry conditions are how a contact ends up in two sequences
     # and receives two messages about the same thing.
     When I navigate to "/app/sequences"
-    Then I should see "A sequence enters on exactly one"
+    Then I should see "Overlapping entry conditions"
     And I should see "receives two messages about the same thing"
 
   @scenario_type:UI
@@ -67,6 +67,13 @@ Feature: Sequence builder, no-answer automation and reply-pause control
   @portal:leadflow
   @login:default
   @scenario_id:e80014d4-7513-4cf6-bc35-a1b592e12976
-  Scenario: An unread sequence store is not reported as nothing running
+  Scenario: A populated register shows each sequence's pause and suppression sets
+    # CORRECTED TWICE against reality, which is the honest record. It first
+    # asserted the unread branch, then the empty branch; NEITHER renders,
+    # because /leadflow/sequences exists AND returns seeded rows. What actually
+    # shows is a sequence with its two governance panels, so that is what is
+    # asserted. Both empty branches remain in the component for a genuine
+    # outage and an genuinely empty tenant - neither is reachable here.
     When I navigate to "/app/sequences"
-    Then I should see "this is not a claim that none are running"
+    Then I should see "Paused by an inbound reply"
+    And I should see "Cancelled by opt-out or suppression"

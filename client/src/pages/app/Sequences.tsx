@@ -146,8 +146,8 @@ export default function Sequences() {
 
           {/* --------------------------------------------------- the steps */}
           <ol className="mt-3 space-y-2">
-            {sequence.steps.map((step) => (
-              <li key={step.step_id} className="lf-card p-3">
+            {(sequence.steps ?? []).map((step) => (
+              <li key={step.step_id ?? `step-${step.order}`} className="lf-card p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-sm text-text">
                     {step.order}. {step.channel} after {step.delay}
@@ -172,7 +172,7 @@ export default function Sequences() {
                 </p>
               </li>
             ))}
-            {sequence.steps.length === 0 && (
+            {(sequence.steps ?? []).length === 0 && (
               <li className="text-sm text-muted">This sequence has no steps.</li>
             )}
           </ol>
@@ -185,8 +185,8 @@ export default function Sequences() {
               stopped and the owner holds an urgent task.
             </p>
             <ul className="mt-2 space-y-1">
-              {sequence.reply_paused.map((entry) => (
-                <li key={entry.contact} className="text-sm">
+              {(sequence.reply_paused ?? []).map((entry, index) => (
+                <li key={entry.contact ?? index} className="text-sm">
                   <span className="text-text">{entry.contact}</span>
                   <span className="text-soft">
                     {' '}
@@ -195,7 +195,7 @@ export default function Sequences() {
                   </span>
                 </li>
               ))}
-              {sequence.reply_paused.length === 0 && (
+              {(sequence.reply_paused ?? []).length === 0 && (
                 <li className="text-sm text-muted">No enrollment is currently reply-paused.</li>
               )}
             </ul>
@@ -206,8 +206,8 @@ export default function Sequences() {
               reaching somebody who asked not to hear from us.
             </p>
             <ul className="mt-2 space-y-1">
-              {sequence.suppressed.map((entry) => (
-                <li key={entry.contact} className="text-sm">
+              {(sequence.suppressed ?? []).map((entry, index) => (
+                <li key={entry.contact ?? index} className="text-sm">
                   <span className="text-text">{entry.contact}</span>
                   <span className="text-soft">
                     {' '}
@@ -215,7 +215,7 @@ export default function Sequences() {
                   </span>
                 </li>
               ))}
-              {sequence.suppressed.length === 0 && (
+              {(sequence.suppressed ?? []).length === 0 && (
                 <li className="text-sm text-muted">No enrollment has been suppressed.</li>
               )}
             </ul>
