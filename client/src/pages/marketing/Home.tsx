@@ -175,6 +175,76 @@ export default function Home() {
         </div>
       </Section>
 
+      {/* Customer story ---------------------------------------------------
+          Placed immediately before the closing CTA: the reader has seen the
+          mechanism and the capabilities, and this is the evidence that a real
+          business runs on it — read last, just before being asked to act.
+
+          THE "50%+" FIGURE IS THE CUSTOMER'S OWN AND STAYS INSIDE THE QUOTE.
+          It describes how fast LeadFlow was BUILT on ProjexCloud, which is a
+          claim about the build process, not about LeadFlow's runtime speed. It
+          is not restated in our voice anywhere, because we have not measured it
+          independently and a customer's number repeated as our own becomes a
+          benchmark we would then have to defend. */}
+      <Section
+        id="customer-story"
+        tone="raised"
+        eyebrow="Customer story"
+        title="A roofing business, live on LeadFlow"
+        lede="LynkedUp Pro runs inbound call capture, qualification and routing to the right sales representative on LeadFlow."
+      >
+        <figure className="mx-auto max-w-3xl">
+          <blockquote className="space-y-5 border-l-2 border-blue pl-6 text-base leading-relaxed text-muted sm:pl-8">
+            <p>
+              &ldquo;LeadFlow has completely changed the way we handle inbound customer calls. As a
+              roofing and residential construction business, every call can represent a real
+              opportunity&nbsp;— and making sure the right sales representative gets the right
+              customer information quickly is critical.
+            </p>
+            <p>
+              What impressed me most is how quickly Projexlight built and deployed a solution
+              specifically around our business process. Using ProjexCloud and its SDK, the team was
+              able to develop and test our LeadFlow solution more than 50% faster&nbsp;— even
+              compared with an already AI-powered software development process&nbsp;— without
+              compromising quality.
+            </p>
+            <p>
+              The result is more than just speed. It gives our team tremendous confidence that every
+              customer call is being handled correctly, routed to the right sales representative,
+              and acted on much faster than before. We can respond to customer needs, resolve
+              issues, and move opportunities forward without the delays and manual effort we
+              previously experienced.
+            </p>
+            <p>
+              Projexlight has demonstrated that AI-powered development doesn&rsquo;t have to mean
+              sacrificing quality for speed. With ProjexCloud, we can build highly customized
+              business applications rapidly, validate them continuously, and adapt them as our
+              business evolves.
+            </p>
+            <p>
+              For us, this isn&rsquo;t just a technology upgrade&nbsp;— it gives our business a real
+              competitive advantage. I would strongly recommend Projexlight and ProjexCloud to any
+              company looking to build custom software faster, improve operational efficiency, and
+              deliver a better customer experience.&rdquo;
+            </p>
+          </blockquote>
+          <figcaption className="mt-8 border-t border-line pt-6">
+            <span className="block font-cond text-base font-bold tracking-tight text-text">
+              Justin Johnson
+            </span>
+            <span className="mt-1 block text-sm text-muted">Founder &amp; CEO, LynkedUp Pro</span>
+            <a
+              className="mt-5 inline-block text-sm font-semibold text-blue hover:underline"
+              href="https://cloud.projexlight.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              LeadFlow is built on ProjexCloud →
+            </a>
+          </figcaption>
+        </figure>
+      </Section>
+
       {/* Closing CTA ----------------------------------------------------- */}
       <section className="border-t border-line bg-bg py-20 sm:py-24">
         <div className="lf-container grid items-center gap-12 lg:grid-cols-[1fr_0.85fr]">
