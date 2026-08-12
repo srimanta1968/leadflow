@@ -113,7 +113,7 @@ export default function Inbox() {
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
         {FILTERS.map((option) => {
-          const count = data?.filters.find((f) => f.key === option.key)?.count;
+          const count = data?.filters?.find((f) => f.key === option.key)?.count;
           return (
             <button
               key={option.key}

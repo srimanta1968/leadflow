@@ -102,7 +102,7 @@ export default function LeadershipDashboard() {
       {/* ---------------------------------------------------- nine tiles */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {SIGNALS.map((signal) => {
-          const live = data?.signals.find((s) => s.key === signal.key);
+          const live = data?.signals?.find((s) => s.key === signal.key);
           return (
             <Link
               key={signal.key}

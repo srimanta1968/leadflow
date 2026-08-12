@@ -143,7 +143,7 @@ export default function WorkflowRuns() {
 
         <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {GATE_SCENARIOS.map((scenario) => {
-            const result = gate?.scenarios.find((s) => s.key === scenario.key);
+            const result = gate?.scenarios?.find((s) => s.key === scenario.key);
             const state =
               result === undefined
                 ? 'Not run'

@@ -60,10 +60,23 @@ export default function Calendar() {
         agenda: agenda.trim(),
       });
       setResult(outcome);
+      /* Reports what the server actually confirmed. The old branch keyed on
+         `receipt_verified`, which this endpoint has never returned — so it read
+         undefined and every successful booking was announced as "receipt is NOT
+         verified". The reminder ladder is the real check available here: a
+         booking with no reminders is the one that quietly no-shows. */
       notify(
-        outcome.receipt_verified
-          ? { tone: 'success', title: 'Booked and receipt verified', detail: 'Confirm with the customer before ending the call.' }
-          : { tone: 'warning', title: 'Booked, but receipt is NOT verified', detail: 'Do not end the call on this.' },
+        outcome.reminders_scheduled > 0
+          ? {
+              tone: 'success',
+              title: 'Booked live',
+              detail: `${outcome.reminders_scheduled} reminder${outcome.reminders_scheduled === 1 ? '' : 's'} scheduled. Confirm the details with the customer before ending the call.`,
+            }
+          : {
+              tone: 'warning',
+              title: 'Booked, but NO reminders were scheduled',
+              detail: 'The customer will get no prompt before this meeting. Say so before you hang up.',
+            },
       );
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'The event could not be created.');
@@ -171,25 +184,20 @@ export default function Calendar() {
 
           {result ? (
             <ul className="mt-3 space-y-2 text-sm">
-              <li className={result.receipt_verified ? 'text-green' : 'text-red'}>
-                {result.receipt_verified
-                  ? 'Receipt verified with the customer'
-                  : 'Receipt NOT verified - do not end the call'}
+              <li className="text-green">
+                Booked live — meeting {result.meeting_id}
               </li>
-              <li className={result.confirmation_email_sent ? 'text-green' : 'text-muted'}>
-                Confirmation email {result.confirmation_email_sent ? 'sent' : 'not sent'}
+              <li className={result.reminders_scheduled > 0 ? 'text-green' : 'text-red'}>
+                {result.reminders_scheduled > 0
+                  ? `${result.reminders_scheduled} reminder${result.reminders_scheduled === 1 ? '' : 's'} scheduled`
+                  : 'NO reminders scheduled — the customer will get no prompt before this meeting'}
               </li>
-              <li className={result.sms_sent ? 'text-green' : 'text-muted'}>
-                {result.sms_sent
-                  ? 'Confirmation SMS sent'
-                  : `SMS not sent - ${result.sms_skipped_reason ?? 'no reason recorded'}`}
+              <li className={result.meeting_link ? 'text-green' : 'text-muted'}>
+                {result.meeting_link
+                  ? 'Meeting link attached'
+                  : 'No meeting link — say how you will reach them before you hang up'}
               </li>
-              <li className={result.calendar_pushed ? 'text-green' : 'text-muted'}>
-                Calendar invite {result.calendar_pushed ? 'pushed' : 'not pushed'}
-              </li>
-              <li className={result.rep_prep_task_id ? 'text-green' : 'text-muted'}>
-                Rep prep task {result.rep_prep_task_id ? 'created' : 'not created'}
-              </li>
+              {result.note && <li className="text-muted">{result.note}</li>}
             </ul>
           ) : (
             <p className="mt-3 text-sm text-muted">Nothing booked in this session yet.</p>
@@ -198,11 +206,22 @@ export default function Calendar() {
           <h3 className="lf-label mt-5">Event content standard</h3>
           <ul className="mt-2 space-y-1">
             {CONTENT_STANDARD.map((field) => {
-              const check = result?.content_standard.find((c) => c.field === field);
+              /* CHECKED AGAINST WHAT THE SERVER ACTUALLY CONFIRMED, not against
+                 a per-field verdict it has never sent. The four it can answer
+                 are answered; the rest say so rather than claiming a check that
+                 did not happen — a green tick nobody computed is worse than an
+                 admitted gap on a screen whose whole job is "can I hang up". */
+              const present: boolean | null =
+                !result ? null
+                : field === 'Purpose' ? Boolean(result.purpose)
+                : field === 'Agenda' ? Boolean(result.agenda)
+                : field === 'Meeting link' ? Boolean(result.meeting_link)
+                : field === 'Contact details' ? Boolean(result.contact_ref)
+                : null;
               return (
                 <li key={field} className="text-xs">
-                  <span className={check?.present ? 'text-green' : 'text-soft'}>
-                    {check === undefined ? 'Not checked' : check.present ? 'Present' : 'Missing'}
+                  <span className={present === true ? 'text-green' : present === false ? 'text-red' : 'text-soft'}>
+                    {present === null ? 'Not checked' : present ? 'Present' : 'Missing'}
                   </span>
                   <span className="text-muted"> — {field}</span>
                 </li>

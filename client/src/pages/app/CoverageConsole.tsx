@@ -222,7 +222,7 @@ export default function CoverageConsole() {
           </button>
 
           <p className="mt-2 text-xs text-soft">
-            {data?.opening_validation.recorded_at
+            {data?.opening_validation?.recorded_at
               ? `Last recorded ${data.opening_validation.recorded_at}`
               : 'Not recorded today.'}
           </p>
@@ -237,12 +237,12 @@ export default function CoverageConsole() {
           </p>
 
           <ul className="mt-3 space-y-1">
-            {(data?.late_coverage.roster ?? []).map((person) => (
+            {(data?.late_coverage?.roster ?? []).map((person) => (
               <li key={person} className="text-sm text-text">
                 {person}
               </li>
             ))}
-            {!loading && (data?.late_coverage.roster ?? []).length === 0 && (
+            {!loading && (data?.late_coverage?.roster ?? []).length === 0 && (
               <li className="text-sm text-red">
                 Nobody is rostered for late coverage, so a 4:59pm lead has no named owner.
               </li>
@@ -250,7 +250,7 @@ export default function CoverageConsole() {
           </ul>
 
           <p className="mt-3 text-xs text-soft">
-            {data?.late_coverage.note ?? 'Enforced to 5:30pm.'}
+            {data?.late_coverage?.note ?? 'Enforced to 5:30pm.'}
           </p>
         </section>
       </div>

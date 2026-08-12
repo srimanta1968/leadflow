@@ -186,7 +186,7 @@ export default function RoutingConfiguration() {
           </p>
           <ul className="mt-3 space-y-2">
             {SPECIALTY_DIMENSIONS.map((dimension) => {
-              const configured = config?.specialty_matchers.find((m) => m.dimension === dimension);
+              const configured = config?.specialty_matchers?.find((m) => m.dimension === dimension);
               return (
                 <li key={dimension} className="flex items-baseline justify-between gap-3 text-sm">
                   <span className="text-text">{dimension}</span>

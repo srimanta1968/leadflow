@@ -259,7 +259,7 @@ export default function Governance() {
 
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {STATIONS.map((station) => {
-            const live = certification?.stations.find((s) => s.key === station.key);
+            const live = certification?.stations?.find((s) => s.key === station.key);
             return (
               <li key={station.key} className="lf-card p-3">
                 <div className="flex items-baseline justify-between gap-2">
@@ -283,15 +283,15 @@ export default function Governance() {
         {/* The gate, in the words that matter to a manager. */}
         <p
           className={`mt-4 rounded border px-3 py-2 text-sm ${
-            certification?.gate.passed
+            certification?.gate?.passed
               ? 'border-green/40 bg-green/10 text-green'
               : 'border-gold/40 bg-gold/10 text-gold'
           }`}
         >
-          {certification?.gate.passed
+          {certification?.gate?.passed
             ? 'Certification gate passed. This rep may receive live P0 and P1 leads.'
             : `Certification gate not passed. This rep receives no live P0 or P1 leads. ${
-                certification?.gate.reason ?? 'The certification record could not be read.'
+                certification?.gate?.reason ?? 'The certification record could not be read.'
               }`}
         </p>
       </section>
@@ -302,7 +302,7 @@ export default function Governance() {
         <h3 className="lf-eyebrow">Gates</h3>
         <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 12 }, (_, index) => {
-            const live = goLive?.gates[index];
+            const live = goLive?.gates?.[index];
             return (
               <li key={index} className="lf-card p-3">
                 <p className="text-sm text-text">{live?.label ?? `Gate ${index + 1}`}</p>
@@ -321,7 +321,7 @@ export default function Governance() {
         <h3 className="lf-eyebrow mt-5">Signatures</h3>
         <ul className="mt-3 space-y-2">
           {SIGNATURES.map((role) => {
-            const live = goLive?.signatures.find((s) => s.role === role);
+            const live = goLive?.signatures?.find((s) => s.role === role);
             return (
               <li key={role} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                 <span className="text-text">{role}</span>

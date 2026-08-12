@@ -94,7 +94,7 @@ export default function DataReview() {
     void load(risk, family);
   }, [risk, family, load]);
 
-  const ownerGap = data?.field_gaps.find((gap) => gap.field === 'owner');
+  const ownerGap = data?.field_gaps?.find((gap) => gap.field === 'owner');
 
   return (
     <div className="mx-auto max-w-6xl">

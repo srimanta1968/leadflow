@@ -231,7 +231,7 @@ function ReversalModal({
           <div className="rounded-lg border border-gold/40 bg-gold/10 p-3">
             <p className="text-xs font-semibold text-gold">What could not be counted</p>
             <ul className="mt-1 space-y-1">
-              {preview?.field_gaps.map((gap) => (
+              {preview?.field_gaps?.map((gap) => (
                 <li key={gap.field} className="text-xs text-muted">
                   {gap.field} - {gap.reason}
                 </li>

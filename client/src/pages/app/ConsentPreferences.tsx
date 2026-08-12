@@ -129,7 +129,7 @@ export default function ConsentPreferences() {
           <option value={30}>30 days</option>
           <option value={90}>90 days</option>
         </select>
-        {data?.register.truncated && (
+        {data?.register?.truncated && (
           <span className={`rounded-full border px-3 py-1 text-sm ${chipClass('warning')}`}>
             Showing the first {data.register.limit} receipts of an unknown total
           </span>
@@ -184,7 +184,7 @@ export default function ConsentPreferences() {
         {!loading && (data?.receipts ?? []).length === 0 && (
           <p className="text-soft py-6">
             No receipts to show —{' '}
-            {data?.upstream_available.receipts === false
+            {data?.upstream_available?.receipts === false
               ? 'could not reach the consent service, so the register is unavailable rather than empty.'
               : 'no consent has been captured for this tenant yet.'}
           </p>
@@ -213,7 +213,7 @@ export default function ConsentPreferences() {
         <h2 className="mb-2 font-semibold">Purpose Taxonomy</h2>
         {(data?.purposes ?? []).length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {data?.purposes.map((p) => (
+            {data?.purposes?.map((p) => (
               <span key={p} className={`rounded-full border px-3 py-1 text-sm ${chipClass('identity')}`}>
                 {p}
               </span>

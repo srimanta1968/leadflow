@@ -2429,16 +2429,30 @@ export interface UnifiedInbox {
 
 /* ----------------------------------------------------------- meetings */
 
+/**
+ * What POST /meetings/book-live actually returns.
+ *
+ * REWRITTEN AGAINST THE HANDLER AND THE api_definition, which capture
+ * `data.meeting_id`. The previous declaration described a different response
+ * entirely — appointment_id, receipt_verified, confirmation_email_sent,
+ * sms_sent, calendar_pushed, rep_prep_task_id, content_standard — and the
+ * server has never sent any of them. Every field read undefined, so the panel
+ * reported a successful booking as a failed one and then died on
+ * `content_standard.find`. A type that describes a response nobody sends is
+ * worse than no type: it type-checks, so nothing catches it until a screen
+ * crashes in production.
+ */
 export interface BookLiveResult {
-  appointment_id: string | null;
-  /** Verified INSIDE the call, before the rep hangs up. */
-  receipt_verified: boolean;
-  confirmation_email_sent: boolean;
-  sms_sent: boolean | null;
-  sms_skipped_reason: string | null;
-  calendar_pushed: boolean;
-  rep_prep_task_id: string | null;
-  content_standard: { field: string; present: boolean }[];
+  meeting_id: string;
+  contact_ref: string;
+  starts_at: string;
+  purpose: string;
+  agenda: string;
+  meeting_link: string | null;
+  /** How many rungs of the reminder ladder were scheduled. */
+  reminders_scheduled: number;
+  booked_live: boolean;
+  note: string | null;
 }
 
 /* ------------------------------------------------------------- offers */

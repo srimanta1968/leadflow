@@ -100,7 +100,7 @@ export default function Incidents() {
             and nobody sees the pattern because no one person handled them all.
           </p>
           <ul className="mt-3 space-y-2">
-            {data?.systemic_patterns.map((pattern) => (
+            {data?.systemic_patterns?.map((pattern) => (
               <li key={pattern.type} className="text-sm">
                 <p className="text-text">
                   {pattern.type} · {pattern.occurrences} occurrences
@@ -191,7 +191,7 @@ export default function Incidents() {
         </p>
         <ul className="mt-3 space-y-2">
           {ON_CALL_ROUTING.map((route) => {
-            const live = data?.on_call.find((o) => o.incident_type === route.type);
+            const live = data?.on_call?.find((o) => o.incident_type === route.type);
             return (
               <li key={route.type} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                 <span className="text-text">{route.type}</span>

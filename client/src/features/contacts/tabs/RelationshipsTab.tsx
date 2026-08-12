@@ -240,7 +240,7 @@ export default function RelationshipsTab() {
 
         {view === 'graph' ? (
           <RelationshipCanvas
-            centerLabel={data?.nodes.find((n) => n.node_id === data.center_id)?.label ?? 'This person'}
+            centerLabel={data?.nodes?.find((n) => n.node_id === data.center_id)?.label ?? 'This person'}
             rows={rows}
             nodesById={nodesById}
             loading={loading}

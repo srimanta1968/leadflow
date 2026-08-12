@@ -139,7 +139,7 @@ export default function Pipeline() {
 
         {(overdue?.repeated_pushers ?? []).length > 0 && (
           <p className="mt-3 text-xs text-gold">
-            {overdue?.repeated_pushers.length} records have had their due date pushed repeatedly
+            {overdue?.repeated_pushers?.length} records have had their due date pushed repeatedly
             and are surfaced on the manager dashboard.
           </p>
         )}
@@ -265,7 +265,7 @@ function MoveModal({
   const [target, setTarget] = useState('');
   const { notify } = useToast();
 
-  const criteria = move?.from.exit_criteria ?? [];
+  const criteria = move?.from?.exit_criteria ?? [];
   // With no evidence model reachable, the honest position is that the criteria
   // are UNVERIFIED rather than met. The gate therefore refuses and says so,
   // which is the correct failure direction for a governed transition.
@@ -315,7 +315,7 @@ function MoveModal({
           >
             <option value="">Choose a stage</option>
             {stages
-              .filter((stage) => stage.key !== move?.from.key)
+              .filter((stage) => stage.key !== move?.from?.key)
               .map((stage) => (
                 <option key={stage.key} value={stage.key}>
                   {stage.label}

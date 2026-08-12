@@ -180,12 +180,21 @@ export default function Home() {
           mechanism and the capabilities, and this is the evidence that a real
           business runs on it — read last, just before being asked to act.
 
-          THE "50%+" FIGURE IS THE CUSTOMER'S OWN AND STAYS INSIDE THE QUOTE.
-          It describes how fast LeadFlow was BUILT on ProjexCloud, which is a
-          claim about the build process, not about LeadFlow's runtime speed. It
-          is not restated in our voice anywhere, because we have not measured it
-          independently and a customer's number repeated as our own becomes a
-          benchmark we would then have to defend. */}
+          THE "50%+" FIGURE IS MEASURED, and it stays inside the quote for a
+          different reason than being unverified: attribution is what makes a
+          number like this land with a reader.
+
+          It describes how fast LeadFlow was BUILT on ProjexCloud — a claim about
+          the build, not about LeadFlow's runtime speed. On a PRODUCT page those
+          two are easy to conflate, which is the specific reason not to lift it
+          into our own voice here: "50% faster" in our words, on this page, reads
+          as a claim about the software rather than about delivering it.
+
+          The comparison behind it is held internally (a prior ~8-month effort
+          with a team of 10 that missed schedule, versus ~3 months with an
+          effective team of 4). It is not published here — it characterises
+          someone else's failure to deliver, and this page is not the place to
+          litigate it. */}
       <Section
         id="customer-story"
         tone="raised"
@@ -228,20 +237,38 @@ export default function Home() {
               deliver a better customer experience.&rdquo;
             </p>
           </blockquote>
-          <figcaption className="mt-8 border-t border-line pt-6">
-            <span className="block font-cond text-base font-bold tracking-tight text-text">
-              Justin Johnson
-            </span>
-            <span className="mt-1 block text-sm text-muted">Founder &amp; CEO, LynkedUp Pro</span>
+          <figcaption className="mt-8 flex items-center gap-4 border-t border-line pt-6">
+            {/* Portrait only — the name and title stay as real text beside it rather than
+                baked into the image, so they remain selectable, translatable and readable
+                to a screen reader. Lazy because this sits well below the fold. */}
+            <img
+              src="/justin-johnson.jpg"
+              alt="Justin Johnson"
+              width={56}
+              height={56}
+              loading="lazy"
+              decoding="async"
+              className="h-14 w-14 flex-none rounded-full border border-line object-cover [object-position:center_22%]"
+            />
+            <div>
+              <span className="block font-cond text-base font-bold tracking-tight text-text">
+                Justin Johnson
+              </span>
+              <span className="mt-1 block text-sm text-muted">
+                Founder &amp; CEO, LynkedUp Pro
+              </span>
+            </div>
+          </figcaption>
+          <div className="mt-5">
             <a
-              className="mt-5 inline-block text-sm font-semibold text-blue hover:underline"
+              className="inline-block text-sm font-semibold text-blue hover:underline"
               href="https://cloud.projexlight.com"
               target="_blank"
               rel="noopener noreferrer"
             >
               LeadFlow is built on ProjexCloud →
             </a>
-          </figcaption>
+          </div>
         </figure>
       </Section>
 

@@ -152,7 +152,7 @@ export default function RoutingSimulation() {
             { key: 'notifications', label: 'Notifications sent' },
             { key: 'clocks', label: 'SLA clocks started' },
           ].map((counter) => {
-            const count = simulation?.side_effects[counter.key as 'assignments'];
+            const count = simulation?.side_effects?.[counter.key as 'assignments'];
             return (
               <div key={counter.key} className="lf-card p-4">
                 <p className="text-xs text-muted">{counter.label}</p>

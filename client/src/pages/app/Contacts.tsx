@@ -226,13 +226,13 @@ export default function Contacts() {
                 onChange={(event) => setFacet(facet.key, event.target.value)}
               >
                 <option value="all">{facet.allLabel}</option>
-                {(data?.facets[facet.options] ?? []).map((option) => (
+                {(data?.facets?.[facet.options] ?? []).map((option) => (
                   /* The VALUE stays the id the filter matches on; only the
                      label is resolved. A dropdown of UUIDs asks the operator
                      to know which colleague 6920bf2b is. */
                   <option key={option} value={option}>
                     {facet.key === 'owner'
-                      ? (data?.facets.owner_names?.[option] ?? ownerLabel(option))
+                      ? (data?.facets?.owner_names?.[option] ?? ownerLabel(option))
                       : option}
                   </option>
                 ))}

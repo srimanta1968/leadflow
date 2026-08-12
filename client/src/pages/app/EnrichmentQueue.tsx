@@ -87,7 +87,7 @@ export default function EnrichmentQueue() {
   }, [filter, load]);
 
   const kpis = queue?.kpis;
-  const fallbackGap = queue?.metric_gaps.find((gap) => gap.metric === 'provider_fallbacks');
+  const fallbackGap = queue?.metric_gaps?.find((gap) => gap.metric === 'provider_fallbacks');
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -129,16 +129,16 @@ export default function EnrichmentQueue() {
         <section className="lf-card p-4">
           <h2 className="text-sm font-semibold text-text">Awaiting Approval</h2>
           <p className="mt-1 text-2xl font-bold text-text">
-            {figure(kpis?.awaiting_approval.count)}
+            {figure(kpis?.awaiting_approval?.count)}
           </p>
           <p className="text-sm text-muted">
-            {figure(kpis?.awaiting_approval.estimated_credits)} credits estimated
+            {figure(kpis?.awaiting_approval?.estimated_credits)} credits estimated
           </p>
         </section>
 
         <section className="lf-card p-4">
           <h2 className="text-sm font-semibold text-text">Processing</h2>
-          <p className="mt-1 text-2xl font-bold text-text">{figure(kpis?.processing.count)}</p>
+          <p className="mt-1 text-2xl font-bold text-text">{figure(kpis?.processing?.count)}</p>
           {/*
             The gap is PRINTED, not hidden. A blank line here would read as
             "zero fallbacks"; the sentence says the number is deliberately not
@@ -150,35 +150,35 @@ export default function EnrichmentQueue() {
         <section className="lf-card p-4">
           <h2 className="text-sm font-semibold text-text">Completed Today</h2>
           <p className="mt-1 text-2xl font-bold text-text">
-            {figure(kpis?.completed_today.count)}
+            {figure(kpis?.completed_today?.count)}
           </p>
           <p className="text-sm text-muted">
-            {figure(kpis?.completed_today.matched)} successful matches
+            {figure(kpis?.completed_today?.matched)} successful matches
           </p>
         </section>
 
         <section className="lf-card p-4">
           <h2 className="text-sm font-semibold text-text">No Match</h2>
-          <p className="mt-1 text-2xl font-bold text-text">{figure(kpis?.no_match.count)}</p>
-          <p className="text-sm text-muted">{kpis?.no_match.policy ?? 'No-charge policy applied'}</p>
+          <p className="mt-1 text-2xl font-bold text-text">{figure(kpis?.no_match?.count)}</p>
+          <p className="text-sm text-muted">{kpis?.no_match?.policy ?? 'No-charge policy applied'}</p>
         </section>
 
         <section className="lf-card p-4">
           <h2 className="text-sm font-semibold text-text">Cache Reuse</h2>
           {/* AC3 - both figures are computed from the rows, never a counter. */}
-          <p className="mt-1 text-2xl font-bold text-text">{percent(kpis?.cache_reuse.rate ?? null)}</p>
+          <p className="mt-1 text-2xl font-bold text-text">{percent(kpis?.cache_reuse?.rate ?? null)}</p>
           <p className="text-sm text-muted">
-            {figure(kpis?.cache_reuse.credits_saved)} credits saved
+            {figure(kpis?.cache_reuse?.credits_saved)} credits saved
           </p>
         </section>
 
         <section className="lf-card p-4">
           <h2 className="text-sm font-semibold text-text">Budget Remaining</h2>
           <p className="mt-1 text-2xl font-bold text-text">
-            {figure(kpis?.budget_remaining.available)}
+            {figure(kpis?.budget_remaining?.available)}
           </p>
           <p className="text-sm text-muted">
-            {figure(kpis?.budget_remaining.reserved)} reserved
+            {figure(kpis?.budget_remaining?.reserved)} reserved
           </p>
         </section>
       </div>

@@ -18,7 +18,7 @@ import { useContactRecord } from '../ContactRecordContext';
 
 export default function ConsentTab() {
   const { summary } = useContactRecord();
-  const consentNode = summary?.trust_rail.find((node) => node.node === 'CONSENT');
+  const consentNode = summary?.trust_rail?.find((node) => node.node === 'CONSENT');
 
   return (
     <section aria-label="Preferences and Consent" className="lf-panel p-5">

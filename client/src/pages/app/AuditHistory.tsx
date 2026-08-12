@@ -178,23 +178,23 @@ export default function AuditHistory() {
           <dl className="space-y-3">
             <CorrelationRow
               label="Canonical Entity"
-              value={correlation?.canonical_entity.value}
-              note={correlation?.canonical_entity.note ?? 'MDM write kernel'}
+              value={correlation?.canonical_entity?.value}
+              note={correlation?.canonical_entity?.note ?? 'MDM write kernel'}
             />
             <CorrelationRow
               label="Trace / Causation"
-              value={correlation?.trace.value}
-              note={correlation?.trace.note ?? 'Browser to workflow to MDM'}
+              value={correlation?.trace?.value}
+              note={correlation?.trace?.note ?? 'Browser to workflow to MDM'}
             />
             <CorrelationRow
               label="Policy Bundle"
-              value={correlation?.policy_bundle.value}
-              note={correlation?.policy_bundle.note ?? 'Decision references preserved'}
+              value={correlation?.policy_bundle?.value}
+              note={correlation?.policy_bundle?.note ?? 'Decision references preserved'}
             />
             <CorrelationRow
               label="Consent Epoch"
-              value={correlation?.consent_epoch.value}
-              note={correlation?.consent_epoch.note ?? 'Current at latest action'}
+              value={correlation?.consent_epoch?.value}
+              note={correlation?.consent_epoch?.note ?? 'Current at latest action'}
             />
           </dl>
         </section>

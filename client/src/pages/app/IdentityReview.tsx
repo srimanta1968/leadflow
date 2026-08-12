@@ -70,7 +70,7 @@ export default function IdentityReview() {
     return (metric: string) => map.get(metric) ?? 'No upstream metric.';
   }, [data]);
 
-  const slaMinutes = data?.sla.review_minutes ?? 15;
+  const slaMinutes = data?.sla?.review_minutes ?? 15;
   const breached = (data?.cases ?? []).filter((row) => row.sla_breached === true).length;
 
   return (
@@ -86,8 +86,8 @@ export default function IdentityReview() {
 
       {/* The six-tile rail. Three are live; three say plainly that they are not. */}
       <section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <Tile label="Review Cases" caption={`${data?.kpis.review_cases.high_risk ?? 0} high risk`}>
-          {data?.kpis.review_cases.total ?? 0}
+        <Tile label="Review Cases" caption={`${data?.kpis?.review_cases.high_risk ?? 0} high risk`}>
+          {data?.kpis?.review_cases.total ?? 0}
         </Tile>
         <Tile label="Exact Auto-Links" caption="Crosswalk or deterministic exact match">
           <GapValue reason={gapFor('exact_auto_links')} />
@@ -96,13 +96,13 @@ export default function IdentityReview() {
           <GapValue reason={gapFor('kept_separate')} />
         </Tile>
         <Tile label="Retracted Links" caption="Replayed downstream projections">
-          {data?.kpis.retracted_links ?? 0}
+          {data?.kpis?.retracted_links ?? 0}
         </Tile>
         <Tile label="Median Review" caption={`Within ${slaMinutes}-minute SLA`}>
           <GapValue reason={gapFor('median_review_minutes')} />
         </Tile>
         <Tile label="Resolver Calibration" caption="High-risk precision benchmark">
-          {data?.kpis.resolver_calibration
+          {data?.kpis?.resolver_calibration
             ? `ECE ${(data.kpis.resolver_calibration.ece ?? 0).toFixed(3)}`
             : <GapValue reason="EMPI metrics could not be reached." />}
         </Tile>
@@ -187,7 +187,7 @@ export default function IdentityReview() {
               "nothing to review" during an outage stops looking.
             */}
             No cases to review —{' '}
-            {data?.upstream_available.candidate_links === false
+            {data?.upstream_available?.candidate_links === false
               ? 'could not reach the identity resolver, so the queue is unavailable rather than empty.'
               : 'nothing is waiting on a steward decision.'}
           </p>
