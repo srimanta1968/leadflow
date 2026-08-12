@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { ScreenErrorBoundary } from '../../components/app/ScreenErrorBoundary';
 import { Logo } from '../../components/marketing/Logo';
 import { useSession } from '../../context/SessionContext';
 import { ProfileChip } from '../../features/auth';
@@ -325,7 +326,11 @@ export function AppShell() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          <Outlet />
+          {/* Wraps ONLY the routed pane, so a screen that throws does not take
+              the sidebar and the top bar down with it. */}
+          <ScreenErrorBoundary>
+            <Outlet />
+          </ScreenErrorBoundary>
         </main>
       </div>
 
