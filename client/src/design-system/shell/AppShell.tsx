@@ -9,10 +9,14 @@ import { SUCCESS } from '../../content/messages';
 import { isAllowed, usePermissions } from '../../platform/permissions/usePermissions';
 import { NAV_ACTIONS, NAV_GROUPS, SCREEN_SUBTITLE, type NavItem } from './navModel';
 import { useShellCounts, type ShellCounts } from './useShellCounts';
+
+/** Where the operator's folded-group choice lives between visits. */
+const NAV_FOLD_KEY = 'leadflow.nav.folded';
 import { CommandPalette } from './CommandPalette';
 import { COMMAND_ACTIONS } from './commandRegistry';
 import { QuickContactModal } from '../../components/app/QuickContactModal';
 import { ExtensionPreviewModal } from '../../components/app/ExtensionPreviewModal';
+import { guideForPath } from '../../content/trainingGuides';
 
 /**
  * The application shell: sidebar, brandbar, topbar and the view outlet.
@@ -117,6 +121,39 @@ export function AppShell() {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const counts = useShellCounts(pathname);
+
+  /*
+   * Which groups are folded, remembered across loads.
+   *
+   * The sidebar is on screen constantly, so re-folding the same four sections
+   * on every visit is a tax paid forever. Seeded from the model's
+   * defaultCollapsed the first time only; after that the operator's choice
+   * wins, because they know what they use and the default does not.
+   */
+  const [foldedGroups, setFoldedGroups] = useState<Set<string>>(() => {
+    try {
+      const stored = window.localStorage.getItem(NAV_FOLD_KEY);
+      if (stored) return new Set(JSON.parse(stored) as string[]);
+    } catch {
+      // A blocked or corrupt store must not stop the shell rendering.
+    }
+    return new Set(NAV_GROUPS.filter((g) => g.defaultCollapsed).map((g) => g.label));
+  });
+
+  const toggleGroup = useCallback((label: string) => {
+    setFoldedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      try {
+        window.localStorage.setItem(NAV_FOLD_KEY, JSON.stringify([...next]));
+      } catch {
+        // Persistence is a convenience; the fold still works this session.
+      }
+      return next;
+    });
+  }, []);
+
   // ONE batch for the whole shell. The nav and the palette gate on overlapping
   // actions, and two hooks would ask the PDP the same question twice per mount.
   const permissions = usePermissions(
@@ -195,14 +232,40 @@ export function AppShell() {
         aria-label="Application"
         data-collapsed={collapsed}
       >
-        {NAV_GROUPS.map((group) => (
+        {NAV_GROUPS.map((group) => {
+          /*
+           * A collapsed RAIL hides every label already, so folding is only
+           * meaningful in the expanded sidebar. Treating a group as open while
+           * the rail is collapsed keeps the icons reachable instead of hiding
+           * them behind a control that is not on screen.
+           */
+          const foldable = Boolean(group.collapsible) && !collapsed;
+          const folded = foldable && foldedGroups.has(group.label);
+
+          return (
           <div key={group.label}>
             {!collapsed && (
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-soft">
-                {group.label}
-              </p>
+              foldable ? (
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.label)}
+                  aria-expanded={!folded}
+                  className="flex w-full items-center justify-between px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-soft hover:text-muted"
+                >
+                  <span>{group.label}</span>
+                  {/* The count is what makes a folded group honest: it says how
+                      much is hidden rather than implying the section is empty. */}
+                  <span className="ml-2 font-normal tracking-normal">
+                    {folded ? `${group.items.length}` : '−'}
+                  </span>
+                </button>
+              ) : (
+                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-soft">
+                  {group.label}
+                </p>
+              )
             )}
-            <div className="space-y-0.5">
+            <div className={`space-y-0.5 ${folded ? 'hidden' : ''}`}>
               {group.items.map((item) => (
                 <NavRow
                   key={item.to}
@@ -235,7 +298,8 @@ export function AppShell() {
               ))}
             </div>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="border-t border-line">
@@ -305,6 +369,26 @@ export function AppShell() {
           </p>
 
           <div className="flex items-center gap-3">
+            {/*
+              THE GUIDE AFFORDANCE, and it is persistent for a reason. A training
+              area nobody can find from the screen they are stuck on gets read
+              once during onboarding and never again, so this deep-links to the
+              guide for the CURRENT path and falls back to the index when no
+              guide covers this screen — never to a plausible-looking wrong one.
+            */}
+            <NavLink
+              to={guideForPath(pathname) ? `/app/training/${guideForPath(pathname)?.id}` : '/app/training'}
+              onClick={() => setDrawerOpen(false)}
+              className="lf-btn-ghost px-3 py-1.5 text-xs"
+              title={
+                guideForPath(pathname)
+                  ? `Guide: ${guideForPath(pathname)?.title}`
+                  : 'No guide covers this screen yet — open the training centre'
+              }
+            >
+              Guide
+            </NavLink>
+
             {/* The mockup's .searchbox. Now a real control rather than the
                 honest placeholder it was while the palette did not exist. */}
             <button

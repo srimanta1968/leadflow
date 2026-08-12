@@ -54,16 +54,56 @@ export interface NavGroup {
   /** The mockup renders these as .navgroup eyebrows. */
   label: string;
   items: NavItem[];
+  /**
+   * The FIRST group never collapses. Everything an operator does all day starts
+   * there, and a sidebar whose top section can be hidden lets somebody hide the
+   * product's front door and not find it again. Every other group folds, and the
+   * state persists — the sidebar is on screen constantly, so re-collapsing four
+   * sections on every load is a tax paid forever.
+   */
+  collapsible?: boolean;
+  /** Folded on first load. Setup-shaped groups are visited rarely. */
+  defaultCollapsed?: boolean;
 }
 
 export const NAV_GROUPS: NavGroup[] = [
   {
+    /*
+     * THE HOURLY WORK, PINNED AND NEVER FOLDABLE.
+     *
+     * These were scattered across three groups by SUBJECT MATTER — Capture
+     * Inbox under contacts, Lead queue and Calendar under revenue, Inbox
+     * halfway down a thirteen-item list — which is a filing system, not a
+     * workspace. A rep touches every one of these several times an hour and
+     * should never hunt for them or scroll; everything else is a place you go
+     * when a task sends you there.
+     *
+     * Calendar earns its place here for a reason the SOP is explicit about: the
+     * rep books the meeting WHILE STILL ON THE CALL, so the control has to be
+     * one click away at the moment they are talking. Buried under Revenue it
+     * was four scrolls and a decision.
+     *
+     * These are MOVED here, not copied. Listing Calendar twice would leave an
+     * operator wondering whether the two entries differ, and the nav test
+     * rightly refuses a duplicated route — a sidebar with one screen in two
+     * places is the ambiguity that guard exists to prevent.
+     */
+    label: 'Daily work',
+    items: [
+      { label: 'Capture Inbox', to: '/app', ungated: 'every operator triages their own tenant queue; the rows are scoped server side and the per-row ACTIONS are gated individually', count: 'captureUnresolved' },
+      { label: 'Lead queue', to: '/app/leads', action: 'lead.work_assigned', count: 'leadsOpen' },
+      { label: 'Inbox', to: '/app/inbox', ungated: 'an operator reads the threads on their own records; the per-message SEND is gated by the channel decision, which is the control that matters' },
+      { label: 'Calendar', to: '/app/calendar', action: 'meeting.book' },
+      { label: 'Pipeline', to: '/app/pipeline', action: 'stage.update' },
+      { label: 'Quick Capture', to: '/app/capture', ungated: 'capturing a lead is the one thing every role may do; refusing it would lose the lead' },
+    ],
+  },
+  {
     label: 'Contact operations',
+    collapsible: true,
     items: [
       { label: 'Contact Command', to: '/app/command', action: 'dashboard.view_team', planned: true },
       { label: 'Contacts', to: '/app/contacts', ungated: 'reading contacts is tenant-scoped by the endpoint, not role-gated' },
-      { label: 'Capture Inbox', to: '/app', ungated: 'every operator triages their own tenant queue; the rows are scoped server side and the per-row ACTIONS are gated individually', count: 'captureUnresolved' },
-      { label: 'Quick Capture', to: '/app/capture', ungated: 'capturing a lead is the one thing every role may do; refusing it would lose the lead' },
       { label: 'Import Center', to: '/app/import', action: 'import.run_read' },  // Gated on the READ grant, not import.commit: this screen reviews imports,
       // it does not apply them, and requiring the commit grant to LOOK would hide
       // the register from the Privacy Officer who audits it.
@@ -71,6 +111,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Identity & trust',
+    collapsible: true,
     items: [
       // NOT `planned`. Both shipped (TK-3957, TK-3961), both routed in App.tsx,
       // and both sat here flagged Soon — so the sidebar rendered a finished
@@ -86,9 +127,20 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Revenue',
     items: [
-      { label: 'Lead queue', to: '/app/leads', action: 'lead.work_assigned', count: 'leadsOpen' },
-      { label: 'Inbox', to: '/app/inbox', ungated: 'an operator reads the threads on their own records; the per-message SEND is gated by the channel decision, which is the control that matters' },
-      { label: 'Pipeline', to: '/app/pipeline', action: 'stage.update' },
+      { label: 'Offers', to: '/app/offers', action: 'offer.change_terms' },
+      { label: 'Onboarding handoff', to: '/app/handoffs', action: 'handoff.accept' },
+    ],
+    collapsible: true,
+  },
+  {
+    /*
+     * SPLIT OUT OF REVENUE, which had grown to thirteen items — the longest
+     * group by far and a mix of two different jobs. A rep works the first list
+     * every hour; nobody edits a routing rule twice a week. Interleaving them
+     * made the daily items harder to find and the rarely-used ones look urgent.
+     */
+    label: 'Configuration',
+    items: [
       { label: 'Routing rules', to: '/app/routing', action: 'routing.configure' },
       { label: 'Routing configuration', to: '/app/routing-config', action: 'routing.configure' },
       { label: 'Routing simulation', to: '/app/routing-simulation', action: 'routing.configure' },
@@ -96,13 +148,13 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'SLA targets', to: '/app/sla', action: 'sla.configure', count: 'captureSlaRisk' },
       { label: 'Sequences', to: '/app/sequences', action: 'automation.publish' },
       { label: 'Message templates', to: '/app/templates', action: 'message.publish_template' },
-      { label: 'Calendar', to: '/app/calendar', action: 'meeting.book' },
-      { label: 'Offers', to: '/app/offers', action: 'offer.change_terms' },
-      { label: 'Onboarding handoff', to: '/app/handoffs', action: 'handoff.accept' },
     ],
+    collapsible: true,
+    defaultCollapsed: true,
   },
   {
     label: 'Insight',
+    collapsible: true,
     items: [
       { label: 'Analytics', to: '/app/analytics', action: 'dashboard.view_team' },
       { label: 'Leadership', to: '/app/leadership', action: 'dashboard.view_team' },
@@ -115,9 +167,23 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Related',
+    collapsible: true,
+    defaultCollapsed: true,
     items: [
       { label: 'Associated Properties', to: '/app/properties', ungated: 'a read of related records, scoped by the endpoint', planned: true },
       { label: 'Campaign Enrollment', to: '/app/campaigns', action: 'campaign.configure' },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { label: 'User Administration', to: '/app/admin/users', action: 'user.invite' },
+      // UNGATED, and it is the one gate worth arguing about. This is the screen
+      // that explains why the OTHER items render Locked, so gating it would
+      // leave the operator who most needs it — the one just told they may not
+      // open Governance — with a refusal and no way to find out why.
+      { label: 'Permission Matrix', to: '/app/admin/permissions', ungated: 'this screen explains why other screens are Locked; hiding it from the people who are being refused is the one case where a gate makes the product less honest rather than more secure' },
+      { label: 'Training Centre', to: '/app/training', ungated: 'guides describe what the product does; a reader who cannot use a capability still needs to know which grant it needs, which is the answer to most support questions' },
     ],
   },
 ];
@@ -162,4 +228,7 @@ export const SCREEN_SUBTITLE: Record<string, string> = {
   '/app/governance': 'Governance — post-mortems, certification and go-live',
   '/app/sequences': 'Sequences — automated follow-up that stops when a human replies',
   '/app/templates': 'Message templates — the approved library and the SMS gate',
+  '/app/admin/users': 'User Administration — who is on the team and what they may do',
+  '/app/admin/permissions': 'Permission Matrix — SOP §28, evaluated rather than described',
+  '/app/training': 'Training Centre — step-by-step guides for every shipped screen',
 };
