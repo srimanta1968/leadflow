@@ -244,7 +244,13 @@ export default function Contact360() {
         {CONTACT_TABS.map((tab) => (
           <NavLink
             key={tab.segment}
-            to={tab.segment}
+            // ABSOLUTE, not relative. `to={tab.segment}` resolved against the
+            // CURRENT route — from /app/contacts/X/overview a bare
+            // "contact-points" became /app/contacts/X/overview/contact-points,
+            // which matches no route, so every tab click landed on NotFound.
+            // The tabs are the primary navigation of this screen and none of
+            // them worked.
+            to={`/app/contacts/${contactId}/${tab.segment}`}
             title={tab.hint}
             className={({ isActive }) =>
               `-mb-px border-b-2 px-3 py-2 text-sm ${
