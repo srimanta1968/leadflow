@@ -118,3 +118,8 @@ mcp-server/feedback/history/
 # Storybook static build
 client/storybook-static/
 deploy/leadflow.env
+
+# Per-task learning notes written by the tooling. Machine-generated, rewritten
+# on every run, and of no value to anyone reading the repository — they were
+# tracked, so ignoring alone would not have stopped them reappearing in diffs.
+learning/
