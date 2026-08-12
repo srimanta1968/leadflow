@@ -4,6 +4,7 @@ import { api, ApiError, type AuditTimeline } from '../../services/api';
 import { Timeline, type TimelineEntry } from '../../design-system/evidence/Timeline';
 import { ReversibleActionsPanel } from '../../features/audit/ReversibleActionsPanel';
 import { EvidenceBundleModal } from '../../features/audit/EvidenceBundleModal';
+import { AdvancedQueryModal } from '../../features/audit/AdvancedQueryModal';
 
 /**
  * Audit & History (#view-audit) — evidence, causality and reversibility.
@@ -39,6 +40,7 @@ export default function AuditHistory() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bundleOpen, setBundleOpen] = useState(false);
+  const [queryOpen, setQueryOpen] = useState(false);
 
   const load = useCallback(async (subject: string) => {
     if (subject === '') {
@@ -89,7 +91,12 @@ export default function AuditHistory() {
           <p className="mt-1.5 max-w-3xl text-sm text-muted">{FRAMING}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button type="button" name="advanced_query" className="lf-btn-secondary px-4 py-2">
+          <button
+            type="button"
+            name="advanced_query"
+            onClick={() => setQueryOpen(true)}
+            className="lf-btn-secondary px-4 py-2"
+          >
             Advanced query
           </button>
           <button
@@ -199,6 +206,19 @@ export default function AuditHistory() {
         open={bundleOpen}
         subjectRef={subjectRef}
         onClose={() => setBundleOpen(false)}
+      />
+
+      <AdvancedQueryModal
+        open={queryOpen}
+        onClose={() => setQueryOpen(false)}
+        /* A hit becomes the screen's subject, so a search lands on the
+           correlated narrative rather than leaving the reader to copy a
+           reference between two views. Through the URL, like every other
+           subject change here, so the resulting link opens on the same thing. */
+        onUseSubject={(ref) => {
+          setDraft(ref);
+          setParams({ subject_ref: ref });
+        }}
       />
     </div>
   );

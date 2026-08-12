@@ -1404,6 +1404,32 @@ export const api = {
   evidenceBundle: (payload: { subject_ref: string; include: string[] }) =>
     request<EvidenceBundle>('/leadflow/audit/evidence-bundle', { method: 'POST', body: payload }),
 
+  /**
+   * Filtered evidence across the twelve correlation dimensions.
+   *
+   * A POST because the filter set is a document, not a lookup — and because a
+   * query naming an actor and a purpose does not belong in a URL that lands in
+   * a proxy log.
+   */
+  auditQuery: (payload: { filters: EvidenceFilters; limit?: number }, signal?: AbortSignal) =>
+    request<AuditQueryResult>('/leadflow/audit/query', {
+      method: 'POST',
+      body: { ...payload.filters, limit: payload.limit },
+      signal,
+    }),
+
+  /** Saved queries this caller may run — their own, plus role and tenant shares. */
+  savedAuditQueries: (signal?: AbortSignal) =>
+    request<{ queries: SavedAuditQuery[] }>('/leadflow/audit/saved-queries', { signal }),
+
+  /** Save a query and say who may run it. Visibility is required, never defaulted. */
+  saveAuditQuery: (payload: {
+    name: string;
+    visibility: SavedQueryVisibility;
+    filters: EvidenceFilters;
+  }) =>
+    request<SavedAuditQuery>('/leadflow/audit/saved-queries', { method: 'POST', body: payload }),
+
   /* ------------------------------------------- routing, coverage, capacity */
 
   /** The versioned routing configuration: predicates, bands and matchers. */
@@ -2074,6 +2100,68 @@ export interface ReversalPreview {
   reversible: boolean;
   /** Why a count is unknown, rather than a confident zero. */
   field_gaps: { field: string; reason: string }[];
+}
+
+/** The twelve dimensions an evidence query can be narrowed by. */
+export interface EvidenceFilters {
+  actor?: string;
+  persona_role?: string;
+  purpose?: string;
+  decision_outcome?: string;
+  policy_version?: string;
+  consent_epoch?: string;
+  entity_ref?: string;
+  case_id?: string;
+  import_run_id?: string;
+  trace_id?: string;
+  from?: string;
+  to?: string;
+}
+
+export type SavedQueryVisibility = 'private' | 'role' | 'tenant';
+
+export interface SavedAuditQuery {
+  query_id: string;
+  name: string;
+  filters: EvidenceFilters;
+  visibility: SavedQueryVisibility;
+  owner_persona_id: string;
+  owner_role: string | null;
+  upstream_query_id: string | null;
+  created_at: string;
+}
+
+/**
+ * A query answer AND a chain verdict.
+ *
+ * `chain.state` is on every response and is never optional: a broken chain and
+ * an unreachable verifier are opposite instructions to the reader — stop
+ * trusting these rows, versus try again later.
+ */
+export interface AuditQueryResult {
+  query_ref: string;
+  filters: EvidenceFilters;
+  results: Record<string, unknown>[];
+  result_count: number;
+  total: number | null;
+  chain: {
+    state: 'verified' | 'broken' | 'unknown';
+    verified: boolean;
+    entries_checked: number | null;
+    break_at_seq: number | null;
+    break_reason: string | null;
+    detail: string | null;
+    range: { from_seq: number | null; to_seq: number | null };
+  };
+  trace: {
+    trace_id: string;
+    spans: Record<string, unknown>[];
+    span_count: number;
+    available: boolean;
+    layers: Record<string, unknown> | null;
+    layers_available: boolean;
+  } | null;
+  upstream_available: { search: boolean; audit: boolean; trace: boolean | null };
 }
 
 export interface EvidenceBundle {
