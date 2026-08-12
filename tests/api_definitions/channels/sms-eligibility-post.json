@@ -1,0 +1,149 @@
+{
+  "taskId": "2a99235e-71ce-430b-921e-8a52823c6cdf",
+  "featureId": "0bba9cbe-4c1d-4cc7-99c8-d16cb86a455c",
+  "epicId": "6691a598-597d-42a8-82fc-ddec2442b572",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/channels/sms/eligibility - record an eligibility basis, with the evidence behind it",
+  "description": "Records what makes a contact textable (2a99235e-71ce-430b-921e-8a52823c6cdf#AC1). THREE BASES ONLY, and a phone number is not one - VERIFIED LIVE, basis \"has_phone_number\" returned 400 naming the three that are accepted.\n\nEVIDENCE IS REQUIRED, enforced here and by a CHECK constraint. VERIFIED LIVE: a basis with no evidence_ref returned 400. A basis with nothing behind it reads as documented while resting on somebody memory, which is exactly the state an audit cannot distinguish from an invention.\n\nPER PURPOSE, not per contact. Consent to be texted about an appointment is not consent to be texted about a promotion, and storing one basis for the whole relationship is how a service message becomes a marketing one.\n\nEXPIRY IS OPTIONAL AND HONOURED. An expired basis is refused at check time with its own reason code rather than being silently treated as absent, because \"it lapsed\" and \"there never was one\" call for different conversations with the contact.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/channels/sms/eligibility",
+  "method": "POST",
+  "expectedStatus": 400,
+  "coversCriterion": [
+    "2a99235e-71ce-430b-921e-8a52823c6cdf#AC1"
+  ],
+  "fieldEnums": {
+    "basis": [
+      "express_written_consent",
+      "existing_relationship",
+      "inbound_request"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A basis with no evidence is refused",
+      "coversCriterion": "2a99235e-71ce-430b-921e-8a52823c6cdf#AC1",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "basis": "{{static:express_written_consent}}",
+        "purpose": "{{static:inspection_estimate}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "Holding a phone number is not an accepted basis",
+      "coversCriterion": "2a99235e-71ce-430b-921e-8a52823c6cdf#AC1",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "basis": "{{static:has_phone_number}}",
+        "evidence_ref": "{{static:crm-note-1}}",
+        "purpose": "{{static:inspection_estimate}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no subject_ref",
+      "payload": {
+        "basis": "{{static:inbound_request}}",
+        "evidence_ref": "{{static:x}}",
+        "purpose": "{{static:inspection_estimate}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "basis must be one of express_written_consent, existing_relationship, inbound_request - holding a phone number is not one of them",
+      "when": "an unrecognised basis is supplied."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "evidence_ref is required - an eligibility basis must point at the evidence for it",
+      "when": "no evidence is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "when": "no contact is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "purpose is required",
+      "when": "no purpose is named."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

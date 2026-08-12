@@ -1,0 +1,74 @@
+{
+  "taskId": "4cc3f597-f6c8-4dc5-8044-096ce144e676",
+  "featureId": "36b8ab88-3c05-4528-b9bb-45f058859a33",
+  "epicId": "06998b3d-d057-490d-8cfb-962e43b525c6",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 13,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/failures/kill-switch - is sending halted",
+  "description": "Whether automated sending is currently halted (4cc3f597-f6c8-4dc5-8044-096ce144e676#AC4). FAILS CLOSED: a switch that cannot be read is treated as ENGAGED. The asymmetry is deliberate - pausing sends we did not need to pause costs a delay, and sending during the incident the switch was thrown for makes the incident worse.\n\nThis is the read every send path performs, exposed so an operator can confirm the state rather than infer it from whether messages stopped. QA: measured live in both states.",
+  "endpoint": "/api/leadflow/failures/kill-switch",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC4"
+  ],
+  "testCases": [
+    {
+      "name": "The current switch state is reported, failing closed on error",
+      "coversCriterion": "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC4",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

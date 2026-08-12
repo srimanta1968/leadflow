@@ -1,0 +1,143 @@
+{
+  "taskId": "73357dd8-628f-47fa-9e41-1b42cf1f23fc",
+  "featureId": "cb6618a4-8e73-4585-aa79-af0bd20ea042",
+  "epicId": "60b11414-8cf8-4248-bc8a-22d74d122968",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/segments"
+  ],
+  "name": "POST /api/leadflow/segments/:id/compute - the audit snapshot",
+  "description": "Computes the audience and CAPTURES IT AT RUN START (73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC3). Derived later it would be a different set - people convert, consent lapses, records are suppressed - so \"who was in this audience\" is only answerable if it was written down at the moment it mattered.\n\nTHE REFUSALS ARE STORED ALONGSIDE THE MEMBERS. \"Who did we message\" is answerable from the members alone; \"why was this person not messaged\" is what a consent complaint or a rights audit actually asks, and that answer exists only if the exclusions were kept.\n\nTHE SNAPSHOT NAMES THE VERSION THAT PRODUCED IT, denormalised rather than joined (73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC4). The join gives the same answer today and a DIFFERENT one after the definition is superseded, and \"who was in this audience and under what rule\" must not change retroactively.\n\nQA: measured live against the definition created earlier in the chain.",
+  "endpoint": "/api/leadflow/segments/:id/compute",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC3",
+    "73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC4"
+  ],
+  "captureResponse": {
+    "segments.compute.response.data.snapshot_id": "data.snapshot_id"
+  },
+  "requestBody": {
+    "candidates": [
+      {
+        "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+        "origin_class": "first_party"
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The audience is snapshotted with its members, refusals and the version used",
+      "coversCriterion": "73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC3",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "candidates": [
+          {
+            "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+            "origin_class": "first_party"
+          },
+          {
+            "subject_ref": "licensed:probe",
+            "origin_class": "licensed_third_party"
+          }
+        ]
+      },
+      "params": {
+        "id": "{{cache:segments.post.response.data.segment_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no segment with that id",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "candidates": [
+          {
+            "subject_ref": "contact:x"
+          }
+        ]
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:segments.post.response.data.segment_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:segments.post.response.data.segment_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "candidates must be a non-empty array of { subject_ref }",
+      "when": "the candidate list is absent or empty."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No segment definition with that id",
+      "when": "the segment id does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

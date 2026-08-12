@@ -1,0 +1,84 @@
+{
+  "taskId": "2fc627e9-9a59-4d21-ad5e-b7301b6d1990",
+  "featureId": "7605d8da-4ebb-4d6e-86f8-3c1573476924",
+  "epicId": "e000da35-a777-46e7-8589-2d24accdc494",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/calendar/readiness - who may receive leads",
+  "description": "The SOP §09 calendar checklist, as a GATE rather than a dashboard (2fc627e9-9a59-4d21-ad5e-b7301b6d1990#AC1). Routing a live enquiry to a rep whose booking link is broken converts it into a dead one, and nobody finds out until the prospect gives up - so may_receive_leads is a computed verdict the routing engine can consult, not a number somebody reads on a screen.\n\nEIGHT CHECKS REPORTED SEPARATELY, because each fails for a different reason and is fixed by a different person. A single ready flag tells a manager to \"fix the calendar\", which is not an instruction anybody can act on; failing[] names exactly which ones are outstanding.\n\nTWO-WAY SYNC IS VERIFIED IN BOTH DIRECTIONS (2fc627e9-9a59-4d21-ad5e-b7301b6d1990#AC2). A connection that READS the calendar but cannot WRITE books meetings nobody sees; one that writes but cannot read double-books over existing commitments. Both are checked and the flag is their conjunction, because a single \"connected\" hides both failures.\n\nFOUR MEETING TYPES WITH THEIR BUFFERS (2fc627e9-9a59-4d21-ad5e-b7301b6d1990#AC4), verified live: fit_call 15m+5, demo 30m+10, decision_review 30m+10, onboarding 60m+15. The buffer is part of the type rather than a global setting, because a 60-minute onboarding needs more recovery time than a 15-minute fit call.\n\nTHE REMINDER LADDER IS RETURNED ALONGSIDE, so an operator can see that the 15-minute rung is internal before they wonder why the customer never got it. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/calendar/readiness",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "2fc627e9-9a59-4d21-ad5e-b7301b6d1990#AC1",
+    "2fc627e9-9a59-4d21-ad5e-b7301b6d1990#AC2",
+    "2fc627e9-9a59-4d21-ad5e-b7301b6d1990#AC4"
+  ],
+  "fieldEnums": {
+    "data.meeting_types.key": [
+      "fit_call",
+      "demo",
+      "decision_review",
+      "onboarding"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The checklist reports each check and whether the rep may receive leads",
+      "coversCriterion": "2fc627e9-9a59-4d21-ad5e-b7301b6d1990#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

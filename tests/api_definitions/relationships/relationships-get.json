@@ -1,0 +1,208 @@
+{
+  "name": "GET /api/leadflow/relationships - every contextual role a subject holds, live and historical",
+  "description": "The read behind #c-relationships, whose framing line is the whole model: roles are bitemporal relationship contracts, and ownership, occupancy, management and decision authority remain DISTINCT.\n\nMULTIPLE ROLES COEXIST FOR ONE PAIR (74f2a183-98b3-4858-a215-1d600056d332#AC1), each with its own trust state and its own validity. One property can simultaneously carry an OWNS the public record only suggests, a field-confirmed OCCUPIES and a DECISION_MAKER, while an organisation holds a DOCUMENTED AUTHORIZED_FOR backed by an uploaded management agreement. Collapsing those into one edge forces a choice nobody should have to make - lose the distinction, or overwrite a role that is still true - so role_label separates them and valid_from/valid_to give each its own life.\n\nTRUST AND VALIDITY ARE DIFFERENT AXES, and the response keeps them apart. \"Is this in force now\" and \"how sure are we it is real\" have different remedies: an expired authority needs renewing, an unevidenced one needs a document. A single status field answers \"inactive\" to both and tells the operator nothing about which, so `trust_state` and `is_live` are separate.\n\nCLOSED ROLES ARE RETURNED, NOT HIDDEN (74f2a183-98b3-4858-a215-1d600056d332#AC2). `include_closed` defaults to false because the working view is the live one, but the ended rows are one query param away and never gone - \"who was the decision maker last March\" is exactly the question asked when something has gone wrong, and a deleted row cannot answer it. Each closed row carries its valid_to and closed_reason.\n\nAS-OF IS A FIRST-CLASS FILTER. `as_of` asks the bitemporal question directly - what did we believe was true at that instant - rather than making the caller reconstruct it from valid_from/valid_to by hand, which is where off-by-one reasoning about open intervals creeps in.\n\nGROUPED BY OBJECT SO THE SCREEN DOES NOT HAVE TO. The mockup renders one card per property carrying several role chips, and grouping in the composer means every consumer groups the same way. `roles_by_object` is derived from the same rows as `roles`, so a card and the flat list cannot disagree.\n\nREACHABILITY RESPECTS A TRAVERSAL BUDGET (74f2a183-98b3-4858-a215-1d600056d332#AC4). When `check_reachable_to` is supplied the composer additionally asks sdk-rebac POST /api/relationships/check, which walks the graph under an explicit depth and visit cap - default depth 4, visits 1024 - and the response reports `budget_used` alongside the verdict. An unbounded traversal on a cyclic graph is not slow, it is non-terminating, and reporting the budget is what lets a deny be read as \"not reachable\" rather than \"we gave up\".\n\nDEGRADES RATHER THAN THROWS. sdk-rebac is not provisioned against a LeadFlow tenant in any environment available here, so the list comes back empty with upstream_available.rebac false - which is a different statement from \"this subject holds no roles\", and the screen must be able to tell them apart. That is the branch the suite observes.\n\nNO requiresRole: reading which roles a contact holds is a tenant-scoped read the navigation model already treats as open (Associated Properties is ungated, 'a read of related records, scoped by the endpoint'). The auth header is pinned on every testCase because no role swap applies. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/relationships",
+  "method": "GET",
+  "taskId": "74f2a183-98b3-4858-a215-1d600056d332",
+  "featureId": "1ba43067-6c89-474d-a242-f37cdf9d997f",
+  "epicId": "2979a602-317e-49cd-8b38-2d2914a88afa",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "74f2a183-98b3-4858-a215-1d600056d332#AC1",
+    "74f2a183-98b3-4858-a215-1d600056d332#AC2",
+    "74f2a183-98b3-4858-a215-1d600056d332#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "role": [
+      "OWNS",
+      "OCCUPIES",
+      "DECISION_MAKER",
+      "AUTHORIZED_FOR",
+      "REPRESENTS",
+      "REFERRAL_SOURCE"
+    ],
+    "trust_state": [
+      "CANDIDATE",
+      "CONFIRMED",
+      "DOCUMENTED"
+    ],
+    "data.roles.role": [
+      "OWNS",
+      "OCCUPIES",
+      "DECISION_MAKER",
+      "AUTHORIZED_FOR",
+      "REPRESENTS",
+      "REFERRAL_SOURCE"
+    ],
+    "data.roles.trust_state": [
+      "CANDIDATE",
+      "CONFIRMED",
+      "DOCUMENTED"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A subject's live roles come back grouped by the object they attach to",
+      "coversCriterion": "74f2a183-98b3-4858-a215-1d600056d332#AC1",
+      "queryParams": {
+        "subject_ref": "{{var:absent_uuid}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "Closed roles are retrievable rather than gone",
+      "coversCriterion": "74f2a183-98b3-4858-a215-1d600056d332#AC2",
+      "queryParams": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "include_closed": "true"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "A reachability check reports the traversal budget it spent",
+      "coversCriterion": "74f2a183-98b3-4858-a215-1d600056d332#AC4",
+      "queryParams": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "check_reachable_to": "{{var:absent_uuid}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no subject_ref, so there is nobody to describe",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown role filter is rejected rather than returning every role",
+      "coversCriterion": "74f2a183-98b3-4858-a215-1d600056d332#AC1",
+      "queryParams": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "role": "LANDLORD"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a traversal budget beyond the cap is refused, never silently clamped",
+      "coversCriterion": "74f2a183-98b3-4858-a215-1d600056d332#AC4",
+      "queryParams": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "check_reachable_to": "{{var:absent_uuid}}",
+        "depth_cap": "99"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "message_note": "Returning every relationship in the tenant to a caller who named nobody would be both a disclosure and a useless answer.",
+      "when": "no subject is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "role must be one of OWNS, OCCUPIES, DECISION_MAKER, AUTHORIZED_FOR, REPRESENTS, REFERRAL_SOURCE",
+      "when": "an unrecognised role filter is supplied. Dropping it would return EVERY role to somebody who asked for the owners, and a screen headed 'Owners' listing occupants is the exact confusion this vocabulary exists to prevent - the two carry completely different authority."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "depth_cap must be an integer between 1 and 4",
+      "when": "a traversal deeper than the platform cap is requested. Refused rather than clamped: a caller who asked for depth 99 and silently got 4 would read a deny as 'not reachable within 99 hops', which is a far stronger claim than the one actually checked."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

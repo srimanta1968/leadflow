@@ -1,0 +1,95 @@
+{
+  "taskId": "fe8a391f-f000-44aa-9f2a-ce108c98f951",
+  "featureId": "76edee77-5f80-42d5-9255-cad3182b54ba",
+  "epicId": "be026e56-403d-441b-9a82-4055aad09d66",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/sla/overnight-queue - signals that arrived outside business hours",
+  "description": "The overnight queue for SOP §04 out-of-hours handling: everything that arrived 17:00-08:59, at a weekend or on an approved holiday, with the commitment made to each customer.\n\nEVERY ENTRY CARRIES ITS COMMITMENT (fe8a391f-f000-44aa-9f2a-ce108c98f951#AC1) - the next business open, the 08:45 owner task and the 09:30 first call - computed from the named business calendar rather than by adding hours. Verified live: a Saturday 19:00 Central arrival produced owner_task_due_at 2026-08-17T13:45Z and first_call_due_at 2026-08-17T14:30Z, which are 08:45 and 09:30 Monday CDT.\n\nNO PROMISE IS RECORDED THAT NOBODY CAN KEEP (fe8a391f-f000-44aa-9f2a-ce108c98f951#AC4). same_night_promised carries a CHECK constraint that it can only be true when an on-call rep is named, so an optimistic promise cannot be stored even by a caller that bypasses the service. The response states that rule rather than leaving it to be inferred from a null.\n\nGROUPED BY REASON because a holiday backlog is a staffing decision and a nightly one is routine, and a single count cannot tell an operator which they are looking at.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/sla/overnight-queue",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "fe8a391f-f000-44aa-9f2a-ce108c98f951#AC1",
+    "fe8a391f-f000-44aa-9f2a-ce108c98f951#AC4"
+  ],
+  "fieldEnums": {
+    "data.entries.reason": [
+      "after_hours",
+      "weekend",
+      "holiday"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The queue lists out-of-hours arrivals with their next-business-day commitment",
+      "coversCriterion": "fe8a391f-f000-44aa-9f2a-ce108c98f951#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "Released entries can be included for a historical view",
+      "queryParams": {
+        "include_released": "true"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

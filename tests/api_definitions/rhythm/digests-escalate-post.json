@@ -1,0 +1,80 @@
+{
+  "taskId": "3070e925-615d-429e-8209-1568671c3502",
+  "featureId": "905a8bb9-e0ea-4d1c-b5e8-2a3c4c27740b",
+  "epicId": "285a56e9-aa8a-46e6-b4cd-0675b52053e5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 12,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/digests/run"
+  ],
+  "name": "POST /api/leadflow/digests/escalate - overdue outputs, once each",
+  "description": "Escalates every required output still open past its due time (3070e925-615d-429e-8209-1568671c3502#AC3). STAMPED ONCE, by an UPDATE ... WHERE escalated_at IS NULL rather than by reading and then writing: the sweep runs on a timer and two concurrent passes would both read \"not yet escalated\", and a manager who gets the same escalation on every tick stops reading them - which is precisely the failure the escalation exists to prevent.\n\nMEASURED LIVE: eight outputs escalated on the first call and zero on the second, which is the guarantee rather than an empty queue.\n\nThe notification is best-effort and the stamp is durable, in that order. An escalation that was recorded but not delivered is recoverable; one that was delivered but not recorded fires again on the next tick.",
+  "endpoint": "/api/leadflow/digests/escalate",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "3070e925-615d-429e-8209-1568671c3502#AC3"
+  ],
+  "captureResponse": {
+    "digests.escalate.response.data.escalated": "data.escalated"
+  },
+  "requestBody": {},
+  "testCases": [
+    {
+      "name": "Overdue outputs escalate, and escalate only once",
+      "coversCriterion": "3070e925-615d-429e-8209-1568671c3502#AC3",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {}
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

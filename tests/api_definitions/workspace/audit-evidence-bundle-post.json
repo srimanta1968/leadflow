@@ -1,0 +1,100 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/audit/evidence-bundle - everything about one subject",
+  "description": "Assembles audit events, consent receipts and source assertions for one subject.\n\nASSEMBLED ON DEMAND rather than stored. A bundle is requested because somebody is answering a question NOW — a complaint, a rights request, a dispute — and a pre-built one is stale by definition and reassuring by accident.\n\nA REASON IS REQUIRED: pulling somebody's whole record together is itself an auditable act, and the bundle records its own assembly.\n\nA PARTIAL BUNDLE SAYS SO, prominently. Handing somebody an incomplete record labelled complete is worse than handing them nothing, because they answer a regulator from it. QA: measured live — the refusal, and a bundle correctly reporting complete:false with all three sections unavailable.",
+  "endpoint": "/api/leadflow/audit/evidence-bundle",
+  "method": "POST",
+  "expectedStatus": 200,
+  "captureResponse": {
+    "audit.evidence_bundle.response.data.complete": "data.complete"
+  },
+  "requestBody": {
+    "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+    "reason": "DSAR request"
+  },
+  "testCases": [
+    {
+      "name": "The bundle reports each section and whether it is complete",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+        "reason": "DSAR request"
+      }
+    },
+    {
+      "name": "A bundle with no stated reason is REFUSED",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:x"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason is required - an evidence bundle assembles somebody's whole record, and why it was assembled is itself an auditable act",
+      "when": "subject_ref or reason is absent."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "taskId": "b6072947-1983-41b2-8b5b-2a7537ab4b46",
+  "featureId": "caabc6f6-4fbb-4a77-91ee-42cce2fdb519",
+  "epicId": "ef8a21ec-c1a9-4d26-ac59-e0fa28b41a3b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/payments/verify"
+  ],
+  "name": "POST /api/leadflow/payments/:id/refund-request - approval and the expansion freeze",
+  "description": "Records a refund request, requires a second party above the threshold, and FREEZES EXPANSION MESSAGING IMMEDIATELY (b6072947-1983-41b2-8b5b-2a7537ab4b46#AC4). The freeze lands before any approval, deliberately: asking somebody to buy more while they are asking for money back is the single most damaging automated message this system could send, and waiting for the decision would leave a window in which the upsell goes out.\n\nrequires_approval IS STORED RATHER THAN INFERRED at read time, so a later change to the threshold cannot retroactively make a past refund look unapproved.\n\nA REASON IS MANDATORY. A refund is money leaving under written terms, and the record is what a later reader - finance, a regulator, the customer's lawyer - judges the decision by.\n\nQA: depends on register and login; :id is the gateway charge reference. The amount is above the threshold so the approval branch is the one exercised.",
+  "endpoint": "/api/leadflow/payments/:id/refund-request",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "b6072947-1983-41b2-8b5b-2a7537ab4b46#AC4"
+  ],
+  "captureResponse": {
+    "payments.refund_request.response.data.refund_id": "data.refund_id"
+  },
+  "requestBody": {
+    "amount_cents": 149900,
+    "reason": "Buyer cancelled inside the refund window under the published terms."
+  },
+  "testCases": [
+    {
+      "name": "A refund above the threshold requires approval and freezes expansion messaging",
+      "coversCriterion": "b6072947-1983-41b2-8b5b-2a7537ab4b46#AC4",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "amount_cents": 149900,
+        "reason": "Buyer cancelled inside the refund window under the published terms."
+      },
+      "params": {
+        "id": "{{cache:payments.verify.post.response.data.charge_ref}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no reason given",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "amount_cents": 1000
+      },
+      "params": {
+        "id": "{{cache:payments.verify.post.response.data.charge_ref}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:payments.verify.post.response.data.charge_ref}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:payments.verify.post.response.data.charge_ref}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason is required - a refund is money leaving under written terms, and the record is what a later reader judges it by",
+      "when": "amount_cents is missing or not positive, or the reason is empty."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

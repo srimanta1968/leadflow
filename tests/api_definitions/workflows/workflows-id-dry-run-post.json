@@ -1,0 +1,143 @@
+{
+  "taskId": "bd991d43-6c82-4842-a375-f62cb4a5439a",
+  "featureId": "e9190d5d-9813-40f7-b61a-d671fe916d74",
+  "epicId": "79cac1c4-3ab0-4f9d-9660-a880c054ac0c",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/workflows"
+  ],
+  "name": "POST /api/leadflow/workflows/:id/dry-run - real history, zero effects",
+  "description": "Replays REAL historical records through a candidate definition and reports what WOULD have happened, with ZERO side effects (bd991d43-6c82-4842-a375-f62cb4a5439a#AC2).\n\nZERO BY CONSTRUCTION, NOT BY A FLAG. The simulation never receives a gateway client; it receives a recorder that counts the intention and returns. A dryRun boolean checked at each call site is one missed check away from a real message to a real customer, and the whole point of a dry run is that a reviewer trusts it enough to publish on its word. Any attempt to reach a real client is counted as an ESCAPE and fails the run.\n\nREAL RECORDS, NOT SYNTHETIC ONES. A simulation over invented data proves the definition parses; a replay over the last fortnight's actual leads proves what it would have DONE, which is what catches \"this rule would have messaged four hundred people\".\n\nCOUNTED PER EFFECT CLASS - sends, tasks, stage changes, suppressions - because \"412 things would have happened\" tells a reviewer nothing and \"308 messages would have sent\" stops the publish.\n\nAN EMPTY WINDOW DOES NOT PASS. A run over zero records proves nothing, and a reviewer reading \"0 messages would have sent\" from an empty window would reasonably conclude the rule is harmless. An unrecognised action also fails the run rather than being ignored - MEASURED LIVE, a definition with an unknown action scored 5000 escapes and did not pass, while a valid one replayed 5000 records with zero escapes.",
+  "endpoint": "/api/leadflow/workflows/:id/dry-run",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "bd991d43-6c82-4842-a375-f62cb4a5439a#AC2"
+  ],
+  "captureResponse": {
+    "workflows.dry_run.response.data.dry_run_id": "data.dry_run_id"
+  },
+  "requestBody": {
+    "window_days": 90
+  },
+  "testCases": [
+    {
+      "name": "A candidate replays real records and reports the effects it would have had",
+      "coversCriterion": "bd991d43-6c82-4842-a375-f62cb4a5439a#AC2",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "window_days": 90
+      },
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an out-of-range window",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "window_days": 900
+      },
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no version with that id",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "window_days": 14
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "window_days must be between 1 and 180",
+      "when": "the replay window is absent, non-numeric or outside the range."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No workflow version with that id",
+      "when": "the version id does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

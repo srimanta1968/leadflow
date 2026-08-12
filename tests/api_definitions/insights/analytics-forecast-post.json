@@ -1,0 +1,146 @@
+{
+  "taskId": "51fff16e-dedb-4033-9d19-afebdccd41c2",
+  "featureId": "edd3d895-d96c-42b2-8a9a-ef91af956a0b",
+  "epicId": "285a56e9-aa8a-46e6-b4cd-0675b52053e5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/analytics/forecast - commit, with exclusions named",
+  "description": "Classifies forecast deals into committed and unqualified (51fff16e-dedb-4033-9d19-afebdccd41c2#AC1). A deal missing a decision date, a named stakeholder, a next event, a stated risk or evidence is EXCLUDED from commit and shown as unqualified WITH THE MISSING ELEMENT NAMED. Both halves matter: excluding it keeps the commit number honest, and naming what is missing turns the exclusion into something actionable rather than an argument in the pipeline review - \"this is not in commit\" starts a debate, \"this has no decision date\" ends one.\n\nTHE REQUIREMENTS ARE CONJUNCTIVE, deliberately. A deal with a date and a stakeholder but no stated risk is the classic slipped deal: everybody knew the risk and nobody wrote it down, so nobody planned for it.\n\nUNQUALIFIED VALUE IS REPORTED AS ITS OWN NUMBER rather than folded away. A commit of 400k with 900k unqualified behind it is a different conversation from a commit of 400k with nothing behind it, and hiding the second number makes the two look identical.\n\nDeals are supplied by the caller rather than read locally: the CRM owns the deal and its qualification fields, and mirroring them here would create a second source of truth for the exact number this endpoint exists to make trustworthy. QA: measured live - a complete deal committed, one missing three elements was excluded with all three named.",
+  "endpoint": "/api/leadflow/analytics/forecast",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "51fff16e-dedb-4033-9d19-afebdccd41c2#AC1"
+  ],
+  "captureResponse": {
+    "analytics.forecast.response.data.committed_cents": "data.committed_cents"
+  },
+  "fieldEnums": {
+    "data.requirements": [
+      "decision_date",
+      "named_stakeholder",
+      "next_event",
+      "stated_risk",
+      "evidence"
+    ]
+  },
+  "requestBody": {
+    "deals": [
+      {
+        "deal_ref": "d1",
+        "amount_cents": 100000,
+        "decision_date": "2026-09-01",
+        "named_stakeholder": "Dana",
+        "next_event": "demo",
+        "stated_risk": "budget",
+        "evidence": "signed brief"
+      },
+      {
+        "deal_ref": "d2",
+        "amount_cents": 500000,
+        "decision_date": "2026-09-01",
+        "named_stakeholder": "Ray"
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "name": "An incomplete deal is excluded from commit with its missing elements named",
+      "coversCriterion": "51fff16e-dedb-4033-9d19-afebdccd41c2#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "deals": [
+          {
+            "deal_ref": "d1",
+            "amount_cents": 100000,
+            "decision_date": "2026-09-01",
+            "named_stakeholder": "Dana",
+            "next_event": "demo",
+            "stated_risk": "budget",
+            "evidence": "signed brief"
+          },
+          {
+            "deal_ref": "d2",
+            "amount_cents": 500000,
+            "decision_date": "2026-09-01",
+            "named_stakeholder": "Ray"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NEGATIVE: an empty deal list",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "deals": []
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "deals must be a non-empty array",
+      "when": "no deals are supplied."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

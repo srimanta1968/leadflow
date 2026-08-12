@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/capture/inbox",
   "method": "GET",
   "taskId": "8c6ed254-1cfb-4489-87ce-acd02652c569",
+  "featureId": "fccb7197-9262-47dd-9a8f-96892cc877ad",
+  "epicId": "befcccab-d3b9-4629-828b-0df9f2c981d6",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "testability": "auto",
@@ -16,9 +18,19 @@
     "297fdaee-3a00-4d85-9452-b46b63725d72#AC2",
     "297fdaee-3a00-4d85-9452-b46b63725d72#AC4"
   ],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/leads"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads"
+  ],
   "fieldEnums": {
-    "trustState": ["P0_CAPTURED", "P1_NORMALIZED", "P2_CANDIDATE", "P3_LINKED", "P4_DIRECT"],
+    "trustState": [
+      "P0_CAPTURED",
+      "P1_NORMALIZED",
+      "P2_CANDIDATE",
+      "P3_LINKED",
+      "P4_DIRECT"
+    ],
     "originClass": [
       "USER_PROVIDED",
       "FIRST_PARTY_DIRECT",
@@ -68,7 +80,9 @@
     },
     {
       "name": "Drill into one rung of the ladder and keep every tile populated",
-      "coversCriterion": ["297fdaee-3a00-4d85-9452-b46b63725d72#AC2"],
+      "coversCriterion": [
+        "297fdaee-3a00-4d85-9452-b46b63725d72#AC2"
+      ],
       "headers": {
         "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
       },

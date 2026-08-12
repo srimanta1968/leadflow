@@ -1,0 +1,85 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/workflows"
+  ],
+  "name": "POST /api/leadflow/workflows/:id/release-gate - may this ship",
+  "description": "Evaluates the same conditions the publish endpoint enforces, WITHOUT publishing.\n\nA reviewer needs to know whether the gate will open before they try it; finding out by being refused is how people learn to treat the refusal as noise rather than as information.\n\nTHE DRY RUN'S HEADLINE NUMBER TRAVELS WITH THE VERDICT, because may_publish: true on a rule that would send 5000 messages is a different decision from one that would send four, and a bare boolean hides which one this is.",
+  "endpoint": "/api/leadflow/workflows/:id/release-gate",
+  "method": "POST",
+  "expectedStatus": 200,
+  "requestBody": {},
+  "testCases": [
+    {
+      "name": "may this ship",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {},
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No workflow version with that id",
+      "when": "the version id does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

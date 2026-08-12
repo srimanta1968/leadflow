@@ -1,0 +1,130 @@
+{
+  "name": "POST /api/leadflow/sequences/{key}/pause - The loop breaker",
+  "description": "Pauses EVERY active enrolment on one sequence and claims their remaining queued steps as cancelled, in a single act. Distinct from POST /api/leadflow/sequences/enrollments/{id}/stop, which handles one contact who asked us to stop; this handles the opposite emergency - the automation itself is misbehaving and stopping it one enrolment at a time is not a control. 200 rather than 201: it is a command against existing rows and creates nothing addressable. Enrolments move to status 'paused' rather than 'stopped' so the cadence is resumable once the cause is understood, but the queued steps are CLAIMED anyway, because a tick already in flight would otherwise send the very message this control exists to prevent - a status change alone is not a stop. Governed on automation.publish and appended to the chain as sequence.paused.v1, a name deliberately separate from the per-enrolment stop: an incident review asks 'when did we suspect the automation' and a complaint asks 'when did this person tell us to stop', and one name would answer each with the other's rows. A reason is REQUIRED because the paused sequence is an incident record and one with no reason cannot be reviewed. QA: this route did not exist until the route-versus-definition audit found the Sequences screen calling it - the pause_sequence control had shipped against a 404. requiresRole admin, so no Authorization header is declared here (MUST-71).",
+  "endpoint": "/api/leadflow/sequences/:key/pause",
+  "method": "POST",
+  "taskId": "4cc3f597-f6c8-4dc5-8044-096ce144e676",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": ["admin"],
+  "testability": "auto",
+  "priority": 30,
+  "expectedStatus": 200,
+  "coversCriterion": ["4cc3f597-f6c8-4dc5-8044-096ce144e676#AC4"],
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "key": [
+      "active_14_day",
+      "timing_or_season",
+      "budget_or_approval",
+      "current_contract",
+      "product_gap"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Pause the active cadence and report what was cancelled",
+      "coversCriterion": "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC4",
+      "capturesResponse": true,
+      "params": { "key": "active_14_day" },
+      "payload": {
+        "reason": "duplicate send loop suspected on the 14-day cadence"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "sequence_key": "active_14_day",
+          "paused": true
+        }
+      }
+    },
+    {
+      "name": "A nurture track pauses on the same contract",
+      "params": { "key": "timing_or_season" },
+      "payload": {
+        "reason": "nurture touches going out against a stale segment"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "sequence_key": "timing_or_season",
+          "paused": true
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: a pause with no reason is refused",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|reason",
+      "params": { "key": "active_14_day" },
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: a sequence key the cadence config does not define",
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "params": { "key": "{{static:no_such_cadence}}" },
+      "payload": {
+        "reason": "probing an unknown key"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "params": { "key": "active_14_day" },
+      "payload": {
+        "reason": "unauthenticated probe"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "reason is absent or blank. A global pause is read later by whoever asks why the cadence stopped sending, and 'somebody paused it' is not an answer."
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "the key names no sequence in features/sequences/cadence.ts. Refused rather than accepted, because a pause that silently affects nothing while reporting success is worse than an error."
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "FORBIDDEN",
+      "status": 403,
+      "when": "the caller does not hold automation.publish - a local 'user' account bridges to sales_rep, which does not",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64/MUST-71: it needs a token from a DIFFERENT role, and this definition declares requiresRole so the runner pre-fetches the admin identity. Pinning a second role's Authorization alongside requiresRole is exactly what MUST-71 forbids."
+    },
+    {
+      "code": "APPROVAL_REQUIRED",
+      "status": 403,
+      "when": "the caller holds automation.publish behind approval rather than unaided - a local 'manager' account, which bridges to sales_manager",
+      "reproducible": false,
+      "_whyNotReproducible": "Same as FORBIDDEN: it needs the manager identity, and there is no manager entry in testCredentials. MUST-59 forbids inventing one."
+    }
+  ]
+}

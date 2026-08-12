@@ -1,0 +1,126 @@
+{
+  "taskId": "8cc092ee-0c9c-4805-8c72-ebc30d20d7d8",
+  "featureId": "9ebc12d7-050e-4963-b70e-4e345ac02d83",
+  "epicId": "6691a598-597d-42a8-82fc-ddec2442b572",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/templates/:id/publish - the approval gate on going live",
+  "description": "Publishes one version behind the approval gate (8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC2).\n\nONLY REVOPS MAY PUBLISH. A Rep may USE approved copy and may not alter it - a rep who edits a template changes what every other rep sends without anybody reviewing it, which is how an unapproved claim reaches a thousand prospects. The refusal is 403 naming the role.\n\nTHE ROLE IS CHECKED BEFORE THE VERSION EXISTS. Checking the version first would tell a Rep whether a draft exists, which is information they have no claim on and a hint about copy they may not change.\n\nEXACTLY ONE CTA, checked at publish and enforced by a CHECK constraint on the version row (8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC4). Belt and braces because the failure is silent: a two-CTA message does not error, it just converts worse, and nobody attributes that to the template.\n\nFEATURE-STATUS HONESTY IS CHECKED AT PUBLISH, NOT AT AUTHORING (8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC4). Copy is written long before it goes out and a capability can slip between the two, so \"is this still true\" belongs at the moment the claim becomes live. A version describing a capability as available is refused when the feature-dependency record says it is roadmap, in_development or not_planned.\n\nTHE PREVIOUS PUBLISHED VERSION IS RETAINED. What was sent last month stays readable, which is the whole reason versions exist.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/templates/:id/publish",
+  "method": "POST",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC2",
+    "8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC4"
+  ],
+  "testCases": [
+    {
+      "name": "Publishing an unknown template version is refused",
+      "coversCriterion": "8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC2",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "version": 1
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a version that is not a positive integer is refused",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "version": 0
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "version must be a positive integer",
+      "when": "no usable version is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "This copy describes a capability as available, but it is recorded otherwise",
+      "when": "the version claims a feature that the dependency record says is not available. A template may not promise a capability the product does not have."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "Only Revenue Operations may publish a template",
+      "when": "a Rep attempts to publish. They may use approved copy and may not alter it."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No template version with that id and version",
+      "when": "the template or version does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "taskId": "0a3474c3-56f8-4af6-8931-eb27cfddc13c",
+  "featureId": "83f42837-d20d-4c0f-b1e2-6cf1573e7b17",
+  "epicId": "c50a5ef2-74d3-4583-9f70-19f9499ad11a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/sequences/nurture - the reason-segmented tracks and who is on them",
+  "description": "Nurture SEGMENTED BY REASON, not by list (0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC1). Seven segments, each with its own cadence and its own approach: timing anchors on the buyer date, budget sends a business case and NEVER repeated discounting, current-contract anchors on the renewal, product-gap sends verified status only with no vague coming-soon, no-response changes the REASON rather than the subject line. One stream serving six reasons sends the same thing to somebody waiting on a budget cycle and somebody mid-contract with a competitor.\n\nEVERY NURTURE RECORD MUST RETAIN ONE OWNER AND ONE DATED NEXT ACTION (0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC2), and this endpoint REPORTS THE VIOLATIONS rather than quietly listing the members. A nurture record with no next action never comes back - it is indistinguishable from a record nobody is working, which is what nurture is supposed to prevent. The invariant is stated in the response so a reader knows what the violations array means.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/sequences/nurture",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC1",
+    "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC2"
+  ],
+  "fieldEnums": {
+    "data.tracks.segment": [
+      "timing_or_season",
+      "budget_or_approval",
+      "current_contract",
+      "product_gap",
+      "trust_or_prelaunch",
+      "no_response",
+      "no_fit_today"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The tracks and their members come back, with any invariant violations named",
+      "coversCriterion": "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC2",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

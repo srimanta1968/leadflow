@@ -1,0 +1,151 @@
+{
+  "taskId": "45f96ede-27d5-4c38-a4e1-a3e40df7fd56",
+  "featureId": "262a5dbd-03c5-42a8-ba53-8bcb1a671657",
+  "epicId": "68d8857d-2a0f-4152-a255-7a3d5bfe121a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 14,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/onboarding"
+  ],
+  "name": "POST /api/leadflow/onboarding/:id/exception - an owned, dated delay",
+  "description": "Records a buyer-driven delay, and REFUSES one without a named owner and a date (45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC3). A buyer who wants to start in September is legitimate; an exception with neither owner nor date is not - it is an unworked handoff wearing a label, which is how a paid customer goes six weeks without anybody calling them. A CHECK constraint enforces the same rule at the row level, so the record cannot exist in the weaker form even if some other writer forgets.\n\nTHE 30-DAY CHECK IS CREATED AUTOMATICALLY (45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC4), not remembered. Thirty days is exactly the horizon past which a deferred customer falls out of everybody's working memory, and the whole point of an exception is that nobody is actively looking at the record.\n\nThe review date is also written as a NEXT action against the named owner, so the delay appears in the queue the owner actually works from rather than only on an onboarding screen they have no reason to open.\n\nQA: reads the handoff created earlier in the chain from the cache; the two refusals carry the acceptance criterion directly.",
+  "endpoint": "/api/leadflow/onboarding/:id/exception",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC3",
+    "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC4"
+  ],
+  "captureResponse": {
+    "onboarding.exception.response.data.handoff_id": "data.handoff_id"
+  },
+  "requestBody": {
+    "reason": "Buyer asked to start after their fiscal year closes.",
+    "owner_user_id": "{{cache:auth.login.response.data.user.id}}",
+    "review_at": "2026-09-15T15:00:00Z"
+  },
+  "testCases": [
+    {
+      "name": "An exception is recorded with its owner, date and automatic 30-day check",
+      "coversCriterion": "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC4",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "reason": "Buyer asked to start after their fiscal year closes.",
+        "owner_user_id": "{{cache:auth.login.response.data.user.id}}",
+        "review_at": "2026-09-15T15:00:00Z"
+      },
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    },
+    {
+      "name": "An exception with no named owner is REFUSED",
+      "coversCriterion": "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC3",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "reason": "Buyer asked to start after their fiscal year closes.",
+        "review_at": "2026-09-15T15:00:00Z"
+      },
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    },
+    {
+      "name": "An exception with no review date is REFUSED",
+      "coversCriterion": "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC3",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "reason": "Buyer asked to start after their fiscal year closes.",
+        "owner_user_id": "{{cache:auth.login.response.data.user.id}}"
+      },
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "owner_user_id is required - an exception with no named owner is an unworked handoff wearing a label",
+      "when": "the reason is empty, no owner is named, or review_at is missing or unparseable. An exception with no date never gets revisited."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No onboarding handoff with that id",
+      "when": "the handoff id does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

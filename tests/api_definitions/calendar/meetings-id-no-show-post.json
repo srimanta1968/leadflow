@@ -1,0 +1,108 @@
+{
+  "taskId": "11672578-09c5-47e1-ae2b-47af58e6f038",
+  "featureId": "e28933df-3916-47d1-9d17-de4e28572ccc",
+  "epicId": "e000da35-a777-46e7-8589-2d24accdc494",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/meetings"
+  ],
+  "name": "POST /api/leadflow/meetings/:id/no-show - mark it once, and open the rescue",
+  "description": "Marks a no-show, suppresses the stale reminders and opens the rescue with a 24-hour rebook task.\n\nIDEMPOTENT BY CONSTRAINT (11672578-09c5-47e1-ae2b-47af58e6f038#AC4). The scan runs on a timer, and two no-shows for one meeting would double-count the occurrence and push a first-time no-show straight to manager review. MEASURED LIVE: the second call returned already_marked true with occurrence unchanged at 1.\n\nA SECOND NO-SHOW FLAGS MANAGER REVIEW (11672578-09c5-47e1-ae2b-47af58e6f038#AC2), counted per CONTACT rather than per meeting - the rule is about the person, and counting per meeting would never reach two. A second miss is a different conversation and a different commitment strategy, not another automated rebook.\n\nTHE RESCUE IS NOT SENT HERE. The response states the rule: the rep must call once within five minutes before any rescue message is permitted, and POST /rescue refuses until that attempt is logged. QA: depends on register, login and POST /api/leadflow/meetings, which produces the meeting this marks. The happy path was added when a route-versus-definition audit found /:id/rescue-call had no definition and no producer: this file previously tested only the 404 and the two 401s, so the endpoint it names was untested rather than untestable.",
+  "endpoint": "/api/leadflow/meetings/:id/no-show",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "11672578-09c5-47e1-ae2b-47af58e6f038#AC2",
+    "11672578-09c5-47e1-ae2b-47af58e6f038#AC4"
+  ],
+  "testCases": [
+    {
+      "name": "A booked meeting is marked as missed, and the rescue opens",
+      "coversCriterion": "11672578-09c5-47e1-ae2b-47af58e6f038#AC2",
+      "capturesResponse": true,
+      "pathParams": {
+        "id": "{{cache:meetings.create.response.data.meeting_id}}"
+      },
+      "payload": {},
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "occurrence": 1
+        }
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "Marking an unknown meeting is refused",
+      "coversCriterion": "11672578-09c5-47e1-ae2b-47af58e6f038#AC4",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No meeting with that id",
+      "when": "the meeting does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

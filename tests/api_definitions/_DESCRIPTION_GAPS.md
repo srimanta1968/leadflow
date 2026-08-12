@@ -13,20 +13,110 @@ enumerate real errors; do not guess.
 - [ ] `POST /api/leadflow/ai/propose` — tests/api_definitions/ai/propose-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `GET /api/leadflow/ai/revops/proposals` — tests/api_definitions/ai/revops-proposals-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `POST /api/leadflow/ai/sdr/proposals/:id/accept` — tests/api_definitions/ai/sdr-proposals-id-accept-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 422/OFFER_TRUTH_VIOLATION
+- [ ] `POST /api/leadflow/audit/reversals/preview` — tests/api_definitions/audit/reversals-preview-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `POST /api/auth/login` — tests/api_definitions/auth/login-post.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/INVALID_CREDENTIALS, 403/ACCOUNT_INACTIVE
+- [ ] `GET /api/auth/me` — tests/api_definitions/auth/me-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND
+- [ ] `POST /api/auth/register` — tests/api_definitions/auth/register-post.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 409/EMAIL_ALREADY_EXISTS, 409/USERNAME_ALREADY_EXISTS
+- [ ] `POST /api/leadflow/meetings/:id/cancel` — tests/api_definitions/calendar/meetings-id-cancel-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/leadflow/meetings/:id/no-show` — tests/api_definitions/calendar/meetings-id-no-show-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/leadflow/meetings/:id/reschedule` — tests/api_definitions/calendar/meetings-id-reschedule-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/leadflow/meetings/:id/rescue-call` — tests/api_definitions/calendar/meetings-id-rescue-call-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `POST /api/leadflow/meetings/:id/rescue` — tests/api_definitions/calendar/meetings-id-rescue-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 404/NOT_FOUND, 409/CONFLICT
+- [ ] `POST /api/leadflow/meetings/:id/sync-failure` — tests/api_definitions/calendar/meetings-id-sync-failure-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `POST /api/leadflow/calendar/readiness` — tests/api_definitions/calendar/readiness-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `POST /api/leadflow/calendar/synthetic-test` — tests/api_definitions/calendar/synthetic-test-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 400/VALIDATION_ERROR
 - [ ] `GET /api/leadflow/calls/:id/intelligence` — tests/api_definitions/calls/id-intelligence-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 403/FORBIDDEN, 404/NOT_FOUND
 - [ ] `GET /api/leadflow/calls/recording-eligibility` — tests/api_definitions/calls/recording-eligibility-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
+- [ ] `POST /api/leadflow/capture/extension` — tests/api_definitions/capture/extension-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
 - [ ] `POST /api/leadflow/capture/:id/resolve` — tests/api_definitions/capture/resolve-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
+- [ ] `POST /api/leadflow/capture/sync-batch` — tests/api_definitions/capture/sync-batch-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 422/ORIGIN_CLASS_REQUIRED
+- [ ] `POST /api/leadflow/calls/dial` — tests/api_definitions/channels/calls-dial-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT
+- [ ] `POST /api/leadflow/calls/:id/disposition` — tests/api_definitions/channels/calls-id-disposition-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/leadflow/channels/sms/sent` — tests/api_definitions/channels/sms-sent-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `POST /api/leadflow/templates/:id/publish` — tests/api_definitions/channels/templates-id-publish-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 403/FORBIDDEN, 404/NOT_FOUND
+- [ ] `GET /api/leadflow/channels/voice/tracking-numbers` — tests/api_definitions/channels/voice-tracking-numbers-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `POST /api/leadflow/checkout/send` — tests/api_definitions/commerce/checkout-send-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/leadflow/offers/:id/activate` — tests/api_definitions/commerce/offers-id-activate-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT
+- [ ] `POST /api/leadflow/onboarding/:id/exception` — tests/api_definitions/commerce/onboarding-id-exception-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `GET /api/leadflow/consent/overview` — tests/api_definitions/consent/overview-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN
+- [ ] `POST /api/leadflow/consent/receipts` — tests/api_definitions/consent/receipts-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN
+- [ ] `POST /api/leadflow/consent/receipts/:receipt_id/revoke` — tests/api_definitions/consent/receipts-revoke-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN
+- [ ] `POST /api/leadflow/data-review/detectors/run` — tests/api_definitions/data-review/detectors-run-post.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
+- [ ] `GET /api/leadflow/enrichment/queue` — tests/api_definitions/enrichment/queue-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
+- [ ] `POST /api/leadflow/enrichment/requests/:request_id/apply` — tests/api_definitions/enrichment/requests-apply-post.json → missing: negative testCase for 4 errorCase(s) (MUST-64): 404/NOT_FOUND, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
 - [ ] `GET /api/events/stream` — tests/api_definitions/events/stream-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN
+- [ ] `POST /api/leadflow/failures/dlq/replay` — tests/api_definitions/failures/failures-dlq-replay-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT
+- [ ] `GET /api/leadflow/identity/calibration` — tests/api_definitions/identity/calibration-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN
+- [ ] `POST /api/leadflow/identity/candidates/:link_id/decision` — tests/api_definitions/identity/candidates-decision-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN
+- [ ] `GET /api/leadflow/identity/links/:merge_id/blast-radius` — tests/api_definitions/identity/links-blast-radius-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN
+- [ ] `POST /api/leadflow/identity/links/:merge_id/retract` — tests/api_definitions/identity/links-retract-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN
+- [ ] `GET /api/leadflow/identity/review-queue` — tests/api_definitions/identity/review-queue-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
+- [ ] `PUT /api/leadflow/identity/risk-profile` — tests/api_definitions/identity/risk-profile-put.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN
 - [ ] `GET /api/leadflow/imports/center` — tests/api_definitions/imports/center-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
-- [ ] `GET /api/leadflow/imports/runs/{run_id}/evidence` — tests/api_definitions/imports/runs-id-evidence-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
-- [ ] `GET /api/leadflow/imports/runs/{run_id}` — tests/api_definitions/imports/runs-id-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
-- [ ] `POST /api/leadflow/imports/runs/{run_id}/report` — tests/api_definitions/imports/runs-id-report-post.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
-- [ ] `POST /api/leadflow/channel-decision/bulk` — tests/api_definitions/orchestration/channel-decision-bulk-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
-- [ ] `POST /api/leadflow/channel-decision` — tests/api_definitions/orchestration/channel-decision-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
+- [ ] `GET /api/leadflow/imports/runs/:run_id/evidence` — tests/api_definitions/imports/runs-id-evidence-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
+- [ ] `GET /api/leadflow/imports/runs/:run_id` — tests/api_definitions/imports/runs-id-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
+- [ ] `POST /api/leadflow/imports/runs/:run_id/report` — tests/api_definitions/imports/runs-id-report-post.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
+- [ ] `GET /api/leadflow/intake/adapters` — tests/api_definitions/intake/adapters-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/UNAUTHENTICATED
+- [ ] `GET /api/leadflow/intake/adapters/:key/launch-evidence` — tests/api_definitions/intake/adapters-launch-evidence-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 404/NOT_FOUND
+- [ ] `POST /api/leadflow/intake/backfill` — tests/api_definitions/intake/backfill-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `POST /api/leadflow/intake/classify` — tests/api_definitions/intake/classify-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED
+- [ ] `POST /api/leadflow/intake/events` — tests/api_definitions/intake/events-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN
+- [ ] `POST /api/leadflow/intake/webhooks/:platform` — tests/api_definitions/intake/webhooks-platform-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED
+- [ ] `POST /api/leadflow/kpi-definitions/tiles` — tests/api_definitions/kpi/kpi-definitions-tiles-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 400/VALIDATION_ERROR
+- [ ] `GET /api/leads/:id/activation-gate` — tests/api_definitions/leads/id-activation-gate-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 404/NOT_FOUND
+- [ ] `POST /api/leads/:id/assign` — tests/api_definitions/leads/id-assign-post.json → missing: negative testCase for 5 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND
+- [ ] `POST /api/leads/:id/first-response` — tests/api_definitions/leads/id-first-response-post.json → missing: negative testCase for 4 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND
+- [ ] `GET /api/leads/:id` — tests/api_definitions/leads/id-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND
+- [ ] `POST /api/leads/:id/route` — tests/api_definitions/leads/id-route-post.json → missing: negative testCase for 5 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND
+- [ ] `GET /api/leads/integrity-exceptions` — tests/api_definitions/leads/integrity-exceptions-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/UNAUTHENTICATED
+- [ ] `GET /api/leads` — tests/api_definitions/leads/leads-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN
+- [ ] `POST /api/leads` — tests/api_definitions/leads/leads-post.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN
+- [ ] `POST /api/leads/route-unowned` — tests/api_definitions/leads/route-unowned-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN
 - [ ] `POST /api/leadflow/closed-won/start` — tests/api_definitions/orchestration/closed-won-start-post.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
 - [ ] `POST /api/leadflow/intake/orchestrate` — tests/api_definitions/orchestration/intake-orchestrate-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN
-- [ ] `GET /api/leadflow/sagas/{run_id}` — tests/api_definitions/orchestration/sagas-run-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
+- [ ] `GET /api/leadflow/sagas/:run_id` — tests/api_definitions/orchestration/sagas-run-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN
+- [ ] `POST /api/leadflow/leads/:id/accept` — tests/api_definitions/ownership/leads-id-accept-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/leadflow/leads/:id/decline` — tests/api_definitions/ownership/leads-id-decline-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 404/NOT_FOUND, 409/CONFLICT
+- [ ] `POST /api/leadflow/leads/:id/reassign` — tests/api_definitions/ownership/leads-id-reassign-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 404/NOT_FOUND, 409/CONFLICT
+- [ ] `POST /api/leadflow/records/:ref/next-action` — tests/api_definitions/pipeline/records-ref-next-action-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `GET /api/leadflow/records/:ref/save-gate` — tests/api_definitions/pipeline/records-ref-save-gate-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `GET /api/leadflow/pipeline/vocabulary` — tests/api_definitions/pipeline/vocabulary-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `POST /api/public/leads` — tests/api_definitions/public/leads-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 429/RATE_LIMITED
+- [ ] `POST /api/leadflow/relationships/:relationship_id/end` — tests/api_definitions/relationships/relationships-end-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/leadflow/relationships` — tests/api_definitions/relationships/relationships-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT
+- [ ] `POST /api/leadflow/digests/:id/complete-output` — tests/api_definitions/rhythm/digests-id-complete-output-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `DELETE /api/routing-rules/:id` — tests/api_definitions/routing-rules/id-delete.json → missing: negative testCase for 4 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND
+- [ ] `PATCH /api/routing-rules/:id` — tests/api_definitions/routing-rules/id-patch.json → missing: negative testCase for 5 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND
+- [ ] `GET /api/routing-rules` — tests/api_definitions/routing-rules/routing-rules-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN
+- [ ] `POST /api/routing-rules` — tests/api_definitions/routing-rules/routing-rules-post.json → missing: negative testCase for 4 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND
+- [ ] `POST /api/leadflow/segments/:id/compute` — tests/api_definitions/segments/segments-id-compute-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 400/VALIDATION_ERROR
+- [ ] `POST /api/leadflow/sequences/enroll` — tests/api_definitions/sequences/enroll-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT
+- [ ] `POST /api/leadflow/sequences/enrollments/:id/stop` — tests/api_definitions/sequences/enrollments-id-stop-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `GET /api/leadflow/sequences/guards/log` — tests/api_definitions/sequences/guards-log-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `POST /api/leadflow/sequences/inbound/poll` — tests/api_definitions/sequences/inbound-poll-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `GET /api/leadflow/sequences/:key/performance` — tests/api_definitions/sequences/key-performance-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `POST /api/leadflow/sequences/nurture/:ref/reactivate` — tests/api_definitions/sequences/nurture-ref-reactivate-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
 - [ ] `POST /api/sla/alerts/acknowledge` — tests/api_definitions/sla/alerts-acknowledge-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/sla/alerts/dispatch` — tests/api_definitions/sla/alerts-dispatch-post.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN
+- [ ] `GET /api/sla/alerts` — tests/api_definitions/sla/alerts-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN
 - [ ] `POST /api/sla/evaluate` — tests/api_definitions/sla/evaluate-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/leadflow/leads/:id/breach` — tests/api_definitions/sla/leads-id-breach-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/leadflow/leads/:id/log-attempt` — tests/api_definitions/sla/leads-id-log-attempt-post.json → missing: negative testCase for 5 errorCase(s) (MUST-64): 422/KIND_CANNOT_SATISFY, 422/NO_TRACKED_CALL, 422/NO_DISPOSITION, 422/NO_NEXT_ACTION
+- [ ] `POST /api/leadflow/sla/overnight-queue` — tests/api_definitions/sla/overnight-queue-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT
+- [ ] `GET /api/sla/policies` — tests/api_definitions/sla/policies-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN
+- [ ] `DELETE /api/sla/policies/:id` — tests/api_definitions/sla/policies-id-delete.json → missing: negative testCase for 4 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND
+- [ ] `PATCH /api/sla/policies/:id` — tests/api_definitions/sla/policies-id-patch.json → missing: negative testCase for 5 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND
+- [ ] `POST /api/sla/policies` — tests/api_definitions/sla/policies-post.json → missing: negative testCase for 4 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 409/CONFLICT
+- [ ] `GET /api/sla/status` — tests/api_definitions/sla/status-get.json → missing: negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN
+- [ ] `GET /api/users/permission-matrix` — tests/api_definitions/users/permission-matrix-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `GET /api/users/register` — tests/api_definitions/users/register-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `GET /api/users/roles` — tests/api_definitions/users/roles-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN
+- [ ] `GET /api/users` — tests/api_definitions/users/users-get.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN
+- [ ] `POST /api/leadflow/workflows/:id/publish` — tests/api_definitions/workflows/workflows-id-publish-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT
+- [ ] `POST /api/leadflow/workflows/:id/rollback` — tests/api_definitions/workflows/workflows-id-rollback-post.json → missing: negative testCase for 2 errorCase(s) (MUST-64): 404/NOT_FOUND, 409/CONFLICT
+- [ ] `GET /api/leadflow/handoffs/:id` — tests/api_definitions/workspace/handoffs-id-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `GET /api/leadflow/leads/:id/routing-trace` — tests/api_definitions/workspace/leads-id-routing-trace-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `GET /api/leadflow/opportunities/:id/offer-staleness` — tests/api_definitions/workspace/opportunities-id-offer-staleness-get.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
+- [ ] `POST /api/leadflow/workflows/:id/release-gate` — tests/api_definitions/workspace/workflows-id-release-gate-post.json → missing: negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND
 
 Call `projexlight_get_api_definition_rules` for the exact format.

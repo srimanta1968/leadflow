@@ -1,0 +1,167 @@
+{
+  "name": "POST /api/users/invite - Add a colleague to the register",
+  "description": "Creates a PENDING user account with the requested local role and returns the register's projection of it. Proves criterion 4c12f924-87d1-4be1-b790-d94a936d58b3#AC1, an admin can invite a user and assign a role without touching the database - before this endpoint existed the only ways to set users.role were the development seed, which refuses to run under NODE_ENV=production, and editing the database by hand. 201 because this INSERTS an addressable row at a collection root. The account is created is_active=false with a credential no password can match, so adding somebody to the register and letting them in are two separate governed acts; POST /api/users/{id}/activate is the second. Governed on user.invite through the policy decision point, which appends the audit entry naming the actor, the invited address and the role; the local role bridge maps users.role='admin' to revenue_operations, which holds the grant unaided, and sales_manager holds it behind approval so a manager receives APPROVAL_REQUIRED rather than a flat refusal. QA: depends on register and login for the conflict case's email; requiresRole admin, so the runner pre-fetches that identity and NO Authorization header is declared here (MUST-71).",
+  "endpoint": "/api/users/invite",
+  "method": "POST",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "featureId": "c12362d4-3479-46e6-b243-47c04b68b61e",
+  "epicId": "224f72e3-9444-4923-96da-477e76aa9654",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "admin"
+  ],
+  "testability": "auto",
+  "priority": 16,
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "4c12f924-87d1-4be1-b790-d94a936d58b3#AC1"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "role": [
+      "admin",
+      "manager",
+      "user",
+      "steward",
+      "privacy"
+    ],
+    "state": [
+      "pending",
+      "active",
+      "deactivated"
+    ]
+  },
+  "captureResponse": {
+    "users.invite.response.data.user.id": "data.user.id",
+    "users.invite.response.data.user.email": "data.user.email"
+  },
+  "testCases": [
+    {
+      "name": "Invite a data steward, who lands pending",
+      "coversCriterion": "4c12f924-87d1-4be1-b790-d94a936d58b3#AC1",
+      "capturesResponse": true,
+      "payload": {
+        "email": "{{dynamic:email}}",
+        "role": "steward",
+        "first_name": "{{dynamic:first_name}}",
+        "last_name": "{{dynamic:last_name}}"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "user": {
+            "role": "steward",
+            "state": "pending",
+            "is_active": false
+          }
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: a role the bridge does not recognise is refused, not saved",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|role",
+      "payload": {
+        "email": "{{dynamic:email}}",
+        "role": "{{static:owner}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: a malformed address",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|email",
+      "payload": {
+        "email": "{{static:not-an-address}}",
+        "role": "user"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no role at all",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|missing",
+      "payload": {
+        "email": "{{dynamic:email}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: somebody already on the register",
+      "testType": "negative",
+      "coversErrorCase": "409|EMAIL_ALREADY_EXISTS",
+      "payload": {
+        "email": "{{cache:auth.register.response.data.user.email}}",
+        "role": "user"
+      },
+      "expectedStatus": 409,
+      "expectedResponse": {
+        "success": false,
+        "code": "EMAIL_ALREADY_EXISTS"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "payload": {
+        "email": "{{dynamic:email}}",
+        "role": "user"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "email is absent or malformed, role is absent, or role is not one of admin, manager, user, steward, privacy. An unrecognised role is rejected rather than saved because the local role bridge returns no SOP roles for it, so the account would save and grant nothing - a silent failure the operator would read as a broken product."
+    },
+    {
+      "code": "EMAIL_ALREADY_EXISTS",
+      "status": 409,
+      "when": "an account already holds that address. Raised by the pre-check and again by the unique index, so two concurrent invitations for one address both answer 409 rather than one answering 500."
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "FORBIDDEN",
+      "status": 403,
+      "when": "the caller does not hold user.invite - a local 'user' or 'steward' account, which bridges to sales_rep and data_steward respectively and holds neither the grant nor an approval path to it",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64/MUST-71: reproducing it needs a token from a DIFFERENT role, and this definition declares requiresRole so the runner pre-fetches the admin identity. Pinning a second role's Authorization alongside requiresRole is exactly what MUST-71 forbids - the resulting 403 is indistinguishable from a genuine permissions bug in the API."
+    },
+    {
+      "code": "APPROVAL_REQUIRED",
+      "status": 403,
+      "when": "the caller holds the action behind approval rather than unaided - a local 'manager' account, which bridges to sales_manager. A distinct code from FORBIDDEN on purpose: the caller MAY do this, with a second party, and telling them they may not is how people learn to work around the product.",
+      "reproducible": false,
+      "_whyNotReproducible": "Same as FORBIDDEN above: it needs the manager identity, which this definition cannot supply without breaking MUST-71. There is no manager entry in testCredentials, and MUST-59 forbids inventing one."
+    }
+  ]
+}

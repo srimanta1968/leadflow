@@ -1,0 +1,128 @@
+{
+  "taskId": "bd991d43-6c82-4842-a375-f62cb4a5439a",
+  "featureId": "e9190d5d-9813-40f7-b61a-d671fe916d74",
+  "epicId": "79cac1c4-3ab0-4f9d-9660-a880c054ac0c",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 8,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/workflows - a version, created inert",
+  "description": "Creates a workflow version, INERT (bd991d43-6c82-4842-a375-f62cb4a5439a#AC1). Reaching production needs a passing dry run AND a recorded approval, and a CHECK constraint refuses a published row carrying neither - so the rule holds even for a writer that forgets to check it, which matters because a convention reviewers are supposed to follow is not followed the first time somebody is in a hurry.\n\nThe version number is server-assigned as max+1 per key. QA: measured live.",
+  "endpoint": "/api/leadflow/workflows",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "bd991d43-6c82-4842-a375-f62cb4a5439a#AC1"
+  ],
+  "captureResponse": {
+    "workflows.post.response.data.workflow_version_id": "data.workflow_version_id",
+    "workflows.post.response.data.workflow_key": "data.workflow_key",
+    "workflows.post.response.data.id": "data.workflow_version_id",
+    "workflows.post.response.data.key": "data.workflow_key"
+  },
+  "requestBody": {
+    "workflow_key": "wf_{{dynamic:uuid}}",
+    "definition": {
+      "steps": [
+        {
+          "when": {
+            "unowned": true
+          },
+          "then": "create_task"
+        }
+      ]
+    }
+  },
+  "testCases": [
+    {
+      "name": "A version is created unpublished, with no dry run and no approval",
+      "coversCriterion": "bd991d43-6c82-4842-a375-f62cb4a5439a#AC1",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "workflow_key": "wf_{{dynamic:uuid}}",
+        "definition": {
+          "steps": [
+            {
+              "when": {
+                "unowned": true
+              },
+              "then": "create_task"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: no definition object",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "workflow_key": "wf_no_def"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "definition must be an object",
+      "when": "workflow_key is absent, or the definition is missing or not an object."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

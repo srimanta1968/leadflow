@@ -1,0 +1,119 @@
+{
+  "taskId": "92ce5959-0e5c-4ce8-be7a-02cc870b2120",
+  "featureId": "95512768-e04d-425c-bec5-fea91a60842b",
+  "epicId": "ef8a21ec-c1a9-4d26-ac59-e0fa28b41a3b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/offers",
+    "POST /api/leadflow/offers/:id/approve"
+  ],
+  "name": "POST /api/leadflow/offers/:id/activate - exactly one quotable version",
+  "description": "Makes an approved version the one reps quote (92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC1). SUPERSEDING THE PREVIOUS VERSION IS PART OF ACTIVATION, in the same request: two active versions would mean two reps quoting different terms and both believing they were current, and a partial unique index refuses the second one outright rather than trusting the handler to remember.\n\nACTIVATION WITHOUT THE FULL ROUTE IS A 409, NOT A 400 (92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC2). The request is well formed and the version is real; the world is simply not in a state where activation is permitted, and the refusal names who is still outstanding. A database CHECK enforces the same rule, so an unapproved sheet cannot be activated by any writer - putting unreviewed terms in front of a buyer is the harm.\n\nQA: depends on the draft and its approvals, both read from the cache.",
+  "endpoint": "/api/leadflow/offers/:id/activate",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC1",
+    "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC2"
+  ],
+  "captureResponse": {
+    "offers.activate.response.data.offer_version_id": "data.offer_version_id"
+  },
+  "testCases": [
+    {
+      "name": "An approved version becomes active and supersedes the previous one",
+      "coversCriterion": "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {},
+      "params": {
+        "id": "{{cache:offers.post.response.data.offer_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no version with that id",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {},
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:offers.post.response.data.offer_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:offers.post.response.data.offer_version_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No offer version with that id",
+      "when": "the offer version id does not exist."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "This version is still awaiting legal and finance. Activating an unapproved sheet would put unreviewed terms in front of a buyer.",
+      "when": "any party on the approval route has not signed off. The request is well formed; the world is not in a state where activation is permitted."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "taskId": "45f96ede-27d5-4c38-a4e1-a3e40df7fd56",
+  "featureId": "262a5dbd-03c5-42a8-ba53-8bcb1a671657",
+  "epicId": "68d8857d-2a0f-4152-a255-7a3d5bfe121a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/onboarding/pending - the 24-hour completion alert",
+  "description": "Lists paid licences whose handoff has not landed, and RAISES THE 24-HOUR ALERT from the same pass (45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC1). A list nobody reads catches nothing, so the alert to CS and the manager fires here rather than waiting for somebody to open a screen.\n\nTHE CLOCK RUNS FROM VERIFIED PAYMENT, not from the handoff row being created. Otherwise a handoff nobody creates never starts a clock - which is precisely the \"Closed Won incomplete\" failure SOP §50 names, and the one an implementation keyed off its own record would never detect.\n\nTHE ALERT FIRES ONCE PER HANDOFF, claimed by an UPDATE ... WHERE alerted_at IS NULL rather than by reading and then writing. The list runs on a timer as well as on demand, and two concurrent passes would both read \"not yet alerted\" and both notify - a manager who gets the same alert six times stops reading them.\n\nCLOSED WON IS NOT TERMINAL until CS has accepted the handoff AND the kickoff is booked (45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC2). A record that goes quiet the moment payment clears is the failure this prevents: the customer has paid and nobody has called them.\n\nQA: depends on register and login; a fresh environment has no paid licences, so pending_count is legitimately zero and the shape is what is asserted.",
+  "endpoint": "/api/leadflow/onboarding/pending",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC1",
+    "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC2"
+  ],
+  "testCases": [
+    {
+      "name": "Pending handoffs are listed with the overdue set and the alerts raised",
+      "coversCriterion": "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

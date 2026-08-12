@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/ai/revops/proposals",
   "method": "GET",
   "taskId": "0c5a3bed-354e-4400-9378-5fe701d1f90a",
+  "featureId": "3fb74d09-7398-4fee-9d8f-05f19e31ad4d",
+  "epicId": "34925c81-88e1-4115-8220-a1441a258108",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 4,

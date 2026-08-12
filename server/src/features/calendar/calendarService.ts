@@ -1,5 +1,6 @@
 import { dataService } from '../../services/DataService';
 import { config } from '../../config/env';
+import { sendsHalted } from '../failures/runbook';
 import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { degradingRead } from '../../platform/sdkGateway/degradingRead';
 
@@ -254,4 +255,102 @@ export async function reminderAllowed(input: {
   } catch {
     return { allowed: false, refusal: 'The eligibility check failed.' };
   }
+}
+
+/**
+ * Dispatch every reminder that has come due.
+ *
+ * THE GATE RUNS PER REMINDER AT SEND TIME, not at generation time. A meeting
+ * booked on Monday sends its 24-hour reminder on Thursday, and consent can be
+ * withdrawn in between — evaluating eligibility when the reminder was CREATED
+ * would send to somebody who opted out three days ago, and "but it is
+ * transactional" is an argument nobody wins after the complaint.
+ *
+ * THE SEND IS CLAIMED BY THE UPDATE, not decided by a read. The dispatcher runs
+ * on a timer and two concurrent ticks would both see the same due reminder;
+ * telling a customer twice about the same meeting is the specific harm.
+ */
+export async function dispatchDueReminders(now = new Date()): Promise<{
+  due: number; sent: number; refused: number; halted: boolean;
+}> {
+  if (await sendsHalted()) {
+    /* The global pause covers reminders too. A meeting reminder is a smaller
+       harm than a cadence blast, but a switch that stops "most" automated sends
+       is one nobody can reason about during an incident. */
+    return { due: 0, sent: 0, refused: 0, halted: true };
+  }
+
+  const due = await dataService.query<{
+    reminder_id: string; meeting_id: string; audience: 'customer' | 'rep';
+    channel: string; template_key: string | null; subject_ref: string; starts_at: string;
+  }>(
+    `SELECT r.reminder_id, r.meeting_id, r.audience, r.channel, r.template_key,
+            m.subject_ref, m.starts_at
+       FROM leadflow_meeting_reminder r
+       JOIN leadflow_meeting m ON m.meeting_id = r.meeting_id
+      WHERE r.tenant_id = $1 AND r.sent_at IS NULL AND r.suppressed_at IS NULL
+        AND r.due_at <= $2::timestamptz
+        AND m.status <> 'cancelled'
+      ORDER BY r.due_at ASC LIMIT 200`,
+    [config.projexCloud.tenantId, now.toISOString()]
+  );
+
+  let sent = 0;
+  let refused = 0;
+  for (const reminder of due) {
+    const verdict = await reminderAllowed({
+      audience: reminder.audience, subjectRef: reminder.subject_ref, channel: reminder.channel,
+    });
+
+    if (!verdict.allowed) {
+      /* SUPPRESSED WITH THE REASON RECORDED, never silently skipped. A reminder
+         that was refused and one that was never processed look identical if the
+         row is just left alone, and the first is a consent decision somebody
+         may have to explain. */
+      await dataService.query(
+        `UPDATE leadflow_meeting_reminder
+            SET suppressed_at = now(), suppressed_reason = 'channel decision refused at send time',
+                gate_refusal = $2
+          WHERE reminder_id = $1 AND sent_at IS NULL AND suppressed_at IS NULL`,
+        [reminder.reminder_id, verdict.refusal]
+      );
+      refused += 1;
+      continue;
+    }
+
+    const claimed = await dataService.query<{ reminder_id: string }>(
+      `UPDATE leadflow_meeting_reminder SET sent_at = now()
+        WHERE reminder_id = $1 AND sent_at IS NULL AND suppressed_at IS NULL
+        RETURNING reminder_id`,
+      [reminder.reminder_id]
+    );
+    if (claimed.length === 0) continue;
+
+    if (SdkGatewayClient.isConfigured()) {
+      try {
+        await SdkGatewayClient.call({
+          sdk: 'sdk-notification', path: '/api/notifications/send', method: 'POST',
+          idempotencyKey: `meeting-reminder:${reminder.reminder_id}`,
+          body: {
+            tenant_id: config.projexCloud.tenantId,
+            // A rep-audience reminder goes in-app and NEVER to a customer
+            // channel — the 15-minute rung exists to nudge the rep, and to the
+            // customer it reads as nagging when they are already on their way.
+            channel: reminder.audience === 'rep' ? 'in_app' : reminder.channel,
+            subject_ref: reminder.audience === 'rep' ? null : reminder.subject_ref,
+            audience: reminder.audience === 'rep' ? 'internal' : 'prospect',
+            template_key: reminder.template_key ?? 'meeting_reminder',
+            metadata: { meeting_id: reminder.meeting_id, starts_at: reminder.starts_at },
+          },
+        });
+      } catch {
+        /* The claim stands. A reminder marked sent that failed to deliver is
+           recoverable from the notification log; one left unclaimed is sent
+           again on the next tick, which is the duplicate this guards against. */
+      }
+    }
+    sent += 1;
+  }
+
+  return { due: due.length, sent, refused, halted: false };
 }

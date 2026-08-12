@@ -1,0 +1,147 @@
+{
+  "taskId": "db21f0db-8754-4be1-b3db-d367fff9af12",
+  "featureId": "373c118f-8ae3-406d-8134-d66b402c63c3",
+  "epicId": "ef8a21ec-c1a9-4d26-ac59-e0fa28b41a3b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 11,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/offers",
+    "POST /api/leadflow/offers/:id/activate"
+  ],
+  "name": "POST /api/leadflow/checkout/send - a versioned link, with no card data",
+  "description": "Sends a secure checkout link and BLOCKS card-like patterns from every free-text field (db21f0db-8754-4be1-b3db-d367fff9af12#AC1). Blocked, not flagged: card data in a CRM note or an email is a compliance breach that no amount of later redaction undoes, because the note is already replicated, indexed and backed up by the time anybody notices. The 422 names which pattern matched and tells the operator to send the link instead.\n\nTHE LUHN CHECK IS DELIBERATELY NOT APPLIED. A number that fails Luhn is still somebody typing a card number badly, and the point is to stop the habit rather than to catch valid cards specifically. A false positive costs a rephrase; a false negative costs a breach notification.\n\nTHE LINK CARRIES THE EXACT APPROVED VERSION THE BUYER WAS SHOWN (db21f0db-8754-4be1-b3db-d367fff9af12#AC2), stamped onto the session at send. Without it a dispute about terms cannot be settled, because the offer may have changed since. An offer with no active approved version cannot be sent at all.\n\nANY PREVIOUS OPEN CHECKOUT FOR THE SAME CONTACT IS CANCELLED. A second live link lets them pay twice, or pay against terms the rep has already replaced.\n\nThe agreed decision time is recorded as a NEXT action rather than left in a rep's head, so the follow-up exists whether or not they remember it. QA: depends on the offer activated earlier in the chain, whose key is read from the cache.",
+  "endpoint": "/api/leadflow/checkout/send",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "db21f0db-8754-4be1-b3db-d367fff9af12#AC1",
+    "db21f0db-8754-4be1-b3db-d367fff9af12#AC2"
+  ],
+  "captureResponse": {
+    "checkout.send.post.response.data.checkout_id": "data.checkout_id",
+    "checkout.send.post.response.data.id": "data.checkout_id",
+    "checkout.send.post.response.data.subject_ref": "data.subject_ref"
+  },
+  "requestBody": {
+    "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+    "offer_key": "leadflow_core_qa",
+    "note": "Buyer asked for the link after the demo.",
+    "decision_due_at": "2026-08-20T15:00:00Z"
+  },
+  "testCases": [
+    {
+      "name": "A checkout is sent against the active approved version, stamped with it",
+      "coversCriterion": "db21f0db-8754-4be1-b3db-d367fff9af12#AC2",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+        "offer_key": "leadflow_core_qa",
+        "note": "Buyer asked for the link after the demo.",
+        "decision_due_at": "2026-08-20T15:00:00Z"
+      }
+    },
+    {
+      "name": "A note containing a card-like number is REFUSED, not merely flagged",
+      "coversCriterion": "db21f0db-8754-4be1-b3db-d367fff9af12#AC1",
+      "expectedStatus": 422,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "422|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+        "offer_key": "leadflow_core_qa",
+        "note": "He read me his card over the phone: 4111 1111 1111 1111"
+      }
+    },
+    {
+      "name": "NEGATIVE: subject_ref omitted",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "offer_key": "leadflow_core_qa"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "when": "subject_ref or offer_key is absent or empty."
+    },
+    {
+      "status": 422,
+      "code": "VALIDATION_ERROR",
+      "message": "This note looks like it contains card data (card number). Card details must never be collected in messages, notes, email or by phone - send the secure checkout link instead.",
+      "when": "a free-text field matches a card number, CVV or expiry pattern. Refused rather than stored, because redaction after the fact does not undo replication."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No approved active version exists for that offer, so no checkout may be sent",
+      "when": "the offer has no approved active version - a link against unreviewed terms must not reach a buyer."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

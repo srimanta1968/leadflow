@@ -75,6 +75,49 @@ ensure_registry_env() {
 
 REGISTRY_FILE="$(get_registry_host_dir)/registered_projects.json"
 
+# WHERE COMPOSE MUST RUN FROM.
+#
+# The compose file reads its variables from the .env in the CURRENT directory,
+# and EVERY project mount comes from that file:
+#     ${PROJECT_PATH:-../}:/workspace
+#     ${ADDITIONAL_PROJECT_1..10:-/dev/null}:/projects/additionalN
+#     PROJECT_PATH_MAPPINGS=${PROJECT_PATH_MAPPINGS:-}
+# Note the DEFAULTS. Run this script from a GUEST checkout and compose from its
+# directory, and the container is recreated with /workspace pointing at the guest
+# and all ten slots blanked to /dev/null -- every other project's files vanish
+# from the container, and the resolver is left with no mappings at all. Nothing
+# warns; the container comes up "healthy".
+#
+# Only the OWNER's mcp-server dir holds the .env that describes the fleet, so
+# compose runs from there. Same intent as the fix setup-all.sh already carries
+# for recover_env_from_registry: "a GUEST running setup-all updates the OWNER's
+# .env - not its own (the previous bug)". Docker is the authority for who the
+# owner is, exactly as in setup-all.sh's is_this_project_the_owner.
+resolve_compose_dir() {
+    local ws=""
+    for _c in "$CONTAINER_NAME" projexlight-dev-mcp projexlight-test-mcp; do
+        ws=$(docker inspect "$_c"             --format='{{range .Mounts}}{{if eq .Destination "/workspace"}}{{.Source}}{{end}}{{end}}' 2>/dev/null || echo "")
+        [ -n "$ws" ] && break
+    done
+    if [ -n "$ws" ]; then
+        ws="${ws//\//}"
+        if [ -d "$ws/mcp-server" ] && [ -f "$ws/mcp-server/$(basename "$COMPOSE_FILE")" ]; then
+            # Resolve both sides before comparing: $SCRIPT_DIR is a Unix path and
+            # the mount source is a Windows one, so a raw string compare would
+            # call the owner a guest and needlessly relocate the run.
+            local a b
+            a=$(cd "$ws/mcp-server" 2>/dev/null && pwd)
+            b=$(cd "$SCRIPT_DIR" 2>/dev/null && pwd)
+            if [ -n "$a" ] && [ "$a" != "$b" ]; then
+                print_msg "$YELLOW" "[INFO] Composing from the OWNER project so other projects keep their mounts:"
+                print_msg "$YELLOW" "       $a"
+                echo "$a"; return
+            fi
+        fi
+    fi
+    echo "$SCRIPT_DIR"
+}
+
 check_prerequisites() {
     if ! command -v docker &> /dev/null; then
         print_msg "$RED" "[ERROR] Docker is not installed"
@@ -271,6 +314,32 @@ sync_credentials_if_needed() {
             rest="${rest//\\//}"
             unix_path="/${drive,,}${rest}"
         fi
+
+        # DO NOT ASSUME GUEST. This block runs when the project has NO registry
+        # entry at all, which is exactly the case after a fresh or repaired
+        # registry -- including for the OWNER. Registering it isOwner:false makes
+        # the server hand the owner an additional slot and overwrite its
+        # containerPath "/workspace" with "/projects/additionalN", so the project
+        # is mounted twice and its per-project state splits across two container
+        # roots. Same demotion setup-all.sh had, fixed there by
+        # is_this_project_the_owner.
+        #
+        # Ask Docker, not the registry: whatever source is mounted at /workspace
+        # IS the owner. If the container is not running we cannot tell, and false
+        # stays the safe default -- a guest wrongly called owner steals /workspace.
+        local is_owner_flag="false" ws_src
+        ws_src=$(docker inspect "$CONTAINER_NAME" \r
+            --format='{{range .Mounts}}{{if eq .Destination "/workspace"}}{{.Source}}{{end}}{{end}}' 2>/dev/null || echo "")
+        if [ -n "$ws_src" ]; then
+            ws_src="${ws_src//\//}"
+            if [[ "$ws_src" =~ ^([A-Za-z]):(.*)$ ]]; then
+                ws_src="/${BASH_REMATCH[1],,}${BASH_REMATCH[2]}"
+            fi
+            if [ "${ws_src%/}" = "${unix_path%/}" ]; then
+                is_owner_flag="true"
+                print_msg "$YELLOW" "[SYNC] This project is mounted at /workspace - registering as OWNER"
+            fi
+        fi
         curl -sf -X POST "http://localhost:${port}/api/projects/register" \
             -H "Content-Type: application/json" \
             -d "{
@@ -286,7 +355,7 @@ sync_credentials_if_needed() {
                 \"expiresAt\": \"$expires_at\",
                 \"sprintId\": \"$sprint_id\",
                 \"databaseConfig\": $db_config,
-                \"isOwner\": false
+                \"isOwner\": $is_owner_flag
             }" > /dev/null 2>&1 || true
         if curl -sf "http://localhost:${port}/api/projects" 2>/dev/null \
              | jq -e --arg pid "$project_id" '.projects[]? | select(.projectId==$pid)' >/dev/null 2>&1; then
@@ -540,6 +609,7 @@ start_server() {
     # Start fresh container
     print_msg "$BLUE" "Starting Dev MCP Server..."
     print_msg "$CYAN" "[INFO] API URL: ${PROJEXLIGHT_API_URL:-https://api.projexlight.com}"
+    cd "$(resolve_compose_dir)" || exit 1
     $COMPOSE_CMD -f dev-mcp-compose.yml up -d
 
     # Wait for health with retries

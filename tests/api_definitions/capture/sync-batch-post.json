@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/capture/sync-batch",
   "method": "POST",
   "taskId": "60ab6112-2c9b-4b38-98bc-880a2d2eaa65",
+  "featureId": "80de4665-965c-479d-8afb-79486bbc46a2",
+  "epicId": "befcccab-d3b9-4629-828b-0df9f2c981d6",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 1,

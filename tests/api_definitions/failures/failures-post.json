@@ -1,0 +1,136 @@
+{
+  "taskId": "4cc3f597-f6c8-4dc5-8044-096ce144e676",
+  "featureId": "36b8ab88-3c05-4528-b9bb-45f058859a33",
+  "epicId": "06998b3d-d057-490d-8cfb-962e43b525c6",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 8,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/failures - record a failure and take its fallback",
+  "description": "Records one of the six documented failure modes and returns its fallback and NAMED OWNER (4cc3f597-f6c8-4dc5-8044-096ce144e676#AC1). The owner is the part that is easy to leave out and the part that decides whether anything happens: an alert addressed to everybody is addressed to nobody.\n\nTHE SIX MODES ARE A CLOSED SET, enforced by a CHECK constraint. A free string would let a new failure be logged under a name nothing has a fallback for, which is the same as not logging it - MEASURED LIVE, an unknown mode was refused with all six named.\n\nTHE ORIGINAL EVENT ID IS MANDATORY AND IS THE DEDUPE KEY. A connector outage that loses it makes the backfill produce duplicates, because nothing can tell which events already landed, so it is part of a unique constraint rather than a field somebody remembers to populate. A repeat report of the same failure returns 200 with duplicate true and writes nothing.\n\nRETRIES ARE PART OF THE RUNBOOK ENTRY, not a transport setting: \"retry safely once with no duplicate\" is a product decision about a customer's inbox, and burying it in an HTTP client's config is how it silently becomes three.",
+  "endpoint": "/api/leadflow/failures",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC1"
+  ],
+  "captureResponse": {
+    "failures.post.response.data.failure_id": "data.failure_id",
+    "failures.post.response.data.id": "data.failure_id"
+  },
+  "fieldEnums": {
+    "data.failure_mode": [
+      "connector_down",
+      "provider_send_failure",
+      "calendar_sync_failure",
+      "payment_webhook_missing",
+      "duplicate_send_loop",
+      "timezone_or_holiday_rule"
+    ]
+  },
+  "requestBody": {
+    "failure_mode": "provider_send_failure",
+    "original_event_id": "evt_{{dynamic:uuid}}",
+    "source_ref": "sms"
+  },
+  "testCases": [
+    {
+      "name": "A documented failure is recorded with its fallback and owner",
+      "coversCriterion": "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC1",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "failure_mode": "provider_send_failure",
+        "original_event_id": "evt_{{dynamic:uuid}}",
+        "source_ref": "sms"
+      }
+    },
+    {
+      "name": "NEGATIVE: a failure mode nothing has a fallback for",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "failure_mode": "everything_broke",
+        "original_event_id": "evt_x"
+      }
+    },
+    {
+      "name": "NEGATIVE: no original event id, so the backfill could not deduplicate",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "failure_mode": "connector_down"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "failure_mode must be one of connector_down, provider_send_failure, calendar_sync_failure, payment_webhook_missing, duplicate_send_loop, timezone_or_holiday_rule - a failure logged under a name nothing has a fallback for is the same as not logging it",
+      "when": "the mode is outside the six documented ones, or original_event_id is absent."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

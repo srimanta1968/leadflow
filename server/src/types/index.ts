@@ -35,6 +35,28 @@ export interface UserRow {
   last_login: Date | null;
   created_at: Date;
   updated_at: Date;
+  /*
+   * The register lifecycle, added by migration 034.
+   *
+   * ALL NULLABLE, including on rows that predate the register — an account
+   * created by /signup before this existed has no invitation and never will,
+   * and back-filling one would be inventing a colleague who invited them.
+   */
+  invited_at?: Date | null;
+  invited_by?: string | null;
+  activated_at?: Date | null;
+  deactivated_at?: Date | null;
+  deactivated_by?: string | null;
+  /**
+   * The ProjexCloud persona this row projects, when there is one (migration 007).
+   *
+   * DECIDES WHERE A ROLE CHANGE HAS TO LAND. `rolesFor` prefers a platform
+   * session's persona grants over the local `users.role`, so once a colleague
+   * signs in through ProjexCloud, editing the local column alone changes
+   * nothing they can do — the register would report a role the product does not
+   * enforce, which is the worst of both stores.
+   */
+  platform_persona_id?: string | null;
 }
 
 /** A user as exposed over the API — never carries `password_hash`. */

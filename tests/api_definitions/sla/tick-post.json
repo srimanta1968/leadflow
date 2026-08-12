@@ -1,0 +1,124 @@
+{
+  "taskId": "a9c60302-b7ba-4eab-bfe5-cf68d479d1d4",
+  "featureId": "396bd456-9a2a-4c7c-91fb-c1690cd345a8",
+  "epicId": "be026e56-403d-441b-9a82-4055aad09d66",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/sla/tick - advance the T+0 to T+45 escalation ladder",
+  "description": "Fires every rung that has come due, to the audience SOP §04 and §05 name for it: T+0 assign and write NEXT, T+1 acknowledgement, T+5 unaccepted reminder with the backup notified, T+15 rep reminder plus yellow manager warning, T+25 red alert with the optional P1 freeze, T+30 BREACH, T+45 critical incident (a9c60302-b7ba-4eab-bfe5-cf68d479d1d4#AC1).\n\nA DUPLICATED TICK NEVER DOUBLE-ALERTS (a9c60302-b7ba-4eab-bfe5-cf68d479d1d4#AC2), and that is a uniqueness problem rather than a scheduling one. Ticks arrive from the timer, from a webhook and from an operator; two landing on the same lead a millisecond apart both read \"T+15 has not fired\" and both send. So a rung is claimed by INSERTING into leadflow_escalation_fire, which carries UNIQUE (lead_id, rung) - the second insert is refused by the database and a refused insert means somebody else already alerted. No read-then-write, no lock, no window. MEASURED LIVE: two consecutive ticks on one lead returned fired [0] suppressed [] and then fired [] suppressed [0].\n\nSUPPRESSED IS REPORTED, NOT DISCARDED. A healthy re-tick has to be distinguishable from a ladder that has stopped firing, and only the suppressed count does that.\n\nEVERY DUE RUNG FIRES, NOT JUST THE LATEST. A tick delayed by an outage must not skip T+5 and T+15 on its way to T+25, because the backup was never told and the manager never saw the warning. Each rung is claimed separately, so a catch-up sweep sends what was genuinely missed and suppresses what was not.\n\nONE INCIDENT PER SWEEP AT T+45, listing every affected lead (a9c60302-b7ba-4eab-bfe5-cf68d479d1d4#AC4). Forty leads breaching because one workflow broke is one incident with forty rows; forty incidents is a pager nobody can act on. The idempotency key is bucketed by hour so a retry inside the sweep window joins the existing incident rather than opening a second.\n\nMEASURED FROM THE ORIGINAL SOURCE TIMESTAMP so a reassigned lead does not restart its ladder. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/sla/tick",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "a9c60302-b7ba-4eab-bfe5-cf68d479d1d4#AC1",
+    "a9c60302-b7ba-4eab-bfe5-cf68d479d1d4#AC2",
+    "a9c60302-b7ba-4eab-bfe5-cf68d479d1d4#AC4"
+  ],
+  "fieldEnums": {
+    "data.scope": [
+      "lead",
+      "sweep"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A sweep reports what fired and what the constraint suppressed",
+      "coversCriterion": "a9c60302-b7ba-4eab-bfe5-cf68d479d1d4#AC2",
+      "payload": {},
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "Re-running the sweep fires nothing it has already fired",
+      "coversCriterion": "a9c60302-b7ba-4eab-bfe5-cf68d479d1d4#AC2",
+      "payload": {},
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: ticking an unknown lead reports that nothing was advanced",
+      "coversCriterion": "a9c60302-b7ba-4eab-bfe5-cf68d479d1d4#AC1",
+      "payload": {
+        "lead_id": "{{var:absent_uuid}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "captureResponse": {
+    "sla.tick.response.data.rungs_fired": "data.rungs_fired"
+  },
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No lead with that id",
+      "when": "a lead_id is supplied that does not exist. Deliberately not a silent no-op: a caller ticking a lead by id expects to hear that the id was wrong rather than that nothing was due."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

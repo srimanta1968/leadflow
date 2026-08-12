@@ -1,0 +1,155 @@
+{
+  "taskId": "0a3474c3-56f8-4af6-8931-eb27cfddc13c",
+  "featureId": "83f42837-d20d-4c0f-b1e2-6cf1573e7b17",
+  "epicId": "c50a5ef2-74d3-4583-9f70-19f9499ad11a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/sequences/nurture - enter a record on the track its REASON dictates",
+  "description": "Places a record on the nurture track its reason dictates (0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC1), and creates the first dated touch so the record never sits without a next action (0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC2).\n\nAN OWNER IS REQUIRED, not defaulted to nobody. A nurture record with no owner never comes back, so the column is NOT NULL and the handler refuses without one.\n\nA NO-FIT RECORD IS NOT NURTURED WITHOUT A SPECIFIC FUTURE CHANGE (0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC4). SOP §47 is explicit, and the reason is that nurturing somebody who will never fit is a cost to them and to us forever. VERIFIED LIVE: no_fit_today with no future_change returned 400 naming the rule, and a CHECK constraint refuses it at the database so no other writer can store one.\n\nTHE FIRST TOUCH IS DATED FROM THE TRACK, so entering a record immediately produces the dated NEXT the invariant requires rather than leaving a gap until somebody runs a sweep. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/sequences/nurture",
+  "method": "POST",
+  "expectedStatus": 400,
+  "coversCriterion": [
+    "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC1",
+    "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC2",
+    "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC4"
+  ],
+  "fieldEnums": {
+    "reason_segment": [
+      "timing_or_season",
+      "budget_or_approval",
+      "current_contract",
+      "product_gap",
+      "trust_or_prelaunch",
+      "no_response",
+      "no_fit_today"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A no-fit record with no named future change is refused",
+      "coversCriterion": "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC4",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "reason_segment": "{{static:no_fit_today}}",
+        "owner_user_id": "{{cache:auth.login.response.data.user.id}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown reason segment is refused",
+      "coversCriterion": "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC1",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "reason_segment": "{{static:maybe_later}}",
+        "owner_user_id": "{{cache:auth.login.response.data.user.id}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no owner, so the record would never come back",
+      "coversCriterion": "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC2",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "reason_segment": "{{static:no_response}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "when": "no record is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason_segment must be one of timing_or_season, budget_or_approval, current_contract, product_gap, trust_or_prelaunch, no_response, no_fit_today",
+      "when": "an unrecognised segment is supplied."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "owner_user_id is required - a nurture record with no owner never comes back",
+      "when": "no owner is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "future_change is required for no_fit_today",
+      "when": "a no-fit record is entered with no specific future change that could create fit. SOP §47 does not permit it."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

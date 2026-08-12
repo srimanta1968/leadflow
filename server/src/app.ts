@@ -15,6 +15,7 @@ import { platformSession } from './platform/auth';
 import { provisionRoles } from './platform/identity';
 import { provisionConsentPurposes } from './platform/consent';
 import { tick as runRhythm } from './features/rhythm';
+import { dispatchDueReminders } from './features/calendar/calendarService';
 import { runDetectors } from './features/dataReview/detectors';
 import { seedTemplates } from './db/templateSeed';
 import { pollInboundSignals } from './features/sequences';
@@ -268,6 +269,21 @@ async function bootstrap(): Promise<void> {
    * overdue all weekend, and holding the escalation until Monday loses the one
    * signal that it slipped.
    */
+  /*
+   * MEETING REMINDERS. Every minute, because the 15-minute rep rung is the one
+   * that matters most and a five-minute sweep would fire it at anywhere from 10
+   * to 15 minutes out — which for the rung whose whole job is "you are about to
+   * be late" is the difference between useful and noise.
+   *
+   * The gate runs per reminder at SEND time inside the dispatcher, not here: a
+   * meeting booked Monday sends its 24-hour reminder Thursday, and consent can
+   * be withdrawn in between.
+   */
+  const reminderTimer = setInterval(() => {
+    dispatchDueReminders().catch((e: Error) => console.error('[reminders] dispatch failed:', e.message));
+  }, 60_000);
+  reminderTimer.unref();
+
   const rhythmTimer = setInterval(() => {
     runRhythm(new Date()).catch((e: Error) => console.error('[rhythm] tick failed:', e.message));
   }, 5 * 60_000);

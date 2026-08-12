@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/identity/review-queue",
   "method": "GET",
   "taskId": "62941f6f-9165-4c0a-afb5-82f6107bcb6c",
+  "featureId": "528b6e48-8c46-4bcf-b375-4af635eb886e",
+  "epicId": "9b0dd42c-1871-4a47-aae2-ab76e48d0d5c",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "requiresRole": [

@@ -4,6 +4,8 @@ import { authenticate, type AuthenticatedRequest } from '../../middleware/auth';
 import { AppError, ErrorCodes } from '../../utils/errors';
 import { dataService } from '../../services/DataService';
 import { config } from '../../config/env';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
+import { actionableSurfaces } from '../../config/erasureSurfaces';
 import {
   assertTraceLayers,
   mirrorSavedQuery,
@@ -385,6 +387,358 @@ auditRoutes.get(
            true statement rather than a degraded one. */
         upstream_available: { search: null },
         note: 'Visibility governs who may RUN a query. Running it re-executes the search under the caller own scopes.',
+      },
+    });
+  })
+);
+
+/**
+ * GET /api/leadflow/audit/timeline — the correlated narrative for one subject.
+ *
+ * A NARRATIVE, NOT A LOG TAIL. The events are grouped by correlation so a
+ * reader sees "this lead arrived, was routed, was messaged, and the message was
+ * suppressed" as one story rather than four rows they have to join in their
+ * head. That joining is exactly where a reader gets the story wrong.
+ */
+auditRoutes.get(
+  '/timeline',
+  asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const subjectRef = typeof req.query?.subject_ref === 'string' ? req.query.subject_ref.trim() : '';
+    if (subjectRef === '') {
+      throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'subject_ref is required');
+    }
+
+    const upstream = await SdkGatewayClient.isConfigured()
+      ? await SdkGatewayClient.call<{ data?: { events?: Record<string, unknown>[] } }>({
+        sdk: 'sdk-audit',
+        // A POST, not a GET — /api/audit/export takes its filter in the body.
+        path: '/api/audit/export',
+        method: 'POST',
+        body: { tenant_id: config.projexCloud.tenantId, subject_ref: subjectRef, limit: 200 }, idempotencyKey: `audit-timeline:${subjectRef}`,
+      }).catch(() => ({ delivered: false, data: undefined }))
+      : { delivered: false, data: undefined };
+
+    const events = (upstream.data?.data?.events ?? []).map((e: Record<string, unknown>) => ({
+      event_id: String(e.event_id ?? e.id ?? ''),
+      title: String(e.event_type ?? 'event'),
+      reference: typeof e.resource_id === 'string' ? e.resource_id : null,
+      actor: typeof e.actor_id === 'string' ? e.actor_id : null,
+      policy_decision_ref: typeof e.policy_decision_ref === 'string' ? e.policy_decision_ref : null,
+      credit_estimate: null,
+      occurred_at: typeof e.occurred_at === 'string' ? e.occurred_at : null,
+      correlation_id: typeof e.correlation_id === 'string' ? e.correlation_id : null,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        subject_ref: subjectRef, entries: events, entry_count: events.length,
+        upstream_available: { audit: upstream.delivered },
+        field_gaps: upstream.delivered ? [] : [
+          {
+            field: 'entries',
+            /* An empty timeline and an unreachable one look identical, and only
+               one of them means nothing happened to this person. */
+            reason: 'sdk-audit could not be reached, so this subject\'s history is unknown rather than empty.',
+          },
+        ],
+      },
+    });
+  })
+);
+
+/**
+ * The four reversible actions the Audit screen offers, and what each would touch.
+ *
+ * DECLARED, NOT INFERRED. The panel in client/src/features/audit/
+ * ReversibleActionsPanel.tsx offers exactly these four keys; anything else is a
+ * caller error rather than an empty preview, because a blast radius of "nothing"
+ * for a typo'd action is the one answer an operator must never be shown before
+ * approving a reversal.
+ */
+const REVERSIBLE_ACTIONS: Record<string, { label: string; categories: string[] }> = {
+  retract_identity_link: {
+    label: 'Retract identity link',
+    categories: ['identity_links', 'merged_records', 'audit_entries'],
+  },
+  end_relationship: {
+    label: 'End relationship',
+    categories: ['relationships', 'derived_access', 'audit_entries'],
+  },
+  withdraw_consent: {
+    label: 'Withdraw consent',
+    categories: ['consent_receipts', 'queued_messages', 'suppression_entries', 'audit_entries'],
+  },
+  start_privacy_erasure: {
+    label: 'Start privacy erasure',
+    categories: ['erasure_surfaces', 'retained_records', 'audit_entries'],
+  },
+};
+
+/**
+ * POST /api/leadflow/audit/reversals/preview — what a reversal would touch.
+ *
+ * ZERO SIDE EFFECTS BY CONTRACT. This runs while an operator is deciding, so it
+ * reads and counts and does nothing else — no write, no suppression, no audit
+ * append. An entry here would record a reversal that never happened, and the one
+ * thing worse than an unlogged action is a logged one that did not occur.
+ *
+ * A NULL COUNT IS NOT ZERO, and the distinction is the whole point of the
+ * `field_gaps` list. "Nothing would be touched" and "we could not find out what
+ * would be touched" look identical in a number and are opposites in a decision:
+ * the first invites approval, the second forbids it. Every unreachable upstream
+ * therefore yields count:null AND a named gap, and `reversible` goes false when
+ * any category could not be counted — an operator may not approve a blast radius
+ * nobody can state.
+ *
+ * COUNTED FROM WHAT THIS DEPLOYMENT CAN ACTUALLY SEE. The erasure surfaces are
+ * local configuration, so that count is exact; identity, relationship and
+ * consent counts come from their gateways and degrade honestly when ProjexCloud
+ * is unreachable.
+ */
+auditRoutes.post(
+  '/reversals/preview',
+  asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const subjectRef = typeof body.subject_ref === 'string' ? body.subject_ref.trim() : '';
+    const action = typeof body.action === 'string' ? body.action.trim() : '';
+
+    if (subjectRef === '') {
+      throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'subject_ref is required');
+    }
+    if (!(action in REVERSIBLE_ACTIONS)) {
+      throw new AppError(
+        400,
+        ErrorCodes.VALIDATION_ERROR,
+        `action must be one of ${Object.keys(REVERSIBLE_ACTIONS).join(', ')}`
+      );
+    }
+
+    const configured = SdkGatewayClient.isConfigured();
+    const gaps: { field: string; reason: string }[] = [];
+
+    /** Count rows an upstream would return, or null when it cannot be asked. */
+    const upstreamCount = async (
+      field: string,
+      sdk: string,
+      path: string,
+      unreachableReason: string
+    ): Promise<number | null> => {
+      if (!configured) {
+        gaps.push({ field, reason: `No ProjexCloud gateway is configured, so ${unreachableReason}` });
+        return null;
+      }
+      try {
+        const r = await SdkGatewayClient.call<{ data?: unknown }>({ sdk, path, method: 'GET' });
+        if (!r.delivered) {
+          gaps.push({ field, reason: `${sdk} did not answer, so ${unreachableReason}` });
+          return null;
+        }
+        const bag = r.data?.data as Record<string, unknown> | unknown[] | undefined;
+        const rows = Array.isArray(bag)
+          ? bag
+          : Array.isArray((bag as Record<string, unknown>)?.items)
+            ? ((bag as Record<string, unknown>).items as unknown[])
+            : null;
+        if (rows === null) {
+          gaps.push({ field, reason: `${sdk} answered in a shape this preview cannot count, so ${unreachableReason}` });
+          return null;
+        }
+        return rows.length;
+      } catch {
+        gaps.push({ field, reason: `${sdk} could not be reached, so ${unreachableReason}` });
+        return null;
+      }
+    };
+
+    const subject = encodeURIComponent(subjectRef);
+    const blast: { category: string; count: number | null; detail: string }[] = [];
+
+    if (action === 'retract_identity_link') {
+      const links = await upstreamCount(
+        'identity_links',
+        'sdk-identity',
+        `/api/identity/subjects/${subject}/links`,
+        'the number of links on this subject is unknown rather than zero.'
+      );
+      blast.push({
+        category: 'identity_links',
+        count: links,
+        detail: 'Links withdrawn. The underlying assertions survive; only the claim that they describe one person is retracted.',
+      });
+      blast.push({
+        category: 'merged_records',
+        count: links,
+        detail: 'Records that would separate again. Each keeps its own history rather than losing it.',
+      });
+    } else if (action === 'end_relationship') {
+      const roles = await upstreamCount(
+        'relationships',
+        'sdk-rebac',
+        `/api/rebac/subjects/${subject}/relationships`,
+        'the number of open relationships is unknown rather than zero.'
+      );
+      blast.push({
+        category: 'relationships',
+        count: roles,
+        detail: 'Closed with a valid_to date rather than deleted, so the period each was true stays answerable.',
+      });
+      blast.push({
+        category: 'derived_access',
+        count: roles,
+        detail: 'Access that came FROM the relationship ends with it. Access granted by a role is unaffected.',
+      });
+    } else if (action === 'withdraw_consent') {
+      const receipts = await upstreamCount(
+        'consent_receipts',
+        'sdk-consent',
+        `/api/consent/receipts?subject_ref=${subject}`,
+        'the number of live receipts is unknown rather than zero.'
+      );
+      blast.push({
+        category: 'consent_receipts',
+        count: receipts,
+        detail: 'Revoked. The evidence that consent was once given is preserved — a withdrawal is not a denial that it happened.',
+      });
+
+      // LOCAL AND EXACT. Queued sequence steps live in this database, so this
+      // one number is not a guess and does not degrade.
+      const queued = await dataService.query<{ n: string }>(
+        `SELECT COUNT(*)::text AS n
+           FROM leadflow_sequence_enrollment
+          WHERE tenant_id = $1 AND subject_ref = $2 AND status = 'active'`,
+        [config.projexCloud.tenantId, subjectRef]
+      );
+      blast.push({
+        category: 'queued_messages',
+        count: Number(queued[0]?.n ?? 0),
+        detail: 'Active enrolments whose remaining steps would be cancelled immediately, before the next tick.',
+      });
+      blast.push({
+        category: 'suppression_entries',
+        count: 1,
+        detail: 'One suppression entry is written per withdrawal, so a later send is refused rather than merely undesirable.',
+      });
+    } else {
+      // start_privacy_erasure — the surfaces are local configuration, so this is
+      // the one action whose blast radius is exact without any upstream.
+      const surfaces = actionableSurfaces();
+      blast.push({
+        category: 'erasure_surfaces',
+        count: surfaces.length,
+        detail: `Surfaces carrying this person's data: ${surfaces.map((s) => s.surface).join(', ')}.`,
+      });
+      blast.push({
+        category: 'retained_records',
+        count: surfaces.filter((s) => s.method === 'redact').length,
+        detail: 'Redacted rather than deleted. The row survives so SLA, routing and audit references stay intact; the person does not.',
+      });
+    }
+
+    // Always last, and never a number. The chain is append-only, so a reversal
+    // ADDS to it — claiming a count of entries "affected" would imply entries
+    // change, which is the one thing they never do.
+    blast.push({
+      category: 'audit_entries',
+      count: null,
+      detail: 'None are altered. The reversal appends its own entry naming the actor and the reason; the entries it reverses stay exactly as written.',
+    });
+    gaps.push({
+      field: 'audit_entries',
+      reason: 'Deliberately uncounted: audit entries are never modified by a reversal, so a count would imply an effect that cannot occur.',
+    });
+
+    const uncounted = blast.filter((b) => b.count === null && b.category !== 'audit_entries');
+
+    res.status(200).json({
+      success: true,
+      data: {
+        action,
+        blast_radius: blast,
+        /*
+         * FALSE WHEN ANYTHING COULD NOT BE COUNTED. An operator approving a
+         * reversal is approving its consequences, and consequences nobody can
+         * enumerate are not approvable. This is the field the panel gates its
+         * confirm button on.
+         */
+        reversible: uncounted.length === 0,
+        field_gaps: gaps,
+      },
+    });
+  })
+);
+
+/**
+ * POST /api/leadflow/audit/evidence-bundle — everything about one subject.
+ *
+ * ASSEMBLED ON DEMAND rather than stored. A bundle is requested because
+ * somebody is answering a question NOW — a complaint, a rights request, a
+ * dispute — and a pre-built one is stale by definition and reassuring by
+ * accident.
+ */
+auditRoutes.post(
+  '/evidence-bundle',
+  asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const subjectRef = typeof body.subject_ref === 'string' ? body.subject_ref.trim() : '';
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (subjectRef === '') throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'subject_ref is required');
+    if (reason === '') {
+      throw new AppError(
+        400, ErrorCodes.VALIDATION_ERROR,
+        'reason is required — an evidence bundle assembles somebody\'s whole record, and why it was assembled is itself an auditable act'
+      );
+    }
+
+    const configured = SdkGatewayClient.isConfigured();
+    const fetchOne = async (sdk: string, path: string): Promise<{ ok: boolean; data: unknown }> => {
+      if (!configured) return { ok: false, data: null };
+      try {
+        const r = await SdkGatewayClient.call<{ data?: unknown }>({
+          sdk, path, method: 'GET', idempotencyKey: `bundle:${sdk}:${subjectRef}`,
+        });
+        return { ok: r.delivered, data: r.data?.data ?? null };
+      } catch { return { ok: false, data: null }; }
+    };
+
+    const audit = await fetchOne('sdk-audit', `/api/audit/export?subject_ref=${encodeURIComponent(subjectRef)}&limit=500`);
+    const consent = await fetchOne('sdk-consent', `/api/consent/receipts?subject_ref=${encodeURIComponent(subjectRef)}`);
+    const source = await fetchOne('sdk-source-record', `/api/source-records/subjects/${encodeURIComponent(subjectRef)}/assertions`);
+
+    const sections = [
+      { section: 'audit_events', available: audit.ok, data: audit.data },
+      { section: 'consent_receipts', available: consent.ok, data: consent.data },
+      { section: 'source_assertions', available: source.ok, data: source.data },
+    ];
+    const incomplete = sections.filter((s) => !s.available).map((s) => s.section);
+
+    // The bundle records its own assembly, because pulling somebody's entire
+    // record together is itself an act somebody may later ask about.
+    if (configured) {
+      try {
+        await SdkGatewayClient.call({
+          sdk: 'sdk-audit', path: '/api/audit/append', method: 'POST',
+          idempotencyKey: `bundle-assembled:${subjectRef}:${reason}`,
+          body: {
+            tenant_id: config.projexCloud.tenantId,
+            event_type: 'leadflow.evidence_bundle.assembled.v1',
+            actor_id: req.session?.userId ?? null, resource_type: 'subject', resource_id: subjectRef,
+            metadata: { reason, sections_unavailable: incomplete },
+          },
+        });
+      } catch { /* the bundle is still returned; the trail entry is best-effort */ }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        subject_ref: subjectRef, reason, sections,
+        assembled_at: new Date().toISOString(),
+        /* A PARTIAL BUNDLE SAYS SO, prominently. Handing somebody an incomplete
+           record labelled "complete" is worse than handing them nothing: they
+           answer a regulator from it. */
+        complete: incomplete.length === 0,
+        sections_unavailable: incomplete,
       },
     });
   })

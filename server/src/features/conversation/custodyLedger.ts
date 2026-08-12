@@ -152,7 +152,7 @@ async function mirrorUpstream(
   try {
     const result = await SdkGatewayClient.call<{ data?: { evidence_id?: string } }>({
       sdk: 'sdk-evidence',
-      path: '/api/evidence/records',
+      path: '/api/evidence/capture',
       method: 'POST',
       idempotencyKey: `custody:${input.recordingId}:${hash}`,
       body: {

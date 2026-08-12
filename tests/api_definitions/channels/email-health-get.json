@@ -1,0 +1,82 @@
+{
+  "taskId": "5faf3fdf-7777-49fc-9c19-267f74ca3f23",
+  "featureId": "019148aa-61a7-4caa-a9ff-83369ddb6681",
+  "epicId": "6691a598-597d-42a8-82fc-ddec2442b572",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/channels/email/health - can this tenant send, and is every sender identity complete?",
+  "description": "The RevOps deliverability panel. SPF, DKIM and DMARC ARE REPORTED SEPARATELY (5faf3fdf-7777-49fc-9c19-267f74ca3f23#AC1) rather than as one verified flag, because they fail for different reasons and are fixed by different DNS records - a single boolean tells an operator to \"fix DNS\", which is not an instruction anybody can follow. can_send is the conjunction of all three, computed here so no caller has to remember that partial verification is not verification.\n\nEVERY COMMERCIAL EMAIL CARRIES IDENTITY, ADDRESS AND A WORKING OPT-OUT (5faf3fdf-7777-49fc-9c19-267f74ca3f23#AC4). from_name, from_address, business_name and physical_address are NOT NULL on leadflow_email_domain, because a commercial message without them is unlawful in most of the jurisdictions this product operates in and a nullable column makes that state storable. The opt-out is appended at render time from sdk-deliverability optout-tokens rather than pasted into copy, so it cannot be edited out of a template.\n\nAN EMPTY DOMAIN LIST MEANS THE CHANNEL CANNOT SEND, and channel_ready says so plainly rather than leaving the caller to infer it from a zero. VERIFIED LIVE: a tenant with no configured domain returned domain_count 0 and channel_ready false.\n\nREPUTATION DEGRADES SEPARATELY. sdk-deliverability being unreachable empties that panel and leaves the domain verdicts intact, because the verification state is local and does not depend on the reputation feed.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/channels/email/health",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "5faf3fdf-7777-49fc-9c19-267f74ca3f23#AC1",
+    "5faf3fdf-7777-49fc-9c19-267f74ca3f23#AC4"
+  ],
+  "fieldEnums": {
+    "data.checks": [
+      "spf",
+      "dkim",
+      "dmarc"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The panel reports each DNS check separately and whether the channel can send",
+      "coversCriterion": "5faf3fdf-7777-49fc-9c19-267f74ca3f23#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

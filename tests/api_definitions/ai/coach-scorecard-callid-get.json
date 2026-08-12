@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/ai/coach/scorecard/:callId",
   "method": "GET",
   "taskId": "74a0891b-3892-4e93-aad4-450bfd776afa",
+  "featureId": "3b3d8b6b-4485-4e0b-8b9a-ffb42351f2cd",
+  "epicId": "34925c81-88e1-4115-8220-a1441a258108",
   "requiresAuth": true,
   "testability": "manual",
   "priority": 4,

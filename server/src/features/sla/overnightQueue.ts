@@ -65,7 +65,7 @@ export async function acknowledge(input: {
   try {
     const result = await SdkGatewayClient.call({
       sdk: 'sdk-notification',
-      path: '/api/notifications',
+      path: '/api/notifications/send',
       method: 'POST',
       idempotencyKey: `overnight-ack:${input.leadId}`,
       body: {
@@ -96,7 +96,7 @@ export async function bookingLink(leadId: string): Promise<string | null> {
   try {
     const result = await SdkGatewayClient.call<{ data?: { url?: string; link?: string } }>({
       sdk: 'sdk-scheduling',
-      path: '/api/scheduling/booking-links',
+      path: '/api/scheduling/scheduling-links',
       method: 'POST',
       idempotencyKey: `overnight-book:${leadId}`,
       body: { tenant_id: config.projexCloud.tenantId, subject_ref: leadId, purpose: 'first_call' },

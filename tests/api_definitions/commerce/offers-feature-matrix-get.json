@@ -1,0 +1,110 @@
+{
+  "taskId": "92ce5959-0e5c-4ce8-be7a-02cc870b2120",
+  "featureId": "95512768-e04d-425c-bec5-fea91a60842b",
+  "epicId": "ef8a21ec-c1a9-4d26-ac59-e0fa28b41a3b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 11,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/offers/feature-matrix"
+  ],
+  "name": "GET /api/leadflow/offers/feature-matrix - the five labels a rep may speak",
+  "description": "The capability matrix, with OWNER AND UPDATE DATE PER CAPABILITY (92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC3). Both are NOT NULL columns, so an entry without them cannot exist - a claim nobody owns is a claim nobody is accountable for, and one nobody can tell is stale is worse than no matrix at all, because it looks authoritative.\n\nFIVE LABELS AND NO OTHERS: LIVE, BETA, ROADMAP, USAGE_THIRD_PARTY, NOT_INCLUDED. A CHECK constraint refuses anything else, which is what stops \"it's basically live\" reaching a buyer as a commitment. The distinction between USAGE_THIRD_PARTY and NOT_INCLUDED matters commercially: the first is available and billed by somebody else, the second is not available at all, and collapsing them is how a customer discovers a surprise invoice.\n\nby_status is returned so a manager can see at a glance how much of the sheet is ROADMAP - a matrix that is mostly roadmap is a different sales conversation. QA: depends on register and login; offer_key is required.",
+  "endpoint": "/api/leadflow/offers/feature-matrix?offer_key=leadflow_core_qa",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC3"
+  ],
+  "fieldEnums": {
+    "data.statuses": [
+      "LIVE",
+      "BETA",
+      "ROADMAP",
+      "USAGE_THIRD_PARTY",
+      "NOT_INCLUDED"
+    ],
+    "data.capabilities.status": [
+      "LIVE",
+      "BETA",
+      "ROADMAP",
+      "USAGE_THIRD_PARTY",
+      "NOT_INCLUDED"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The matrix returns each capability with its status, owner and update date",
+      "coversCriterion": "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC3",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: offer_key omitted",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "offer_key is required",
+      "when": "the offer_key query parameter is absent or empty."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

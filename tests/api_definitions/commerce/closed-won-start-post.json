@@ -1,0 +1,145 @@
+{
+  "taskId": "69092248-3926-4a4e-a863-e3211b58c1d5",
+  "featureId": "869a6768-5cdd-4e29-9891-bb3529add0c6",
+  "epicId": "68d8857d-2a0f-4152-a255-7a3d5bfe121a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "client_success"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/closed-won/start - one saga, three purchase paths",
+  "description": "Starts or RESUMES the closed-won saga. One endpoint for both, because a caller retrying after a timeout cannot know whether the first attempt died mid-saga, and making them choose guarantees somebody eventually picks wrong (69092248-3926-4a4e-a863-e3211b58c1d5#AC2). The runner reads the step ledger and continues from the first unfinished step, so every step result is persisted as it lands and a resumed run skips what the ledger says is done - a process that dies after creating the customer must not create a second one when it comes back.\n\nPRESALE STOPS BEFORE THE WELCOME, ALWAYS (69092248-3926-4a4e-a863-e3211b58c1d5#AC1). stop_presale precedes welcome in the step list and a failure there rolls the saga back rather than continuing: a customer who has just paid receiving \"still thinking it over?\" the next morning is the single most reliable way to annoy somebody who has just given you money, and it is invisible in testing because the sequence fires hours later on its own schedule. Rollback deliberately does NOT re-enrol them - restarting outreach automatically after a failed close is how somebody gets a chase email an hour after their payment failed.\n\nTHREE PURCHASE PATHS THROUGH ONE SAGA (69092248-3926-4a4e-a863-e3211b58c1d5#AC3): direct_online, rep_assisted and payment_pending. Not three sagas - the steps after payment are identical whichever way the buyer paid, and duplicating them would guarantee they drift.\n\nPAYMENT PENDING PROVISIONS NOTHING AND WELCOMES NOBODY (69092248-3926-4a4e-a863-e3211b58c1d5#AC4). An invoice raised is not money received. Provisioning against it hands over the product for free and makes the follow-up adversarial; \"welcome aboard\" to somebody who has not paid tells them the transaction is finished and makes every later chase read as our mistake. Both steps still RUN and record why they held, because a step never attempted and one deliberately withheld look identical in a ledger that only stores what ran.\n\nverify_payment reads the recorded verification and refuses a charge marked intent_only. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/closed-won/start",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "69092248-3926-4a4e-a863-e3211b58c1d5#AC1",
+    "69092248-3926-4a4e-a863-e3211b58c1d5#AC2",
+    "69092248-3926-4a4e-a863-e3211b58c1d5#AC3",
+    "69092248-3926-4a4e-a863-e3211b58c1d5#AC4"
+  ],
+  "captureResponse": {
+    "closed_won.start.response.data.correlationId": "data.correlationId"
+  },
+  "fieldEnums": {
+    "data.input.purchasePath": [
+      "direct_online",
+      "rep_assisted",
+      "payment_pending"
+    ]
+  },
+  "requestBody": {
+    "dealId": "deal_{{dynamic:uuid}}",
+    "chargeId": "ch_{{dynamic:uuid}}",
+    "subjectRef": "contact:{{cache:auth.login.response.data.user.id}}",
+    "purchasePath": "payment_pending"
+  },
+  "testCases": [
+    {
+      "name": "The pending path runs the saga while holding provisioning and the welcome",
+      "coversCriterion": "69092248-3926-4a4e-a863-e3211b58c1d5#AC4",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "dealId": "deal_{{dynamic:uuid}}",
+        "chargeId": "ch_{{dynamic:uuid}}",
+        "subjectRef": "contact:{{cache:auth.login.response.data.user.id}}",
+        "purchasePath": "payment_pending"
+      }
+    },
+    {
+      "name": "NEGATIVE: a purchase path outside the three the SOP defines",
+      "coversCriterion": "69092248-3926-4a4e-a863-e3211b58c1d5#AC3",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "dealId": "deal_x",
+        "chargeId": "ch_x",
+        "subjectRef": "contact:x",
+        "purchasePath": "wire_transfer_maybe"
+      }
+    },
+    {
+      "name": "NEGATIVE: no payment evidence at all",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "dealId": "deal_x",
+        "subjectRef": "contact:x"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "dealId, chargeId and subjectRef are all required - dealId and chargeId together identify this close",
+      "when": "any of the three is absent, or purchasePath is outside direct_online, rep_assisted and payment_pending. An unknown path is refused rather than defaulted, because silently treating it as direct_online would provision and welcome on a close whose money the caller was not claiming had arrived."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

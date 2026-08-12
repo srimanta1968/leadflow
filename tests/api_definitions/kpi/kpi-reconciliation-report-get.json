@@ -1,0 +1,83 @@
+{
+  "taskId": "44fa2588-4db3-48f4-a653-2c0a970f94fc",
+  "featureId": "722a8fca-8bcc-46b6-8a50-0cf286fb9e17",
+  "epicId": "285a56e9-aa8a-46e6-b4cd-0675b52053e5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 11,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/kpi-definitions",
+    "POST /api/leadflow/kpi-definitions/tiles"
+  ],
+  "name": "GET /api/leadflow/kpi-definitions/reconciliation/report - recompute and compare",
+  "description": "Recomputes each registered metric FROM ITS SOURCE OF TRUTH and flags any tile that disagrees (44fa2588-4db3-48f4-a653-2c0a970f94fc#AC2). Comparing two tiles to each other proves only that they agree; comparing both to an independent recomputation proves they are RIGHT, and when they diverge it says WHICH ONE is wrong - which is the difference between a report that settles the argument and one that starts it.\n\nMEASURED LIVE: a tile displaying 0.99 against a recomputed 0.1387 was reported as a divergence with the basis of the recomputation stated, so the reader can check the reasoning rather than take the verdict on trust.\n\nMETRICS THIS REPORT CANNOT RECOMPUTE ARE NAMED, not skipped (44fa2588-4db3-48f4-a653-2c0a970f94fc#AC4). A reconciliation report that silently omits what it could not check reads as a clean bill of health, which is worse than saying nothing at all. Tiles referencing an unregistered definition are listed separately for the same reason.\n\nThe tolerance is 0.0001: rounding is not disagreement, a different rule is. QA: reads the definition and tile created earlier in the chain.",
+  "endpoint": "/api/leadflow/kpi-definitions/reconciliation/report",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC2",
+    "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC4"
+  ],
+  "fieldEnums": {
+    "data.verdict": [
+      "reconciled",
+      "divergent"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Divergence between a tile and the recomputation is detected and reported",
+      "coversCriterion": "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC2",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

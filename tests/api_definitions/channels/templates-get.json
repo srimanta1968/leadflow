@@ -1,0 +1,120 @@
+{
+  "taskId": "8cc092ee-0c9c-4805-8c72-ebc30d20d7d8",
+  "featureId": "9ebc12d7-050e-4963-b70e-4e345ac02d83",
+  "epicId": "6691a598-597d-42a8-82fc-ddec2442b572",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/templates - the versioned library, with which version is actually live",
+  "description": "The SOP §16-18 library: eight email templates, ten SMS, the voicemail scripts, the call scripts and the objection-response library (8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC1). The REQUIRED CATALOG is returned alongside what exists, so a missing template is a visible gap rather than an absence nobody notices - VERIFIED LIVE returning expected_email 8 and expected_sms 10.\n\nVERSIONS RATHER THAN EDITS. Approving in place overwrites the copy that was live, so \"what did we actually send in March\" becomes unanswerable - which is the question asked first when a complaint arrives about a message nobody can find. Each row reports its live version, when it was published, and how many drafts are waiting.\n\nPUBLISHED AND DRAFT ARE DISTINGUISHED. An unpublished version is UNUSABLE rather than merely unmarked, so a rep cannot accidentally send copy nobody approved.\n\nTHE TWO RULES EVERY TEMPLATE IS HELD TO are returned with the list (8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC4): exactly one CTA, enforced by a CHECK constraint rather than by review, and feature-status honesty, enforced at publish. A message asking for two things reliably gets neither, and a roadmap item described as shipped is the single most expensive sentence a template can contain.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/templates",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC1",
+    "8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC4"
+  ],
+  "fieldEnums": {
+    "channel": [
+      "email",
+      "sms",
+      "voice",
+      "call_script"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The library reports what exists against the catalog SOP requires",
+      "coversCriterion": "8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "The list can be narrowed to one channel",
+      "coversCriterion": "8cc092ee-0c9c-4805-8c72-ebc30d20d7d8#AC1",
+      "queryParams": {
+        "channel": "sms"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown channel is refused",
+      "queryParams": {
+        "channel": "carrier_pigeon"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "channel must be one of email, sms, voice, call_script",
+      "when": "an unrecognised channel filter is supplied."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

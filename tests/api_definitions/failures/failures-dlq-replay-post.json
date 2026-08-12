@@ -1,0 +1,117 @@
+{
+  "taskId": "4cc3f597-f6c8-4dc5-8044-096ce144e676",
+  "featureId": "36b8ab88-3c05-4528-b9bb-45f058859a33",
+  "epicId": "06998b3d-d057-490d-8cfb-962e43b525c6",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 11,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/failures/dlq/replay - bounded and idempotent",
+  "description": "Replays dead-lettered items in a BOUNDED batch (4cc3f597-f6c8-4dc5-8044-096ce144e676#AC2). The cap is the point, not a pagination convenience: a queue that has been filling for six hours holds thousands of items, and replaying them all at once trips the provider's rate limit, refills the queue and - for a messaging connector - puts thousands of messages into inboxes in one minute. The count NOT replayed is returned, because a silent cap reads as \"the queue is clear\".\n\nEACH REPLAY IS KEYED ON THE ITEM, so replaying a replay is one replay. A DLQ item delivered twice is exactly the duplicate the queue exists to avoid.\n\nTHE KILL SWITCH OUTRANKS THE REPLAY (4cc3f597-f6c8-4dc5-8044-096ce144e676#AC4). MEASURED LIVE: with the global send pause engaged the replay returned 409, because replaying a queue during a duplicate-send incident is the loop the switch was thrown to stop.\n\nFailures are returned per item with their reason rather than as one aggregate count - \"2 failed\" cannot tell an operator whether to retry or to escalate, and \"the circuit is open\" and \"the service returned 500\" have different next steps.\n\nQA NOTE: this runs in the same suite as the kill-switch test, which engages the global pause. The interlock is the ACCEPTANCE CRITERION — replaying a queue during a duplicate-send incident is the loop the switch was thrown to stop — so the suite asserts the 409 rather than racing the switch back off, which would test the opposite of the rule.",
+  "endpoint": "/api/leadflow/failures/dlq/replay",
+  "method": "POST",
+  "expectedStatus": 409,
+  "coversCriterion": [
+    "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC2",
+    "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC4"
+  ],
+  "captureResponse": {
+    "failures.dlq_replay.response.data.replayed_count": "data.replayed_count"
+  },
+  "requestBody": {
+    "ids": [
+      "{{var:absent_uuid}}"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Replay is refused while the global send pause is engaged",
+      "coversCriterion": "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC2",
+      "expectedStatus": 409,
+      "expectedResponse": {
+        "success": false,
+        "code": "CONFLICT"
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "ids": [
+          "{{var:absent_uuid}}"
+        ]
+      }
+    },
+    {
+      "name": "NEGATIVE: no ids to replay",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "ids": []
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "ids must be a non-empty array of delivery ids",
+      "when": "no ids are supplied."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "The global send pause is engaged, so nothing may be replayed. Release the kill switch first - replaying a queue during a duplicate-send incident is the loop the switch was thrown to stop.",
+      "when": "the kill switch is engaged."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

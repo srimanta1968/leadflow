@@ -1,0 +1,229 @@
+{
+  "name": "POST /api/leadflow/relationships - establish one contextual role, with the evidence its trust state demands",
+  "description": "Establishes ONE role between a person or organisation and a property. The write behind the Establish First-Party Relationship modal, and the only path by which a role comes into existence in LeadFlow.\n\nEVIDENCE IS REQUIRED FOR CONFIRMED AND DOCUMENTED (74f2a183-98b3-4858-a215-1d600056d332#AC3), and refused without it. Those two states mean somebody CHECKED - so they must say what they checked. A CONFIRMED role with nothing behind it reads as verified to every downstream reader while resting on nothing, which is worse than an honest CANDIDATE because nobody will ever question it again. CANDIDATE needs no evidence by design: it is the state that says we have not checked.\n\nENFORCED TWICE, ON PURPOSE. This handler refuses it with a readable message naming the two states, and sdk-rebac refuses it again in its service AND with a CHECK constraint - so an unevidenced CONFIRMED row is unrepresentable however it was written, including by a backfill or a direct insert that never passes through here. Belt and braces is the right posture when the failure mode is a false claim of verification.\n\nONE ROLE PER CALL, DELIBERATELY. The modal collects several at once, and it is tempting to accept an array - but the roles carry INDEPENDENT trust states and independent evidence, and a partial failure across a batch leaves the caller unable to say which landed. Six calls that each succeed or fail on their own terms is the honest shape.\n\nROLES COEXIST RATHER THAN REPLACE (74f2a183-98b3-4858-a215-1d600056d332#AC1). Establishing OCCUPIES does not disturb an existing OWNS on the same pair: they are different contracts with different lives. Upstream keys liveness on (pair, kind, role_label), so re-establishing a role that is ALREADY live answers 409 rather than silently creating a second one - two live OCCUPIES for the same pair is not richer data, it is a record nobody can act on.\n\n201 BECAUSE A ROLE IS A NEW ADDRESSABLE RECORD at a collection root, per MUST-54. The expectedStatus below is 502 only because no environment here has a reachable graph.\n\nTHE HAPPY PATH IS 502 in the environments available here: sdk-rebac is not provisioned against a LeadFlow tenant, so the write cannot land and the endpoint says so rather than reporting a role it did not create. The VALIDATION branches are fully exercised, and they are the ones carrying AC3 - the evidence rule is enforced HERE, before any upstream call, so it is provable without a provisioned graph. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/relationships",
+  "method": "POST",
+  "taskId": "74f2a183-98b3-4858-a215-1d600056d332",
+  "featureId": "1ba43067-6c89-474d-a242-f37cdf9d997f",
+  "epicId": "2979a602-317e-49cd-8b38-2d2914a88afa",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 502,
+  "coversCriterion": [
+    "74f2a183-98b3-4858-a215-1d600056d332#AC1",
+    "74f2a183-98b3-4858-a215-1d600056d332#AC3"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "role": [
+      "OWNS",
+      "OCCUPIES",
+      "DECISION_MAKER",
+      "AUTHORIZED_FOR",
+      "REPRESENTS",
+      "REFERRAL_SOURCE"
+    ],
+    "trust_state": [
+      "CANDIDATE",
+      "CONFIRMED",
+      "DOCUMENTED"
+    ],
+    "data.role": [
+      "OWNS",
+      "OCCUPIES",
+      "DECISION_MAKER",
+      "AUTHORIZED_FOR",
+      "REPRESENTS",
+      "REFERRAL_SOURCE"
+    ],
+    "data.trust_state": [
+      "CANDIDATE",
+      "CONFIRMED",
+      "DOCUMENTED"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A CANDIDATE role needs no evidence, because it claims nothing was checked",
+      "coversCriterion": "74f2a183-98b3-4858-a215-1d600056d332#AC3",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "object_ref": "{{var:not_a_uuid}}",
+        "role": "{{static:OWNS}}",
+        "trust_state": "{{static:CANDIDATE}}"
+      },
+      "expectedStatus": 502,
+      "expectedResponse": {
+        "success": false,
+        "code": "UPSTREAM_UNAVAILABLE"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a CONFIRMED role with no evidence is refused",
+      "coversCriterion": "74f2a183-98b3-4858-a215-1d600056d332#AC3",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "object_ref": "{{var:not_a_uuid}}",
+        "role": "{{static:OCCUPIES}}",
+        "trust_state": "{{static:CONFIRMED}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a DOCUMENTED role with no evidence is refused",
+      "coversCriterion": "74f2a183-98b3-4858-a215-1d600056d332#AC3",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "object_ref": "{{var:not_a_uuid}}",
+        "role": "{{static:AUTHORIZED_FOR}}",
+        "trust_state": "{{static:DOCUMENTED}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown role is refused rather than passed through to the graph",
+      "coversCriterion": "74f2a183-98b3-4858-a215-1d600056d332#AC1",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "object_ref": "{{var:not_a_uuid}}",
+        "role": "{{static:LANDLORD}}",
+        "trust_state": "{{static:CANDIDATE}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a subject cannot hold a role to itself",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "object_ref": "{{var:absent_uuid}}",
+        "role": "{{static:REPRESENTS}}",
+        "trust_state": "{{static:CANDIDATE}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "captureResponse": {
+    "relationships.create.response.data.relationship_id": "data.relationship_id"
+  },
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "trust_state CONFIRMED requires at least one evidence_ref",
+      "when": "a CONFIRMED or DOCUMENTED role arrives with no evidence. Those states mean somebody checked, so they must say what they checked - a CONFIRMED role resting on nothing reads as verified to every downstream reader and will never be questioned again."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "role must be one of OWNS, OCCUPIES, DECISION_MAKER, AUTHORIZED_FOR, REPRESENTS, REFERRAL_SOURCE",
+      "when": "an unrecognised role is supplied. Passing it through would let a typo create an authority nothing in the product understands, which stays invisible until somebody is refused an action they should have been allowed."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref and object_ref must differ",
+      "when": "both refs are the same. A persona holding a contextual role to itself is meaningless and upstream refuses it too; caught here so the error names the field rather than surfacing as an opaque upstream 400."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref and object_ref are required",
+      "when": "either ref is missing. There is no role without two ends."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "A live role of this kind already exists for this pair",
+      "when": "the same role is established twice while the first is still live. Two live OCCUPIES for one pair is not richer data, it is a record nobody can act on - the existing one should be ended or re-attested instead."
+    },
+    {
+      "status": 502,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "message": "The relationship graph did not confirm the role, so nothing was established",
+      "when": "sdk-rebac could not be reached. Reported rather than absorbed: a role that silently did not land would leave an operator believing an authority exists."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

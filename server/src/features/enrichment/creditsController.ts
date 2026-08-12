@@ -1,9 +1,10 @@
 import { Router, type Response } from 'express';
 import { asyncHandler } from '../../middleware/errorHandler';
-import { authenticate } from '../../middleware/auth';
+import { authenticate, type AuthenticatedRequest } from '../../middleware/auth';
 import { governed, type GovernedRequest } from '../../platform/policy/governed';
 import { PERMISSIONS } from '../../config/roles';
 import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
+import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { BUDGET_TIERS } from './budgetTiers';
 import {
   listCapabilityRequests,
@@ -170,4 +171,40 @@ creditsRoutes.get(
       });
     },
   )),
+);
+
+/**
+ * GET /api/leadflow/credits/balance — what is left, and what it is committed to.
+ *
+ * A THIN ALIAS OF /summary, kept because the workspace asks a narrower question:
+ * "can I afford this action right now". Pointing the screen at /summary would
+ * work and would return a page of budget-tier detail it has no use for, and the
+ * first person to change that shape would break a screen that never wanted it.
+ */
+creditsRoutes.get(
+  '/balance',
+  asyncHandler(async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const upstream = SdkGatewayClient.isConfigured()
+      ? await SdkGatewayClient.call<{ data?: { balance?: number; committed?: number } }>({
+        sdk: 'sdk-data-credits', path: '/api/credits/balance', method: 'GET',
+        idempotencyKey: 'credits-balance:read',
+      }).catch(() => ({ delivered: false, data: undefined }))
+      : { delivered: false, data: undefined };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        balance: upstream.data?.data?.balance ?? null,
+        committed: upstream.data?.data?.committed ?? null,
+        upstream_available: { credits: upstream.delivered },
+        /* NULL, NEVER ZERO, when the balance cannot be read. Zero means "you
+           cannot afford this"; unknown means "we could not check" — and a
+           screen that greys out an action for the wrong one of those reasons
+           sends somebody to find a workaround. */
+        field_gaps: upstream.delivered ? [] : [
+          { field: 'balance', reason: 'sdk-data-credits could not be reached, so the balance is unknown rather than zero.' },
+        ],
+      },
+    });
+  })
 );

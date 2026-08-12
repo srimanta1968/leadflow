@@ -92,7 +92,25 @@ describe('the audit vocabulary', () => {
     // spent. Separate from `enrichment.requested` because "who looked at what we
     // have been buying" and "who bought this" are different questions, and one
     // name would make each query return the other's rows.
-    expect(allAuditEventNames()).toHaveLength(54);
+    // 4 more for the user register, and they are four rather than one
+    // `user.changed` for the reason this whole vocabulary is closed: the entry
+    // anybody actually goes looking for is the ROLE CHANGE — "how did this
+    // person get the authority they used" — and it is found by querying an
+    // event name, not by parsing a discriminator out of a payload.
+    // `user.role.changed` carries the previous AND the new role, which is the
+    // only way an entry can answer "what could they do before this". Invite,
+    // activation and closure stay separate because they are separate
+    // authorities: adding somebody to a list, letting them in, and stopping
+    // them working are three different acts, and the closure in particular is
+    // never a delete — the row and every action attributed to it survive, which
+    // is what keeps a departed colleague's history attributable.
+    // 1 more for the sequence loop breaker. `sequence.paused` is NOT a variant
+    // of the per-enrolment stop: one records "we suspected the automation and
+    // stopped it", the other "this person asked us to". An incident review
+    // queries the first and a complaint queries the second, so a single name
+    // would hand each of them the other's rows.
+    expect(allAuditEventNames()).toHaveLength(59);
+    expect(isAuditEventName('sequence.paused.v1')).toBe(true);
     expect(isAuditEventName('enrichment.queue.inspected.v1')).toBe(true);
     expect(isAuditEventName('capture.created.v1')).toBe(true);
     expect(isAuditEventName('sla.breached.v1')).toBe(true);

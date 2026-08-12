@@ -4,33 +4,52 @@
   "endpoint": "/api/leads/integrity-exceptions",
   "method": "GET",
   "taskId": "bdaec986-d033-4fcd-b201-07b81f13b1fc",
+  "featureId": "3092f695-d900-48e1-8422-4cfdafaa9b09",
+  "epicId": "fdd26353-b251-4841-8bed-f9d4378d17be",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 2,
   "expectedStatus": 200,
-  "coversCriterion": ["bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4"],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "coversCriterion": [
+    "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "testCases": [
     {
       "name": "Returns the blocked queue",
       "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "expectedStatus": 200,
-      "expectedResponse": { "success": true }
+      "expectedResponse": {
+        "success": true
+      }
     },
     {
       "name": "Clamps an absurd limit instead of scanning the table",
       "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "queryParams": { "limit": "100000" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "limit": "100000"
+      },
       "expectedStatus": 200,
-      "expectedResponse": { "success": true }
+      "expectedResponse": {
+        "success": true
+      }
     },
     {
       "name": "Reject an unauthenticated read",
       "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4",
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

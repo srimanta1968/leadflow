@@ -1,18 +1,547 @@
 {
-  "orchestration/channel-decision-bulk-post.json": {
-    "hash": "f898d52fe1bcb44095ad16b7c78aeb4f0fd893aa3248b1608803f6784edc57dd",
-    "status": "findings",
-    "findingsCount": 2,
-    "verifiedAt": "2026-08-08T18:24:36",
+  "consent/overview-get.json": {
+    "hash": "6c33a48ab53ba1e8653d639b0690dc5eec72a948592b54191cd9c358b791ca9f",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-10T15:43:59",
+    "route": [
+      "GET",
+      "/leadflow/consent/overview"
+    ]
+  },
+  "consent/receipts-post.json": {
+    "hash": "bec208514947826077b1fadbd222d3463b980171aa90a6ca839271992e1b980c",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-10T15:43:59",
     "route": [
       "POST",
-      "/leadflow/channel-decision/bulk"
+      "/leadflow/consent/receipts"
+    ]
+  },
+  "consent/receipts-revoke-post.json": {
+    "hash": "39e1d3510f1513e3aba433a18215968306655f267c1a4468c8edf5b7f7abe228",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-10T15:43:59",
+    "route": [
+      "POST",
+      "/leadflow/consent/receipts/:p/revoke"
+    ]
+  },
+  "ai/coach-calls-post.json": {
+    "hash": "4b6cc2f8df3be21351cb88fec0565fb541257d26d47083861329960ef8038449",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/ai/coach/calls"
+    ]
+  },
+  "ai/coach-scorecard-callid-get.json": {
+    "hash": "c275f74e69b145f8c082d960f0ccc30bbf89b2ff4304de09c7781334f756a770",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-08-12T03:24:45",
+    "route": [
+      "GET",
+      "/leadflow/ai/coach/scorecard/:p"
     ],
     "findings": [
       {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "POST /api/leadflow/channel-decision/bulk was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+        "rule": "MUST-34",
+        "severity": "medium",
+        "message": "testability is manual/skip \u2014 new definitions must ship testability:auto (manual is decided after execution)."
+      },
+      {
+        "rule": "MUST-44",
+        "severity": "high",
+        "message": "Build the COMPLETE prerequisite chain in dependsOn (the list of APIs QA must call first). FKs to trace: the referenced resources. For EACH: add the CREATE endpoint, any PUBLISH/ACTIVATE/APPROVE endpoint that makes the row usable, and any SUB-RESOURCE it needs (e.g. rates), in order; set each FK value to {cache:...} from its producer. Do NOT mark manual \u2014 build the chain (a NOT NULL FK to a non-seeded row is the #1 cause of 500s)."
+      }
+    ]
+  },
+  "ai/manager-risk-signals-get.json": {
+    "hash": "f2b9af61aeaa3df6b23150bbc2f5c1d1241403da3d7857f3c2a5735f0d0390dc",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/ai/manager/risk-signals"
+    ]
+  },
+  "ai/proposals-id-decide-post.json": {
+    "hash": "c0b9ac01ebd8ec3784bd0fe0e696b2ab3e053d3463e6ee243b402511df870c7a",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/ai/proposals/:p/decide"
+    ]
+  },
+  "ai/propose-post.json": {
+    "hash": "030c5d52fa80d8e6f9ea50a49f14eb74f5aac124031913e9157e4d21d92b10a3",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/ai/propose"
+    ]
+  },
+  "ai/revops-proposals-get.json": {
+    "hash": "2d26eaf8ba018b5d4869cf79b50cc8f5be35d90af9eac0b3142a2b6782d04692",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/ai/revops/proposals"
+    ]
+  },
+  "ai/sdr-proposals-id-accept-post.json": {
+    "hash": "20fa134f979678bb4bc037d6900ab2d957495e36d62378c78e03f78e1888d21f",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/ai/sdr/proposals/:p/accept"
+    ]
+  },
+  "ai/sdr-qualify-post.json": {
+    "hash": "b80c6819dd3020f6c0e5b73ee488361fb6bcdb5f1419c953e556d2a70cf360a4",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/ai/sdr/qualify"
+    ]
+  },
+  "analytics/overview-get.json": {
+    "hash": "83912fdf5d8f2b14da81a805495c110ad0f9391b1969637fe2edeb3d44efb484",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/analytics/overview"
+    ]
+  },
+  "auth/login-post.json": {
+    "hash": "73bf3aa850e4bf843176d5697c24b065c7e4dd481c5521730407bfa14fcd7e5b",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/auth/login"
+    ]
+  },
+  "auth/me-get.json": {
+    "hash": "2d5a3a09def29d97b95688a0812d76dd3abd4fc792003c224570efa0d6f72ed6",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/auth/me"
+    ]
+  },
+  "auth/register-post.json": {
+    "hash": "0300e7e73901df4942d7f7d0ecf0d4561de8f6b9a73dacccd2144e4232c13b62",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/auth/register"
+    ]
+  },
+  "authz/evaluate-post.json": {
+    "hash": "69c6bc7b31a953777581f1c30fae99333b82c4ef116ca384339130bf16c1a8b0",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/authz/evaluate"
+    ]
+  },
+  "calls/id-intelligence-get.json": {
+    "hash": "8d2c1c49f2faac8637825b5ec24199f06649d5f3a507317dfe5e7b4222e1f72f",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/calls/:p/intelligence"
+    ]
+  },
+  "calls/recording-eligibility-get.json": {
+    "hash": "6da0d44393a268fa69192dd5a782c22e7e6cc7b50e53f10cf3acd11157b57aab",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/calls/recording-eligibility"
+    ]
+  },
+  "capture/extension-domain-policy-get.json": {
+    "hash": "40e4eea61d811addf37e1beb1d69294c626ca0dd530a576efd691d19980ce942",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/capture/extension/domain-policy"
+    ]
+  },
+  "capture/extension-post.json": {
+    "hash": "a9d4fbc211f3860d76fb783a60595a63f8d63b939c4f22bf0c80ed1b9e06f507",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/capture/extension"
+    ]
+  },
+  "capture/inbox-get.json": {
+    "hash": "f82545e0afd6411c2396b6257c8fae68313f348919d377ea4aeab4eec1f0ce1b",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/capture/inbox"
+    ]
+  },
+  "capture/quick-post.json": {
+    "hash": "4729deb56ba213c1ef6a902b9f31fc6695356d2c0502636979d567dd13dcab23",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/capture/quick"
+    ]
+  },
+  "capture/resolve-post.json": {
+    "hash": "d9ee8969ed81b1fb8029016c6f0af95b3bf4056781be19e852ce1ea44f1d7e3c",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/capture/:p/resolve"
+    ]
+  },
+  "capture/sync-batch-post.json": {
+    "hash": "b82266849893099e3c23ab0a9aa25be926e975ec90c5d5ec37ad1c7d7ba3d976",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/capture/sync-batch"
+    ]
+  },
+  "events/events-outbox-dlq-get.json": {
+    "hash": "16e3c7eacb5010c00eee7b5d56336378243fa83bba766336100b1299271a95e8",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:36",
+    "route": [
+      "GET",
+      "/leadflow/events/outbox/dlq"
+    ]
+  },
+  "events/events-outbox-replay-post.json": {
+    "hash": "330b8b016190afd25022fd6671520ac93f4f339043472b3332a28fcc258153ad",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:36",
+    "route": [
+      "POST",
+      "/leadflow/events/outbox/:p/replay"
+    ]
+  },
+  "events/events-projexcloud-post.json": {
+    "hash": "988ec64f68639686450f02ef5ae83282314dd1c5138cbd5121498d47bdbc1297",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leadflow/events/projexcloud"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[0].payload.subject_id' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "events/events-rebuild-post.json": {
+    "hash": "2a6edd5e7113893693e316ddf3ac464233865521ebbfe6968f93f012e5f879aa",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leadflow/events/rebuild"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-14",
+        "severity": "medium",
+        "message": "POST endpoint has no captureResponse \u2014 capture created ids so dependents can {{cache:...}} them."
+      }
+    ]
+  },
+  "events/events-status-get.json": {
+    "hash": "53642733a6a674d89faacb40a5e366caf7802c2eba6aef1eae67b406c359a725",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/events/status"
+    ]
+  },
+  "events/stream-get.json": {
+    "hash": "c3f5ff673d608900ed427a3cd11bdc9c7446418bdafec12aac286182a8450584",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "GET",
+      "/events/stream"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-34",
+        "severity": "medium",
+        "message": "testability is manual/skip \u2014 new definitions must ship testability:auto (manual is decided after execution)."
+      }
+    ]
+  },
+  "identity/calibration-get.json": {
+    "hash": "244e297caac1e01965d3a090369b3a7555e0f14c740310eb2ff08548faa47ae5",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/identity/calibration"
+    ]
+  },
+  "identity/candidates-decision-post.json": {
+    "hash": "564dbff4ff594aee81d3dba6a74ae951d8b487cfb49e5d4eb24fe952f91d7f6c",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/identity/candidates/:p/decision"
+    ]
+  },
+  "identity/links-blast-radius-get.json": {
+    "hash": "5065e82da0c603f58876d1d5d080e27577fb3ccf656aeba8e615565f9243e695",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/identity/links/:p/blast-radius"
+    ]
+  },
+  "identity/links-retract-post.json": {
+    "hash": "4fdc660740217f7baf464bc7301e8d3ca1ea18027690d2025623fd2bd98f360f",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/identity/links/:p/retract"
+    ]
+  },
+  "identity/review-queue-get.json": {
+    "hash": "59289b82857c95f58f55641b6a33689751a6a5650f7de7e25f5a978192a43f9f",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/identity/review-queue"
+    ]
+  },
+  "identity/risk-profile-put.json": {
+    "hash": "f7d09ecada0754c38a433836f8ef8e568a6205d071243414fa28f3f723980be3",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "PUT",
+      "/leadflow/identity/risk-profile"
+    ]
+  },
+  "imports/center-get.json": {
+    "hash": "6749376bb1d20acacf1733169d6fd6c775f828e6d2f90b8b25e3ba1dd01042a3",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/imports/center"
+    ]
+  },
+  "imports/runs-id-evidence-get.json": {
+    "hash": "cb8771e9e5820ef29a9915a5b6e41cf04e94b1057de3f0b26136f79380122b8a",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/imports/runs/:p/evidence"
+    ]
+  },
+  "imports/runs-id-get.json": {
+    "hash": "61b9b4681c4c4b0be4636d01f1fb90ca877e99e556012a328a025b9e67670fa9",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/imports/runs/:p"
+    ]
+  },
+  "imports/runs-id-report-post.json": {
+    "hash": "2d665d69c3467a56ebe9608c35bd03b7b3001e37f0ca06a92004c027a3b5407e",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leadflow/imports/runs/:p/report"
+    ]
+  },
+  "intake/adapters-get.json": {
+    "hash": "0681ed0db4f723a9add079150f417f4ca33cf5307febbb1ab02bc9e542a42de1",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leadflow/intake/adapters"
+    ]
+  },
+  "intake/adapters-launch-evidence-get.json": {
+    "hash": "f7773643b9f7ccd4bc5cd9d6c195b36925d36b3a10ab9d1bef800085cf2e11bf",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "GET",
+      "/leadflow/intake/adapters/:p/launch-evidence"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-72",
+        "severity": "medium",
+        "message": "2 datasets declare expectedStatus 200 and none is marked `capturesResponse: true` \u2014 the producer is chosen by position, so the cached value may come from a variant."
+      }
+    ]
+  },
+  "intake/classify-post.json": {
+    "hash": "2934dcf39b4cf55977509b0124185790b314b6961bd5ff7b1f3aaa62d3062cbb",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leadflow/intake/classify"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-72",
+        "severity": "medium",
+        "message": "8 datasets declare expectedStatus 200 and none is marked `capturesResponse: true` \u2014 the producer is chosen by position, so the cached value may come from a variant."
+      }
+    ]
+  },
+  "intake/events-post.json": {
+    "hash": "3724f79b34dd08111fc611fb6428b6d87ac030c224a63aa9daa8bc7653113801",
+    "status": "findings",
+    "findingsCount": 4,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leadflow/intake/events"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[0].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[2].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[3].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[4].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "intake/webhooks-platform-post.json": {
+    "hash": "ed9d236ec34261171191e0a703195ca7441532fd5064dd6aee8f90375eb80fc9",
+    "status": "findings",
+    "findingsCount": 6,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leadflow/intake/webhooks/:p"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[0].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[1].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-38",
+        "severity": "high",
+        "message": "header 'x-signature' (testCases[1]) uses {static:...} \u2014 use {cache:...}/{var:...}/{baseUrl}/{dynamic:...}."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[2].payload.sourceEventId' (payload) uses '{{dynamic:uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-38",
+        "severity": "high",
+        "message": "header 'x-signature' (testCases[2]) uses {static:...} \u2014 use {cache:...}/{var:...}/{baseUrl}/{dynamic:...}."
       },
       {
         "rule": "MUST-14",
@@ -21,72 +550,2045 @@
       }
     ]
   },
-  "orchestration/channel-decision-post.json": {
-    "hash": "2852c8e55d632c0a57fe72dd0b4f36b7b365e52457ff71084a1754ba28ca8b32",
+  "leads/id-activation-gate-get.json": {
+    "hash": "ff5075d3b316be9f708fd05e93fd941c1c5ffcd88aa08ddd611231870a58abd8",
     "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-08T18:24:36",
+    "findingsCount": 3,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "GET",
+      "/leads/:p/activation-gate"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[2].pathParams.id' (pathParams) uses '{{static:00000000-0000-0000-0000-000000000000}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[3].pathParams.id' (pathParams) uses '{{static:not-a-uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      },
+      {
+        "rule": "MUST-72",
+        "severity": "medium",
+        "message": "2 datasets declare expectedStatus 200 and none is marked `capturesResponse: true` \u2014 the producer is chosen by position, so the cached value may come from a variant."
+      }
+    ]
+  },
+  "leads/id-assign-post.json": {
+    "hash": "458dc48f3785e82d4c1e08809aad87d90c5bb2885964bb857922786ab97aed78",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
     "route": [
       "POST",
-      "/leadflow/channel-decision"
+      "/leads/:p/assign"
+    ]
+  },
+  "leads/id-first-response-post.json": {
+    "hash": "03561faace88a83de83c2d95c6228d8798d373599d355719462aff959b7eeff4",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leads/:p/first-response"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[2].pathParams.id' (pathParams) uses '{{static:not-a-uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "leads/id-get.json": {
+    "hash": "43bde750d440d57d66d3994dcbacaaf9f0c88c1315b3c94d4da050d9236d6ed3",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "GET",
+      "/leads/:p"
     ],
     "findings": [
       {
         "rule": "CODE-MATCH",
         "severity": "low",
-        "message": "POST /api/leadflow/channel-decision was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+        "message": "GET /api/leads/:id was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
       }
+    ]
+  },
+  "leads/id-route-post.json": {
+    "hash": "3a3b39458a4e3091814f6d7341a68575243990cafec187b811cf9932643f4c6b",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leads/:p/route"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[1].pathParams.id' (pathParams) uses '{{static:not-a-uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "leads/integrity-exceptions-get.json": {
+    "hash": "5855b81d26aa3d3843af6e24e365dc2466a77fa5c94b54ebb8b11201caf9a275",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/leads/integrity-exceptions"
+    ]
+  },
+  "leads/leads-get.json": {
+    "hash": "3a70fd32d119eb149a7bdfa04e7849e4f42670188d7d79b276575717bfb66f6a",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "GET",
+      "/leads"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leads was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "leads/leads-post.json": {
+    "hash": "6a85446a83c5b05a881b7ab6369efe321d47c08891b9e714212ff339ff5c06e3",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leads"
+    ]
+  },
+  "leads/route-unowned-post.json": {
+    "hash": "b40be6653008b10f384eeeae66bf0817d9769b4d46a49cff202a2e8a801f4b3a",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/leads/route-unowned"
+    ]
+  },
+  "orchestration/channel-decision-bulk-post.json": {
+    "hash": "eddf8347eddcfbd39ba137b54051d92edfe573b9266ba86aae4704cbd2cd6d1c",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T03:58:46",
+    "route": [
+      "POST",
+      "/leadflow/channel-decision/bulk"
+    ]
+  },
+  "orchestration/channel-decision-post.json": {
+    "hash": "381ec7e85f79ef31b89ac5eff685ee2ad1661d4db4ced12302f58bab7b5efccf",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T03:09:09",
+    "route": [
+      "POST",
+      "/leadflow/channel-decision"
     ]
   },
   "orchestration/closed-won-start-post.json": {
     "hash": "028f95818a7a9286fa7939b9d8f4fb7f530f9cf88a0760ef0f82434972c4b558",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T03:09:09",
+    "route": [
+      "POST",
+      "/leadflow/closed-won/start"
+    ]
+  },
+  "orchestration/intake-orchestrate-post.json": {
+    "hash": "ff35753c0a621145f421d507c2f3de64e081199e51009036df5ad5b87af362e7",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T03:09:09",
+    "route": [
+      "POST",
+      "/leadflow/intake/orchestrate"
+    ]
+  },
+  "orchestration/sagas-run-get.json": {
+    "hash": "a324b93535a5d981c57266f460058c3d8b5567683f93d7eb7fad53a86982466c",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T03:09:09",
+    "route": [
+      "GET",
+      "/leadflow/sagas/:p"
+    ]
+  },
+  "platform/sdk-health-get.json": {
+    "hash": "4bfc8b861fb2cfb4b529c214543f5688124ed0b88c28205e2a70d8d54a9ec14c",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-08T18:24:36",
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "GET",
+      "/leadflow/platform/sdk-health"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/platform/sdk-health was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "public/leads-post.json": {
+    "hash": "da80a6c5a7e01227a03ac8e1c89d058b68282821941e174620f1745c9264a75b",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/public/leads"
+    ]
+  },
+  "routing-rules/id-delete.json": {
+    "hash": "96edf595d3125b61b7c46616a153fa4be8b38babc01967a80b915e0e51063d2d",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "DELETE",
+      "/routing-rules/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "DELETE /api/routing-rules/:id was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "routing-rules/id-patch.json": {
+    "hash": "7c02c63d7667a6f10c4a6408bdfde296e259dfa2aff9c7d653e393d706b03e76",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "PATCH",
+      "/routing-rules/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "PATCH /api/routing-rules/:id was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "routing-rules/routing-rules-get.json": {
+    "hash": "5fabeaa9cee6fc8497fe7f2a70eb483f67ff4a5264af8dcfac4862bc49591060",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "GET",
+      "/routing-rules"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/routing-rules was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "routing-rules/routing-rules-post.json": {
+    "hash": "33aff9ee270863e949d339400145cdea85f2e03e350aaab6ea89bc36fefee786",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "POST",
+      "/routing-rules"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/routing-rules was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      },
+      {
+        "rule": "MUST-36",
+        "severity": "high",
+        "message": "FK field 'testCases[2].payload.assigned_user_id' (payload) uses '{{static:not-a-uuid}}' \u2014 must use {cache:<resource>.create.response.data.id} from its producer, never static/dynamic-uuid/literal UUID. Add the producer to dependsOn."
+      }
+    ]
+  },
+  "sla/alerts-acknowledge-post.json": {
+    "hash": "980717f32c16d8c198bad3f30d3bac37d056c1639aac00562ef7657c23e4f1dc",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/sla/alerts/acknowledge"
+    ]
+  },
+  "sla/alerts-dispatch-post.json": {
+    "hash": "89077ec2ec9df9d7c8f7a5e09238bd0da220983a6b88715a56f9525b17531826",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/sla/alerts/dispatch"
+    ]
+  },
+  "sla/alerts-get.json": {
+    "hash": "739639041c70d3f5df3aabcc91f00d16ab4b8e5714aaf9ee32b8dd25747c3530",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/sla/alerts"
+    ]
+  },
+  "sla/evaluate-post.json": {
+    "hash": "05619a920b3b2f9c168e0ec3c4ee13677938c96da6cffe5854760435bf3e608d",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/sla/evaluate"
+    ]
+  },
+  "sla/policies-get.json": {
+    "hash": "3c331ed3837424339d680ed342877f6be313b100f21b88eb21b15d22d99d286e",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "GET",
+      "/sla/policies"
+    ]
+  },
+  "sla/policies-id-delete.json": {
+    "hash": "ea3e26bdd8cb9e333c9fb066b011ce2add6af04da0df77a4ff1617eb0354d619",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "DELETE",
+      "/sla/policies/:p"
+    ]
+  },
+  "sla/policies-id-patch.json": {
+    "hash": "9689a0beaf32d1949f51e1261322355a2224f4a988a07e7266e49dd0567053e5",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "PATCH",
+      "/sla/policies/:p"
+    ]
+  },
+  "sla/policies-post.json": {
+    "hash": "cb1cad703f97f640c273209bb9bfd094fa0cff127c25d6ced07006988e80189c",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:49",
+    "route": [
+      "POST",
+      "/sla/policies"
+    ]
+  },
+  "sla/status-get.json": {
+    "hash": "76529014109a8026db9810d073f76ee09b764dcdc9667082a6b224ff8a4a9ed1",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T02:04:50",
+    "route": [
+      "GET",
+      "/sla/status"
+    ]
+  },
+  "users/users-get.json": {
+    "hash": "2164543561701fa019e2b161beef6c581d0f5ada53302057349dc6682cc87616",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "GET",
+      "/users"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/users was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "orchestration/channel-decision-decisionref-authorise-post.json": {
+    "hash": "86e01a5c082c977a7419be8f284497cd83a28cae339375760af8160bf8f3ba7f",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T03:09:09",
+    "route": [
+      "POST",
+      "/leadflow/channel-decision/:p/authorise"
+    ]
+  },
+  "consent/stop-signals-post.json": {
+    "hash": "dc8a774edb24fdeb255463752c9cbcfe83f757f2a052a422c9f7b994d0c11ee0",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T05:09:10",
+    "route": [
+      "POST",
+      "/leadflow/consent/stop-signals"
+    ]
+  },
+  "consent/suppressions-get.json": {
+    "hash": "492d50fe9ce85d01e2714a15cab14b4873e87878bb86706885cc3410960f6cae",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T05:09:10",
+    "route": [
+      "GET",
+      "/leadflow/consent/suppressions"
+    ]
+  },
+  "consent/suppressions-reconcile-post.json": {
+    "hash": "03b113c2325d554dea7ec32fa1797f51b240a6cb0dfa883adf3110a19cedf944",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T05:09:41",
+    "route": [
+      "POST",
+      "/leadflow/consent/suppressions/reconcile"
+    ]
+  },
+  "enrichment/queue-get.json": {
+    "hash": "8c8b4bd9a4c41d827fae54f7f643573f51ea3e404d3c3b9f981b04cd2a734a55",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T05:23:32",
+    "route": [
+      "GET",
+      "/leadflow/enrichment/queue"
+    ]
+  },
+  "enrichment/credits-summary-get.json": {
+    "hash": "9b2ca01314b61510a563c6664c371a055c4d78af5cdb66dd34e1cde6096f61de",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T06:54:03",
+    "route": [
+      "GET",
+      "/leadflow/credits/summary"
+    ]
+  },
+  "enrichment/eligibility-post.json": {
+    "hash": "8ea3eefd9aa7af4e6286eebb170fc99b543d99e8d3eee7ff84c0b08a6817f718",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T06:54:04",
+    "route": [
+      "POST",
+      "/leadflow/enrichment/eligibility"
+    ]
+  },
+  "enrichment/requests-post.json": {
+    "hash": "2dd1c9a6b4b04c8434a3d95b5b2c19b80e39a0e208a37ae94789dd350c170973",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T06:54:04",
+    "route": [
+      "POST",
+      "/leadflow/enrichment/requests"
+    ]
+  },
+  "enrichment/requests-apply-post.json": {
+    "hash": "abcd2fbdc1b07bdfaabc2ead21c2d7658d128dc6c70e99c71078dbc754a1ddfa",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leadflow/enrichment/requests/:p/apply"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-39",
+        "severity": "low",
+        "message": "fieldEnums missing for enum-backed field(s): reason. Add a root-level 'fieldEnums' mapping each to its COMPLETE list of valid values (read from the DB schema/validator) so QA docs show what each field accepts."
+      }
+    ]
+  },
+  "data-review/detectors-run-post.json": {
+    "hash": "acf02582f1a7a55de111d11b6cb5d71dddebebc3f14f01028686dc5dcc0fab28",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:36",
+    "route": [
+      "POST",
+      "/leadflow/data-review/detectors/run"
+    ]
+  },
+  "audit/query-post.json": {
+    "hash": "6161a633c463f2b93e179f7e25c18e83277e40335724f172f51b96a3d4181440",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:36",
+    "route": [
+      "POST",
+      "/leadflow/audit/query"
+    ]
+  },
+  "audit/saved-queries-get.json": {
+    "hash": "d9d52309bd440e3f6b96ae80194023ea607561b7dd53aafcaf5aad29eb1229a5",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:36",
+    "route": [
+      "GET",
+      "/leadflow/audit/saved-queries"
+    ]
+  },
+  "audit/saved-queries-post.json": {
+    "hash": "c2fe8fe872938bd6e28702caa9afa3eec775470ed8d39e0090b6cc9555a87124",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:36",
+    "route": [
+      "POST",
+      "/leadflow/audit/saved-queries"
+    ]
+  },
+  "relationships/relationships-end-post.json": {
+    "hash": "bcacef6dd0f27dac20721ba0dafc6e0576ae3b345b0ce0b8024b4f00c468d757",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "POST",
+      "/leadflow/relationships/:p/end"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-39",
+        "severity": "low",
+        "message": "fieldEnums missing for enum-backed field(s): reason. Add a root-level 'fieldEnums' mapping each to its COMPLETE list of valid values (read from the DB schema/validator) so QA docs show what each field accepts."
+      }
+    ]
+  },
+  "relationships/relationships-get.json": {
+    "hash": "71696a32531a02b355bd67f8eff8019993d50a048d1cd400a2e148a304f9926a",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "GET",
+      "/leadflow/relationships"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/relationships was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "relationships/relationships-post.json": {
+    "hash": "e232ed4e73049551e1ad2f24c7e05aa09f7fb35f0cd51b777bb9aba921e4bc18",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "POST",
+      "/leadflow/relationships"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/relationships was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "ownership/leads-id-accept-post.json": {
+    "hash": "48973f0faafbf39aba2d9a267dc8b551a12a608f698e6a2167471714ae8d74cf",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "POST",
+      "/leadflow/leads/:p/accept"
+    ]
+  },
+  "ownership/leads-id-decline-post.json": {
+    "hash": "946b75f6f8d38a03621d546ee95de7f966d56d0e33ee7c8671659297d689f56b",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leadflow/leads/:p/decline"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-39",
+        "severity": "low",
+        "message": "fieldEnums missing for enum-backed field(s): reason. Add a root-level 'fieldEnums' mapping each to its COMPLETE list of valid values (read from the DB schema/validator) so QA docs show what each field accepts."
+      }
+    ]
+  },
+  "ownership/leads-id-reassign-post.json": {
+    "hash": "a4c321aabf09d30f089d7ed8a7267226955a8fe203a6458b13839b27e384534c",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leadflow/leads/:p/reassign"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-39",
+        "severity": "low",
+        "message": "fieldEnums missing for enum-backed field(s): reason. Add a root-level 'fieldEnums' mapping each to its COMPLETE list of valid values (read from the DB schema/validator) so QA docs show what each field accepts."
+      }
+    ]
+  },
+  "ownership/leads-orphans-get.json": {
+    "hash": "7cc13ce83204d330460dfb95794c4c51399aa85eed412b20d6d6e4bef9fe605b",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "GET",
+      "/leadflow/leads/orphans"
+    ]
+  },
+  "sla/attainment-get.json": {
+    "hash": "547af1687b4a6f6915994fcdece81a0ff51c2e6385b7522a38d07823911e0ea0",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "GET",
+      "/leadflow/sla/attainment"
+    ]
+  },
+  "sla/config-get.json": {
+    "hash": "ad3b08124a50010f8bd74c237cf527624327e77ff2a8157d29266b158ab314ed",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "GET",
+      "/leadflow/sla/config"
+    ]
+  },
+  "sla/leads-id-breach-post.json": {
+    "hash": "e61aa9a372a5e2c347b5849387023d2f91a47fdcb70f2d516184b8deb5a081f6",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "POST",
+      "/leadflow/leads/:p/breach"
+    ]
+  },
+  "sla/leads-id-log-attempt-post.json": {
+    "hash": "09bddde2693d0266f57323968090217b84b81f89d9c10f8834943db4f7feb8a3",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "POST",
+      "/leadflow/leads/:p/log-attempt"
+    ]
+  },
+  "sla/overnight-queue-get.json": {
+    "hash": "e2d3bbb200832364d149342bae5222ae2a66dd4b07aa02c7205ef8c0109ad182",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "GET",
+      "/leadflow/sla/overnight-queue"
+    ]
+  },
+  "sla/overnight-queue-post.json": {
+    "hash": "0eec79bbef291f976e606d878eac19e53f7d16e0a1c7f22f245fb4fbb27a662b",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "POST",
+      "/leadflow/sla/overnight-queue"
+    ]
+  },
+  "sla/tick-post.json": {
+    "hash": "cffebb49b3070f4aadaf4f740f41b3e653705be102083f94bed8b02c85cb7b11",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "POST",
+      "/leadflow/sla/tick"
+    ]
+  },
+  "pipeline/records-ref-close-lost-post.json": {
+    "hash": "ba2056d3c33d785c28987bc7ecc968e9ae6c5c4d374c14181a6a8021782b6df0",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "POST",
+      "/leadflow/records/:p/close-lost"
+    ]
+  },
+  "pipeline/records-ref-disposition-post.json": {
+    "hash": "e4978ad2801e2a61f2517a5ce0be2a67c1ac3a05e88028bbb02fcf22fc5a2a67",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "POST",
+      "/leadflow/records/:p/disposition"
+    ]
+  },
+  "pipeline/records-ref-feature-dependency-post.json": {
+    "hash": "96c47b88219dbbaf7504a7bab360504b3d426c75240d755028d973c4213a3cbd",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "POST",
+      "/leadflow/records/:p/feature-dependency"
+    ]
+  },
+  "pipeline/records-ref-next-action-post.json": {
+    "hash": "42e29b79b9a1c3d608f06c6244d92b5f7861b8e8ee6ed4e37b1af87a3fc12d0e",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "POST",
+      "/leadflow/records/:p/next-action"
+    ]
+  },
+  "pipeline/records-ref-save-gate-get.json": {
+    "hash": "d8163acd84325b5716e9c2de2ef1f05fcb616f568887b98bf3312a8980896e08",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "GET",
+      "/leadflow/records/:p/save-gate"
+    ]
+  },
+  "pipeline/stage-guard-get.json": {
+    "hash": "f20d84a9879bd3e6481434c072b9921d3b62faf73d71c37307e94c662cabfcf5",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "GET",
+      "/leadflow/pipeline/stage-guard"
+    ]
+  },
+  "pipeline/stages-get.json": {
+    "hash": "0762be915d23fd8dcf376984316b6d4c1429c8a525da695e6498ed07ca5f8ed0",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:37",
+    "route": [
+      "GET",
+      "/leadflow/pipeline/stages"
+    ]
+  },
+  "channels/calls-dial-post.json": {
+    "hash": "64ce063f3772f190aa66b7ef9e1f7fd0a3de3bd0251ddbb01057d99d884a0cbe",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:36",
+    "route": [
+      "POST",
+      "/leadflow/calls/dial"
+    ]
+  },
+  "channels/calls-id-disposition-post.json": {
+    "hash": "18be8bb2d63bc0d6d120621536e13df9b2f073e24bdb4a47c5b9ebb3be3cfc24",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:36",
+    "route": [
+      "POST",
+      "/leadflow/calls/:p/disposition"
+    ]
+  },
+  "channels/email-health-get.json": {
+    "hash": "af13788ad0375efdfcd0820fbeeba3adb0c55f5c1ed66e68bd056f3e9915b828",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:23:20",
+    "route": [
+      "GET",
+      "/leadflow/channels/email/health"
+    ]
+  },
+  "channels/sms-eligibility-get.json": {
+    "hash": "b8e30bddd6ec24f65bd5851709311b29e3d39ee493b176795551c507d637f1eb",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:36",
+    "route": [
+      "GET",
+      "/leadflow/channels/sms/eligibility"
+    ]
+  },
+  "channels/sms-eligibility-post.json": {
+    "hash": "a389523c45de5edfee6e2f221dd6775e845c528ecbf6fd31435a0d0b1c4f6c2b",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:23:20",
+    "route": [
+      "POST",
+      "/leadflow/channels/sms/eligibility"
+    ]
+  },
+  "channels/templates-get.json": {
+    "hash": "0e756a102ba9eafea04feca3948da10d063fdccf8a04e001cb2cd49c8f2a053a",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:45",
+    "route": [
+      "GET",
+      "/leadflow/templates"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/templates was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "channels/templates-id-publish-post.json": {
+    "hash": "638c1376ae8a72165ac0b6a7a08325b00b4a12dc8e8e4afda1cffcbb7f14c185",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:36",
+    "route": [
+      "POST",
+      "/leadflow/templates/:p/publish"
+    ]
+  },
+  "data-review/cases-get.json": {
+    "hash": "f3a9e2774179db7c5b3bfba0427f66b89f16c73d1137ac6c33eee285da781a18",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T21:26:36",
+    "route": [
+      "GET",
+      "/leadflow/data-review/cases"
+    ]
+  },
+  "sequences/enroll-post.json": {
+    "hash": "ee175ad9c44da0413a12de78d4d4375f25bbebd974b464d76a1ee176379159fb",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:40",
+    "route": [
+      "POST",
+      "/leadflow/sequences/enroll"
+    ]
+  },
+  "sequences/enrollments-id-stop-post.json": {
+    "hash": "7fda10894ea76db849e637524d5470157901203fd3f1a9782a98acf44a10007f",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:40",
+    "route": [
+      "POST",
+      "/leadflow/sequences/enrollments/:p/stop"
+    ]
+  },
+  "sequences/nurture-get.json": {
+    "hash": "b53525744e9bacd45439935d87a640c43c481fd8478fe1477dbf3e77ade4a47b",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:40",
+    "route": [
+      "GET",
+      "/leadflow/sequences/nurture"
+    ]
+  },
+  "sequences/nurture-post.json": {
+    "hash": "f880ad8d88eadc51ffef6b6ed8ea87e9a7b7a55639ebe0b1ed92e49503363b1e",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:40",
+    "route": [
+      "POST",
+      "/leadflow/sequences/nurture"
+    ]
+  },
+  "sequences/nurture-ref-reactivate-post.json": {
+    "hash": "dd48bba2337b81e544e0b1241e10c2a3eacd4317b09970b265f015418dc23ff8",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:40",
+    "route": [
+      "POST",
+      "/leadflow/sequences/nurture/:p/reactivate"
+    ]
+  },
+  "sequences/sequences-get.json": {
+    "hash": "729f976b72cf58171ae26e7f5449f7a406d803c5bb4a1eaf312a9f737a59bc5f",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "GET",
+      "/leadflow/sequences"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/sequences was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "sequences/tick-post.json": {
+    "hash": "da879303785076d04fe905868e147742159c984125bc36afbc93c47f33fd3b86",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T22:03:17",
+    "route": [
+      "POST",
+      "/leadflow/sequences/tick"
+    ]
+  },
+  "calendar/meetings-id-cancel-post.json": {
+    "hash": "1670009b3f5be1dcae4fcaf19b0541b81cc1521cf7695b6eb16afc860cc23690",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:45",
+    "route": [
+      "POST",
+      "/leadflow/meetings/:p/cancel"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-39",
+        "severity": "low",
+        "message": "fieldEnums missing for enum-backed field(s): reason. Add a root-level 'fieldEnums' mapping each to its COMPLETE list of valid values (read from the DB schema/validator) so QA docs show what each field accepts."
+      }
+    ]
+  },
+  "calendar/meetings-id-no-show-post.json": {
+    "hash": "4f7b1ff005bcf18fad603889c69bc053a1e092f829785a74903b58d75792db98",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:39",
+    "route": [
+      "POST",
+      "/leadflow/meetings/:p/no-show"
+    ]
+  },
+  "calendar/meetings-id-reschedule-post.json": {
+    "hash": "ecc0b894b49e3fd40207c80cfabaa2b2c2d74d4b897d234ff974d14bff7272ac",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:39",
+    "route": [
+      "POST",
+      "/leadflow/meetings/:p/reschedule"
+    ]
+  },
+  "calendar/meetings-id-rescue-post.json": {
+    "hash": "8493b01f2d373d7bfbb79751e544680557708c6eb22e7bf23960daeab6539161",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:39",
+    "route": [
+      "POST",
+      "/leadflow/meetings/:p/rescue"
+    ]
+  },
+  "calendar/meetings-post.json": {
+    "hash": "69414972bc6693561f3c4c089c97bacd029e0ab88c7d3b3c08e4f0ee9dbb9094",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:45",
+    "route": [
+      "POST",
+      "/leadflow/meetings"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/meetings was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "calendar/readiness-get.json": {
+    "hash": "811e65675fbc5cec18aed5ada244cbb567b45c2474eeaa65c0941a78333f1f30",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:39",
+    "route": [
+      "GET",
+      "/leadflow/calendar/readiness"
+    ]
+  },
+  "calendar/synthetic-test-post.json": {
+    "hash": "f777f8d4051c815cf5da5b7c58febc3a4cb232d2d5af2fbb7ed3f408e166151a",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:39",
+    "route": [
+      "POST",
+      "/leadflow/calendar/synthetic-test"
+    ]
+  },
+  "commerce/checkout-id-status-get.json": {
+    "hash": "28f79cd178f022f6f291c527763fead049a1bf3c49ec6e592d963d0be181357d",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:39",
+    "route": [
+      "GET",
+      "/leadflow/checkout/:p/status"
+    ]
+  },
+  "commerce/checkout-send-post.json": {
+    "hash": "8df7c7cc3054c070e292cee2e33c8fd14b5c27c5fe1af85b792f67d0017cc945",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:16:50",
+    "route": [
+      "POST",
+      "/leadflow/checkout/send"
+    ]
+  },
+  "commerce/closed-won-start-post.json": {
+    "hash": "69e00a2e83156ca1a7952d2c1a5dcb83594a8a8c54c4cdc71c1bd9cc3a28f16c",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:45",
     "route": [
       "POST",
       "/leadflow/closed-won/start"
     ],
     "findings": [
       {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "POST /api/leadflow/closed-won/start was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+        "rule": "MUST-71",
+        "severity": "high",
+        "message": "requiresRole=['client_success'] is declared but 3 dataset(s) also set their own Authorization, which takes precedence \u2014 the role token is never sent and the endpoint will 403. Remove the header or the role, not both."
       }
     ]
   },
-  "orchestration/intake-orchestrate-post.json": {
-    "hash": "ff35753c0a621145f421d507c2f3de64e081199e51009036df5ad5b87af362e7",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-08T18:24:36",
-    "route": [
-      "POST",
-      "/leadflow/intake/orchestrate"
-    ],
-    "findings": [
-      {
-        "rule": "CODE-MATCH",
-        "severity": "low",
-        "message": "POST /api/leadflow/intake/orchestrate was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
-      }
-    ]
-  },
-  "orchestration/sagas-run-get.json": {
-    "hash": "71002e700ed4c020667a63cacd467df801434f9d23868b2bace60193c4f3bf75",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-08T18:24:36",
+  "commerce/offers-current-get.json": {
+    "hash": "1dc4aa762de1d46ab3530deba513ccd770c2120a7b475049c1034afdb253933d",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:39",
     "route": [
       "GET",
-      "/leadflow/sagas/:p"
+      "/leadflow/offers/current"
+    ]
+  },
+  "commerce/offers-feature-matrix-get.json": {
+    "hash": "4e3ba85c947d7dad302667df59d4e603f7f9d3358b691153a350ce722a496721",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:39",
+    "route": [
+      "GET",
+      "/leadflow/offers/feature-matrix"
+    ]
+  },
+  "commerce/offers-feature-matrix-post.json": {
+    "hash": "a7405671945937c8c34e507b1e2a6be24d140c10c4aec293d8f9d74a34623705",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "POST",
+      "/leadflow/offers/feature-matrix"
+    ]
+  },
+  "commerce/offers-id-activate-post.json": {
+    "hash": "df248661876ad5d026047e963d443bd39a792e8fbd8430241bf742ab569be87a",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "POST",
+      "/leadflow/offers/:p/activate"
+    ]
+  },
+  "commerce/offers-id-approve-post.json": {
+    "hash": "33ae70957a306282d19fadc7e47b6e9bff86c2c9c59764f9fb57e4df0d123748",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "POST",
+      "/leadflow/offers/:p/approve"
+    ]
+  },
+  "commerce/offers-post.json": {
+    "hash": "3ddb7c0f067491880a20bf8808385d76a30142b4660666cc370533dbeb77cfd7",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:45",
+    "route": [
+      "POST",
+      "/leadflow/offers"
     ],
     "findings": [
       {
         "rule": "CODE-MATCH",
         "severity": "low",
-        "message": "GET /api/leadflow/sagas/{run_id} was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+        "message": "POST /api/leadflow/offers was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
       }
+    ]
+  },
+  "commerce/onboarding-id-accept-post.json": {
+    "hash": "3e327c185bbe349800b22295f095aea2bdb36dddcccee5220de490cc2d9b8aae",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "POST",
+      "/leadflow/onboarding/:p/accept"
+    ]
+  },
+  "commerce/onboarding-id-exception-post.json": {
+    "hash": "878f6649926b30d9b95b693c03ca802998a33aeea9292476caba9d28b7f00852",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "POST",
+      "/leadflow/onboarding/:p/exception"
+    ]
+  },
+  "commerce/onboarding-pending-get.json": {
+    "hash": "7a7fbb009e1960925711887832a89ff5a89b40f7ef12c132365644d363297ab5",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:03:39",
+    "route": [
+      "GET",
+      "/leadflow/onboarding/pending"
+    ]
+  },
+  "commerce/onboarding-post.json": {
+    "hash": "c3c74f9e5aec273b95299dd1f14096d385b287334e80697fe4da7d803aadaaa1",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:45",
+    "route": [
+      "POST",
+      "/leadflow/onboarding"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/onboarding was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "commerce/payments-id-refund-request-post.json": {
+    "hash": "f0f73ed53386086968a8f869584edc91267a628467a0fc5130d829fd32534b64",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "POST",
+      "/leadflow/payments/:p/refund-request"
+    ]
+  },
+  "commerce/payments-verify-post.json": {
+    "hash": "008c45f1c28603f00c6d4f403a05312e12ebc6d57fa65effbf7bd27e38091074",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-11T23:16:50",
+    "route": [
+      "POST",
+      "/leadflow/payments/verify"
+    ]
+  },
+  "failures/failures-dlq-get.json": {
+    "hash": "650d403faf7a3c35beba2ae62bc46998d7fc13cebcfee8ea5171e9d2a78b3269",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "GET",
+      "/leadflow/failures/dlq"
+    ]
+  },
+  "failures/failures-dlq-replay-post.json": {
+    "hash": "ea165c8dd972621da9a9ad8d0eea8416a2d01a0f8bb7c5edeeaba4fd507470a2",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:54",
+    "route": [
+      "POST",
+      "/leadflow/failures/dlq/replay"
+    ]
+  },
+  "failures/failures-id-retry-post.json": {
+    "hash": "dfbf11b0aabb3c0ec904f9d70fb281231ccfb2da78a770d4ab190c5b771ce7b7",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:54",
+    "route": [
+      "POST",
+      "/leadflow/failures/:p/retry"
+    ]
+  },
+  "failures/failures-kill-switch-get.json": {
+    "hash": "1cdbd4fd67977f4c77cda15e9ffe97926a494cbc287ec0ee1fa78e22c3548c75",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "GET",
+      "/leadflow/failures/kill-switch"
+    ]
+  },
+  "failures/failures-kill-switch-post.json": {
+    "hash": "05ace9fa64b6f04e286ac108f05a56619ba83c4cf98149b5b1eb4fd4f766fdd7",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:54",
+    "route": [
+      "POST",
+      "/leadflow/failures/kill-switch"
+    ]
+  },
+  "failures/failures-post.json": {
+    "hash": "fe7eaf712b2492cbd20c87a7d0a6e3e06f5b70c50b44764049ed5a99ca739e1d",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leadflow/failures"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/failures was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "insights/analytics-attribution-get.json": {
+    "hash": "aeb92e00d9ca12a0cef19603815bef751d3393959ea9c0a0d7a43cbab5d59e5e",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "GET",
+      "/leadflow/analytics/attribution"
+    ]
+  },
+  "insights/analytics-forecast-post.json": {
+    "hash": "0446b364961fbd11e6d94c0bc17c0a991e2bf511009870fa92c66034f08ee54d",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:54",
+    "route": [
+      "POST",
+      "/leadflow/analytics/forecast"
+    ]
+  },
+  "insights/analytics-funnel-get.json": {
+    "hash": "197a11757205bd7d62cb9a30ce89cd73456f41adcf4cc840e9f6744036cdf151",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "GET",
+      "/leadflow/analytics/funnel"
+    ]
+  },
+  "insights/analytics-source-quality-get.json": {
+    "hash": "ac78e9326f294be67a629a6f97ec459508ea430c94d4eccd0ff0194a42df4e64",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "GET",
+      "/leadflow/analytics/source-quality"
+    ]
+  },
+  "kpi/kpi-definitions-get.json": {
+    "hash": "de5be7252fcf5a5cfb93a2132ac5e11f639b2a20ae335e228c4151db317153b2",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "GET",
+      "/leadflow/kpi-definitions"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/kpi-definitions was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "kpi/kpi-definitions-metrickey-get.json": {
+    "hash": "af4cff67dac7d73105980e0828a7edd3afa2470a934ce7bce69ca1bb82c6e837",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "GET",
+      "/leadflow/kpi-definitions/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/kpi-definitions/:metric_key was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "kpi/kpi-definitions-post.json": {
+    "hash": "eb7adcc9a5de44b5d7084cca99fe92f67f2248d8df2f9d1365a4bfcdec861ab0",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leadflow/kpi-definitions"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/kpi-definitions was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "kpi/kpi-definitions-tiles-post.json": {
+    "hash": "9a7858d4ff0729e1029e0e04edff36f963cce6d245f8e69437b3837661fcb869",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:55",
+    "route": [
+      "POST",
+      "/leadflow/kpi-definitions/tiles"
+    ]
+  },
+  "kpi/kpi-reconciliation-report-get.json": {
+    "hash": "f92a69d5dfb465ae6949d190b24647e73c174c5d76f94c48bf60aace76aac4ce",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:29",
+    "route": [
+      "GET",
+      "/leadflow/kpi-definitions/reconciliation/report"
+    ]
+  },
+  "rhythm/digests-escalate-post.json": {
+    "hash": "2b80eb55197fc0355b030ef9fb5c9f67d8c4c2688146db161bcdefad06543868",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:55",
+    "route": [
+      "POST",
+      "/leadflow/digests/escalate"
+    ]
+  },
+  "rhythm/digests-get.json": {
+    "hash": "32e985587b59f7ab05d716265a027d880b774465c14ae8f3afbcf5376927afa7",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "GET",
+      "/leadflow/digests"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/digests was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "rhythm/digests-id-complete-output-post.json": {
+    "hash": "1ee16aa8ebadedb764b1d186b4e6479cb9b55cc10fd67299deb212d8e24ce877",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "POST",
+      "/leadflow/digests/:p/complete-output"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-73",
+        "severity": "high",
+        "message": "expectedStatus 200 matches no dataset ([404, 400, 401, 401]) \u2014 captureResponse can never fire and every dependent will block."
+      }
+    ]
+  },
+  "rhythm/digests-run-post.json": {
+    "hash": "8577a76a9027387aa5e433e19606985a41ae6392237f02b9111524c3c35a9b32",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:30",
+    "route": [
+      "POST",
+      "/leadflow/digests/run"
+    ]
+  },
+  "segments/segments-id-compute-post.json": {
+    "hash": "6e45a939db6c4b1207d82921a5e5d1e524cbe9a3012f2964941df27818421dd8",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:55",
+    "route": [
+      "POST",
+      "/leadflow/segments/:p/compute"
+    ]
+  },
+  "segments/segments-id-snapshots-get.json": {
+    "hash": "6648a3329beb40f94098bdb80ef3fa16c5cf5205bd3e8da424db5bbf2ec687f5",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:30",
+    "route": [
+      "GET",
+      "/leadflow/segments/:p/snapshots"
+    ]
+  },
+  "segments/segments-post.json": {
+    "hash": "1d2eecc36ec5ea2720bbb66dfe04eb58ba4100d515a9d9a9b363056dbd5f935b",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "POST",
+      "/leadflow/segments"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/segments was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "segments/segments-preview-post.json": {
+    "hash": "2fb30fe7dd8a26cdab6c3c44a0dd319e12b4bc494260f98d045e5c16a6fea127",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:55",
+    "route": [
+      "POST",
+      "/leadflow/segments/preview"
+    ]
+  },
+  "workflows/workflows-id-dry-run-post.json": {
+    "hash": "776bf641bbea87b1b5603fa008fe48116cd56574805b66446422be97fc596030",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:30",
+    "route": [
+      "POST",
+      "/leadflow/workflows/:p/dry-run"
+    ]
+  },
+  "workflows/workflows-id-publish-post.json": {
+    "hash": "97c69121e01c93d2dec48b42ff45cb449d238c7ca2540429ab61ce59412d2487",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "POST",
+      "/leadflow/workflows/:p/publish"
+    ]
+  },
+  "workflows/workflows-id-rollback-post.json": {
+    "hash": "8be25df288adc24d3ad009703d52297a0758b0381c0ec593722ad03d149e852e",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "POST",
+      "/leadflow/workflows/:p/rollback"
+    ]
+  },
+  "workflows/workflows-key-versions-get.json": {
+    "hash": "bc7c6332a9c96d39e6fbed1aaee7ecad7f377db0cc8728e1603cd354f45bb00b",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T00:54:30",
+    "route": [
+      "GET",
+      "/leadflow/workflows/:p/versions"
+    ]
+  },
+  "workflows/workflows-post.json": {
+    "hash": "fdf4f21ce77be5d0ed9c50abb913e9773c0e149d1229a70d55a9e5dfae543ced",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "POST",
+      "/leadflow/workflows"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/workflows was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "contacts/contacts-export-post.json": {
+    "hash": "861c518a38e529b82fddd2e02d97a5f684224cc6137b146cdd3962e1709fc45e",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:12:38",
+    "route": [
+      "POST",
+      "/leadflow/contacts/export"
+    ]
+  },
+  "contacts/contacts-get.json": {
+    "hash": "a3c38598e02c3acac565fe20f123eaa2171b2214d440e5fb54a4cac8375a8ff1",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "GET",
+      "/leadflow/contacts"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/contacts was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "contacts/contacts-id-campaign-enrollments-get.json": {
+    "hash": "30a3fedbcdc84c16d0bee8e8b4c14c2c2b6fab00846857e201db4c065234a90a",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:54",
+    "route": [
+      "GET",
+      "/leadflow/contacts/:p/campaign-enrollments"
+    ]
+  },
+  "contacts/contacts-id-conversations-get.json": {
+    "hash": "56d3cd93b722e8ba68f993a116b6c79b1d53c6a9d7d3338d65a1c0b61e00a3db",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:54",
+    "route": [
+      "GET",
+      "/leadflow/contacts/:p/conversations"
+    ]
+  },
+  "contacts/contacts-id-overview-get.json": {
+    "hash": "7307409a07cbd131dbe977d2aee772ce95a85fff249d92599c393db5a4937f04",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:54",
+    "route": [
+      "GET",
+      "/leadflow/contacts/:p/overview"
+    ]
+  },
+  "contacts/contacts-id-properties-get.json": {
+    "hash": "6e407243c9aa99f813c6491daa0b08401eb9f5e0bbce16ee53b2e9f1fe2d7007",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:54",
+    "route": [
+      "GET",
+      "/leadflow/contacts/:p/properties"
+    ]
+  },
+  "contacts/contacts-id-properties-link-post.json": {
+    "hash": "af474957ebda7aa87a7bbd31a2abc25c7d367073ec09a8fe1d81d05cf56e33ad",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:46",
+    "route": [
+      "POST",
+      "/leadflow/contacts/:p/properties/link"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-14",
+        "severity": "medium",
+        "message": "POST endpoint has no captureResponse \u2014 capture created ids so dependents can {{cache:...}} them."
+      }
+    ]
+  },
+  "contacts/contacts-id-provenance-get.json": {
+    "hash": "81551c7bf1789c35a12fa7ded81a50412ace091a00573743b105267e4df90c1a",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:54",
+    "route": [
+      "GET",
+      "/leadflow/contacts/:p/provenance"
+    ]
+  },
+  "contacts/contacts-id-relationships-get.json": {
+    "hash": "4991898dd094f76b218ce09bd300cdcc61c16b2071d9374f7ae1aebdf62b99e3",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:54",
+    "route": [
+      "GET",
+      "/leadflow/contacts/:p/relationships"
+    ]
+  },
+  "contacts/contacts-id-summary-get.json": {
+    "hash": "1ecc96d7f64f3233b7d9d98081ab04efdd34c9f54192e06315fb90a03353ceb8",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:54",
+    "route": [
+      "GET",
+      "/leadflow/contacts/:p/summary"
+    ]
+  },
+  "saved-views/saved-views-counts-get.json": {
+    "hash": "8295ef0872ce465145e8cb37550056a500ed84e64a0671d736162b7e6fec5108",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:55",
+    "route": [
+      "GET",
+      "/leadflow/saved-views/counts"
+    ]
+  },
+  "saved-views/saved-views-get.json": {
+    "hash": "05126d40a77dd8c418c7bc81ec71e2caefabb82f5b8c12b95d87a0598d54b5e1",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "GET",
+      "/leadflow/saved-views"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/saved-views was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "saved-views/saved-views-post.json": {
+    "hash": "b408b39e29f0fa87d34b2c3eb8e3a1fe8b52eb9d7b02f91250bf7c1d03af7a0e",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "POST",
+      "/leadflow/saved-views"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "POST /api/leadflow/saved-views was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "users/id-activate-post.json": {
+    "hash": "b3291a37dc6be0c1f880b2dd40af3d85fc7e1a82b0500e0ca27d6dfe75fdab3f",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "POST",
+      "/users/:p/activate"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-14",
+        "severity": "medium",
+        "message": "POST endpoint has no captureResponse \u2014 capture created ids so dependents can {{cache:...}} them."
+      }
+    ]
+  },
+  "users/id-deactivate-post.json": {
+    "hash": "efec6f287772ae045db4b25276b0234e3c31dea09c26a818025f69d42722381e",
+    "status": "findings",
+    "findingsCount": 2,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "POST",
+      "/users/:p/deactivate"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-14",
+        "severity": "medium",
+        "message": "POST endpoint has no captureResponse \u2014 capture created ids so dependents can {{cache:...}} them."
+      },
+      {
+        "rule": "MUST-39",
+        "severity": "low",
+        "message": "fieldEnums missing for enum-backed field(s): reason. Add a root-level 'fieldEnums' mapping each to its COMPLETE list of valid values (read from the DB schema/validator) so QA docs show what each field accepts."
+      }
+    ]
+  },
+  "users/id-role-patch.json": {
+    "hash": "59b3031110b194640261872a03d8e9c4b8d9b8a7983b9f90093284c7ae654ffc",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "PATCH",
+      "/users/:p/role"
+    ]
+  },
+  "users/invite-post.json": {
+    "hash": "06f738fcd1b2f1260a02d0db732157fea032d38e976eb5c5346b8d177ffb7eff",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "POST",
+      "/users/invite"
+    ]
+  },
+  "users/permission-matrix-get.json": {
+    "hash": "737f58b4d90de2c654c203ae7eebc45452e531505878a304074103d14a62dbb9",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/users/permission-matrix"
+    ]
+  },
+  "users/register-get.json": {
+    "hash": "bf7867c5ec6dfd10f79fdd8088efa44ec699af4e3f814cd93994cf5df5eb75db",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/users/register"
+    ]
+  },
+  "users/roles-get.json": {
+    "hash": "c681064b1c1042e8a6326f9dd819efe3e526bd54db4ff7505050a7774b68fae5",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/users/roles"
+    ]
+  },
+  "workspace/audit-evidence-bundle-post.json": {
+    "hash": "01f995b99e59842c351889ab6ab25b9d81453ba97c54d6c9723a41411756d5d7",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:12:43",
+    "route": [
+      "POST",
+      "/leadflow/audit/evidence-bundle"
+    ]
+  },
+  "workspace/audit-timeline-get.json": {
+    "hash": "d21972d00ecd0f43215eb95f3283a93955f1d19dd83c23ad3195c52e597c3885",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/audit/timeline"
+    ]
+  },
+  "workspace/certification-persona-get.json": {
+    "hash": "68d9240d155be0a8252fe6e3c498f98e4f55026c343f6e31285a4a24673e175c",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "GET",
+      "/leadflow/certification/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/certification/:persona_id was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "workspace/coverage-console-get.json": {
+    "hash": "5c93880eeb97087700d7fa7718ad00e401df637de81beae9cca9d998518b7de4",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/coverage/console"
+    ]
+  },
+  "workspace/coverage-opening-validation-post.json": {
+    "hash": "4d2cbf6f2304e8eadcab51bb592cfcf5aa3ffb23f536ed5eb6b6588ef87a29fe",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:12:43",
+    "route": [
+      "POST",
+      "/leadflow/coverage/opening-validation"
+    ]
+  },
+  "workspace/credits-balance-get.json": {
+    "hash": "36e97e528358acb17e423f4c7668b076dd9e7ae261c71cfbd0ff43ae08f26775",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/credits/balance"
+    ]
+  },
+  "workspace/dashboards-leadership-get.json": {
+    "hash": "6f1d4e5e18d7cf5c13daff3a58767b1c57a2301999d133cde143758bf682b7b7",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/dashboards/leadership"
+    ]
+  },
+  "workspace/dashboards-role-get.json": {
+    "hash": "48cd45ca5dc05f746544582a824841fa5d9f65c6b9e038eac67136fad947f88d",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "GET",
+      "/leadflow/dashboards/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/dashboards/:role was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "workspace/go-live-status-get.json": {
+    "hash": "53e3eecf9d795a4360093b3e7c5b8726a3b42f6e8a5a18c9433721f8758dd508",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/go-live/status"
+    ]
+  },
+  "workspace/handoffs-id-get.json": {
+    "hash": "915b9159595873bd02d6d4facc172e126368f508d5808df220223c44bac32f12",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "GET",
+      "/leadflow/handoffs/:p"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/handoffs/:id was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "workspace/inbox-get.json": {
+    "hash": "ee9aa6cb785b73c0fe5c26ad7f076ba2d6daa8d75211f18be8ab0aba5718a09d",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/inbox"
+    ]
+  },
+  "workspace/incidents-get.json": {
+    "hash": "fea455fed85cdaae4b8ed3f953db78c8901740309771bfe78de640314390e9c0",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:47",
+    "route": [
+      "GET",
+      "/leadflow/incidents"
+    ],
+    "findings": [
+      {
+        "rule": "CODE-MATCH",
+        "severity": "low",
+        "message": "GET /api/leadflow/incidents was not found in the best-effort route scan \u2014 verify the path/method against the handler (the scanner may not cover this registration style)."
+      }
+    ]
+  },
+  "workspace/leads-id-routing-trace-get.json": {
+    "hash": "9fcbd33e4eaed106726f7d58a3d894fad4cb293565fc7c1dbcda7cc698be9bfd",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/leads/:p/routing-trace"
+    ]
+  },
+  "workspace/meetings-book-live-post.json": {
+    "hash": "8c1e1518781684ba8fb8535f99dfcc8de238e493d1438b380f62523fb0ed40d6",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:12:43",
+    "route": [
+      "POST",
+      "/leadflow/meetings/book-live"
+    ]
+  },
+  "workspace/next-actions-overdue-get.json": {
+    "hash": "12e4df6a402128ea2f50b326df8c24a4413ea79200c913b049f47820592c790f",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/next-actions/overdue"
+    ]
+  },
+  "workspace/opportunities-id-offer-staleness-get.json": {
+    "hash": "df4cebffcca1e07a2003d68fbab2494ae7648fdc0be4af160769cdc68e8a8cd6",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/opportunities/:p/offer-staleness"
+    ]
+  },
+  "workspace/pipeline-board-get.json": {
+    "hash": "ee6d909d61e70f8022eb7b4568156af6e53283e8a63749879876e7dd3d9e5e2d",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/pipeline/board"
+    ]
+  },
+  "workspace/routing-config-get.json": {
+    "hash": "be0b4add1f0a1d00e8cac7dc8701bf7d712999ceb6a1d2e10352ee0679242e70",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/routing/config"
+    ]
+  },
+  "workspace/routing-fair-share-audit-get.json": {
+    "hash": "5b38d563825d25cc392d8be1306411af2c5ccb43a7961eedba8ccfaf871aa78c",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/routing/fair-share-audit"
+    ]
+  },
+  "workspace/routing-simulate-post.json": {
+    "hash": "9ceb30a69fcfcf8b498a34a43c705585ec7e8d45cea9271de681b2a8b35fcc50",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:12:43",
+    "route": [
+      "POST",
+      "/leadflow/routing/simulate"
+    ]
+  },
+  "workspace/workflows-definitions-get.json": {
+    "hash": "21665357a235cc06eed6d42e1bb9629710c7c7d08b927be1a9992c6b39d8973d",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/workflows/definitions"
+    ]
+  },
+  "workspace/workflows-id-release-gate-post.json": {
+    "hash": "b1daff3aa75f7c49cfe4110fb23297d27bda1dd90059cfd955a56ff9e19cf77a",
+    "status": "findings",
+    "findingsCount": 1,
+    "verifiedAt": "2026-08-12T03:24:48",
+    "route": [
+      "POST",
+      "/leadflow/workflows/:p/release-gate"
+    ],
+    "findings": [
+      {
+        "rule": "MUST-14",
+        "severity": "medium",
+        "message": "POST endpoint has no captureResponse \u2014 capture created ids so dependents can {{cache:...}} them."
+      }
+    ]
+  },
+  "workspace/workflows-runs-get.json": {
+    "hash": "7f07a274f3d94b1dfce71851997d0427b9264eb5d47915a08b1c1d6d0dc4aca9",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-12T03:10:56",
+    "route": [
+      "GET",
+      "/leadflow/workflows/runs"
     ]
   }
 }

@@ -3,7 +3,7 @@
   "instruction": "Read tests/api_definitions/_DESCRIPTION_GAPS.md and fix EVERY listed api_definition: a QA-grade description (with edge cases), a root-level errorCases[], and a negative testCase for each errorCase the REQUEST can trigger (testType:\"negative\" + coversErrorCase + the errorCase status/code). Read each handler to enumerate real errors \u2014 do not guess. 5xx/infra faults need no test; mark them reproducible:false. Then re-commit.",
   "report_file": "tests/api_definitions/_DESCRIPTION_GAPS.md",
   "rule": "MUST-42 / MUST-43 / MUST-64",
-  "count": 21,
+  "count": 111,
   "gaps": [
     {
       "file": "tests/api_definitions/ai/coach-calls-post.json",
@@ -54,6 +54,102 @@
       ]
     },
     {
+      "file": "tests/api_definitions/audit/reversals-preview-post.json",
+      "endpoint": "/api/leadflow/audit/reversals/preview",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/auth/login-post.json",
+      "endpoint": "/api/auth/login",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/INVALID_CREDENTIALS, 403/ACCOUNT_INACTIVE"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/auth/me-get.json",
+      "endpoint": "/api/auth/me",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/auth/register-post.json",
+      "endpoint": "/api/auth/register",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 409/EMAIL_ALREADY_EXISTS, 409/USERNAME_ALREADY_EXISTS"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/calendar/meetings-id-cancel-post.json",
+      "endpoint": "/api/leadflow/meetings/:id/cancel",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/calendar/meetings-id-no-show-post.json",
+      "endpoint": "/api/leadflow/meetings/:id/no-show",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/calendar/meetings-id-reschedule-post.json",
+      "endpoint": "/api/leadflow/meetings/:id/reschedule",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/calendar/meetings-id-rescue-call-post.json",
+      "endpoint": "/api/leadflow/meetings/:id/rescue-call",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/calendar/meetings-id-rescue-post.json",
+      "endpoint": "/api/leadflow/meetings/:id/rescue",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 404/NOT_FOUND, 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/calendar/meetings-id-sync-failure-post.json",
+      "endpoint": "/api/leadflow/meetings/:id/sync-failure",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/calendar/readiness-post.json",
+      "endpoint": "/api/leadflow/calendar/readiness",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/calendar/synthetic-test-post.json",
+      "endpoint": "/api/leadflow/calendar/synthetic-test",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 400/VALIDATION_ERROR"
+      ]
+    },
+    {
       "file": "tests/api_definitions/calls/id-intelligence-get.json",
       "endpoint": "/api/leadflow/calls/:id/intelligence",
       "method": "GET",
@@ -70,6 +166,14 @@
       ]
     },
     {
+      "file": "tests/api_definitions/capture/extension-post.json",
+      "endpoint": "/api/leadflow/capture/extension",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN"
+      ]
+    },
+    {
       "file": "tests/api_definitions/capture/resolve-post.json",
       "endpoint": "/api/leadflow/capture/:id/resolve",
       "method": "POST",
@@ -78,11 +182,187 @@
       ]
     },
     {
+      "file": "tests/api_definitions/capture/sync-batch-post.json",
+      "endpoint": "/api/leadflow/capture/sync-batch",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 422/ORIGIN_CLASS_REQUIRED"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/channels/calls-dial-post.json",
+      "endpoint": "/api/leadflow/calls/dial",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/channels/calls-id-disposition-post.json",
+      "endpoint": "/api/leadflow/calls/:id/disposition",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/channels/sms-sent-post.json",
+      "endpoint": "/api/leadflow/channels/sms/sent",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/channels/templates-id-publish-post.json",
+      "endpoint": "/api/leadflow/templates/:id/publish",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 403/FORBIDDEN, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/channels/voice-tracking-numbers-get.json",
+      "endpoint": "/api/leadflow/channels/voice/tracking-numbers",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/commerce/checkout-send-post.json",
+      "endpoint": "/api/leadflow/checkout/send",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/commerce/offers-id-activate-post.json",
+      "endpoint": "/api/leadflow/offers/:id/activate",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/commerce/onboarding-id-exception-post.json",
+      "endpoint": "/api/leadflow/onboarding/:id/exception",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/consent/overview-get.json",
+      "endpoint": "/api/leadflow/consent/overview",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/consent/receipts-post.json",
+      "endpoint": "/api/leadflow/consent/receipts",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/consent/receipts-revoke-post.json",
+      "endpoint": "/api/leadflow/consent/receipts/:receipt_id/revoke",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/data-review/detectors-run-post.json",
+      "endpoint": "/api/leadflow/data-review/detectors/run",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/enrichment/queue-get.json",
+      "endpoint": "/api/leadflow/enrichment/queue",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/enrichment/requests-apply-post.json",
+      "endpoint": "/api/leadflow/enrichment/requests/:request_id/apply",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 4 errorCase(s) (MUST-64): 404/NOT_FOUND, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN"
+      ]
+    },
+    {
       "file": "tests/api_definitions/events/stream-get.json",
       "endpoint": "/api/events/stream",
       "method": "GET",
       "missing": [
         "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/failures/failures-dlq-replay-post.json",
+      "endpoint": "/api/leadflow/failures/dlq/replay",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/identity/calibration-get.json",
+      "endpoint": "/api/leadflow/identity/calibration",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/identity/candidates-decision-post.json",
+      "endpoint": "/api/leadflow/identity/candidates/:link_id/decision",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/identity/links-blast-radius-get.json",
+      "endpoint": "/api/leadflow/identity/links/:merge_id/blast-radius",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/identity/links-retract-post.json",
+      "endpoint": "/api/leadflow/identity/links/:merge_id/retract",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/identity/review-queue-get.json",
+      "endpoint": "/api/leadflow/identity/review-queue",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/identity/risk-profile-put.json",
+      "endpoint": "/api/leadflow/identity/risk-profile",
+      "method": "PUT",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN"
       ]
     },
     {
@@ -95,7 +375,7 @@
     },
     {
       "file": "tests/api_definitions/imports/runs-id-evidence-get.json",
-      "endpoint": "/api/leadflow/imports/runs/{run_id}/evidence",
+      "endpoint": "/api/leadflow/imports/runs/:run_id/evidence",
       "method": "GET",
       "missing": [
         "negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN"
@@ -103,7 +383,7 @@
     },
     {
       "file": "tests/api_definitions/imports/runs-id-get.json",
-      "endpoint": "/api/leadflow/imports/runs/{run_id}",
+      "endpoint": "/api/leadflow/imports/runs/:run_id",
       "method": "GET",
       "missing": [
         "negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN"
@@ -111,26 +391,138 @@
     },
     {
       "file": "tests/api_definitions/imports/runs-id-report-post.json",
-      "endpoint": "/api/leadflow/imports/runs/{run_id}/report",
+      "endpoint": "/api/leadflow/imports/runs/:run_id/report",
       "method": "POST",
       "missing": [
         "negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN"
       ]
     },
     {
-      "file": "tests/api_definitions/orchestration/channel-decision-bulk-post.json",
-      "endpoint": "/api/leadflow/channel-decision/bulk",
-      "method": "POST",
+      "file": "tests/api_definitions/intake/adapters-get.json",
+      "endpoint": "/api/leadflow/intake/adapters",
+      "method": "GET",
       "missing": [
-        "negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN"
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/UNAUTHENTICATED"
       ]
     },
     {
-      "file": "tests/api_definitions/orchestration/channel-decision-post.json",
-      "endpoint": "/api/leadflow/channel-decision",
+      "file": "tests/api_definitions/intake/adapters-launch-evidence-get.json",
+      "endpoint": "/api/leadflow/intake/adapters/:key/launch-evidence",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/intake/backfill-post.json",
+      "endpoint": "/api/leadflow/intake/backfill",
       "method": "POST",
       "missing": [
-        "negative testCase for 1 errorCase(s) (MUST-64): 403/FORBIDDEN"
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/intake/classify-post.json",
+      "endpoint": "/api/leadflow/intake/classify",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/intake/events-post.json",
+      "endpoint": "/api/leadflow/intake/events",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/intake/webhooks-platform-post.json",
+      "endpoint": "/api/leadflow/intake/webhooks/:platform",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/kpi/kpi-definitions-tiles-post.json",
+      "endpoint": "/api/leadflow/kpi-definitions/tiles",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 400/VALIDATION_ERROR"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/leads/id-activation-gate-get.json",
+      "endpoint": "/api/leads/:id/activation-gate",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/leads/id-assign-post.json",
+      "endpoint": "/api/leads/:id/assign",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 5 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/leads/id-first-response-post.json",
+      "endpoint": "/api/leads/:id/first-response",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 4 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/leads/id-get.json",
+      "endpoint": "/api/leads/:id",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/leads/id-route-post.json",
+      "endpoint": "/api/leads/:id/route",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 5 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/leads/integrity-exceptions-get.json",
+      "endpoint": "/api/leads/integrity-exceptions",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/UNAUTHENTICATED"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/leads/leads-get.json",
+      "endpoint": "/api/leads",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/leads/leads-post.json",
+      "endpoint": "/api/leads",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/leads/route-unowned-post.json",
+      "endpoint": "/api/leads/route-unowned",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN"
       ]
     },
     {
@@ -151,10 +543,178 @@
     },
     {
       "file": "tests/api_definitions/orchestration/sagas-run-get.json",
-      "endpoint": "/api/leadflow/sagas/{run_id}",
+      "endpoint": "/api/leadflow/sagas/:run_id",
       "method": "GET",
       "missing": [
         "negative testCase for 3 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 403/FORBIDDEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/ownership/leads-id-accept-post.json",
+      "endpoint": "/api/leadflow/leads/:id/accept",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/ownership/leads-id-decline-post.json",
+      "endpoint": "/api/leadflow/leads/:id/decline",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 404/NOT_FOUND, 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/ownership/leads-id-reassign-post.json",
+      "endpoint": "/api/leadflow/leads/:id/reassign",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 404/NOT_FOUND, 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/pipeline/records-ref-next-action-post.json",
+      "endpoint": "/api/leadflow/records/:ref/next-action",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/pipeline/records-ref-save-gate-get.json",
+      "endpoint": "/api/leadflow/records/:ref/save-gate",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/pipeline/vocabulary-get.json",
+      "endpoint": "/api/leadflow/pipeline/vocabulary",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/public/leads-post.json",
+      "endpoint": "/api/public/leads",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 429/RATE_LIMITED"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/relationships/relationships-end-post.json",
+      "endpoint": "/api/leadflow/relationships/:relationship_id/end",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/relationships/relationships-post.json",
+      "endpoint": "/api/leadflow/relationships",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/rhythm/digests-id-complete-output-post.json",
+      "endpoint": "/api/leadflow/digests/:id/complete-output",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/routing-rules/id-delete.json",
+      "endpoint": "/api/routing-rules/:id",
+      "method": "DELETE",
+      "missing": [
+        "negative testCase for 4 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/routing-rules/id-patch.json",
+      "endpoint": "/api/routing-rules/:id",
+      "method": "PATCH",
+      "missing": [
+        "negative testCase for 5 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/routing-rules/routing-rules-get.json",
+      "endpoint": "/api/routing-rules",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/routing-rules/routing-rules-post.json",
+      "endpoint": "/api/routing-rules",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 4 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/segments/segments-id-compute-post.json",
+      "endpoint": "/api/leadflow/segments/:id/compute",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 400/VALIDATION_ERROR"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sequences/enroll-post.json",
+      "endpoint": "/api/leadflow/sequences/enroll",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sequences/enrollments-id-stop-post.json",
+      "endpoint": "/api/leadflow/sequences/enrollments/:id/stop",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sequences/guards-log-get.json",
+      "endpoint": "/api/leadflow/sequences/guards/log",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sequences/inbound-poll-post.json",
+      "endpoint": "/api/leadflow/sequences/inbound/poll",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sequences/key-performance-get.json",
+      "endpoint": "/api/leadflow/sequences/:key/performance",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sequences/nurture-ref-reactivate-post.json",
+      "endpoint": "/api/leadflow/sequences/nurture/:ref/reactivate",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
       ]
     },
     {
@@ -166,8 +726,168 @@
       ]
     },
     {
+      "file": "tests/api_definitions/sla/alerts-dispatch-post.json",
+      "endpoint": "/api/sla/alerts/dispatch",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sla/alerts-get.json",
+      "endpoint": "/api/sla/alerts",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN"
+      ]
+    },
+    {
       "file": "tests/api_definitions/sla/evaluate-post.json",
       "endpoint": "/api/sla/evaluate",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sla/leads-id-breach-post.json",
+      "endpoint": "/api/leadflow/leads/:id/breach",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sla/leads-id-log-attempt-post.json",
+      "endpoint": "/api/leadflow/leads/:id/log-attempt",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 5 errorCase(s) (MUST-64): 422/KIND_CANNOT_SATISFY, 422/NO_TRACKED_CALL, 422/NO_DISPOSITION, 422/NO_NEXT_ACTION"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sla/overnight-queue-post.json",
+      "endpoint": "/api/leadflow/sla/overnight-queue",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sla/policies-get.json",
+      "endpoint": "/api/sla/policies",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sla/policies-id-delete.json",
+      "endpoint": "/api/sla/policies/:id",
+      "method": "DELETE",
+      "missing": [
+        "negative testCase for 4 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sla/policies-id-patch.json",
+      "endpoint": "/api/sla/policies/:id",
+      "method": "PATCH",
+      "missing": [
+        "negative testCase for 5 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sla/policies-post.json",
+      "endpoint": "/api/sla/policies",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 4 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN, 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/sla/status-get.json",
+      "endpoint": "/api/sla/status",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 3 errorCase(s) (MUST-64): 400/VALIDATION_ERROR, 401/UNAUTHENTICATED, 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/users/permission-matrix-get.json",
+      "endpoint": "/api/users/permission-matrix",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/users/register-get.json",
+      "endpoint": "/api/users/register",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/users/roles-get.json",
+      "endpoint": "/api/users/roles",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/users/users-get.json",
+      "endpoint": "/api/users",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 401/UNAUTHENTICATED, 401/INVALID_TOKEN"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/workflows/workflows-id-publish-post.json",
+      "endpoint": "/api/leadflow/workflows/:id/publish",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/workflows/workflows-id-rollback-post.json",
+      "endpoint": "/api/leadflow/workflows/:id/rollback",
+      "method": "POST",
+      "missing": [
+        "negative testCase for 2 errorCase(s) (MUST-64): 404/NOT_FOUND, 409/CONFLICT"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/workspace/handoffs-id-get.json",
+      "endpoint": "/api/leadflow/handoffs/:id",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/workspace/leads-id-routing-trace-get.json",
+      "endpoint": "/api/leadflow/leads/:id/routing-trace",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/workspace/opportunities-id-offer-staleness-get.json",
+      "endpoint": "/api/leadflow/opportunities/:id/offer-staleness",
+      "method": "GET",
+      "missing": [
+        "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"
+      ]
+    },
+    {
+      "file": "tests/api_definitions/workspace/workflows-id-release-gate-post.json",
+      "endpoint": "/api/leadflow/workflows/:id/release-gate",
       "method": "POST",
       "missing": [
         "negative testCase for 1 errorCase(s) (MUST-64): 404/NOT_FOUND"

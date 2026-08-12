@@ -1,0 +1,99 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "GET /api/leadflow/contacts"
+  ],
+  "name": "GET /api/leadflow/contacts/:id/summary - the header and trust rail",
+  "description": "The Contact 360 header. The TRUST RAIL is derived from facts that already exist — captured, canonicalised, owned, worked — rather than from a stored status column, because a status column drifts from the facts it summarises and this rail is exactly what somebody uses to decide whether to trust the record.\n\ndisplay_name_provenance is NULL rather than guessed when the identity projection is unreadable: a name shown with no provenance reads as undisputed, and the point of the header is that a survived name is a decision somebody can query.\n\nCarries upstream_available and field_gaps like every read in this workspace: a panel that renders blank when an SDK is down is indistinguishable from one rendering a person who genuinely has no history. QA: measured live against a real contact from the list.",
+  "endpoint": "/api/leadflow/contacts/:id/summary",
+  "method": "GET",
+  "expectedStatus": 200,
+  "testCases": [
+    {
+      "name": "The summary panel returns its data with the reachability of each upstream",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:contacts.list.response.data.contacts.0.contact_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no contact with that id",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:contacts.list.response.data.contacts.0.contact_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:contacts.list.response.data.contacts.0.contact_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No contact with that id",
+      "when": "the contact id does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

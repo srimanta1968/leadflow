@@ -1,0 +1,146 @@
+{
+  "taskId": "db775683-a5a1-4285-a6d9-f12467c1a2b2",
+  "featureId": "936adefc-fbab-42cb-9fd3-a0aa7d00f6ca",
+  "epicId": "350440b3-9f6f-4cbe-bd63-778721adff89",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/records/:ref/next-action - save the NEXT, or be refused field by field",
+  "description": "Enforces SOP §01: a non-terminal record cannot be saved, advanced or closed without an action type, an owner, an EXACT due date and time, a purpose and an intended outcome (db775683-a5a1-4285-a6d9-f12467c1a2b2#AC1).\n\nVERIFIED LIVE. A save carrying only action_type returned 422 BLANK_NEXT with missing_fields [owner_user_id, due_at, purpose, intended_outcome] and a per-field refusal naming each - for example owner_user_id: \"An action with no name against it is an action nobody has agreed to do\", remedy \"Name the person who will carry it out\" (db775683-a5a1-4285-a6d9-f12467c1a2b2#AC2). A complete NEXT returned 201.\n\nA BLOCKED SAVE CREATES A MANAGER-VISIBLE INTEGRITY EXCEPTION rather than failing silently (db775683-a5a1-4285-a6d9-f12467c1a2b2#AC4), and the exception id is returned so the UI can reference it. Silence is how a gate becomes something reps route around: nobody sees that one record has been refused eleven times, so nobody asks why. Verified live - the refusal returned an integrity_exception_id.\n\n422 RATHER THAN 400 because the request is well formed and the refusal is about the CONTENT being incomplete. The structured refusals travel in the body so the UI can render each against its own field.\n\nONE OPEN NEXT PER RECORD, enforced by a partial unique index. Two competing NEXTs is the same as none, because nobody can say which one the record is waiting on. Saving a new one COMPLETES the previous rather than deleting it - what the record was waiting on before is part of its history.\n\nAN UNPARSEABLE DUE DATE IS REFUSED SEPARATELY from a missing one, because a date that will not parse is worse than an absent one: it looks set. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/records/:ref/next-action",
+  "method": "POST",
+  "expectedStatus": 422,
+  "coversCriterion": [
+    "db775683-a5a1-4285-a6d9-f12467c1a2b2#AC1",
+    "db775683-a5a1-4285-a6d9-f12467c1a2b2#AC2",
+    "db775683-a5a1-4285-a6d9-f12467c1a2b2#AC4"
+  ],
+  "fieldEnums": {
+    "data.missing_fields": [
+      "action_type",
+      "owner_user_id",
+      "due_at",
+      "purpose",
+      "intended_outcome"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "An incomplete NEXT is refused with a refusal per missing field",
+      "coversCriterion": "db775683-a5a1-4285-a6d9-f12467c1a2b2#AC2",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "action_type": "{{static:call}}"
+      },
+      "expectedStatus": 422,
+      "expectedResponse": {
+        "success": false,
+        "code": "BLANK_NEXT"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "An entirely blank NEXT is refused naming all five fields",
+      "coversCriterion": "db775683-a5a1-4285-a6d9-f12467c1a2b2#AC1",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 422,
+      "expectedResponse": {
+        "success": false,
+        "code": "BLANK_NEXT"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unparseable due date is refused rather than stored as set",
+      "coversCriterion": "db775683-a5a1-4285-a6d9-f12467c1a2b2#AC2",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "action_type": "{{static:call}}",
+        "owner_user_id": "{{var:absent_uuid}}",
+        "due_at": "{{static:next week}}",
+        "purpose": "{{static:Qualify}}",
+        "intended_outcome": "{{static:Booked or disqualified}}"
+      },
+      "expectedStatus": 422,
+      "expectedResponse": {
+        "success": false,
+        "code": "BLANK_NEXT"
+      },
+      "testType": "negative",
+      "coversErrorCase": "422|BLANK_NEXT",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 422,
+      "code": "BLANK_NEXT",
+      "message": "This record cannot be saved without a complete NEXT.",
+      "when": "any of the five required fields is absent or unreadable. The body carries a refusal per field so the UI renders each inline, and an integrity exception is raised so a manager can see the blocked save."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No record with that reference",
+      "when": "the NEXT is complete but the record does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

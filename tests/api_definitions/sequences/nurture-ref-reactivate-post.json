@@ -1,0 +1,125 @@
+{
+  "taskId": "0a3474c3-56f8-4af6-8931-eb27cfddc13c",
+  "featureId": "83f42837-d20d-4c0f-b1e2-6cf1573e7b17",
+  "epicId": "c50a5ef2-74d3-4583-9f70-19f9499ad11a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/sequences/nurture/:ref/reactivate - return a record to an active owner, today",
+  "description": "Seven triggers return a nurtured record to its owner (0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC3): a reply, a direct question, a booking, pricing or checkout activity, a referral, or a relevant product milestone.\n\nTHE TASK IS DUE TODAY, NOT QUEUED. A reactivation trigger is the prospect acting NOW; answering tomorrow wastes the signal that made them worth reactivating. The due date is set to end of the current day rather than to a fixed offset, so a trigger at 09:00 and one at 16:00 both produce a task due today.\n\nA RESCORE IS REQUESTED because the record entered nurture under an old picture of them, and acting on a stale score is how a hot reactivation gets worked like a cold lead. The rescore degrades rather than blocking - the owner task is the part that matters and it lands either way. VERIFIED LIVE: reactivation created the same-day task; the rescore reported false because sdk-lead-scoring is unreachable here.\n\nTHE MEMBERSHIP IS EXITED WITH ITS REASON rather than deleted, so a record that has been reactivated three times is visible as such. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/sequences/nurture/:ref/reactivate",
+  "method": "POST",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC3"
+  ],
+  "fieldEnums": {
+    "trigger": [
+      "reply",
+      "direct_question",
+      "booking",
+      "pricing_activity",
+      "checkout_activity",
+      "referral",
+      "product_milestone"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Reactivating a record that is not in nurture is refused",
+      "coversCriterion": "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC3",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "trigger": "{{static:booking}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown trigger is refused",
+      "coversCriterion": "0a3474c3-56f8-4af6-8931-eb27cfddc13c#AC3",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "trigger": "{{static:a_hunch}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "trigger must be one of reply, direct_question, booking, pricing_activity, checkout_activity, referral, product_milestone",
+      "when": "an unrecognised trigger is supplied."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No open nurture membership for that record",
+      "when": "the record is not currently in nurture."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

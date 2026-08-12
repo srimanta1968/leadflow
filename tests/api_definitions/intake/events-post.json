@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/intake/events",
   "method": "POST",
   "taskId": "117d407a-1ec5-4da9-9f35-fd213e290554",
+  "featureId": "5f7276ee-977f-4de3-85de-85fabc22f8e2",
+  "epicId": "fdd26353-b251-4841-8bed-f9d4378d17be",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 1,
@@ -13,7 +15,10 @@
     "117d407a-1ec5-4da9-9f35-fd213e290554#AC2",
     "117d407a-1ec5-4da9-9f35-fd213e290554#AC4"
   ],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "fieldEnums": {
     "platform": [
       "web_form",
@@ -26,7 +31,12 @@
       "csv_import",
       "partner_api"
     ],
-    "signalKind": ["lead", "task", "message", "payment"]
+    "signalKind": [
+      "lead",
+      "task",
+      "message",
+      "payment"
+    ]
   },
   "captureResponse": {
     "intake.events.response.data.leadId": "data.leadId",
@@ -36,56 +46,83 @@
     {
       "name": "A new signal is accepted and becomes a lead",
       "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "platform": "web_form",
         "sourceEventId": "{{dynamic:uuid}}",
         "signalKind": "lead",
         "occurredAt": "{{dynamic:pastdate}}",
-        "rawPayload": { "name": "Priya Raman", "email": "priya@example.test" },
-        "contactHints": { "email": "priya@example.test" }
+        "rawPayload": {
+          "name": "Priya Raman",
+          "email": "priya@example.test"
+        },
+        "contactHints": {
+          "email": "priya@example.test"
+        }
       },
       "expectedStatus": 201,
       "expectedResponse": {
         "success": true,
-        "data": { "outcome": "accepted", "archived": true, "replay": false }
+        "data": {
+          "outcome": "accepted",
+          "archived": true,
+          "replay": false
+        }
       }
     },
     {
       "name": "Reject a signal with no sourceEventId - it cannot be made replay-safe",
       "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC2",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "platform": "web_form",
         "signalKind": "lead",
-        "rawPayload": { "name": "No id" }
+        "rawPayload": {
+          "name": "No id"
+        }
       },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "outcome": "rejected", "archived": true }
+        "data": {
+          "outcome": "rejected",
+          "archived": true
+        }
       }
     },
     {
       "name": "A REJECTED signal is still archived",
       "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC2",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "platform": "{{static:carrier_pigeon}}",
         "sourceEventId": "{{dynamic:uuid}}",
         "signalKind": "lead",
-        "rawPayload": { "note": "unknown platform" }
+        "rawPayload": {
+          "note": "unknown platform"
+        }
       },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "outcome": "rejected", "archived": true }
+        "data": {
+          "outcome": "rejected",
+          "archived": true
+        }
       }
     },
     {
       "name": "Reject an unknown signal kind rather than guessing",
       "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC2",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "platform": "web_form",
         "sourceEventId": "{{dynamic:uuid}}",
@@ -93,7 +130,12 @@
         "rawPayload": {}
       },
       "expectedStatus": 200,
-      "expectedResponse": { "success": true, "data": { "outcome": "rejected" } }
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "outcome": "rejected"
+        }
+      }
     },
     {
       "name": "Reject an unauthenticated intake",
@@ -105,7 +147,9 @@
         "rawPayload": {}
       },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

@@ -1,0 +1,114 @@
+{
+  "name": "POST /api/leadflow/meetings/{id}/sync-failure - Record the manual invite when the calendar breaks",
+  "description": "Records the URL of an invitation sent by hand after a calendar integration failed, and opens a high-severity incident against the meeting. SOP section 09 requires the manual invite to be sent and its URL recorded BEFORE contact ends, and the reason is blunt: a customer who left without an invitation because an integration was down has no way to know the meeting exists. 200 rather than 201 - it stamps an existing meeting. manual_invite_url is REQUIRED and that is the whole guard; an endpoint that accepted the failure without the fallback would record the outage and lose the customer. The incident is best effort and its absence is reported as incident_opened false rather than failing the call, because the manual invite is the thing that saves the meeting and it has already been sent. QA: depends on POST /api/leadflow/meetings, which produces the meeting id.",
+  "endpoint": "/api/leadflow/meetings/:id/sync-failure",
+  "method": "POST",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 33,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/meetings"
+  ],
+  "testCases": [
+    {
+      "name": "The manual invite is recorded against the meeting",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:meetings.create.response.data.meeting_id}}"
+      },
+      "payload": {
+        "manual_invite_url": "https://calendar.example.com/manual-invite/probe"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "repair_by": "same business day"
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: the failure is recorded without the fallback that fixes it",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|manual_invite_url",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:meetings.create.response.data.meeting_id}}"
+      },
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: a meeting that does not exist",
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "manual_invite_url": "https://calendar.example.com/manual-invite/probe"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "pathParams": {
+        "id": "{{cache:meetings.create.response.data.meeting_id}}"
+      },
+      "payload": {
+        "manual_invite_url": "https://calendar.example.com/manual-invite/probe"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "manual_invite_url is absent or blank. SOP section 09 requires the invite to have been sent before this is recorded, and an endpoint that accepted the outage without the fallback would document the failure while losing the customer."
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no meeting holds that id"
+    }
+  ]
+}

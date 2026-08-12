@@ -3,6 +3,7 @@ import { dataService } from './DataService';
 import { SdkGatewayClient } from '../platform/sdkGateway';
 import { DEFAULT_FIRST_RESPONSE_MINUTES, SlaPolicyService } from './SlaPolicyService';
 import { AppError, ErrorCodes } from '../utils/errors';
+import { isReady, readReadiness } from '../features/calendar/calendarService';
 import { eventStream } from './EventStream';
 import { LeadSourceChannel, RoutingDecision, RoutingMethod, RoutingRule } from '../types';
 import { currentTenantContext, tenantIdFor } from '../platform/tenancy/tenantHierarchy';
@@ -192,15 +193,55 @@ export class RoutingService {
         ORDER BY r.evaluation_order ASC, r.created_at ASC`
     );
 
+    /*
+     * CALENDAR READINESS IS A ROUTING GATE, not a dashboard. SOP §09: routing a
+     * live enquiry to a rep whose booking link is broken converts it into a dead
+     * one, and nobody finds out until the prospect gives up. The readiness
+     * verdict already existed and nothing consulted it, which made it a number
+     * on a screen rather than a rule.
+     *
+     * A REP WITH NO READINESS ROW IS ELIGIBLE. Failing closed here would route
+     * nothing at all the first time this ships — nobody has a row yet — and an
+     * unrouted lead breaches its clock just as surely as a misrouted one. The
+     * gate excludes reps KNOWN to be unready, which is the claim the data
+     * actually supports.
+     */
+    const unreadyRows = (await readReadiness()).filter((row) => !isReady(row));
+    const activeCount = await dataService.queryOne<{ v: string }>(
+      'SELECT COUNT(*)::text AS v FROM users WHERE is_active = TRUE'
+    );
+
+    /*
+     * THE GATE STANDS DOWN WHEN IT WOULD EXCLUDE EVERYBODY.
+     *
+     * Observed on the first live run: one rep, readiness failing, and the gate
+     * left the lead with no owner at all. That is the WORSE failure. A lead
+     * routed to a rep whose booking link is broken is a bad conversation
+     * somebody can still have and fix; a lead routed to nobody breaches its
+     * clock in silence and nobody is accountable for it.
+     *
+     * So the gate is a preference over available reps, not a hard bar on the
+     * pool. When it would empty the pool it yields, and the reason travels on
+     * the assignment so the calendar problem is visible rather than absorbed.
+     */
+    const wouldExcludeEveryone = unreadyRows.length >= Number(activeCount?.v ?? 0);
+    const unready = wouldExcludeEveryone
+      ? new Set<string>()
+      : new Set(unreadyRows.map((row) => row.rep_user_id));
+    const readinessNote = wouldExcludeEveryone && unreadyRows.length > 0
+      ? ' (calendar readiness ignored: no rep currently passes, and an unrouted lead is worse than a badly routed one)'
+      : '';
+
     // Step one: the first rule whose channel matches, or whose channel is blank
     // (a catch-all). First match wins, which is what evaluation_order encodes.
     const matched = rules.find(
-      (rule) => rule.source_channel === null || rule.source_channel === lead.source
+      (rule) => (rule.source_channel === null || rule.source_channel === lead.source)
+        && !(rule.assigned_user_id !== null && unready.has(rule.assigned_user_id))
     );
     if (matched && matched.assigned_user_id) {
       return {
         assigneeId: matched.assigned_user_id,
-        reason: `Matched routing rule "${matched.name ?? matched.id}" on source ${lead.source ?? 'any'}`,
+        reason: `Matched routing rule "${matched.name ?? matched.id}" on source ${lead.source ?? 'any'}${readinessNote}`,
         method: 'rule_match',
         ruleId: matched.id,
       };
@@ -209,15 +250,19 @@ export class RoutingService {
     // Step two: round-robin over active users, choosing whoever currently holds
     // the fewest open leads. This keeps assignment fair without needing the
     // coverage data only sdk-coverage has.
+    // The same gate applies to the round-robin. A fair share of leads sent to a
+    // rep who cannot be booked is a fair share of dead ends.
     const candidate = await dataService.queryOne<{ id: string; open_leads: string }>(
       `SELECT u.id, COUNT(l.id)::text AS open_leads
          FROM users u
          LEFT JOIN leads l
            ON l.owner_user_id = u.id AND l.first_response_at IS NULL
         WHERE u.is_active = TRUE
+          AND NOT (u.id::text = ANY($1::text[]))
         GROUP BY u.id
         ORDER BY COUNT(l.id) ASC, u.created_at ASC
-        LIMIT 1`
+        LIMIT 1`,
+      [[...unready]]
     );
 
     if (!candidate) {
@@ -225,7 +270,7 @@ export class RoutingService {
     }
     return {
       assigneeId: candidate.id,
-      reason: `Round-robin: fewest open leads (${candidate.open_leads}) among active users`,
+      reason: `Round-robin: fewest open leads (${candidate.open_leads}) among active users${readinessNote}`,
       method: 'round_robin',
       ruleId: null,
     };

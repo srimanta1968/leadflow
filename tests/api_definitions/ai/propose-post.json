@@ -4,16 +4,36 @@
   "endpoint": "/api/leadflow/ai/propose",
   "method": "POST",
   "taskId": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5",
+  "featureId": "bd0a0a9c-728c-4348-8aa4-ecbe8eec1428",
+  "epicId": "34925c81-88e1-4115-8220-a1441a258108",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 1,
   "expectedStatus": 201,
-  "coversCriterion": ["1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1"],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "coversCriterion": [
+    "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "fieldEnums": {
-    "kind": ["message", "score", "summary", "next_action"],
-    "status": ["proposed", "accepted", "rejected"],
-    "agentKey": ["sdr_first_touch", "sales_coach", "next_action_planner"]
+    "kind": [
+      "message",
+      "score",
+      "summary",
+      "next_action"
+    ],
+    "status": [
+      "proposed",
+      "accepted",
+      "rejected"
+    ],
+    "agentKey": [
+      "sdr_first_touch",
+      "sales_coach",
+      "next_action_planner"
+    ]
   },
   "captureResponse": {
     "ai.reviewProposal.response.data.proposal.id": "data.proposal.id"
@@ -22,7 +42,9 @@
     {
       "name": "A consequential output is recorded as a proposal, never as something delivered",
       "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "agentKey": "sdr_first_touch",
         "kind": "message",
@@ -47,41 +69,59 @@
       "name": "Reject a kind the agent is not registered to propose",
       "testType": "negative",
       "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "agentKey": "next_action_planner",
         "kind": "message",
-        "content": { "body": "{{static:Let me send this myself}}" }
+        "content": {
+          "body": "{{static:Let me send this myself}}"
+        }
       },
       "expectedStatus": 400,
-      "expectedError": { "code": "VALIDATION_ERROR" }
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
     },
     {
       "name": "Reject an agent that is not in the registry",
       "testType": "negative",
       "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "agentKey": "{{static:unregistered_agent}}",
         "kind": "summary",
-        "content": { "text": "{{static:A summary from nowhere}}" }
+        "content": {
+          "text": "{{static:A summary from nowhere}}"
+        }
       },
       "expectedStatus": 400,
-      "expectedError": { "code": "VALIDATION_ERROR" }
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
     },
     {
       "name": "Reject a proposal citing a completion the activity ledger does not hold",
       "testType": "negative",
       "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "agentKey": "sales_coach",
         "kind": "summary",
-        "content": { "text": "{{static:Call went well}}" },
+        "content": {
+          "text": "{{static:Call went well}}"
+        },
         "completionId": "{{var:absent_uuid}}"
       },
       "expectedStatus": 422,
-      "expectedError": { "code": "AI_COMPLETION_NOT_ACCOUNTED" }
+      "expectedError": {
+        "code": "AI_COMPLETION_NOT_ACCOUNTED"
+      }
     },
     {
       "name": "Reject an unauthenticated proposal",
@@ -90,10 +130,14 @@
       "payload": {
         "agentKey": "sdr_first_touch",
         "kind": "message",
-        "content": { "body": "{{static:Unauthenticated draft}}" }
+        "content": {
+          "body": "{{static:Unauthenticated draft}}"
+        }
       },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

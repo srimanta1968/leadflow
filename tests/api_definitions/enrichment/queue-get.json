@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/enrichment/queue",
   "method": "GET",
   "taskId": "678f5c6f-b8c3-4238-92e6-df3d94834336",
+  "featureId": "443a19e7-52e9-4c92-972f-a0106cc5dd0f",
+  "epicId": "c889c809-5a56-4eb6-b499-0e940d93c83e",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "requiresRole": [

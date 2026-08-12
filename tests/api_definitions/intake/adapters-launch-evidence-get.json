@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/intake/adapters/:key/launch-evidence",
   "method": "GET",
   "taskId": "3048538d-a5da-4311-bbd5-63d773a0844b",
+  "featureId": "e6ea22a3-3b66-413e-a91c-161a4896949b",
+  "epicId": "fdd26353-b251-4841-8bed-f9d4378d17be",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 2,
@@ -12,7 +14,10 @@
     "3048538d-a5da-4311-bbd5-63d773a0844b#AC3",
     "3048538d-a5da-4311-bbd5-63d773a0844b#AC2"
   ],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "fieldEnums": {
     "key": [
       "meta_lead_ads",
@@ -33,36 +38,62 @@
     {
       "name": "Produces a complete packet for a paid-social adapter",
       "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC3",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "key": "{{static:meta_lead_ads}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "key": "{{static:meta_lead_ads}}"
+      },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "adapter": "meta_lead_ads", "readyToLaunch": true }
+        "data": {
+          "adapter": "meta_lead_ads",
+          "readyToLaunch": true
+        }
       }
     },
     {
       "name": "Produces a packet for a channel that needs no permission fields",
       "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC3",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "key": "{{static:phone}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "key": "{{static:phone}}"
+      },
       "expectedStatus": 200,
-      "expectedResponse": { "success": true, "data": { "readyToLaunch": true } }
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "readyToLaunch": true
+        }
+      }
     },
     {
       "name": "404 for an adapter that does not exist, not an empty packet",
       "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC3",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "key": "{{static:carrier_pigeon}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "key": "{{static:carrier_pigeon}}"
+      },
       "expectedStatus": 404,
-      "expectedError": { "code": "NOT_FOUND" }
+      "expectedError": {
+        "code": "NOT_FOUND"
+      }
     },
     {
       "name": "Reject an unauthenticated read",
       "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC3",
-      "pathParams": { "key": "{{static:meta_lead_ads}}" },
+      "pathParams": {
+        "key": "{{static:meta_lead_ads}}"
+      },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

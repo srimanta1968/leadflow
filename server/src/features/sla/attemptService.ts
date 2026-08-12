@@ -252,6 +252,15 @@ export async function attainment(windowDays = 30): Promise<AttainmentReport> {
     [String(windowDays)]
   );
 
+  /*
+   * pg hands back a Date for timestamptz, not the string this row type declares.
+   * Calling .slice() on it threw and 500'd the entire attainment report — the
+   * one report that says whether the SLA is being met. Normalised in one place
+   * rather than trusting the declared type at each use.
+   */
+  const isoOf = (v: unknown): string =>
+    v instanceof Date ? v.toISOString() : typeof v === 'string' ? v : '';
+
   const group = (keyOf: (r: (typeof rows)[number]) => string): AttainmentSlice[] => {
     const map = new Map<string, { closed: number; met: number; breached: number }>();
     for (const row of rows) {
@@ -294,8 +303,8 @@ export async function attainment(windowDays = 30): Promise<AttainmentReport> {
     overall: { key: 'overall', closed, met, breached, attainment_rate: overallRate },
     by_source: group((r) => r.source ?? 'unknown'),
     by_rep: group((r) => r.owner_user_id ?? 'unassigned'),
-    by_day: group((r) => (r.source_timestamp ?? '').slice(0, 10)),
-    by_hour: group((r) => (r.source_timestamp ?? '').slice(11, 13)),
+    by_day: group((r) => isoOf(r.source_timestamp).slice(0, 10)),
+    by_hour: group((r) => isoOf(r.source_timestamp).slice(11, 13)),
     median_first_attempt_minutes: pct(0.5),
     p95_first_attempt_minutes: pct(0.95),
     misses: breaches,

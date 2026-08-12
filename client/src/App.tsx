@@ -44,6 +44,9 @@ import Incidents from './pages/app/Incidents';
 import Governance from './pages/app/Governance';
 import Sequences from './pages/app/Sequences';
 import Templates from './pages/app/Templates';
+import UserAdministration from './pages/app/UserAdministration';
+import PermissionMatrixScreen from './pages/app/PermissionMatrixScreen';
+import TrainingCentre from './pages/app/TrainingCentre';
 import NotFound from './pages/NotFound';
 
 /**
@@ -128,6 +131,23 @@ export default function App() {
               <Route path="governance" element={<Governance />} />
               <Route path="sequences" element={<Sequences />} />
               <Route path="templates" element={<Templates />} />
+
+              {/*
+                Administration. The permission matrix component has existed for
+                some time and was never routed — unreachable dead code beside a
+                product where three screens were Locked for everybody because
+                nobody could grant the roles that unlock them.
+              */}
+              <Route path="admin/users" element={<UserAdministration />} />
+              <Route path="admin/permissions" element={<PermissionMatrixScreen />} />
+
+              {/*
+                The guide is a route segment rather than component state so the
+                Guide button in the top bar can deep-link straight to the card
+                for the screen the operator is stuck on.
+              */}
+              <Route path="training" element={<TrainingCentre />} />
+              <Route path="training/:guideId" element={<TrainingCentre />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

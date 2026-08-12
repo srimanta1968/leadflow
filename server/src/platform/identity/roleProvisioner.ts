@@ -25,12 +25,17 @@ export interface ProvisionSummary {
  * `SdkGatewayClient` collapses every non-ok response into one
  * UPSTREAM_UNAVAILABLE error carrying `returned <status>` in its message, so the
  * status is recovered from there. Reading a status out of a message is not
- * lovely, and the alternative is worse: sdk-rebac publishes no GET for role
- * templates (confirmed against the catalog — `get_sdk_api` returns found:false
- * for GET /api/role-templates), so there is no way to ASK what exists before
- * creating. Create-and-tolerate-conflict is the only idempotent shape available.
+ * lovely, and create-and-tolerate-conflict remains the right shape for the
+ * WRITE: a create answering 409 has told the caller the template exists, which
+ * is what they wanted to know.
  *
- * If a list endpoint is ever published, replace this with a read.
+ * CORRECTION. This comment previously asserted that sdk-rebac publishes no GET
+ * for role templates. It does — `GET /api/role-templates` ("List role templates
+ * for an app") is in the catalog under sdk-tenant, and
+ * `features/users/personaGrants.ts` uses it to resolve a template NAME to the
+ * `role_template_id` that `POST /api/role-assignments` requires. The wrong claim
+ * is corrected rather than deleted, because it is why nothing in this codebase
+ * ever captured a template id, and that is the only place the fact survives.
  */
 function isAlreadyExists(error: unknown): boolean {
   // STRUCTURED, not prose. This used to be /returned (409|422)/ against the

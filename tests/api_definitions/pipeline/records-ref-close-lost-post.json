@@ -1,0 +1,153 @@
+{
+  "taskId": "c3bf29f3-da93-407b-8ecc-fdb35c245cdc",
+  "featureId": "5804edc4-c360-4241-90c2-38ecb36554b6",
+  "epicId": "350440b3-9f6f-4cbe-bd63-778721adff89",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/records/:ref/close-lost - the SOP §15 loss capture",
+  "description": "Requires the reason code, the prospect OWN WORDING and the offer version discussed (c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC3), all three verified live at 400 when absent and 201 when complete.\n\nWHY THE WORDING IS MANDATORY. A taxonomy tells you how often you lose on price; the sentence tells you what they actually said, and only one of those changes how the offer gets written. A paraphrase is the rep interpretation of the loss, which is the thing least likely to survive contact with the next deal.\n\nWHY THE OFFER VERSION IS MANDATORY. A loss cannot be attributed to terms that have since changed. Without the version stamp, six months of losses aggregate into a number about an offer that no longer exists.\n\nA FUTURE DATE ONLY WHEN ONE TRULY EXISTS. revisit_at is nullable on purpose: inventing a follow-up date to fill the field produces a nurture queue full of commitments the prospect never made, which is how re-engagement earns its reputation. The response says so rather than leaving the null looking like an omission.\n\nSEVEN CODES FROM SOP §15 - NO_FIT, TIMING, BUDGET, FEATURE, RIVAL, TRUST, NO_REPLY - and an unrecognised one is refused rather than stored, because a loss reason nothing aggregates is a loss nobody learns from.\n\nONE CAPTURE PER RECORD, enforced by a unique constraint: a second call returns the existing capture rather than overwriting what was said the first time. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/records/:ref/close-lost",
+  "method": "POST",
+  "expectedStatus": 400,
+  "coversCriterion": [
+    "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC3"
+  ],
+  "fieldEnums": {
+    "reason_code": [
+      "NO_FIT",
+      "TIMING",
+      "BUDGET",
+      "FEATURE",
+      "RIVAL",
+      "TRUST",
+      "NO_REPLY"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A capture with no prospect wording is refused",
+      "coversCriterion": "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC3",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "reason_code": "{{static:BUDGET}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "A capture with no offer version is refused",
+      "coversCriterion": "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC3",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "reason_code": "{{static:BUDGET}}",
+        "prospect_wording": "{{static:We just spent our budget on a van}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unrecognised loss code is refused",
+      "coversCriterion": "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC3",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "reason_code": "{{static:VIBES}}",
+        "prospect_wording": "{{static:Not for us}}",
+        "offer_version": "{{static:v2.1}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason_code must be one of NO_FIT, TIMING, BUDGET, FEATURE, RIVAL, TRUST, NO_REPLY",
+      "when": "an unrecognised loss code is supplied."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "prospect_wording is required - record what they actually said, not a paraphrase",
+      "when": "the prospect own words are missing."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "offer_version is required - a loss cannot be attributed to terms that have since changed",
+      "when": "the offer version is missing."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -1,0 +1,178 @@
+{
+  "taskId": "92ce5959-0e5c-4ce8-be7a-02cc870b2120",
+  "featureId": "95512768-e04d-425c-bec5-fea91a60842b",
+  "epicId": "ef8a21ec-c1a9-4d26-ac59-e0fa28b41a3b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 8,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/offers - draft a version, unquotable until approved",
+  "description": "Drafts a new version of an offer. A DRAFT IS UNQUOTABLE (92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC2): it is created unapproved and inactive, so nothing a rep can read changes until the full route has signed off and somebody activates it. GET /offers/current returns only the active version, so a draft is invisible to the people who quote rather than merely marked.\n\nEVERY COMMERCIAL FIELD SOP §12 REQUIRES IS MANDATORY AT DRAFT TIME (92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC4), not checked later at publish. A half-filled sheet invites the gap to be closed by improvisation on a call, which is the failure the whole Offer Data Sheet exists to prevent - price, quantity basis, payment options, licence limits, implementation expectations, refund and cancellation terms, included features, variable charges and third-party charges. The refusal names exactly which fields are missing.\n\nTHE VERSION NUMBER IS ASSIGNED BY THE SERVER as max+1 per offer, not supplied by the caller. A caller-chosen number lets two drafts claim the same version, and afterwards no dispute about \"which v3 did they sign\" is answerable.\n\nQA: depends on register and login. offer_key is randomised per run so the chain that follows - approve, activate, current, checkout - operates on its own offer rather than fighting a previous run's.",
+  "endpoint": "/api/leadflow/offers",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC2",
+    "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC4"
+  ],
+  "captureResponse": {
+    "offers.post.response.data.offer_version_id": "data.offer_version_id",
+    "offers.post.response.data.offer_key": "data.offer_key",
+    "offers.post.response.data.id": "data.offer_version_id"
+  },
+  "requestBody": {
+    "offer_key": "leadflow_core_qa",
+    "price_cents": 149900,
+    "currency": "USD",
+    "quantity_basis": "Per seat, billed annually.",
+    "payment_options": [
+      "card",
+      "ach",
+      "invoice"
+    ],
+    "license_limits": "Five seats included; additional seats billed at the same per-seat rate.",
+    "implementation_expectations": "Kickoff inside five business days; data migration is a separate statement of work.",
+    "refund_terms": "Full refund inside 14 days of first payment; pro-rata thereafter.",
+    "cancellation_terms": "Thirty days written notice before the renewal date.",
+    "included_features": [
+      "lead_intake",
+      "routing",
+      "sequences"
+    ],
+    "variable_charges": [
+      {
+        "name": "SMS segments",
+        "basis": "per segment"
+      }
+    ],
+    "third_party_charges": [
+      {
+        "name": "Telephony minutes",
+        "vendor": "Twilio",
+        "basis": "per minute"
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A complete Offer Data Sheet is drafted, unapproved and inactive",
+      "coversCriterion": "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC4",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "offer_key": "leadflow_core_qa",
+        "price_cents": 149900,
+        "currency": "USD",
+        "quantity_basis": "Per seat, billed annually.",
+        "payment_options": [
+          "card",
+          "ach",
+          "invoice"
+        ],
+        "license_limits": "Five seats included; additional seats billed at the same per-seat rate.",
+        "implementation_expectations": "Kickoff inside five business days; data migration is a separate statement of work.",
+        "refund_terms": "Full refund inside 14 days of first payment; pro-rata thereafter.",
+        "cancellation_terms": "Thirty days written notice before the renewal date.",
+        "included_features": [
+          "lead_intake",
+          "routing",
+          "sequences"
+        ],
+        "variable_charges": [
+          {
+            "name": "SMS segments",
+            "basis": "per segment"
+          }
+        ],
+        "third_party_charges": [
+          {
+            "name": "Telephony minutes",
+            "vendor": "Twilio",
+            "basis": "per minute"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NEGATIVE: a sheet missing refund and cancellation terms",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "offer_key": "leadflow_incomplete",
+        "price_cents": 149900,
+        "quantity_basis": "Per seat.",
+        "payment_options": [
+          "card"
+        ],
+        "license_limits": "Five seats.",
+        "implementation_expectations": "Kickoff in five days.",
+        "included_features": [],
+        "variable_charges": [],
+        "third_party_charges": []
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "An Offer Data Sheet missing refund_terms, cancellation_terms cannot be drafted - a rep filling the gap on a call is how two customers end up on different terms",
+      "when": "offer_key is absent, or any commercial field SOP §12 requires is missing, empty or the wrong type."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -4,19 +4,30 @@
   "endpoint": "/api/leadflow/ai/proposals/:id/decide",
   "method": "POST",
   "taskId": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5",
+  "featureId": "bd0a0a9c-728c-4348-8aa4-ecbe8eec1428",
+  "epicId": "34925c81-88e1-4115-8220-a1441a258108",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 2,
   "expectedStatus": 200,
-  "coversCriterion": ["1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1"],
+  "coversCriterion": [
+    "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1"
+  ],
   "dependsOn": [
     "POST /api/auth/register",
     "POST /api/auth/login",
     "POST /api/leadflow/ai/propose"
   ],
   "fieldEnums": {
-    "decision": ["accept", "reject"],
-    "status": ["proposed", "accepted", "rejected"]
+    "decision": [
+      "accept",
+      "reject"
+    ],
+    "status": [
+      "proposed",
+      "accepted",
+      "rejected"
+    ]
   },
   "captureResponse": {
     "ai.reviewDecision.response.data.proposal.id": "data.proposal.id"
@@ -25,8 +36,12 @@
     {
       "name": "A qualified human accepts, and only then is the output released to a person",
       "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}"
+      },
       "payload": {
         "decision": "accept",
         "note": "{{static:Reads well, sending as written}}"
@@ -34,47 +49,80 @@
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "proposal": { "status": "accepted", "delivered": false } }
+        "data": {
+          "proposal": {
+            "status": "accepted",
+            "delivered": false
+          }
+        }
       }
     },
     {
       "name": "Deciding an already-decided proposal is a conflict",
       "testType": "negative",
       "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}" },
-      "payload": { "decision": "accept" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}"
+      },
+      "payload": {
+        "decision": "accept"
+      },
       "expectedStatus": 409,
-      "expectedError": { "code": "CONFLICT" }
+      "expectedError": {
+        "code": "CONFLICT"
+      }
     },
     {
       "name": "Reject a decision with no verdict in it",
       "testType": "negative",
       "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}"
+      },
       "payload": {},
       "expectedStatus": 400,
-      "expectedError": { "code": "VALIDATION_ERROR" }
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
     },
     {
       "name": "Reject a decision on an unknown proposal",
       "testType": "negative",
       "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{var:absent_uuid}}" },
-      "payload": { "decision": "reject" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "decision": "reject"
+      },
       "expectedStatus": 404,
-      "expectedError": { "code": "NOT_FOUND" }
+      "expectedError": {
+        "code": "NOT_FOUND"
+      }
     },
     {
       "name": "Reject an unauthenticated decision",
       "testType": "negative",
       "coversCriterion": "1c6997dd-bed1-4bbb-ad24-69a9d097f8f5#AC1",
-      "pathParams": { "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}" },
-      "payload": { "decision": "accept" },
+      "pathParams": {
+        "id": "{{cache:ai.reviewProposal.response.data.proposal.id}}"
+      },
+      "payload": {
+        "decision": "accept"
+      },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

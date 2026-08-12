@@ -769,14 +769,37 @@ UNKNOWN_STATUS_COUNT=0
 # project shares the container, and that is precisely when the unscoped call
 # starts answering 409 ambiguous. Detecting the ambiguity rather than assuming
 # it keeps day one working and day two correct.
+# Probe with the SAME subshell/exec/temp-file dance the poll loop below uses.
+# A bare curl inside a git hook on Windows/Git Bash can hang or return nothing --
+# which is why the loop wraps every call. When the probe came back empty the case
+# below did not match, the poll stayed unscoped, and it spun on 409 until timeout.
+_probe_status() {
+    local _u="$1" _f _c _pid _w=0
+    _f=$(mktemp)
+    bash -c "exec curl -s -o /dev/null -m 15 -w '%{http_code}' '$_u' </dev/null >'$_f' 2>/dev/null" &
+    _pid=$!
+    while [ $_w -lt 20 ] && kill -0 $_pid 2>/dev/null; do sleep 1; _w=$((_w + 1)); done
+    if kill -0 $_pid 2>/dev/null; then
+        kill $_pid 2>/dev/null; wait $_pid 2>/dev/null; rm -f "$_f"; echo "000"; return
+    fi
+    wait $_pid 2>/dev/null
+    _c=$(cat "$_f" 2>/dev/null); rm -f "$_f"
+    echo "${_c:-000}"
+}
+
+# Choose by WHAT ANSWERS, not by matching a code or a body: an unregistered path
+# and an ambiguous container both answer 409, so only trying can separate them.
 STATUS_URL="${MCP_SERVER_URL}/api/test/status"
-STATUS_PROBE=$(curl -s --max-time 10 "${STATUS_URL}" 2>/dev/null || echo "")
-case "$STATUS_PROBE" in
-    *'"status"'*'"ambiguous"'*|*'Multiple projects have API test state'*)
-        # More than one project registered here, so say which one we mean.
-        STATUS_URL="${MCP_SERVER_URL}/api/test/status?projectPath=$(url_encode_path "${PROJECT_PATH}")"
-        ;;
-esac
+_unscoped_code=$(_probe_status "${STATUS_URL}")
+if [ "$_unscoped_code" != "200" ]; then
+    _scoped_url="${MCP_SERVER_URL}/api/test/status?projectPath=$(url_encode_path "${PROJECT_PATH}")"
+    _scoped_code=$(_probe_status "${_scoped_url}")
+    if [ "$_scoped_code" = "200" ]; then
+        STATUS_URL="$_scoped_url"
+    else
+        echo -e "${YELLOW}   Status poll: neither scoped nor unscoped answered (${_unscoped_code}/${_scoped_code}).${NC}"
+    fi
+fi
 
 while [ $WAIT_TIME -lt $API_TEST_MAX_WAIT ]; do
     sleep "$API_TEST_POLL_INTERVAL"
@@ -841,6 +864,26 @@ while [ $WAIT_TIME -lt $API_TEST_MAX_WAIT ]; do
     UNKNOWN_STATUS_COUNT=0
 
     TEST_STATUS=$(echo "$STATUS_RESPONSE" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
+
+    # AMBIGUITY CAN APPEAR MID-POLL, so re-decide here and not only once up front.
+    #
+    # The probe above is a SNAPSHOT. At that instant this project may be the only
+    # one running, so the unscoped URL answers 200 and is correctly chosen. Then a
+    # second project starts a run -- another repo's push, concurrently -- the
+    # container now holds two, and every later unscoped poll answers 409
+    # {"status":"ambiguous"}. That body is valid JSON, so it passes the checks
+    # above and simply never matches a terminal status: the loop burns its whole
+    # budget while the suite has long since finished and been billed. Seen exactly
+    # that with a LeadFlow push overlapping a ProjexCloud one.
+    #
+    # Switching the URL once, on the first ambiguous reply, costs one poll
+    # interval and is self-correcting whenever the condition changes under us.
+    if [ "$TEST_STATUS" = "ambiguous" ] && [ "${STATUS_URL#*projectPath=}" = "${STATUS_URL}" ]; then
+        STATUS_URL="${MCP_SERVER_URL}/api/test/status?projectPath=$(url_encode_path "${PROJECT_PATH}")"
+        echo -e "
+${YELLOW}⚠️  Another project started a run - scoping the status poll to this project.${NC}"
+        continue
+    fi
 
     # Check for error in response
     ERROR_MSG=$(echo "$STATUS_RESPONSE" | jq -r '.error // empty' 2>/dev/null)
@@ -1143,32 +1186,26 @@ fi
 # ============================================================
 # STEP 7: Component duplication scan
 # ============================================================
-echo -e "\n${BLUE}🔍 Scanning for duplicate components in changed files...${NC}"
-
-# Include projectPath for multi-project credential routing
-COMPONENT_SCAN_RESULT=$(curl -s --connect-timeout 3 --max-time 120 -X POST "${MCP_SERVER_URL}/api/components/scan" \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"projectPath\": \"${PROJECT_PATH}\",
-        \"triggered_by\": \"git_push\",
-        \"changed_files\": ${CHANGED_FILES_JSON}
-    }" 2>&1)
-
-if [ $? -eq 0 ] && [ -n "$COMPONENT_SCAN_RESULT" ]; then
-    DUPLICATES_FOUND=$(echo "$COMPONENT_SCAN_RESULT" | jq -r '.summary.duplicateComponentsFound // 0' 2>/dev/null || echo "0")
-
-    echo -e "${GREEN}✓ Component scan completed${NC}"
-
-    if [ "$DUPLICATES_FOUND" -gt 0 ]; then
-        echo -e "  ${YELLOW}⚠️  Similar components found: ${DUPLICATES_FOUND}${NC}"
-        echo -e "  ${YELLOW}   Review details in Leadership Dashboard${NC}"
-    else
-        echo -e "  No duplicate components detected"
-    fi
-else
-    echo -e "${YELLOW}⚠️  Component scan returned no results${NC}"
-fi
-
+# FIRE AND FORGET, same reasoning as the governance audit. This one runs an LLM
+# over the changed files to find near-duplicate components; it feeds the
+# dashboard and never gates the push, yet it was the last thing standing between
+# a finished test run and git exiting -- up to 120s of waiting. It has been
+# synchronous since the initial commit; the 120s cap was only added in July.
+_scan_payload=$(mktemp)
+cat > "$_scan_payload" <<SCANJSON
+{"projectPath": "${PROJECT_PATH}", "triggered_by": "git_push", "changed_files": ${CHANGED_FILES_JSON}}
+SCANJSON
+_scan_dir="${PROJECT_ROOT}/.mcp-cache"; mkdir -p "$_scan_dir" 2>/dev/null || true
+(
+    # NO setsid: it does not exist on Git Bash for Windows, and using it made the
+    # background job die instantly -- the dispatch returned fast while the work
+    # never ran. The subshell plus redirected stdio, </dev/null and disown is
+    # enough to detach here.
+    curl -s --connect-timeout 3 --max-time 120 -X POST "${MCP_SERVER_URL}/api/components/scan"         -H "Content-Type: application/json" -d @"$_scan_payload" > "$_scan_dir/component_scan_last_run.log" 2>&1 </dev/null
+    rm -f "$_scan_payload"
+) >/dev/null 2>&1 </dev/null &
+disown 2>/dev/null || true
+echo -e "  Component scan dispatched; result lands in .mcp-cache/component_scan_last_run.log"
 # ============================================================
 # STEP 9: Summary
 # ============================================================

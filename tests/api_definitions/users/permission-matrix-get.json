@@ -1,0 +1,64 @@
+{
+  "name": "GET /api/users/permission-matrix - The SOP §28 grid, as the PDP decides it",
+  "description": "Returns one row per SOP actor, each carrying the policy decision point's own verdict for every action in the bundle, with denials dropped so the grid shows what a role HOLDS beside what it must ESCALATE. Proves criterion 4c12f924-87d1-4be1-b790-d94a936d58b3#AC3, the permission matrix is reachable from the UI and remains read-only: the response states editable=false and names its source files, and there is deliberately NO companion write endpoint. Roles and policies are versioned code in server/src/config/roles.ts and policies.ts; an endpoint that edited them would make the policy set per-tenant configuration when it is the one thing in this system that must have exactly one source. The verdicts come from evaluate(), the SAME function that decides whether a request may proceed - rendering ROLE_DEFINITIONS directly would ignore POLICY_OVERRIDES and show audit.delete_event as available to Leadership with approval when the bundle denies it to everyone unconditionally, and a matrix that disagrees with enforcement on the one rule with no escalation path is worse than no matrix. Behind authenticate, not role-gated, for the same reason as GET /api/users/roles. QA: depends on register and login for the bearer token.",
+  "endpoint": "/api/users/permission-matrix",
+  "method": "GET",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "featureId": "c12362d4-3479-46e6-b243-47c04b68b61e",
+  "epicId": "224f72e3-9444-4923-96da-477e76aa9654",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 14,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "4c12f924-87d1-4be1-b790-d94a936d58b3#AC3"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "captureResponse": {
+    "users.permissionMatrix.response.data.total": "data.total"
+  },
+  "testCases": [
+    {
+      "name": "Nine SOP actors, and the grid states that it cannot be edited here",
+      "coversCriterion": "4c12f924-87d1-4be1-b790-d94a936d58b3#AC3",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "total": 9,
+          "editable": false
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

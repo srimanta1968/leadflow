@@ -1,0 +1,134 @@
+{
+  "taskId": "fe8a391f-f000-44aa-9f2a-ce108c98f951",
+  "featureId": "76edee77-5f80-42d5-9255-cad3182b54ba",
+  "epicId": "be026e56-403d-441b-9a82-4055aad09d66",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/sla/overnight-queue - acknowledge an out-of-hours arrival and commit to the next business morning",
+  "description": "Acknowledges an arrival outside business hours, captures a booking option, and commits to the next-business-day path (fe8a391f-f000-44aa-9f2a-ce108c98f951#AC1).\n\nCOVERAGE IS CHECKED BEFORE ANYTHING IS PROMISED (fe8a391f-f000-44aa-9f2a-ce108c98f951#AC3, fe8a391f-f000-44aa-9f2a-ce108c98f951#AC4). A same-night request routes to an approved on-call rep ONLY when sdk-coverage names one; otherwise the acknowledgement states the next-business-day commitment and offers a booking link instead. An UNREACHABLE roster is treated as NO coverage, deliberately: the failure modes are not symmetric, because assuming coverage during an outage promises a call nobody will make while assuming none merely sends a more conservative commitment. Verified live: a same-night request with no roster returned same_night_promised false with the reason stated.\n\nTHE ACKNOWLEDGEMENT RESPECTS THE RECIPIENT LOCAL QUIET HOURS (fe8a391f-f000-44aa-9f2a-ce108c98f951#AC2), not ours. Somebody who filled in a form at 23:00 their time should not be texted back because it is mid-morning in Chicago, so the constraint is handed to sdk-notification with quiet_hours_basis recipient_local rather than a window being computed here in the wrong timezone.\n\nAN IN-HOURS ARRIVAL IS REFUSED 409 rather than queued. It is governed by the 30-minute SLA, and silently creating an overnight row would produce a next-day commitment for a lead that is due in half an hour. Verified live.\n\n201 because a queue entry is a new addressable record. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/sla/overnight-queue",
+  "method": "POST",
+  "expectedStatus": 409,
+  "coversCriterion": [
+    "fe8a391f-f000-44aa-9f2a-ce108c98f951#AC1",
+    "fe8a391f-f000-44aa-9f2a-ce108c98f951#AC2",
+    "fe8a391f-f000-44aa-9f2a-ce108c98f951#AC3",
+    "fe8a391f-f000-44aa-9f2a-ce108c98f951#AC4"
+  ],
+  "testCases": [
+    {
+      "name": "An in-hours arrival is refused, because the 30-minute SLA governs it",
+      "coversCriterion": "fe8a391f-f000-44aa-9f2a-ce108c98f951#AC1",
+      "payload": {
+        "lead_id": "{{var:absent_uuid}}",
+        "arrived_at": "{{static:2026-08-11T15:00:00Z}}"
+      },
+      "expectedStatus": 409,
+      "expectedResponse": {
+        "success": false,
+        "code": "CONFLICT"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no lead_id, so there is nothing to acknowledge",
+      "payload": {
+        "arrived_at": "{{static:2026-08-16T00:00:00Z}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unparseable arrival instant is refused",
+      "payload": {
+        "lead_id": "{{var:absent_uuid}}",
+        "arrived_at": "{{static:saturday evening}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "lead_id is required",
+      "when": "no lead is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "arrived_at must be a valid ISO timestamp",
+      "when": "the arrival instant cannot be parsed. The whole commitment is computed from it, so guessing would produce a due time for a moment nobody named."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "This arrival is inside business hours, so it is governed by the 30-minute SLA rather than the overnight path",
+      "when": "the arrival falls inside the workable window. Refused rather than queued: an overnight row would commit to the next morning for a lead due in 30 minutes."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

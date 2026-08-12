@@ -1,5 +1,6 @@
 import { dataService } from '../../services/DataService';
 import { config } from '../../config/env';
+import { sendsHalted } from '../failures/runbook';
 import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { ACTIVE_CADENCE, stopRuleFor, type CadenceStep, type StopAction } from './cadence';
 import { deferReason } from '../sla/businessCalendar';
@@ -126,7 +127,7 @@ async function dispatch(input: {
   try {
     const result = await SdkGatewayClient.call({
       sdk: 'sdk-notification',
-      path: '/api/notifications',
+      path: '/api/notifications/send',
       method: 'POST',
       // Keyed on the STEP, so a retried tick that somehow got past the claim
       // still cannot produce a second send at the provider.
@@ -240,7 +241,7 @@ export async function tickEnrollment(enrollment: Enrollment, now = Date.now()): 
 }
 
 /** Advance every active enrolment. */
-export async function tickAll(now = Date.now()): Promise<{ enrollments: number; claimed: number; suppressed: number; dispatched: number; outcomes: { enrollmentId: string; steps: StepOutcome[] }[] }> {
+export async function tickAll(now = Date.now()): Promise<{ enrollments: number; claimed: number; suppressed: number; dispatched: number; outcomes: { enrollmentId: string; steps: StepOutcome[] }[]; halted?: boolean; haltReason?: string }> {
   const enrollments = await dataService.query<Enrollment>(
     `SELECT enrollment_id, subject_ref, sequence_key, owner_user_id, enrolled_at, status, next_step
        FROM leadflow_sequence_enrollment
@@ -248,6 +249,27 @@ export async function tickAll(now = Date.now()): Promise<{ enrollments: number; 
       ORDER BY enrolled_at ASC LIMIT 500`,
     [config.projexCloud.tenantId]
   );
+  /*
+   * THE GLOBAL KILL SWITCH IS CHECKED ONCE PER TICK, before any enrolment is
+   * touched. SOP §21 requires it to halt all automated sends within one tick,
+   * and the cadence is the loudest sender in the product — a switch thrown
+   * during a duplicate-send incident that still lets this loop run is not a
+   * kill switch, it is a label.
+   *
+   * Checked here rather than per step: a switch engaged mid-tick should stop
+   * the NEXT tick, and re-reading it five hundred times would let half a sweep
+   * send and half not, which is the worst of both outcomes to reconstruct
+   * afterwards.
+   */
+  if (await sendsHalted()) {
+    return {
+      enrollments: enrollments.length, claimed: 0, suppressed: enrollments.length,
+      dispatched: 0, outcomes: [],
+      halted: true,
+      haltReason: 'The global send pause is engaged, so no cadence step was dispatched this tick.',
+    };
+  }
+
   const outcomes: { enrollmentId: string; steps: StepOutcome[] }[] = [];
   let claimed = 0; let suppressed = 0; let dispatched = 0;
   for (const e of enrollments) {
@@ -258,7 +280,7 @@ export async function tickAll(now = Date.now()): Promise<{ enrollments: number; 
     }
     if (steps.length) outcomes.push({ enrollmentId: e.enrollment_id, steps });
   }
-  return { enrollments: enrollments.length, claimed, suppressed, dispatched, outcomes };
+  return { enrollments: enrollments.length, claimed, suppressed, dispatched, outcomes, halted: false };
 }
 
 /**

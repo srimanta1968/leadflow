@@ -84,20 +84,49 @@ export async function runCascade(input: CascadeInput): Promise<CascadeResult> {
 
   // 1. Queued sequence steps. The enrollment is cancelled rather than paused —
   //    a pause is resumable, and nothing about a STOP is resumable.
-  steps.push(await attempt('sequence_enrollments', async () =>
-    SdkGatewayClient.call({
-      sdk: 'sdk-sequence',
-      path: '/api/sequences/enrollments/control',
-      method: 'POST',
-      body: {
-        tenant_id: input.tenantId ?? undefined,
-        subject_ref: input.subjectRef,
-        action: 'cancel',
-        reason: input.reason,
-        channels: input.channels,
-      },
-      correlationId: input.correlationId,
-    })));
+  /*
+   * ONE CALL PER ENROLMENT, resolved from the LOCAL ledger first.
+   *
+   * The platform's control endpoint is keyed on an enrollment_id and there is
+   * no endpoint that lists a subject's enrolments — so a subject-wide cancel is
+   * not expressible upstream. This previously posted to a path with no id at
+   * all, which meant the cascade had never actually stopped a sequence: the
+   * call 404'd and the caller's try/catch recorded a degraded step.
+   *
+   * LeadFlow already knows which enrolments are active because it wrote them,
+   * so the ids come from there. An enrolment the local ledger does not know
+   * about cannot be cancelled by this path, which is why the step reports the
+   * count it acted on rather than claiming the subject is clear.
+   */
+  steps.push(await attempt('sequence_enrollments', async () => {
+    const active = await dataService.query<{ enrollment_id: string }>(
+      `SELECT enrollment_id FROM leadflow_sequence_enrollment
+        WHERE subject_ref = $1 AND status = 'active'`,
+      [input.subjectRef]
+    );
+    let cancelled = 0;
+    let lastStatus: number | null = null;
+    for (const e of active) {
+      const r = await SdkGatewayClient.call({
+        sdk: 'sdk-sequence',
+        path: `/api/sequences/enrollments/${encodeURIComponent(e.enrollment_id)}/control`,
+        method: 'POST',
+        body: {
+          tenant_id: input.tenantId ?? undefined,
+          action: 'cancel',
+          reason: input.reason,
+        },
+        idempotencyKey: `revoke-cancel:${e.enrollment_id}`,
+      });
+      lastStatus = r.status ?? lastStatus;
+      if (r.delivered) cancelled += 1;
+    }
+    /* Delivered only when EVERY active enrolment was cancelled. A partial
+       cascade that reports success would leave a revoked subject enrolled in
+       the sequence that keeps messaging them. An empty list is delivered:
+       there was nothing to stop. */
+    return { delivered: cancelled === active.length, status: lastStatus };
+  }));
 
   // 2. Active campaign audiences. Removal, not exclusion-on-next-build: the
   //    next build may be after the next send.

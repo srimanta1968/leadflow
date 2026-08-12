@@ -1,147 +1,327 @@
 {
-  "_features_hash": "9b3e7bb9e958fd612ba0b8bf4f925e3ffbd32137082c0bfee48a68797589a648",
+  "_features_hash": "1a0306f508fc0470ca73cc3b05383c80886d7171223de02c9fceae08de1277ba",
+  "client/.storybook/preview.tsx": {
+    "hash": "d983784c27781d24f54e90a2d61fbb24304c3717a56e78e14d8c624f51e03b5b",
+    "screen": "preview",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:39"
+  },
+  "client/src/features/imports/csvPreview.ts": {
+    "hash": "50e0ebfa2295b4a547390c41bb0d3aed6f01b3d7081124f9ecd4fd8c5e1a2a45",
+    "screen": "csvPreview",
+    "status": "uncovered",
+    "verifiedAt": "2026-08-12T03:34:39"
+  },
   "client/src/pages/NotFound.tsx": {
     "hash": "407f9357cb8fef96e7e7dec0fe87d561d6c445d028690a66d42c8f5f7586888a",
     "screen": "NotFound",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:27"
+    "verifiedAt": "2026-08-12T03:34:39"
   },
   "client/src/pages/app/Analytics.tsx": {
     "hash": "91e4d15f1c6238c877a0ff5376616816b35cb5689ca5f3752171a2fff295170f",
     "screen": "Analytics",
     "status": "covered",
-    "verifiedAt": "2026-08-06T16:55:56"
+    "verifiedAt": "2026-08-12T03:34:39"
+  },
+  "client/src/pages/app/AuditHistory.tsx": {
+    "hash": "b0b7acdf53f13262728ca3948c100cde1584ae3d2d4e0f5c668b0667bcc1ef62",
+    "screen": "AuditHistory",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:39"
+  },
+  "client/src/pages/app/Calendar.tsx": {
+    "hash": "30110a305b64a7b042a5d620a87115126f4161f0da8fd89effc651c05a81bea9",
+    "screen": "Calendar",
+    "status": "uncovered",
+    "verifiedAt": "2026-08-12T03:34:39"
+  },
+  "client/src/pages/app/CampaignEnrollment.tsx": {
+    "hash": "53b983dfe4501d2aa529ad48015e6a169f7961b9cdfb6079345730ece9cbbd47",
+    "screen": "CampaignEnrollment",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:39"
   },
   "client/src/pages/app/CaptureInbox.tsx": {
-    "hash": "eeabfd339880e19b5f3e512e99ee9eac9d6af097898ef5246fac826afa5469f2",
+    "hash": "4be2ed9b41d5c9513ae0a0dc88ee59bf6fbed6caad3188b8e00b8aec6e9bf989",
     "screen": "CaptureInbox",
     "status": "covered",
-    "verifiedAt": "2026-08-06T16:55:56"
+    "verifiedAt": "2026-08-12T03:34:39"
+  },
+  "client/src/pages/app/CommercialReview.tsx": {
+    "hash": "4080b19ee24b18e50a3c396d0fb65ca30c850e443b1a70d6c40b4f776971a9be",
+    "screen": "CommercialReview",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:39"
+  },
+  "client/src/pages/app/ConsentPreferences.tsx": {
+    "hash": "0e3745780a23d9b8c374e6bcb181cc55e2c600ac3523868a99136d9adfc864ad",
+    "screen": "ConsentPreferences",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/Contact360.tsx": {
+    "hash": "63386c614a128f639cb0bb264b03a82550ce0887a13de6edb50cb1b9c88d4f64",
+    "screen": "Contact360",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/Contacts.tsx": {
+    "hash": "3fc54383a506b6cce54e07b9525a6d5ba855a01bbc3dd0fd0b80ee809601da44",
+    "screen": "Contacts",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/CoverageConsole.tsx": {
+    "hash": "2196f15aea138c9adf9bb22b10daa66590ffee7a5750c9cd22148ed272a00ae7",
+    "screen": "CoverageConsole",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/DataReview.tsx": {
+    "hash": "82d2b691b6bde29bf065835a9b5335c7b69512dd43c192e76d8748e7593b5049",
+    "screen": "DataReview",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/EnrichmentQueue.tsx": {
+    "hash": "aa09ad339134f1c2b1a8da8b5c2e6d80b6a69392f4f634dc94942953514b6765",
+    "screen": "EnrichmentQueue",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/Governance.tsx": {
+    "hash": "fa490f84534215dc20666132dcceae36950d07a3b128ad4eb25d5bb667783db1",
+    "screen": "Governance",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/IdentityReview.tsx": {
+    "hash": "b55466f92221facfe419daf3523f9b16dff699df0c1011cb48d6d375436759dd",
+    "screen": "IdentityReview",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/ImportCenter.tsx": {
+    "hash": "4ad155f806f7f7a28ee8c1fbc371d20608281d6e645c254d9b1de8e590cbe07d",
+    "screen": "ImportCenter",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/Inbox.tsx": {
+    "hash": "58a74bacbc55973d7a8708254d7d75eddefe28ea4ff791cf9d08a4cbdf1c8bed",
+    "screen": "Inbox",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/Incidents.tsx": {
+    "hash": "c5e9ba731cc2124795657651e5b534f5f65bd465d5bd9a9000ddf3cd0ee5a8c3",
+    "screen": "Incidents",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/app/LeadQueue.tsx": {
-    "hash": "b0335b0991fe5df1f3ab825c7d6452efbf543d3b1bec3db99e8da41affd14a9f",
+    "hash": "7c43d2fc33ab5d7d18dfb691dbe6f8f5531b6280aa6864f502a9433f2ae89055",
     "screen": "LeadQueue",
     "status": "covered",
-    "verifiedAt": "2026-08-06T16:55:56"
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/LeadershipDashboard.tsx": {
+    "hash": "ba49cf48f032521f3d8a86cf1db4ab5327b7fbde54ac5c3144e8921d7eb7a313",
+    "screen": "LeadershipDashboard",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/OnboardingHandoff.tsx": {
+    "hash": "99135280b7d2baf5341e48760803da8f03e7cab10fa4f5473f80919130d17b14",
+    "screen": "OnboardingHandoff",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/PermissionMatrixScreen.tsx": {
+    "hash": "9cf83aeb821ef7abbc3005daafe297adc3306959a7f47a49572eff62751a2646",
+    "screen": "PermissionMatrix",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/Pipeline.tsx": {
+    "hash": "629e0b80d3df1378a4aa57bce4e32b8909fd03786f82b341a0fb154ce5889efb",
+    "screen": "Pipeline",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/app/QuickCapture.tsx": {
-    "hash": "bc8941c7d221c4f92fb1b98fbfae766f489d3191f3f3055e7a05d87cf45ab673",
+    "hash": "df589ecaec377ba3d4508feea3696ce2667d8e8d7f4b9ed917a9db435412c2f3",
     "screen": "QuickCapture",
     "status": "covered",
-    "verifiedAt": "2026-08-06T16:55:56"
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/RoleDashboards.tsx": {
+    "hash": "773694ebea592bbf621eb5d690be8c23cf55da3ce70501642eea0f5e2997d62c",
+    "screen": "RoleDashboards",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/RoutingConfiguration.tsx": {
+    "hash": "912a63e76e315c4cfde2b856cab90b713e5637a3454f0d8519e59f60b601c3e4",
+    "screen": "RoutingConfiguration",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/app/RoutingRules.tsx": {
     "hash": "b437279a82da4719ee4b5dd23f1d0c007878cbe2bbd1c3e3f152acec281f4d17",
     "screen": "RoutingRules",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:27"
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/RoutingSimulation.tsx": {
+    "hash": "becf873d7c7407cef1a3657d2b5d668304a96e9d418efe7027952f83fa874a0b",
+    "screen": "RoutingSimulation",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/Sequences.tsx": {
+    "hash": "2d3a24a8bd23bb3d6b291bdf18e68a775ad4e71b2d8f726db3c757eb85aa5aa6",
+    "screen": "Sequences",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/app/SlaSettings.tsx": {
     "hash": "dd1019ad4f957ad0b6070b0f37c741ab34d3c96c56516000abd6c25f4441fe44",
     "screen": "SlaSettings",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:27"
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/Templates.tsx": {
+    "hash": "15dc43fd8a8f481ddd56e7933148b3b6d395db90fddd7d048d17c7c2a417a7c3",
+    "screen": "Templates",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/TrainingCentre.tsx": {
+    "hash": "81398ddae8f3558ed104d2d48e589837cc8ddd092b06ef4cb12faa910018d3b5",
+    "screen": "TrainingCentre",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/UserAdministration.tsx": {
+    "hash": "649da502809ff4d8aae0d691586de509625edf8160a6593314710c654ac5c4ea",
+    "screen": "UserAdministration",
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/WorkflowRuns.tsx": {
+    "hash": "2d119e3ddbae04c75c1ed0daee2ff530afe2c3c888a64b22b5d7099f0af12dc1",
+    "screen": "WorkflowRuns",
+    "status": "uncovered",
+    "verifiedAt": "2026-08-12T03:34:40"
+  },
+  "client/src/pages/app/WorkflowStudio.tsx": {
+    "hash": "6fdfa5e2c71fbfe610652e652ebce5cfceec86e25134a642167ba346c7804dbf",
+    "screen": "WorkflowStudio",
+    "status": "uncovered",
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/auth/SignIn.tsx": {
     "hash": "0fb7b8f0be0ebcea1929f91797d9b5327e515ee5b9a6f7221cf89f876b727454",
     "screen": "SignIn",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/auth/SignUp.tsx": {
     "hash": "4efa138de60b50b887d4c97305ae4f57d6f61d2636de741a7f4a7b0ca0262a59",
     "screen": "SignUp",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/marketing/Demo.tsx": {
     "hash": "9ffdcbd6d062ba04a7dc6dc907adc24f102dd74dd1cfd36d779e8dd7c5b54e84",
     "screen": "Demo",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/marketing/Home.tsx": {
-    "hash": "cf7b3f509b937edb8827d8828a6a59c4d35eaa2c880dd7863f86c26434f14115",
+    "hash": "7825c966b43edd1ef2480936da3850e7b3de26bd115ce732f82e78732c863e11",
     "screen": "Home",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/marketing/Pricing.tsx": {
-    "hash": "d61524b17eee84578f85728572395a518f0f80d524dc1659cfaf188b9460de35",
+    "hash": "d0f99bffad4fa6cf31a9eb2da48fe54cfc4062f49f4417604758c890e8ee035d",
     "screen": "Pricing",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/marketing/Product.tsx": {
     "hash": "2925ed73f3d82ac8af26326875f68377df638e7cad51f599ba91bde54fc86501",
     "screen": "Product",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/marketing/Security.tsx": {
     "hash": "aec23b383cf9d3758f096d4ae773e8c10803acab3256f886668c22f6b4b28fe8",
     "screen": "Security",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/pages/marketing/Solutions.tsx": {
     "hash": "b65de37eb4634ccb694cbc52513f65ba572e421ae6b786b1bf71a64d8b3e2157",
     "screen": "Solutions",
-    "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "status": "covered",
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "client/src/utils/analyticsView.ts": {
     "hash": "a54c86ab53489e159b3b53b1cf6079d284b9b715fd2c8b43840bd6ce6db20bed",
     "screen": "analytics",
     "status": "covered",
-    "verifiedAt": "2026-08-06T16:55:56"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "server/src/routes/analyticsRoutes.ts": {
     "hash": "641a7e7aa1741a5b686eda96c2745ec6b03a2f4471e3dba80681f4468b2caab2",
     "screen": "analyticsRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "server/src/routes/authRoutes.ts": {
     "hash": "a5a79525dfe13a0164a417e3449c2fe079cd807dba3ac7bd3c1ce96c23ac2871",
     "screen": "authRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "server/src/routes/eventRoutes.ts": {
     "hash": "75814a494956922720f8c38befdc715a50066b3c7cc7b67ab5e3baeddb367b72",
     "screen": "eventRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "server/src/routes/leadRoutes.ts": {
     "hash": "931bdff317d6966023935c7f6e07aa21555f9a40cf6642d837b34d163daaacff",
     "screen": "leadRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "server/src/routes/publicLeadRoutes.ts": {
     "hash": "da0b21e7ea9b51a7bfce03b63a9d3b9e71c7636da6820f12a17f6d74ed0daa6b",
     "screen": "publicLeadRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "server/src/routes/routingRoutes.ts": {
     "hash": "9e2cb176a53c75c4aa90ed085ad2149a72ffd1545573a30dce6500d49cfe4294",
     "screen": "routingRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "server/src/routes/slaRoutes.ts": {
     "hash": "b0d1c04d6cedbe828c7cfc8dc008f451ab1a8cfa6abbbafd53b6a195263f6d1d",
     "screen": "slaRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   },
   "server/src/routes/userRoutes.ts": {
-    "hash": "ab7fd0295b2515466305fcaf5fa35a3d45b8475ab2169c4c49e56e379ec352b7",
+    "hash": "3aeb8666515b52ed38e463dbd53bfa644a9e30b0011e9b8455f145dce4f8cbe6",
     "screen": "userRoutes",
     "status": "uncovered",
-    "verifiedAt": "2026-08-06T16:56:28"
+    "verifiedAt": "2026-08-12T03:34:40"
   }
 }

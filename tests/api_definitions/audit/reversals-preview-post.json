@@ -1,0 +1,127 @@
+{
+  "name": "POST /api/leadflow/audit/reversals/preview - The blast radius, before anything commits",
+  "description": "Computes what one of the four reversible actions would touch, category by category, while an operator is still deciding. ZERO SIDE EFFECTS BY CONTRACT: it reads and counts and does nothing else - no write, no suppression, and deliberately no audit append, because an entry here would record a reversal that never happened, and the only thing worse than an unlogged action is a logged one that did not occur. 200 rather than 201 - it is a computation, not a resource. A NULL COUNT IS NOT ZERO: 'nothing would be touched' and 'we could not find out what would be touched' look identical in a number and are opposites in a decision, so every unreachable upstream yields count null AND a named entry in field_gaps, and `reversible` goes false whenever any category could not be counted - an operator may not approve a blast radius nobody can state. The erasure surfaces come from local configuration so that count is exact and never degrades; identity, relationship and consent counts come from their gateways. audit_entries is always null on purpose: the chain is append-only, so a reversal ADDS to it and a count would imply entries change. QA: this route did not exist until the route-versus-definition audit found ReversibleActionsPanel.tsx calling it against a 404. Behind authenticate and not role-gated, like every other read on this router.",
+  "endpoint": "/api/leadflow/audit/reversals/preview",
+  "method": "POST",
+  "taskId": "3f7ac1e8-9b24-4d63-a5f1-2c8e6b0d47a9",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 31,
+  "expectedStatus": 200,
+  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "fieldEnums": {
+    "action": [
+      "retract_identity_link",
+      "end_relationship",
+      "withdraw_consent",
+      "start_privacy_erasure"
+    ]
+  },
+  "captureResponse": {
+    "audit.reversalPreview.response.data.action": "data.action"
+  },
+  "testCases": [
+    {
+      "name": "Erasure states an exact blast radius, because the surfaces are local configuration",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{cache:auth.register.response.data.user.id}}",
+        "action": "start_privacy_erasure"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "action": "start_privacy_erasure",
+          "reversible": true
+        }
+      }
+    },
+    {
+      "name": "Withdrawing consent counts the queued enrolments this database can see",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{cache:auth.register.response.data.user.id}}",
+        "action": "withdraw_consent"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "action": "withdraw_consent"
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: an action outside the four the panel offers",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|action",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{cache:auth.register.response.data.user.id}}",
+        "action": "{{static:delete_everything}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no subject to compute a radius for",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|subject_ref",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "action": "withdraw_consent"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "payload": {
+        "subject_ref": "{{cache:auth.register.response.data.user.id}}",
+        "action": "withdraw_consent"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "subject_ref is absent or blank, or action is not one of retract_identity_link, end_relationship, withdraw_consent, start_privacy_erasure. An unknown action is rejected rather than previewed as empty, because a blast radius of 'nothing' for a typo is the one answer an operator must never see before approving a reversal."
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/meetings/book-live - booked while they are on the call",
+  "description": "A SEPARATE ENDPOINT FROM THE ORDINARY BOOKING, deliberately. Booking live is a different act: the prospect is on the phone, the invite must exist before the call ends, and a failure has to surface to the rep IMMEDIATELY rather than land in a queue — \"I'll send that over\" is how a booked meeting becomes a meeting nobody turns up to.\n\nTHE AGENDA IS REQUIRED. A meeting booked live with no stated agenda is one the prospect cannot prepare for and the rep cannot be held to, and it is the strongest predictor of a no-show.\n\nThe reminder ladder is returned so the rep can say, on the call, exactly what the customer will receive — a confirmation the rep cannot describe is one the customer does not believe.",
+  "endpoint": "/api/leadflow/meetings/book-live",
+  "method": "POST",
+  "expectedStatus": 201,
+  "captureResponse": {
+    "meetings.book_live.response.data.meeting_id": "data.meeting_id"
+  },
+  "requestBody": {
+    "contact_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+    "starts_at": "2026-08-20T15:00:00Z",
+    "purpose": "demo",
+    "agenda": "Walk through the pipeline board and agree next steps."
+  },
+  "testCases": [
+    {
+      "name": "A meeting is booked live with its reminder ladder set",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "contact_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+        "starts_at": "2026-08-20T15:00:00Z",
+        "purpose": "demo",
+        "agenda": "Walk through the pipeline board and agree next steps."
+      }
+    },
+    {
+      "name": "A live booking with no agenda is REFUSED",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "contact_ref": "contact:x",
+        "starts_at": "2026-08-20T15:00:00Z",
+        "purpose": "demo"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "agenda is required - a meeting booked live with no agenda is one nobody prepares for, and that is the strongest predictor of a no-show",
+      "when": "contact_ref, starts_at, purpose or agenda is missing, or starts_at does not parse."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

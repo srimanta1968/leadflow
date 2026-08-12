@@ -1,0 +1,111 @@
+{
+  "taskId": "327ca5f6-1d99-4b2c-9e2a-218250f64f45",
+  "featureId": "a2e66054-e3b2-45ae-a796-7a8f9c3de9f8",
+  "epicId": "e000da35-a777-46e7-8589-2d24accdc494",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/meetings/:id/cancel - cancel, and silence every pending reminder",
+  "description": "Cancels the meeting and SUPPRESSES EVERY PENDING REMINDER (327ca5f6-1d99-4b2c-9e2a-218250f64f45#AC4). A cancelled meeting whose 2-hour reminder still fires sends the customer a link to a meeting that is not happening, which is worse than sending nothing at all.\n\nA REASON IS REQUIRED, because a cancellation is a commitment being withdrawn and the record is what a later reader has to judge it by.\n\nSUPPRESSED RATHER THAN DELETED. The reminder rows stay with their suppression reason, so \"did we tell them\" remains answerable after the fact - a deleted row cannot answer it. WHY `reason` CARRIES NO fieldEnums. The review reads it as enum-backed; it is not. A cancellation reason is free prose written by whoever withdrew the commitment, and a picklist would produce the same six sentences forever while losing the one that mattered. A false enum in the API docs would tell QA to expect values the handler never constrains. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/meetings/:id/cancel",
+  "method": "POST",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "327ca5f6-1d99-4b2c-9e2a-218250f64f45#AC4"
+  ],
+  "testCases": [
+    {
+      "name": "Cancelling an unknown meeting is refused",
+      "coversCriterion": "327ca5f6-1d99-4b2c-9e2a-218250f64f45#AC4",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "reason": "{{static:Customer asked to postpone indefinitely}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a cancellation with no reason is refused",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason is required to cancel a meeting",
+      "when": "no reason is given."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No meeting with that id",
+      "when": "the meeting does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

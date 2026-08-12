@@ -1,0 +1,102 @@
+{
+  "taskId": "3070e925-615d-429e-8209-1568671c3502",
+  "featureId": "905a8bb9-e0ea-4d1c-b5e8-2a3c4c27740b",
+  "epicId": "285a56e9-aa8a-46e6-b4cd-0675b52053e5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 11,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/digests/run"
+  ],
+  "name": "GET /api/leadflow/digests - reviews and the state of their outputs",
+  "description": "Generated digests with their REQUIRED OUTPUTS attached (3070e925-615d-429e-8209-1568671c3502#AC1). The difference between a reminder and a rhythm is the output: \"send the 11:30 sweep\" is a notification people learn to skim, while \"the 11:30 sweep produces reassignments, capacity fixes and coaching moments, and somebody is accountable for each\" is the SOP. The outputs are returned WITH the digest rather than behind a second call, because the question anybody opening this screen asks is \"what came out of yesterday's sweeps\".\n\nNINE REVIEWS ON THE AMERICA/CHICAGO CALENDAR (3070e925-615d-429e-8209-1568671c3502#AC2), each with a local time that is a NAMED ZONE rather than an offset - Chicago moves twice a year and a fixed -05:00 puts the launch huddle at 7:45 for half of it, which is the kind of bug that gets blamed on people not showing up.\n\nEVERY DIGEST CARRIES ITS TEMPLATE KEY AND VERSION (3070e925-615d-429e-8209-1568671c3502#AC4). A template that changes silently makes last month's pack unreadable against this month's - the sections move and the archive still claims to be the same document.\n\nQA: measured live; five daily rhythms generated with 8 tracked outputs between them.",
+  "endpoint": "/api/leadflow/digests",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "3070e925-615d-429e-8209-1568671c3502#AC1",
+    "3070e925-615d-429e-8209-1568671c3502#AC2",
+    "3070e925-615d-429e-8209-1568671c3502#AC4"
+  ],
+  "fieldEnums": {
+    "data.timezone": [
+      "America/Chicago"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Digests are returned with their outputs, template versions and the named zone",
+      "coversCriterion": "3070e925-615d-429e-8209-1568671c3502#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown rhythm key",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "endpoint": "/api/leadflow/digests?rhythm_key=coffee_break"
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "rhythm_key must be one of overnight_queue, launch_huddle, sla_sweep, late_day_sweep, next_action_sweep, weekly_funnel, weekly_coaching, weekly_winloss, monthly_postmortem",
+      "when": "a rhythm_key filter is supplied that is not one of the nine reviews."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

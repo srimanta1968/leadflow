@@ -124,6 +124,36 @@ export const PERMISSIONS = {
   SLA_ALERT_ACKNOWLEDGE: 'sla.alert_acknowledge',
   /** ELABORATION. Retrying undelivered notifications — plumbing, so it sits with RevOps. */
   SLA_ALERT_DISPATCH: 'sla.alert_dispatch',
+
+  /*
+   * THE USER REGISTER. Three grants, not one, and the split is the point.
+   *
+   * §28 names no owner for provisioning, because it describes how a revenue team
+   * works rather than how the software is administered. These are therefore
+   * ELABORATIONS, and they are placed with Revenue Operations for the reason
+   * that role exists: it "configures the machine", and who may sign in and in
+   * what capacity is the first thing configured about it.
+   *
+   * SEPARATE PERMISSIONS BECAUSE THEY ARE SEPARATE AUTHORITIES. Adding a
+   * colleague is routine; changing what a colleague may DO is the act that can
+   * hand somebody else's authority to a third party, and closing an account is
+   * the act that stops a person working. A single `user.administer` would make
+   * those three indistinguishable in the ledger and in any future policy that
+   * wanted to grant one without the others.
+   */
+  /** Add a colleague to the register, in a pending state. */
+  USER_INVITE: 'user.invite',
+  /** Change which role a colleague holds — and therefore what they may do. */
+  USER_ROLE_ASSIGN: 'user.role_assign',
+  /**
+   * Open or close an account for use.
+   *
+   * ONE grant for both directions. The authority is "decides whether this person
+   * may sign in", and a model where closing an account needs a grant that
+   * reopening it does not is a model where a mistake cannot be undone by the
+   * person who made it.
+   */
+  USER_DEACTIVATE: 'user.deactivate',
 } as const;
 
 /**
@@ -197,6 +227,19 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
       // Loosening the target you are measured against is the one change nobody
       // should be able to make alone.
       PERMISSIONS.SLA_CONFIGURE,
+      /*
+       * A Manager may staff their own team — WITH a second party.
+       *
+       * Listed rather than omitted, and that distinction matters: omitting them
+       * would make the register look like something only RevOps has any business
+       * near, and a Manager asking to add a starter would be told "you may not"
+       * rather than "you may, with sign-off". The second reading is the true one
+       * and it is the one that keeps people using the product instead of
+       * routing around it.
+       */
+      PERMISSIONS.USER_INVITE,
+      PERMISSIONS.USER_ROLE_ASSIGN,
+      PERMISSIONS.USER_DEACTIVATE,
     ],
     sopBasis:
       'SOP §28 "Manager" row. The SOP says these three may not be changed "alone", which is an approval requirement rather than a prohibition.',
@@ -230,6 +273,16 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
        * Steward and the Privacy Officer — see the note on that permission.
        */
       PERMISSIONS.IMPORT_RUN_READ,
+      /*
+       * The user register. See the note on these three permissions: §28 is
+       * silent on provisioning, and "configures the machine" is where deciding
+       * who may operate it belongs. Held UNAIDED rather than behind approval,
+       * because a product where nobody can add a colleague without a second
+       * signature has no way to add the second signatory either.
+       */
+      PERMISSIONS.USER_INVITE,
+      PERMISSIONS.USER_ROLE_ASSIGN,
+      PERMISSIONS.USER_DEACTIVATE,
     ],
     requiresApproval: [
       PERMISSIONS.PRODUCT_CLAIM_APPROVE,

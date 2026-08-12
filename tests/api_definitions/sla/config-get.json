@@ -1,0 +1,139 @@
+{
+  "taskId": "3e3ba115-8015-447d-afa1-4aadc2fe1e3a",
+  "featureId": "d71ac4e9-7423-4680-aab3-8617039ba40d",
+  "epicId": "be026e56-403d-441b-9a82-4055aad09d66",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/sla/config - the business calendar, the 30-minute policy and the clock rules",
+  "description": "The SLA configuration behind SOP §04, the customer number-one non-negotiable.\n\nA NAMED IANA ZONE, NEVER A FIXED OFFSET (3e3ba115-8015-447d-afa1-4aadc2fe1e3a#AC1). \"UTC-6\" is correct for America/Chicago for about four months of the year and an hour wrong for the rest, so a fixed offset produces deadlines that are silently 60 minutes out either side of every DST transition - in March it makes a met SLA look breached, and in November it hides a real one. Every wall-clock calculation goes through Intl.DateTimeFormat with the zone NAME, so the platform tz database supplies the transition rules rather than this codebase assuming them. The response carries timezone_kind:\"iana_named_zone\" and fixed_offset:null so a consumer can see which it is getting.\n\nTHE 4:59PM RULE IS SERVED AS A WORKED EXAMPLE, not just as prose (3e3ba115-8015-447d-afa1-4aadc2fe1e3a#AC2). Pass ?at= and the response computes that instant through the SAME function that computes real deadlines: a 16:59 America/Chicago arrival returns due 17:29 with requires_late_coverage true. Both alternative implementations lie - clamping the deadline to 17:00 gives the customer 1 minute instead of 30, and deferring to the next morning quietly converts a 30-minute promise into a 16-hour one. Either way the CRM would hide an impossible SLA behind a green number, which SOP §04 names as the failure to avoid. Verified live: at=2026-08-11T21:59:00Z returned local 16:59, due 22:29Z, requires_late_coverage true.\n\nTHE CLOCK SURVIVES EVERY HANDOVER (3e3ba115-8015-447d-afa1-4aadc2fe1e3a#AC3), and that is enforced rather than documented: migration 024 installs a BEFORE UPDATE trigger on leads that RAISES if source_timestamp changes, so merge, reassignment and backup takeover cannot reset it from any code path. Proven end to end under task b736b718 - three handovers plus an accept moved assigned_at each time while source_timestamp and sla_due_at held.\n\nHOLIDAYS ARE A LIST, NOT A RULE (3e3ba115-8015-447d-afa1-4aadc2fe1e3a#AC4). The observed date of a holiday falling at a weekend is a business decision rather than a calculation, and half of them move every year, so RevOps maintains the list and the code does not guess.\n\nOpen to any authenticated caller: this is configuration a rep needs in order to understand their own deadline, and gating it would leave people guessing at the rule they are measured against. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/sla/config",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "3e3ba115-8015-447d-afa1-4aadc2fe1e3a#AC1",
+    "3e3ba115-8015-447d-afa1-4aadc2fe1e3a#AC2",
+    "3e3ba115-8015-447d-afa1-4aadc2fe1e3a#AC3",
+    "3e3ba115-8015-447d-afa1-4aadc2fe1e3a#AC4"
+  ],
+  "fieldEnums": {
+    "data.calendar.timezone_kind": [
+      "iana_named_zone"
+    ],
+    "data.probe.defer_reason": [
+      "after_hours",
+      "weekend",
+      "holiday"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The calendar reports a named zone rather than a fixed offset",
+      "coversCriterion": "3e3ba115-8015-447d-afa1-4aadc2fe1e3a#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "A 16:59 Central arrival is due at 17:29 and needs late coverage",
+      "coversCriterion": "3e3ba115-8015-447d-afa1-4aadc2fe1e3a#AC2",
+      "queryParams": {
+        "at": "2026-08-11T21:59:00Z"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "A weekend arrival defers to the next business morning",
+      "coversCriterion": "3e3ba115-8015-447d-afa1-4aadc2fe1e3a#AC4",
+      "queryParams": {
+        "at": "2026-08-16T00:00:00Z"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unparseable probe instant is refused rather than silently treated as now",
+      "queryParams": {
+        "at": "lunchtime"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "at must be a valid ISO timestamp",
+      "when": "the probe instant cannot be parsed. Silently substituting now would answer a question about a different moment from the one asked, and the caller would read the deadline as applying to their instant."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

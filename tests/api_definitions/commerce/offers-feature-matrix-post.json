@@ -1,0 +1,125 @@
+{
+  "taskId": "92ce5959-0e5c-4ce8-be7a-02cc870b2120",
+  "featureId": "95512768-e04d-425c-bec5-fea91a60842b",
+  "epicId": "ef8a21ec-c1a9-4d26-ac59-e0fa28b41a3b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/offers/feature-matrix - set one capability status",
+  "description": "Sets or updates one capability's status, and REFUSES an entry with no named owner (92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC3). The refusal is the point: a capability claim with no owner is one nobody is accountable for, and the moment somebody disputes what was promised there is no one to ask.\n\nTHE STATUS MUST BE ONE OF THE FIVE APPROVED LABELS. Anything else is a claim nobody reviewed, so it is refused at the boundary rather than stored and discovered later on a buyer's call.\n\nUPSERT ON (tenant, offer, capability), refreshing updated_at. One row per capability rather than an append-only log, because the question a rep asks is \"what may I say about this today\" and two rows cannot answer it without a rule about which one wins. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/offers/feature-matrix",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC3"
+  ],
+  "captureResponse": {
+    "offers.feature_matrix.post.response.data.capability": "data.capability"
+  },
+  "fieldEnums": {
+    "data.status": [
+      "LIVE",
+      "BETA",
+      "ROADMAP",
+      "USAGE_THIRD_PARTY",
+      "NOT_INCLUDED"
+    ]
+  },
+  "requestBody": {
+    "offer_key": "leadflow_core_qa",
+    "capability": "automated_dialer",
+    "status": "ROADMAP",
+    "owner_user_id": "{{cache:auth.login.response.data.user.id}}",
+    "note": "Planned for the next release; not sellable today."
+  },
+  "testCases": [
+    {
+      "name": "A capability is recorded with its status and named owner",
+      "coversCriterion": "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC3",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "offer_key": "leadflow_core_qa",
+        "capability": "automated_dialer",
+        "status": "ROADMAP",
+        "owner_user_id": "{{cache:auth.login.response.data.user.id}}",
+        "note": "Planned for the next release; not sellable today."
+      }
+    },
+    {
+      "name": "NEGATIVE: a status outside the five approved labels",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "offer_key": "leadflow_core_qa",
+        "capability": "automated_dialer",
+        "status": "basically_live",
+        "owner_user_id": "{{cache:auth.login.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "status must be one of LIVE, BETA, ROADMAP, USAGE_THIRD_PARTY, NOT_INCLUDED",
+      "when": "offer_key or capability is missing, the status is outside the five approved labels, or no owner_user_id can be determined - a capability claim nobody owns is one nobody is accountable for."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

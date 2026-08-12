@@ -1,0 +1,137 @@
+{
+  "taskId": "bd991d43-6c82-4842-a375-f62cb4a5439a",
+  "featureId": "e9190d5d-9813-40f7-b61a-d671fe916d74",
+  "epicId": "79cac1c4-3ab0-4f9d-9660-a880c054ac0c",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 11,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/workflows",
+    "POST /api/leadflow/workflows/:id/publish"
+  ],
+  "name": "POST /api/leadflow/workflows/:id/rollback - in-flight runs decided",
+  "description": "Restores a prior published version, and REFUSES a rollback that does not say what happens to running instances (bd991d43-6c82-4842-a375-f62cb4a5439a#AC3). A run mid-way through the version being withdrawn is in a state neither version describes, and the two honest options - finish under the definition it started with, or stop - are a judgement the caller must make. What is not acceptable is leaving it running against a definition that no longer exists, which is how a customer receives step 4 of a sequence that was rolled back for sending the wrong thing.\n\nfinish_under_old IS DELIBERATE, NOT LAZY: interrupting somebody mid-sequence is its own harm, and for a rollback prompted by a cosmetic problem it is the worse of the two.\n\nAN UNREACHABLE WORKFLOW SERVICE IS REPORTED, not assumed empty. The rollback still stands - the local version state is authoritative - but the response says the number of running instances is unknown rather than implying zero.\n\nThe change is audited with the actor, the restored version, the withdrawn version and the disposition (bd991d43-6c82-4842-a375-f62cb4a5439a#AC4). QA: measured live, including the refusal.",
+  "endpoint": "/api/leadflow/workflows/:id/rollback",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "bd991d43-6c82-4842-a375-f62cb4a5439a#AC3",
+    "bd991d43-6c82-4842-a375-f62cb4a5439a#AC4"
+  ],
+  "captureResponse": {
+    "workflows.rollback.response.data.restored_version": "data.restored_version"
+  },
+  "fieldEnums": {
+    "data.in_flight": [
+      "finish_under_old",
+      "stop"
+    ]
+  },
+  "requestBody": {
+    "in_flight": "finish_under_old"
+  },
+  "testCases": [
+    {
+      "name": "A rollback restores the version and states what happened to in-flight runs",
+      "coversCriterion": "bd991d43-6c82-4842-a375-f62cb4a5439a#AC3",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "in_flight": "finish_under_old"
+      },
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    },
+    {
+      "name": "A rollback with no in-flight disposition is REFUSED",
+      "coversCriterion": "bd991d43-6c82-4842-a375-f62cb4a5439a#AC3",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {},
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "in_flight must be either finish_under_old or stop - a rollback that does not say what happens to running instances orphans them",
+      "when": "the disposition is absent or not one of the two."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No workflow version with that id",
+      "when": "the version id does not exist."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "That version was never published, so there is nothing to roll back to it from",
+      "when": "the target version has no publish record."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

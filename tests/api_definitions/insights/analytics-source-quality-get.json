@@ -1,0 +1,76 @@
+{
+  "taskId": "b7eceb85-6dd9-4335-b950-ff0cf1de6822",
+  "featureId": "473fa734-e824-4bae-9830-3b209b38b9f5",
+  "epicId": "60b11414-8cf8-4248-bc8a-22d74d122968",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/analytics/source-quality - the sources nobody wants to see",
+  "description": "High-volume low-conversion sources, surfaced rather than filtered (b7eceb85-6dd9-4335-b950-ff0cf1de6822#AC2). filtered_out is returned as an explicit zero: every source appears in all_sources, and poor_quality is a ranking over that same set. SOP §20 forbids hiding poor-quality sources and the instinct runs the other way - a source with 400 leads and 2 meetings makes the dashboard look bad, so somebody adds a minimum-conversion filter, and that filter is how the channel keeps its budget.\n\nCAMPAIGN NUMBERS RECONCILE WITH THE SALES DASHBOARD (b7eceb85-6dd9-4335-b950-ff0cf1de6822#AC3) because both are computed from the same lead columns and their definitions live in the KPI registry, where a divergence between two tiles showing the same metric name is detected by the reconciliation report rather than discovered in a meeting.\n\nmin_volume is a caller parameter with a stated default rather than a hidden constant, so nobody has to guess what \"high volume\" meant. QA: measured live.",
+  "endpoint": "/api/leadflow/analytics/source-quality",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "b7eceb85-6dd9-4335-b950-ff0cf1de6822#AC2",
+    "b7eceb85-6dd9-4335-b950-ff0cf1de6822#AC3"
+  ],
+  "testCases": [
+    {
+      "name": "All sources are returned with the poor performers ranked by wasted volume",
+      "coversCriterion": "b7eceb85-6dd9-4335-b950-ff0cf1de6822#AC2",
+      "endpoint": "/api/leadflow/analytics/source-quality?days=90&min_volume=1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

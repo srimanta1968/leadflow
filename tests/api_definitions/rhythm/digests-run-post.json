@@ -1,0 +1,80 @@
+{
+  "taskId": "3070e925-615d-429e-8209-1568671c3502",
+  "featureId": "905a8bb9-e0ea-4d1c-b5e8-2a3c4c27740b",
+  "epicId": "285a56e9-aa8a-46e6-b4cd-0675b52053e5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/digests/run - generate what is due, once",
+  "description": "Generates every review due at the current America/Chicago local time (3070e925-615d-429e-8209-1568671c3502#AC2), and escalates outputs past their due time in the same pass (3070e925-615d-429e-8209-1568671c3502#AC3).\n\nONE DIGEST PER RHYTHM PER BUSINESS DAY, enforced by a unique index rather than by the caller. The generator runs on a five-minute timer and two ticks inside the same window would otherwise produce two huddle packs with different numbers - worse than one late pack, because now nobody knows which one the meeting is working from. MEASURED LIVE: the second run generated zero.\n\nWEEKENDS AND HOLIDAYS GENERATE NOTHING, BUT ESCALATION STILL RUNS. An 8:45 pack on a Sunday is noise, and noise is what teaches people to ignore the Monday one - but an output that came due on Friday afternoon was overdue all weekend, and holding its escalation until Monday loses the one signal that it slipped.\n\nA REAL BUG WAS FOUND AND FIXED HERE by the live run: five of the nine rhythms are daily and internal, so a whole-day period collided them all on migration 015's existing (cadence, audience, period_start, period_end) index. The period now ends at the scheduled instant, which separates them and is the truer statement - the 11:30 sweep covers the day up to 11:30.\n\nQA: measured live; five rhythms generated, second run zero, eight outputs escalated exactly once.",
+  "endpoint": "/api/leadflow/digests/run",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "3070e925-615d-429e-8209-1568671c3502#AC2",
+    "3070e925-615d-429e-8209-1568671c3502#AC3"
+  ],
+  "captureResponse": {
+    "digests.run.response.data.generated_count": "data.generated_count"
+  },
+  "requestBody": {},
+  "testCases": [
+    {
+      "name": "Every due review is generated, and a second run generates nothing",
+      "coversCriterion": "3070e925-615d-429e-8209-1568671c3502#AC2",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {}
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

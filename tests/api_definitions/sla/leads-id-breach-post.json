@@ -1,0 +1,147 @@
+{
+  "taskId": "12ce1f53-ba07-4f62-a2ac-a0b065100b28",
+  "featureId": "cb33fe98-4b8f-403e-8f75-bb94b4ae9c1c",
+  "epicId": "be026e56-403d-441b-9a82-4055aad09d66",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/leads/:id/breach - record a breach with its mandatory cause and customer recovery",
+  "description": "Records an SLA breach. BOTH THE REASON AND THE RECOVERY ARE MANDATORY (12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC2), enforced in the handler and again by a CHECK constraint so no writer can store one without the other.\n\nWHY BOTH. A breach with no cause is a number on a report that teaches nobody anything, and the report exists to change what happens next. A cause with no recovery records what went wrong internally without recording what was actually done FOR THE CUSTOMER, which is the half SOP §04 cares about - the customer does not benefit from an explanation they never receive.\n\nONE BREACH PER LEAD, enforced by a UNIQUE constraint. A lead does not breach the same 30-minute clock twice, and a second call returns the existing record with already_recorded true rather than creating a duplicate that would double-count every attainment figure.\n\nTHE SYSTEMIC FLAG SEPARATES COACHING FROM INCIDENT RESPONSE. A breach caused by a broken workflow is not a rep who needs a conversation, and marking it opens a management incident instead.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/leads/:id/breach",
+  "method": "POST",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC2"
+  ],
+  "testCases": [
+    {
+      "name": "Recording a breach against an unknown lead is refused",
+      "coversCriterion": "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC2",
+      "payload": {
+        "reason_code": "{{static:no_rep_available}}",
+        "recovery_action": "{{static:Called the customer at 10:05 and apologised, booked a survey}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a breach with no reason code is refused",
+      "coversCriterion": "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC2",
+      "payload": {
+        "recovery_action": "{{static:Called back and apologised}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a breach with no recovery action is refused",
+      "coversCriterion": "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC2",
+      "payload": {
+        "reason_code": "{{static:no_rep_available}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason_code is required to record a breach",
+      "when": "no cause is given. A breach with no cause cannot be aggregated, so the report cannot say what is going wrong."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "recovery_action is required to record a breach",
+      "when": "no customer recovery is recorded. SOP §04 requires an action taken for the customer, not merely an internal explanation."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No lead with that id",
+      "when": "the lead does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

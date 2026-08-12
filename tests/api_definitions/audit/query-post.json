@@ -1,0 +1,176 @@
+{
+  "name": "POST /api/leadflow/audit/query - filtered evidence search that always states whether the chain verified for the range",
+  "description": "The Advanced Query surface behind the Audit & History screen. Filters governed actions by actor, persona role, purpose, decision outcome, policy bundle version, consent epoch, date range, entity, case id, import run and trace id, and composes three upstreams: sdk-search for the query, sdk-audit for the chain proof, and sdk-trace when a trace id is supplied.\n\nEVERY RESULT STATES CHAIN VERIFICATION FOR ITS RANGE (a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC1), and that is the reason this endpoint exists rather than the browser calling sdk-search directly. An auditor reading a filtered list of governed actions is reasoning about what happened; if the tamper-evident chain is broken across that window, every row they are reading is unsafe to reason over. So `chain` is a REQUIRED part of every response, carrying verified true/false, entries_checked, and the break sequence and reason when there is one - never an optional field a caller can forget to read.\n\nA 409 FROM sdk-audit IS AN ANSWER, NOT AN OUTAGE, and this is the single most important thing in the composer. POST /api/audit/verify replies 200 when the proof holds and 409 when it does NOT - so the ordinary degrading read, which treats any non-404 error as unreachable, would report a genuinely BROKEN chain as `verified: null, available: false`. That reads on screen as \"we could not check\", which is exactly the wrong thing to tell somebody whose evidence has been tampered with. The gateway therefore separates three states: verified, provably broken, and unreachable.\n\nVERIFICATION IS RANGE-SCOPED, and deliberately does NOT reuse platform/audit/auditLog.ts verifyAuditChain(). That function verifies the whole pool AND OPENS AN INCIDENT when it fails, which is right for the nightly sweep and wrong here - an auditor running twenty exploratory queries against a known-broken window would open twenty incidents. This path passes from_seq/to_seq and is side-effect free.\n\nQUERY BY TRACE ID RETURNS THE CAUSATION CHAIN (a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC3). When `trace_id` is supplied the composer additionally reads sdk-trace GET /api/trace/:trace_id and returns the full cross-service span timeline alongside the matching audit rows, because \"what else happened as part of this\" is the question a trace id is used to ask. An unknown trace id is reported as an empty timeline with `trace_available` true, distinct from an unreachable tracer.\n\nA SEARCH THAT COULD NOT RUN RETURNS NO ROWS AND SAYS SO. sdk-search is not provisioned against a LeadFlow tenant in any environment available here, so `results` is empty and `upstream_available.search` is false. That is the branch the suite observes, and it is worth holding: it proves an unreachable index reports itself rather than rendering as \"no governed actions matched\", which on an audit screen is a false statement about the record.\n\nGOVERNED ON audit.delete_event? NO - deliberately. Reading the chain is OPEN by the navigation model's own reasoning: audit.delete_event is the only gated audit capability, and gating READS would defeat the point of an audit trail. This endpoint is `authenticate`-only and tenant-scoped by the composer, which is why no requiresRole is declared and the default suite identity can exercise it.\n\nTHE HAPPY PATH IS A 200 WITH EMPTY RESULTS AND AN UNVERIFIED CHAIN, and expectedStatus says so rather than describing an environment that does not exist. THE AUTH HEADER IS PINNED ON EVERY testCase, which is correct HERE and would be wrong on a roled endpoint. There is no requiresRole on this route - reading the chain is open by the navigation model own reasoning - so no token swap happens and MUST-71 does not apply. That also makes both 401 branches authorable rather than documentation-only: they can be expressed by omitting or corrupting the header without defeating anything. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/audit/query",
+  "method": "POST",
+  "taskId": "a7572b12-ebb1-49c2-864e-01e2bc04fa65",
+  "featureId": "ddd949b4-0c80-46d0-aca6-e2558eec6bfa",
+  "epicId": "00328fe3-4d27-4712-928a-2fa673523c1b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC1",
+    "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC3",
+    "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "decision_outcome": [
+      "permitted",
+      "denied",
+      "approval_required"
+    ],
+    "data.chain.state": [
+      "verified",
+      "broken",
+      "unknown"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A filtered query answers with rows and a chain verdict for the same range",
+      "coversCriterion": "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC1",
+      "payload": {
+        "from": "{{dynamic:pastdate-30d}}",
+        "to": "{{dynamic:pastdate}}",
+        "purpose": "{{static:lead_management}}",
+        "limit": 50
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "A trace id additionally returns the cross-service causation chain",
+      "coversCriterion": "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC3",
+      "payload": {
+        "trace_id": "{{var:absent_uuid}}",
+        "limit": 25
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "Filtering by decision outcome narrows to refusals",
+      "payload": {
+        "decision_outcome": "{{static:denied}}",
+        "limit": 25
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown decision outcome is rejected rather than silently ignored",
+      "coversCriterion": "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC1",
+      "payload": {
+        "decision_outcome": "{{static:maybe}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a range whose end precedes its start is refused",
+      "payload": {
+        "from": "{{dynamic:futuredate+10d}}",
+        "to": "{{dynamic:futuredate}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "payload": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "payload": {}
+    }
+  ],
+  "captureResponse": {
+    "audit.query.response.data.query_ref": "data.query_ref"
+  },
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "decision_outcome must be one of permitted, denied, approval_required",
+      "when": "an unrecognised outcome is supplied. Dropping it would return EVERY governed action to somebody who asked for the refusals, and an auditor reading that list as 'these were denied' would draw precisely the wrong conclusion."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "to must be at or after from",
+      "when": "the range is inverted. Silently swapping the bounds would answer a different question from the one asked, and the chain verdict would then describe a window the caller never named."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

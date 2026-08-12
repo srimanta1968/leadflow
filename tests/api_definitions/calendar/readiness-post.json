@@ -1,0 +1,82 @@
+{
+  "name": "POST /api/leadflow/calendar/readiness - Refresh a rep's booking readiness",
+  "description": "Re-reads one rep's calendar readiness from the scheduling service and records the MANUAL half of the checklist that no upstream can answer for us - working hours, PTO, buffers, minimum notice, daily maximum and timezone detection. 200 rather than 201: it refreshes an existing row per rep and creates nothing addressable. The GET on the same path reports the state and this one changes it; the pair is deliberate, because a screen that could only refresh would have to write before it could read. rep_user_id defaults to the CALLER when the body omits it, so a rep can refresh their own readiness without knowing their own id. Each check is stored separately because each fails for a different reason and is fixed by a different person, and may_receive_leads is the single verdict the routing engine consults - a rep failing any check must not be routed to, because a broken booking link turns a live enquiry into a dead one and nobody finds out. QA: depends on register and login for the bearer token.",
+  "endpoint": "/api/leadflow/calendar/readiness",
+  "method": "POST",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 32,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "working_hours_set": [
+      "true",
+      "false"
+    ],
+    "buffer_configured": [
+      "true",
+      "false"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Refresh a rep's readiness and set the manual flags",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "rep_user_id": "{{cache:auth.register.response.data.user.id}}",
+        "working_hours_set": true,
+        "buffer_configured": true,
+        "minimum_notice_set": true,
+        "daily_max_set": true
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "rep_user_id": "{{cache:auth.register.response.data.user.id}}"
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "payload": {
+        "rep_user_id": "{{cache:auth.register.response.data.user.id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "rep_user_id is blank AND the session carries no user id",
+      "reproducible": false,
+      "_whyNotReproducible": "Unreachable through this route as authored: `authenticate` runs first, so any request reaching the handler carries a session user id and the body value falls back to it. Documented because the guard is real in the handler, not because a request can trigger it."
+    }
+  ]
+}

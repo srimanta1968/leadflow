@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/intake/webhooks/:platform",
   "method": "POST",
   "taskId": "117d407a-1ec5-4da9-9f35-fd213e290554",
+  "featureId": "5f7276ee-977f-4de3-85de-85fabc22f8e2",
+  "epicId": "fdd26353-b251-4841-8bed-f9d4378d17be",
   "requiresAuth": false,
   "testability": "auto",
   "priority": 1,
@@ -30,38 +32,59 @@
     {
       "name": "Reject an UNSIGNED webhook",
       "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC3",
-      "pathParams": { "platform": "{{static:meta_lead_ads}}" },
+      "pathParams": {
+        "platform": "{{static:meta_lead_ads}}"
+      },
       "payload": {
         "sourceEventId": "{{dynamic:uuid}}",
         "signalKind": "lead",
-        "rawPayload": { "name": "Unsigned" }
+        "rawPayload": {
+          "name": "Unsigned"
+        }
       },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     },
     {
       "name": "Reject a WRONGLY-signed webhook",
       "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC3",
-      "pathParams": { "platform": "{{static:meta_lead_ads}}" },
+      "pathParams": {
+        "platform": "{{static:meta_lead_ads}}"
+      },
       "headers": {
         "x-signature": "{{static:0000000000000000000000000000000000000000000000000000000000000000}}"
       },
       "payload": {
         "sourceEventId": "{{dynamic:uuid}}",
         "signalKind": "lead",
-        "rawPayload": { "name": "Wrong sig" }
+        "rawPayload": {
+          "name": "Wrong sig"
+        }
       },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     },
     {
       "name": "Reject a platform with no configured secret rather than waving it through",
       "coversCriterion": "117d407a-1ec5-4da9-9f35-fd213e290554#AC3",
-      "pathParams": { "platform": "{{static:not_a_platform}}" },
-      "headers": { "x-signature": "{{static:abc123}}" },
-      "payload": { "sourceEventId": "{{dynamic:uuid}}", "rawPayload": {} },
+      "pathParams": {
+        "platform": "{{static:not_a_platform}}"
+      },
+      "headers": {
+        "x-signature": "{{static:abc123}}"
+      },
+      "payload": {
+        "sourceEventId": "{{dynamic:uuid}}",
+        "rawPayload": {}
+      },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

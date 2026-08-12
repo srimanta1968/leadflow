@@ -4,12 +4,19 @@
   "endpoint": "/api/leadflow/ai/coach/calls",
   "method": "POST",
   "taskId": "74a0891b-3892-4e93-aad4-450bfd776afa",
+  "featureId": "3b3d8b6b-4485-4e0b-8b9a-ffb42351f2cd",
+  "epicId": "34925c81-88e1-4115-8220-a1441a258108",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 3,
   "expectedStatus": 201,
-  "coversCriterion": ["74a0891b-3892-4e93-aad4-450bfd776afa#AC4"],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "coversCriterion": [
+    "74a0891b-3892-4e93-aad4-450bfd776afa#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "captureResponse": {
     "ai.coachCall.response.data.call.id": "data.call.id"
   },
@@ -17,7 +24,9 @@
     {
       "name": "Register a call with a recorded consent basis",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "externalCallId": "{{dynamic:text}}",
         "repEmail": "{{dynamic:email}}",
@@ -26,20 +35,31 @@
         "recordingConsentCapturedAt": "{{dynamic:pastdatetime}}"
       },
       "expectedStatus": 201,
-      "expectedResponse": { "success": true, "data": { "call": { "hasRecordingBasis": true } } }
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "call": {
+            "hasRecordingBasis": true
+          }
+        }
+      }
     },
     {
       "name": "Refuse a call with no recording consent basis",
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC4",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "externalCallId": "{{dynamic:text}}",
         "repEmail": "{{dynamic:email}}",
         "occurredAt": "{{dynamic:pastdatetime}}"
       },
       "expectedStatus": 422,
-      "expectedError": { "code": "RECORDING_CONSENT_MISSING" }
+      "expectedError": {
+        "code": "RECORDING_CONSENT_MISSING"
+      }
     },
     {
       "name": "Reject an unauthenticated registration",
@@ -53,7 +73,9 @@
         "recordingConsentCapturedAt": "{{dynamic:pastdatetime}}"
       },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

@@ -1,0 +1,74 @@
+{
+  "taskId": "4cc3f597-f6c8-4dc5-8044-096ce144e676",
+  "featureId": "36b8ab88-3c05-4528-b9bb-45f058859a33",
+  "epicId": "06998b3d-d057-490d-8cfb-962e43b525c6",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/failures/dlq - what is stuck, from both queues",
+  "description": "The dead-letter queue, merged from sdk-connectors and sdk-webhook, plus the local unresolved failures (4cc3f597-f6c8-4dc5-8044-096ce144e676#AC1). They are different queues for different failures - an inbound connector that could not deliver, and an outbound webhook that could not be delivered - and an operator asking \"what is stuck\" means both. Two screens means one of them goes unwatched.\n\nAN UNREACHABLE SOURCE IS NAMED, never silently omitted. An empty DLQ and a DLQ that could not be read look identical, and only one of them is good news - so unreachable_sources and a complete flag are returned alongside the items.\n\nTHE RUNBOOK IS RETURNED WITH THE QUEUE, so an operator reading a stuck item can see which fallback applies and who owns it without opening a second document. QA: measured live.",
+  "endpoint": "/api/leadflow/failures/dlq",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC1"
+  ],
+  "testCases": [
+    {
+      "name": "Stuck items are returned with the runbook and the reachability of each source",
+      "coversCriterion": "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

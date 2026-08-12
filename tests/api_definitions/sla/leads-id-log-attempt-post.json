@@ -1,0 +1,203 @@
+{
+  "taskId": "12ce1f53-ba07-4f62-a2ac-a0b065100b28",
+  "featureId": "cb33fe98-4b8f-403e-8f75-bb94b4ae9c1c",
+  "epicId": "be026e56-403d-441b-9a82-4055aad09d66",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/leads/:id/log-attempt - record a contact attempt, and refuse the ones that do not count",
+  "description": "Enforces the VALID HUMAN ATTEMPT definition from SOP §04: the rep reviewed the context, initiated a TRACKED call from the approved number or dialer, logged a reliable disposition and confirmed NEXT.\n\nA TASK CLICK OR A BULK EMAIL CANNOT SATISFY THE CLOCK (12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC1), and the refusal is TYPED so the rep learns which requirement was missing rather than being told \"invalid\". Without this the SLA measures ACTIVITY instead of CONTACT, and a queue can be cleared to 100% attainment by somebody who clicked twelve tasks and spoke to nobody. MEASURED LIVE: task_click returned 422 KIND_CANNOT_SATISFY, bulk_email returned 422, a tracked_call missing its disposition returned 422 NO_DISPOSITION, and a complete tracked call returned 201.\n\nTHE ORDER OF THE CHECKS IS PART OF THE CONTRACT. Kind is checked first, because telling a rep who sent a mass mailshot that they forgot a disposition would imply that adding one would have worked.\n\n422 RATHER THAN 400, and the attempt is STILL RECORDED. The request is well formed and the work did happen; what it cannot do is satisfy the clock. \"The rep did nothing\" and \"the rep did something that does not count\" are different facts, and coaching needs both - so the row is written either way with satisfies_sla false and the refusal reason stored beside it.\n\nTHE FIRST VALID ATTEMPT WINS. first_response_at is stamped with COALESCE, so a second call an hour later cannot rewrite the response time and turn a met SLA into a different number.\n\nA DATABASE CHECK BACKS THE RULE: an attempt row cannot carry satisfies_sla true without a tracked call reference, a disposition and a next action, so no writer can mint a satisfying attempt out of nothing. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/leads/:id/log-attempt",
+  "method": "POST",
+  "expectedStatus": 422,
+  "coversCriterion": [
+    "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC1"
+  ],
+  "fieldEnums": {
+    "kind": [
+      "tracked_call",
+      "manual_call",
+      "task_click",
+      "bulk_email",
+      "individual_email",
+      "sms",
+      "voicemail"
+    ],
+    "code": [
+      "KIND_CANNOT_SATISFY",
+      "NO_TRACKED_CALL",
+      "NO_DISPOSITION",
+      "NO_NEXT_ACTION",
+      "CONTEXT_NOT_REVIEWED"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A task click is recorded but refused as SLA evidence",
+      "coversCriterion": "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC1",
+      "payload": {
+        "kind": "{{static:task_click}}",
+        "context_reviewed": true
+      },
+      "expectedStatus": 422,
+      "expectedResponse": {
+        "success": false,
+        "code": "KIND_CANNOT_SATISFY"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "A bulk email is refused for the same reason",
+      "coversCriterion": "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC1",
+      "payload": {
+        "kind": "{{static:bulk_email}}",
+        "context_reviewed": true
+      },
+      "expectedStatus": 422,
+      "expectedResponse": {
+        "success": false,
+        "code": "KIND_CANNOT_SATISFY"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "A tracked call with no disposition is refused, naming the missing evidence",
+      "coversCriterion": "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC1",
+      "payload": {
+        "kind": "{{static:tracked_call}}",
+        "context_reviewed": true,
+        "tracked_call_ref": "{{static:CA-probe-1}}"
+      },
+      "expectedStatus": 422,
+      "expectedResponse": {
+        "success": false,
+        "code": "NO_DISPOSITION"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown attempt kind is refused",
+      "payload": {
+        "kind": "{{static:telepathy}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "kind must be one of tracked_call, manual_call, task_click, bulk_email, individual_email, sms, voicemail",
+      "when": "an unrecognised attempt kind is supplied. Accepting it would let a new spelling quietly become a category nothing in the report understands."
+    },
+    {
+      "status": 422,
+      "code": "KIND_CANNOT_SATISFY",
+      "message": "A task click does not satisfy the response SLA",
+      "when": "the attempt is a task click, a bulk email, an SMS or a voicemail. Recorded, but it does not stop the clock: activity is not contact."
+    },
+    {
+      "status": 422,
+      "code": "NO_TRACKED_CALL",
+      "message": "No tracked call reference",
+      "when": "a call attempt carries no dialer reference, so it cannot be verified."
+    },
+    {
+      "status": 422,
+      "code": "NO_DISPOSITION",
+      "message": "No disposition logged",
+      "when": "the outcome was not recorded, which is what makes the attempt auditable."
+    },
+    {
+      "status": 422,
+      "code": "NO_NEXT_ACTION",
+      "message": "No NEXT confirmed",
+      "when": "the rep left the record with no next action, which SOP §04 forbids."
+    },
+    {
+      "status": 422,
+      "code": "CONTEXT_NOT_REVIEWED",
+      "message": "The attempt does not record that the rep reviewed the context",
+      "when": "context_reviewed was not asserted."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

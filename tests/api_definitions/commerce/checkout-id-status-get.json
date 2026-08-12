@@ -1,0 +1,121 @@
+{
+  "taskId": "db21f0db-8754-4be1-b3db-d367fff9af12",
+  "featureId": "373c118f-8ae3-406d-8134-d66b402c63c3",
+  "epicId": "ef8a21ec-c1a9-4d26-ac59-e0fa28b41a3b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 12,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/checkout/send"
+  ],
+  "name": "GET /api/leadflow/checkout/:id/status - the assistance signal",
+  "description": "Reports a checkout's state, and flags STARTED-BUT-NOT-PAID as the highest priority signal on the screen (db21f0db-8754-4be1-b3db-d367fff9af12#AC4). Somebody reached for their card and something stopped them - a declined card, a confusing field, a second thought. It is the most recoverable moment in the whole funnel and the shortest-lived, which is why it outranks every other task rather than joining the queue.\n\nA FAILED CHECKOUT CARRIES THE SAME PRIORITY. From the buyer's side the experience is identical: they tried to pay and did not end up a customer.\n\nPENDING OR FAILED NEVER ADVANCES THE STAGE (db21f0db-8754-4be1-b3db-d367fff9af12#AC3). may_close_won is true only for a checkout the gateway confirmed as paid, and the rule is restated in the response because the screen that shows a started checkout is exactly where somebody is tempted to mark the deal won early.\n\nQA: reads the checkout created earlier in the chain from the cache. A freshly sent checkout is 'sent', so may_close_won is false and priority is normal - which is the AC3 assertion.",
+  "endpoint": "/api/leadflow/checkout/:id/status",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "db21f0db-8754-4be1-b3db-d367fff9af12#AC3",
+    "db21f0db-8754-4be1-b3db-d367fff9af12#AC4"
+  ],
+  "fieldEnums": {
+    "data.status": [
+      "sent",
+      "started",
+      "paid",
+      "failed",
+      "expired",
+      "cancelled"
+    ],
+    "data.priority": [
+      "highest",
+      "normal"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A sent-but-unpaid checkout does not permit Closed Won",
+      "coversCriterion": "db21f0db-8754-4be1-b3db-d367fff9af12#AC3",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:checkout.send.post.response.data.checkout_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no checkout with that id",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:checkout.send.post.response.data.checkout_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:checkout.send.post.response.data.checkout_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No checkout with that id",
+      "when": "the checkout id does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

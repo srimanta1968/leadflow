@@ -92,7 +92,7 @@ export async function verifyRecordingBasis(callId: string): Promise<ConsentVerif
   try {
     const result = await SdkGatewayClient.call<{ data?: { active?: boolean; revoked?: boolean } }>({
       sdk: 'sdk-consent',
-      path: `/api/consent/receipts/${encodeURIComponent(basisRef)}`,
+      path: `/api/consent/receipts?subject_ref=${encodeURIComponent(basisRef)}`,
       method: 'GET',
     });
 

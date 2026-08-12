@@ -1,0 +1,95 @@
+{
+  "name": "GET /api/users/register - The team register with its lifecycle states",
+  "description": "Returns every account with its derived state - pending, active or deactivated - together with who invited it, when it was opened and when it was closed. Proves criterion 4c12f924-87d1-4be1-b790-d94a936d58b3#AC4 from the read side: a deactivated colleague is still ON the register, with deactivated_at and deactivated_by recorded, which is what makes their past actions attributable rather than orphaned. Pass deactivated=true to include closed accounts; the default hides them because the list exists to be worked and archive rows would bury the pending invitations that are outstanding tasks. SEPARATE from GET /api/users, which every screen that must name a colleague already calls: widening that response with invitation stamps would push administrative data into the routing, coverage and ownership screens, and narrowing it later would break them. Three states rather than a boolean, because an invitation nobody has opened and an account closed after somebody left are the same is_active=false and completely different facts. local_credentials_permitted is stated by the API rather than guessed by the client, since whether an administrator may issue a password here is a deployment fact. QA: depends on register and login for the bearer token, and on invite so the register is non-empty.",
+  "endpoint": "/api/users/register",
+  "method": "GET",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "featureId": "c12362d4-3479-46e6-b243-47c04b68b61e",
+  "epicId": "224f72e3-9444-4923-96da-477e76aa9654",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 17,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "4c12f924-87d1-4be1-b790-d94a936d58b3#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/users/invite"
+  ],
+  "fieldEnums": {
+    "deactivated": [
+      "true",
+      "false"
+    ],
+    "state": [
+      "pending",
+      "active",
+      "deactivated"
+    ],
+    "role": [
+      "admin",
+      "manager",
+      "user",
+      "steward",
+      "privacy"
+    ]
+  },
+  "captureResponse": {
+    "users.register.response.data.total": "data.total"
+  },
+  "testCases": [
+    {
+      "name": "The working register, pending invitations first",
+      "coversCriterion": "4c12f924-87d1-4be1-b790-d94a936d58b3#AC4",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "deactivated": "false"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Closed accounts are still on the register when asked for",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "queryParams": {
+        "deactivated": "true"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

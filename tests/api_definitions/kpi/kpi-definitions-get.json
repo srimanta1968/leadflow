@@ -1,0 +1,75 @@
+{
+  "taskId": "44fa2588-4db3-48f4-a653-2c0a970f94fc",
+  "featureId": "722a8fca-8bcc-46b6-8a50-0cf286fb9e17",
+  "epicId": "285a56e9-aa8a-46e6-b4cd-0675b52053e5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/kpi-definitions"
+  ],
+  "name": "GET /api/leadflow/kpi-definitions - the registry",
+  "description": "Every current metric definition (44fa2588-4db3-48f4-a653-2c0a970f94fc#AC1). This is the list a dashboard tile must reference to ship - the read side of the enforcement rule, so a builder can see what already exists before adding a metric that means almost the same thing under a different name, which is how two dashboards start disagreeing in the first place. QA: reads the definition registered earlier in the chain.",
+  "endpoint": "/api/leadflow/kpi-definitions",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC1"
+  ],
+  "testCases": [
+    {
+      "name": "The current definitions are returned with their required fields",
+      "coversCriterion": "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

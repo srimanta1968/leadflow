@@ -1,0 +1,106 @@
+{
+  "taskId": "bd991d43-6c82-4842-a375-f62cb4a5439a",
+  "featureId": "e9190d5d-9813-40f7-b61a-d671fe916d74",
+  "epicId": "79cac1c4-3ab0-4f9d-9660-a880c054ac0c",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 12,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/workflows"
+  ],
+  "name": "GET /api/leadflow/workflows/:key/versions - the version history",
+  "description": "Every version of a workflow with its dry run, approval, publish and rollback stamps (bd991d43-6c82-4842-a375-f62cb4a5439a#AC4). The history is what an auditor reads: \"published without a dry run\" and \"published without an approval\" are different failures with different owners, and keeping the two references as separate columns is what lets the record say which happened rather than only that something did.\n\nThe currently live version is identified explicitly, so nobody has to work it out from the timestamps. QA: reads the workflow created earlier in the chain.",
+  "endpoint": "/api/leadflow/workflows/:key/versions",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "bd991d43-6c82-4842-a375-f62cb4a5439a#AC4"
+  ],
+  "testCases": [
+    {
+      "name": "Versions are returned newest first with the live one identified",
+      "coversCriterion": "bd991d43-6c82-4842-a375-f62cb4a5439a#AC4",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "key": "{{cache:workflows.post.response.data.workflow_key}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a workflow key with no versions",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "key": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "key": "{{cache:workflows.post.response.data.workflow_key}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "key": "{{cache:workflows.post.response.data.workflow_key}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No versions exist for that workflow",
+      "when": "no version has ever been created under that key."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

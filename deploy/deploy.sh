@@ -54,6 +54,27 @@ compose() { docker compose -p "$PROJECT" -f "$COMPOSE_FILE" "$@"; }
 preflight() {
   [ -f "$ENV_FILE" ] || c_die "missing $ENV_FILE — copy leadflow.env.example and fill it in"
 
+  # REFUSE TO SHIP A PLACEHOLDER. Every variable in env.ts has a fallback and
+  # nothing throws, so an unset JWT_SECRET silently becomes 'your-secret-key'
+  # and an unset DB_PASSWORD becomes 'postgres' — the process boots, serves
+  # traffic and passes its health check with both. Nothing downstream will ever
+  # report this, so it has to be caught here.
+  local unset_vars
+  unset_vars="$(grep -E '=CHANGE_ME[[:space:]]*$' "$ENV_FILE" | cut -d= -f1 | paste -sd' ' -)"
+  [ -z "$unset_vars" ] || c_die "still at CHANGE_ME in $ENV_FILE: $unset_vars"
+
+  # The same defaults, spelled out — someone may replace CHANGE_ME with the
+  # very value the fallback would have used.
+  if grep -qE '^JWT_SECRET=your-secret-key[[:space:]]*$' "$ENV_FILE"; then
+    c_die "JWT_SECRET is the development default — generate one: openssl rand -base64 48"
+  fi
+  if grep -qE '^(DB_PASSWORD|LEADFLOW_DB_PASSWORD)=postgres[[:space:]]*$' "$ENV_FILE"; then
+    c_warn "database password is 'postgres' — acceptable only if that is genuinely the shared server's password"
+  fi
+  grep -qE '^NODE_ENV=production[[:space:]]*$' "$ENV_FILE"     || c_die "NODE_ENV is not production — devSeed would run and seed known credentials"
+
+  c_ok "environment validated"
+
   docker network inspect "$SHARED_NETWORK" >/dev/null 2>&1 \
     || c_die "network $SHARED_NETWORK not found — is ProjexCloud running?"
 

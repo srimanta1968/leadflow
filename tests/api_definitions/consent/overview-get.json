@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/consent/overview",
   "method": "GET",
   "taskId": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7",
+  "featureId": "ddeaf926-beaf-4e2f-95f8-c4b0c317c8a4",
+  "epicId": "f7ad7bf2-adea-4b22-b822-510caca24406",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "requiresRole": [

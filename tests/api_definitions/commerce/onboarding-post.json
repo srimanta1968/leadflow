@@ -1,0 +1,132 @@
+{
+  "taskId": "45f96ede-27d5-4c38-a4e1-a3e40df7fd56",
+  "featureId": "262a5dbd-03c5-42a8-ba53-8bcb1a671657",
+  "epicId": "68d8857d-2a0f-4152-a255-7a3d5bfe121a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 12,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/payments/verify"
+  ],
+  "name": "POST /api/leadflow/onboarding - start the 24-hour clock",
+  "description": "Opens the onboarding handoff for a paid licence and STARTS THE 24-HOUR CLOCK FROM THE VERIFICATION, not from now (45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC1). A handoff created three days after the payment must already be three days overdue; stamping it with the creation time would let a late handoff look fresh, which is exactly how the alert gets quietly defeated.\n\nREFUSED WITHOUT A GATEWAY-CONFIRMED PAYMENT (409). A handoff built on a checkout intent puts CS onto a customer who has not paid, and the first thing they do is welcome them.\n\nThe closed-won saga writes this row itself; the endpoint exists because the saga's sdk-handoff call can fail while the local clock must still start. A paid licence with no clock is invisible to the alert that exists to find it - the failure is silent by construction, so the fallback is not optional.\n\nUPSERT ON (tenant, subject), so a retry or a saga resume refreshes the charge reference without restarting the clock. A retry that reset it would hide precisely the overdue handoff being looked for.\n\nQA: depends on the gateway-confirmed charge posted earlier in the chain, read from the cache.",
+  "endpoint": "/api/leadflow/onboarding",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC1"
+  ],
+  "captureResponse": {
+    "onboarding.post.response.data.handoff_id": "data.handoff_id",
+    "onboarding.post.response.data.id": "data.handoff_id"
+  },
+  "requestBody": {
+    "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+    "charge_ref": "{{cache:payments.verify.post.response.data.charge_ref}}"
+  },
+  "testCases": [
+    {
+      "name": "A gateway-confirmed charge opens a handoff whose clock runs from the payment",
+      "coversCriterion": "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC1",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+        "charge_ref": "{{cache:payments.verify.post.response.data.charge_ref}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a charge with no gateway confirmation",
+      "expectedStatus": 409,
+      "expectedResponse": {
+        "success": false,
+        "code": "CONFLICT"
+      },
+      "testType": "negative",
+      "coversErrorCase": "409|CONFLICT",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+        "charge_ref": "ch_never_confirmed"
+      }
+    },
+    {
+      "name": "NEGATIVE: charge_ref omitted",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:x"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref and charge_ref are both required",
+      "when": "either field is absent or empty."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "That charge has no gateway-confirmed payment, so no onboarding handoff may start. A handoff built on an intent puts CS onto a customer who has not paid.",
+      "when": "the charge has no verification, or one recorded as intent_only or failed."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

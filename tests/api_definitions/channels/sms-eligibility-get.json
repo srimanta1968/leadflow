@@ -1,0 +1,157 @@
+{
+  "taskId": "2a99235e-71ce-430b-921e-8a52823c6cdf",
+  "featureId": "0bba9cbe-4c1d-4cc7-99c8-d16cb86a455c",
+  "epicId": "6691a598-597d-42a8-82fc-ddec2442b572",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/channels/sms/eligibility - may we text this person, and if not, why?",
+  "description": "The SOP §18 eligibility gate, asked BEFORE composing (2a99235e-71ce-430b-921e-8a52823c6cdf#AC1). A rep told after writing a message that it cannot be sent has wasted the effort and learned nothing, so the reason comes back here for the composer to show up front.\n\nA PHONE NUMBER ALONE NEVER GRANTS ELIGIBILITY. Only three bases count - express written consent, an existing relationship, or an inbound request - and possessing a mobile number is not one of them. VERIFIED LIVE: a contact with no recorded basis returned eligible false, reason NO_ELIGIBILITY_BASIS, with the explanation \"Holding their phone number is not permission to text them\".\n\nTHE CHECK ORDER IS THE ORDER A REP NEEDS TO HEAR IT (2a99235e-71ce-430b-921e-8a52823c6cdf#AC2, 2a99235e-71ce-430b-921e-8a52823c6cdf#AC3). Permission first, because no amount of waiting fixes an absent basis; then suppression; then quiet hours, the daily cap and the dedup window, which resolve on their own. Telling somebody \"quiet hours\" when they never had consent would send them back at 09:00 to be refused again for the real reason.\n\nQUIET HOURS ARE EVALUATED IN THE RECIPIENT LOCAL TIME (2a99235e-71ce-430b-921e-8a52823c6cdf#AC3), from the zone passed with the request. Evaluating them in ours is the bug that texts somebody at 03:00 because it is mid-morning at head office. An unknown zone falls back to the business calendar rather than to \"always allowed\".\n\nNEVER SILENTLY MARK A TEXT AS SENT (2a99235e-71ce-430b-921e-8a52823c6cdf#AC4). Every ineligible verdict carries a fallback naming the channel and the action - send the approved email and create a call task - and the response states that recording an SMS as sent when none went is forbidden. The failure this prevents is a sequence quietly skipping the SMS step while the timeline shows \"sent\".\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/channels/sms/eligibility",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "2a99235e-71ce-430b-921e-8a52823c6cdf#AC1",
+    "2a99235e-71ce-430b-921e-8a52823c6cdf#AC3",
+    "2a99235e-71ce-430b-921e-8a52823c6cdf#AC4"
+  ],
+  "fieldEnums": {
+    "data.basis": [
+      "express_written_consent",
+      "existing_relationship",
+      "inbound_request"
+    ],
+    "data.reason": [
+      "NO_ELIGIBILITY_BASIS",
+      "ELIGIBILITY_EXPIRED",
+      "ELIGIBILITY_REVOKED",
+      "SUPPRESSED",
+      "QUIET_HOURS",
+      "DAILY_CAP_REACHED",
+      "DEDUP_WINDOW"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A contact with no recorded basis is ineligible, and the reason names why",
+      "coversCriterion": "2a99235e-71ce-430b-921e-8a52823c6cdf#AC1",
+      "queryParams": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "purpose": "inspection_estimate"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "The verdict carries a fallback so no SMS is silently recorded as sent",
+      "coversCriterion": "2a99235e-71ce-430b-921e-8a52823c6cdf#AC4",
+      "queryParams": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "purpose": "inspection_estimate",
+        "timezone": "America/Chicago"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no subject_ref, so there is nobody to judge",
+      "queryParams": {
+        "purpose": "inspection_estimate"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no purpose, so the message cannot be consent-checked",
+      "queryParams": {
+        "subject_ref": "{{var:absent_uuid}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "when": "no contact is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "purpose is required - an SMS with no stated purpose cannot be consent-checked",
+      "when": "no purpose is given. Consent is granted per purpose, so a message without one cannot be matched against anything."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -90,7 +90,7 @@ export async function registerDefinition(input: {
   if (SdkGatewayClient.isConfigured()) {
     try {
       await SdkGatewayClient.call({
-        sdk: 'sdk-audit', path: '/api/audit/events', method: 'POST',
+        sdk: 'sdk-audit', path: '/api/audit/append', method: 'POST',
         idempotencyKey: `kpi-def:${rows[0].kpi_id}`,
         body: {
           tenant_id: config.projexCloud.tenantId,

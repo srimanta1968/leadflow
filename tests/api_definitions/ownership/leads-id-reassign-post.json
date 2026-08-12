@@ -1,0 +1,160 @@
+{
+  "taskId": "b736b718-a31c-4ac3-a9ef-1a65613dcff5",
+  "featureId": "2a107414-e7a7-4d1f-9d7f-a04fc0328379",
+  "epicId": "2f860885-b8ac-4db6-ba54-62cfa4be5772",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/leads/:id/reassign - manager one-click reassign, or backup takeover",
+  "description": "Moves a lead to a new owner. Serves three callers: a manager reassigning from an alert, a backup taking over, and the T+5 acceptance sweep.\n\nTHE RESPONSE CLOCK RUNS FROM WHEN THE LEAD ARRIVED, not from when its current owner got it. Every handover moves assigned_at and leaves source_timestamp and sla_due_at exactly where they were. That is enforced in three places on purpose: a BEFORE UPDATE trigger in migration 024 RAISES if source_timestamp changes, so an offending UPDATE fails whoever wrote it and whichever path it came through; no statement in ownershipService writes that column; and every handover records the clock it saw into leadflow_ownership_event, which makes the invariant checkable after the fact rather than only assertable at the time. The natural implementation breaks this by accident - reassign sets assigned_at = now(), somebody later recomputes sla_due_at from assigned_at to keep it consistent, and a rep who takes over a breaching lead inherits a fresh clock while the breach vanishes from the report. A lead reassigned three times at T+30 is still a T+30 lead (b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC1).\n\nTHE CAPACITY FREEZE (b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC4) bites only when ALL THREE hold: the work is P1, the lead is past T+25, and the target already holds 15 or more open records. Freezing earlier would block ordinary assignment; freezing on load alone would block the manager one-click reassign in the exact situation it exists for, which is a lead about to breach. When it bites the response is 409 with the rep current load named, and a capacity_frozen event is recorded - a freeze nobody can see is a freeze that looks like a bug.\n\nMEASURED FROM THE SOURCE TIMESTAMP, not from assignment. Measuring the freeze window from the latest handover would reset it every time somebody passed the lead on, which is the exact moment it is supposed to start mattering.\n\nOWNERSHIP DISPUTES DO NOT DELAY CONTACT. SOP §02 says the manager assigns one primary owner immediately and compensation is resolved separately; this endpoint therefore does NOT require the caller to be the current owner, because requiring it would make the one-click reassign impossible for the person it exists for.\n\nTHE HAPPY PATH IS 404: no environment here seeds an open lead to move. The validation and capacity branches are exercised. WHY `reason` CARRIES NO fieldEnums. The review flags it as enum-backed; it is not. This reason is FREE PROSE written by the person taking the action, and it is required precisely because a code cannot carry what a code cannot carry - a steward confirming a bought phone number, a rep declining a lead, or somebody ending a decision authority is explaining a judgement, and the explanation is the only part a later reader can assess. Offering a picklist would produce the same six sentences forever and lose the one case that mattered. Documented here rather than satisfied with an invented vocabulary, because a false enum in the API docs would tell QA to expect values the handler never constrains.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/leads/:id/reassign",
+  "method": "POST",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC1",
+    "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC4"
+  ],
+  "fieldEnums": {
+    "priority": [
+      "P1",
+      "P2",
+      "P3"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Reassigning an unknown lead reports that nothing moved",
+      "coversCriterion": "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC1",
+      "payload": {
+        "to_user_id": "{{cache:auth.login.response.data.user.id}}",
+        "reason": "{{static:Primary is on leave, moving to the covering rep}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a reassign with no target owner is refused",
+      "payload": {
+        "reason": "{{static:Moving this on}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a reassign with no reason is refused",
+      "coversCriterion": "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC1",
+      "payload": {
+        "to_user_id": "{{cache:auth.login.response.data.user.id}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "to_user_id is required",
+      "when": "no target owner is named. A reassign with nowhere to go would clear the owner and create an orphan."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason is required to reassign a lead",
+      "when": "no reason is given. Ownership changes are the first thing read when a lead is missed, and an unexplained one cannot be assessed."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No open lead with that id could be reassigned",
+      "when": "the lead does not exist or is already closed. Deliberately not a 200: a caller reading 200 as moved would leave a manager believing they had rescued a breaching lead."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "Capacity freeze: this rep already holds too much open work for a P1 past T+25",
+      "when": "all three freeze conditions hold. 409 rather than 403: the caller is permitted to reassign, the TARGET is not in a state to receive it, and the remedy is a different owner rather than a different permission."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

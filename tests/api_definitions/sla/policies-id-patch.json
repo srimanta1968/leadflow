@@ -4,6 +4,8 @@
   "endpoint": "/api/sla/policies/:id",
   "method": "PATCH",
   "taskId": "9857c559-f963-4e5f-ac05-00d8ca036bba",
+  "featureId": "fb874462-082a-4567-a9f6-72ac0769796d",
+  "epicId": "8f1ff867-089c-40e7-b889-0fd4b06ac1f0",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "testability": "auto",
@@ -12,7 +14,8 @@
   "dependsOn": [
     "POST /api/auth/register",
     "POST /api/auth/login",
-    "POST /api/sla/policies"
+    "POST /api/sla/policies",
+    "GET /api/sla/policies"
   ],
   "fieldEnums": {
     "source_channel": [
@@ -59,6 +62,9 @@
             "is_active": true
           }
         }
+      },
+      "params": {
+        "id": "{{cache:sla.policies.list.response.data.id}}"
       }
     },
     {
@@ -73,6 +79,9 @@
       "expectedStatus": 400,
       "expectedError": {
         "code": "VALIDATION_ERROR"
+      },
+      "params": {
+        "id": "{{cache:sla.policies.list.response.data.id}}"
       }
     },
     {
@@ -86,6 +95,9 @@
       "expectedStatus": 401,
       "expectedError": {
         "code": "UNAUTHENTICATED"
+      },
+      "params": {
+        "id": "{{cache:sla.policies.list.response.data.id}}"
       }
     }
   ],

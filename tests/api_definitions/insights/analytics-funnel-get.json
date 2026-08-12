@@ -1,0 +1,76 @@
+{
+  "taskId": "51fff16e-dedb-4033-9d19-afebdccd41c2",
+  "featureId": "edd3d895-d96c-42b2-8a9a-ef91af956a0b",
+  "epicId": "285a56e9-aa8a-46e6-b4cd-0675b52053e5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/analytics/funnel - rates by source, nothing hidden",
+  "description": "Contact, booking, show and win rates by source, with pipeline health and onboarding attainment.\n\nPOOR SOURCES ARE SURFACED, NEVER FILTERED (51fff16e-dedb-4033-9d19-afebdccd41c2#AC3). SOP §20 says so in as many words, and the temptation runs the other way: a source with 400 leads and 2 meetings makes the dashboard look bad, and the natural instinct is a minimum-conversion filter that quietly hides it. That filter is exactly how a bad channel keeps getting budget. So the query has no HAVING clause on conversion and every source is returned; poor_quality is a RANKING over the same set, not a subset that replaces it.\n\nRANKED BY WASTED VOLUME rather than by conversion percentage. A source with three leads and no wins has a 0% rate and costs nothing; one with four hundred leads and two wins has a 0.5% rate and is where the money is going - sorting by rate alone puts the harmless one first.\n\nONBOARDING ATTAINMENT IS MEASURED AGAINST THE ONE-BUSINESS-DAY STANDARD (51fff16e-dedb-4033-9d19-afebdccd41c2#AC4), not against \"eventually\": a handoff accepted in six days met the goal on any measure that only asks whether it happened.\n\nThe two hard pipeline targets - zero unowned and zero active-without-NEXT - are reported as raw counts rather than percentages, because 99.4% owned sounds like success and is forty leads nobody is working. QA: measured live over 90 days across seven real sources.",
+  "endpoint": "/api/leadflow/analytics/funnel",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "51fff16e-dedb-4033-9d19-afebdccd41c2#AC3",
+    "51fff16e-dedb-4033-9d19-afebdccd41c2#AC4"
+  ],
+  "testCases": [
+    {
+      "name": "Every source is returned, with poor performers ranked rather than removed",
+      "coversCriterion": "51fff16e-dedb-4033-9d19-afebdccd41c2#AC3",
+      "endpoint": "/api/leadflow/analytics/funnel?days=90",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

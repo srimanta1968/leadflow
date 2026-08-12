@@ -1,0 +1,143 @@
+{
+  "taskId": "45f96ede-27d5-4c38-a4e1-a3e40df7fd56",
+  "featureId": "262a5dbd-03c5-42a8-ba53-8bcb1a671657",
+  "epicId": "68d8857d-2a0f-4152-a255-7a3d5bfe121a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 13,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/onboarding"
+  ],
+  "name": "POST /api/leadflow/onboarding/:id/accept - acceptance is not completion",
+  "description": "CS takes the customer. ACCEPTANCE AND A BOOKED KICKOFF ARE SEPARATE FACTS (45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC2), and closed_won_terminal is their conjunction rather than a flag anybody sets. An accepted handoff with no meeting is somebody saying \"yes, mine\" and then nothing happening, which from the customer's side is identical to nobody accepting at all - and a single acceptance flag would let it count as done.\n\nawaiting[] NAMES WHAT IS STILL OUTSTANDING, so the queue that shows an accepted-but-unbooked handoff says kickoff_booked rather than leaving somebody to work out why the record has not cleared.\n\nCLOSED WON STAYS NON-TERMINAL until both land, which is what keeps the record in the pending list and inside the 24-hour alert. A record that goes quiet the moment payment clears is the failure SOP §50 names.\n\naccepted_at uses COALESCE so a second acceptance does not overwrite the first - who took it and when is a fact about the past, and a re-accept is usually somebody adding the kickoff time they did not have the first time.\n\nQA: accepts and books in one call, so the terminal branch is the one exercised; the handoff id is read from the cache.",
+  "endpoint": "/api/leadflow/onboarding/:id/accept",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC2"
+  ],
+  "captureResponse": {
+    "onboarding.accept.response.data.handoff_id": "data.handoff_id"
+  },
+  "requestBody": {
+    "kickoff_at": "2026-08-14T15:00:00Z"
+  },
+  "testCases": [
+    {
+      "name": "Accepting with a booked kickoff makes Closed Won terminal",
+      "coversCriterion": "45f96ede-27d5-4c38-a4e1-a3e40df7fd56#AC2",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "kickoff_at": "2026-08-14T15:00:00Z"
+      },
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no handoff with that id",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "kickoff_at": "2026-08-14T15:00:00Z"
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unparseable kickoff date",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "kickoff_at": "next tuesday sometime"
+      },
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "kickoff_at must be a valid date when supplied",
+      "when": "kickoff_at is present but does not parse. Accepting without a kickoff is legitimate and leaves Closed Won non-terminal; accepting with a date nobody can read is not."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No onboarding handoff with that id",
+      "when": "the handoff id does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

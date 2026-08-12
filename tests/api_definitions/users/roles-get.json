@@ -1,0 +1,63 @@
+{
+  "name": "GET /api/users/roles - What each assignable role actually grants",
+  "description": "Returns the five assignable users.role values, each with the SOP §28 actors it bridges to and the permissions those actors hold unaided or behind approval. Proves criterion 4c12f924-87d1-4be1-b790-d94a936d58b3#AC2, the role picker states what each role grants in SOP terms rather than just its local name - 'steward' tells an operator nothing and 'can promote a source record and review identity merges' tells them everything. Everything in the response is DERIVED at request time from the local role bridge in platform/policy/governed.ts and the role definitions in config/roles.ts; nothing is a second written-down copy, because a copy is a permission model that agrees with the real one until somebody edits one, and this would be the copy an administrator READS while the other is the one that RUNS. Behind authenticate but NOT role-gated: what a role means is reference material, and hiding it from an operator who has just been told a screen is Locked leaves them with a refusal and no explanation. QA: depends on register and login for the bearer token.",
+  "endpoint": "/api/users/roles",
+  "method": "GET",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "featureId": "c12362d4-3479-46e6-b243-47c04b68b61e",
+  "epicId": "224f72e3-9444-4923-96da-477e76aa9654",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 14,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "4c12f924-87d1-4be1-b790-d94a936d58b3#AC2"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "captureResponse": {
+    "users.roles.response.data.total": "data.total"
+  },
+  "testCases": [
+    {
+      "name": "Every assignable role, with the SOP actors it speaks for",
+      "coversCriterion": "4c12f924-87d1-4be1-b790-d94a936d58b3#AC2",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "total": 5
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

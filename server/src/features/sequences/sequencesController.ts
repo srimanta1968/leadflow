@@ -10,10 +10,25 @@ import {
 } from './cadence';
 import { applyStop, tickAll } from './sequenceExecutor';
 import { pollInboundSignals } from './inboundSignals';
+import { governed, type GovernedRequest } from '../../platform/policy/governed';
+import { PERMISSIONS } from '../../config/roles';
+import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
 
 /** Cadences, the executor, reactive stops and nurture. SOP §08, §33, §47. */
 export const sequenceRoutes: Router = Router();
 sequenceRoutes.use(authenticate);
+
+/**
+ * Whether a key names a sequence this deployment actually runs.
+ *
+ * DERIVED FROM THE CADENCE CONFIG, never a hand-kept list: the active cadence
+ * plus every nurture track is exactly the set the executor knows how to tick,
+ * so a key outside it is a 404 rather than a pause that silently affects
+ * nothing and reports success.
+ */
+function isKnownSequenceKey(key: string): boolean {
+  return key === 'active_14_day' || NURTURE_TRACKS.some((track) => track.segment === key);
+}
 
 /**
  * GET /api/leadflow/sequences — the cadence, as configuration.
@@ -72,6 +87,13 @@ sequenceRoutes.post(
         steps_suppressed: result.suppressed,
         steps_dispatched: result.dispatched,
         outcomes: result.outcomes,
+        /* SOP §21: the global pause halts all automated sends within one tick.
+           Surfaced rather than left implicit — "0 dispatched" during an incident
+           and "0 dispatched because nothing was due" are the same number and
+           opposite facts, and the operator who threw the switch needs to see it
+           took hold. */
+        halted: result.halted === true,
+        halt_reason: result.haltReason ?? null,
         note: 'A claimed step is not necessarily a sent one. dispatched reports what the provider actually accepted, because a claimed step whose send failed must not look like a message the prospect received.',
       },
     });
@@ -146,6 +168,109 @@ sequenceRoutes.post(
       },
     });
   })
+);
+
+/**
+ * POST /api/leadflow/sequences/:key/pause — the loop breaker.
+ *
+ * STOPS EVERY QUEUED STEP ACROSS EVERY ENROLMENT ON ONE SEQUENCE, in one act.
+ * `/enrollments/:id/stop` handles one contact who asked us to stop; this handles
+ * the opposite emergency — the automation itself is misbehaving, a duplicate-send
+ * loop is running, and stopping it one enrolment at a time is not a control.
+ *
+ * WHY IT EXISTS AS A ROUTE AT ALL: the Sequences screen has shipped a
+ * "pause_sequence" control since 7dcab57 and there was no endpoint behind it, so
+ * the one button whose entire purpose is to stop an incident answered 404. An
+ * audit of route-versus-definition coverage is what surfaced it; nothing failed,
+ * because nothing tested it.
+ *
+ * PAUSED, NOT STOPPED. `status = 'paused'` leaves the enrolment resumable, which
+ * is right for an incident: the sequence is suspected, not condemned. But the
+ * queued steps are CLAIMED as cancelled anyway — a tick already in flight must
+ * not send one while a human is deciding, and a claim is the only thing the
+ * executor honours.
+ */
+sequenceRoutes.post(
+  '/:key/pause',
+  // asyncHandler WRAPS governed, exactly as every other governed route here
+  // does. Without it a thrown AppError escapes as an unhandled rejection: the
+  // happy path answered 200 and every refusal took the process down, which is
+  // the worst possible split because only the failing cases are affected.
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.AUTOMATION_PUBLISH,
+      event: AUDIT_EVENTS.SEQUENCE_PAUSED,
+      purpose: 'service_operation',
+      resourceType: 'sequence',
+      resourceId: (req) => String((req as { params?: { key?: string } }).params?.key ?? ''),
+      metadata: (req) => ({ reason: (req.body as { reason?: string })?.reason ?? null }),
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const key = String((req as { params?: { key?: string } }).params?.key ?? '');
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+
+      if (reason === '') {
+        // REQUIRED. A global pause is read later by whoever asks why the
+        // cadence stopped sending, and "somebody paused it" is not an answer.
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'reason is required — a paused sequence is an incident record, and one with no reason cannot be reviewed'
+        );
+      }
+
+      if (!isKnownSequenceKey(key)) {
+        throw new AppError(404, ErrorCodes.NOT_FOUND, `No sequence is configured under the key '${key}'`);
+      }
+
+      const stopReason = `sequence_paused: ${reason}`;
+      const paused = await dataService.query<{ enrollment_id: string; next_step: number }>(
+        `UPDATE leadflow_sequence_enrollment
+            SET status = 'paused', stop_reason = $3
+          WHERE tenant_id = $1 AND sequence_key = $2 AND status = 'active'
+          RETURNING enrollment_id, next_step`,
+        [config.projexCloud.tenantId, key, stopReason]
+      );
+
+      /*
+       * CLAIM THE REMAINING STEPS, exactly as applyStop does. Setting the status
+       * alone would leave a tick that is already mid-flight free to send the
+       * step it had picked up, which is the send this control exists to prevent.
+       */
+      let cancelled = 0;
+      for (const enrollment of paused) {
+        for (const step of ACTIVE_CADENCE) {
+          if (step.step < enrollment.next_step) continue;
+          const claimed = await dataService.query<{ execution_id: string }>(
+            `INSERT INTO leadflow_sequence_execution
+               (tenant_id, enrollment_id, step_number, channel, dispatched, skipped_reason)
+             VALUES ($1,$2,$3,$4,FALSE,$5)
+             ON CONFLICT (enrollment_id, step_number) DO NOTHING
+             RETURNING execution_id`,
+            [config.projexCloud.tenantId, enrollment.enrollment_id, step.step, step.channels.join(','), stopReason]
+          );
+          if (claimed.length) cancelled += 1;
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          sequence_key: key,
+          // The two fields the Sequences screen reads. Named exactly as its
+          // contract has them, because a control that reports a pause it cannot
+          // confirm is worse than one that fails loudly.
+          paused: true,
+          queued_steps_cancelled: cancelled,
+          enrollments_paused: paused.length,
+          reason,
+          note:
+            'Enrolments are PAUSED rather than stopped, so they can be resumed once the cause is understood. Their queued steps are claimed as cancelled, so a tick already in flight cannot send one in the meantime.',
+        },
+      });
+    }
+  ))
 );
 
 /** GET /api/leadflow/sequences/:key/performance — per-step rates. */

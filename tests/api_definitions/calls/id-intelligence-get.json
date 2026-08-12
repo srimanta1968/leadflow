@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/calls/:id/intelligence",
   "method": "GET",
   "taskId": "223d7848-77ef-4275-8aff-806d345af646",
+  "featureId": "fa9294d0-e873-4fa2-8319-3b2280549e14",
+  "epicId": "34925c81-88e1-4115-8220-a1441a258108",
   "requiresAuth": true,
   "requiresRole": [
     "admin"

@@ -1,0 +1,123 @@
+{
+  "taskId": "b736b718-a31c-4ac3-a9ef-1a65613dcff5",
+  "featureId": "2a107414-e7a7-4d1f-9d7f-a04fc0328379",
+  "epicId": "2f860885-b8ac-4db6-ba54-62cfa4be5772",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/leads/orphans - every open record missing something SOP §30 requires",
+  "description": "The zero-orphan validator (b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC3). Asserts that every OPEN record carries an owner, a backup, a stage, a priority, a NEXT action, a due time and an intended outcome, and reports each record with the specific fields it is missing.\n\nFIELD BY FIELD, NOT AS A BOOLEAN. \"This lead is incomplete\" is not actionable; \"this lead has no NEXT and no due time\" is. The whole point of the validator is that somebody can fix what it finds, so `missing` is an array of field names rather than a flag.\n\nSCOPED TO OPEN RECORDS. A won or lost lead legitimately has no next action, and reporting every closed record forever would make this a list nobody reads - which is the same as not having a validator at all. closed_at IS NULL is the filter.\n\nORDERED OLDEST FIRST, by source timestamp with NULLS FIRST. A record with no source timestamp at all is the most broken thing this endpoint can find and belongs at the top, not sorted arbitrarily into the middle. Everything else is ordered by how long the customer has been waiting, which is the order somebody should work them in.\n\nA CLEAN RESULT IS AN EMPTY LIST WITH A COUNT OF ZERO, and that is a true statement rather than a degraded one: this reads the local projection, so there is no upstream to be unable to reach. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/leads/orphans",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC3"
+  ],
+  "fieldEnums": {
+    "data.orphans.missing": [
+      "owner_user_id",
+      "backup_user_id",
+      "stage",
+      "priority",
+      "next_action",
+      "next_due_at",
+      "intended_outcome"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The validator reports each open record with the fields it is missing",
+      "coversCriterion": "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC3",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "The list can be narrowed to records missing one particular field",
+      "coversCriterion": "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC3",
+      "queryParams": {
+        "missing": "next_action"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown field filter is rejected rather than returning everything",
+      "coversCriterion": "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC3",
+      "queryParams": {
+        "missing": "vibes"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "missing must be one of owner_user_id, backup_user_id, stage, priority, next_action, next_due_at, intended_outcome",
+      "when": "an unrecognised field filter is supplied. Returning the whole list to somebody who asked for the records with no NEXT would have them work a queue that is not the one they asked for."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}
