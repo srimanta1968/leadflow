@@ -60,7 +60,11 @@ set_env() {
 [ -f "$ENV_FILE" ]        || c_die "missing $ENV_FILE — copy leadflow.env.example first"
 
 # --- the duplicate-tenant guard ---------------------------------------------
-existing_tenant="$(grep -E '^PROJEXCLOUD_TENANT_ID=' "$ENV_FILE" | cut -d= -f2- || true)"
+# Strip an inline comment and surrounding whitespace before comparing. The
+# example file used to carry `KEY=CHANGE_ME   # REQUIRED ...`, so a raw cut
+# yielded the comment too, never equalled "CHANGE_ME", and this guard fired on
+# a FRESH env — blocking the very first run it exists to protect.
+existing_tenant="$(grep -E '^PROJEXCLOUD_TENANT_ID=' "$ENV_FILE" | head -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' | xargs || true)"
 if [ -n "$existing_tenant" ] && [ "$existing_tenant" != "CHANGE_ME" ]; then
   c_die "PROJEXCLOUD_TENANT_ID is already set to '$existing_tenant'.
        Re-running would create a SECOND tenant and a second app, and the consent

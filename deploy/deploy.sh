@@ -60,15 +60,20 @@ preflight() {
   # traffic and passes its health check with both. Nothing downstream will ever
   # report this, so it has to be caught here.
   local unset_vars
-  unset_vars="$(grep -E '=CHANGE_ME[[:space:]]*$' "$ENV_FILE" | cut -d= -f1 | paste -sd' ' -)"
+  # Anchored on the VALUE, not the end of line: the original pattern required
+  # CHANGE_ME to be last on the line, so any variable with a trailing comment
+  # slipped past — DB_PASSWORD and all three PROJEXCLOUD_* were invisible to
+  # this check while JWT_SECRET, which had no comment, was caught. A guard that
+  # silently covers only some of what it claims is worse than none.
+  unset_vars="$(grep -E '^[A-Z_]+=[[:space:]]*CHANGE_ME([[:space:]]|#|$)' "$ENV_FILE" | cut -d= -f1 | paste -sd' ' -)"
   [ -z "$unset_vars" ] || c_die "still at CHANGE_ME in $ENV_FILE: $unset_vars"
 
   # The same defaults, spelled out — someone may replace CHANGE_ME with the
   # very value the fallback would have used.
-  if grep -qE '^JWT_SECRET=your-secret-key[[:space:]]*$' "$ENV_FILE"; then
+  if grep -qE '^JWT_SECRET=[[:space:]]*your-secret-key([[:space:]]|#|$)' "$ENV_FILE"; then
     c_die "JWT_SECRET is the development default — generate one: openssl rand -base64 48"
   fi
-  if grep -qE '^(DB_PASSWORD|LEADFLOW_DB_PASSWORD)=postgres[[:space:]]*$' "$ENV_FILE"; then
+  if grep -qE '^(DB_PASSWORD|LEADFLOW_DB_PASSWORD)=[[:space:]]*postgres([[:space:]]|#|$)' "$ENV_FILE"; then
     c_warn "database password is 'postgres' — acceptable only if that is genuinely the shared server's password"
   fi
   grep -qE '^NODE_ENV=production[[:space:]]*$' "$ENV_FILE"     || c_die "NODE_ENV is not production — devSeed would run and seed known credentials"
