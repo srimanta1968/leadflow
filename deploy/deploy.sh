@@ -36,6 +36,8 @@ readonly ENV_FILE="$(dirname "$COMPOSE_FILE")/leadflow.env"
 readonly SHARED_NETWORK="projexcloud-prod_projex"
 readonly PG_CONTAINER="projexcloud_pg"
 readonly DB_NAME="${LEADFLOW_DB_NAME:-leadflow_db}"
+readonly REPO_ROOT="$(cd "$(dirname "$COMPOSE_FILE")/.." && pwd)"
+readonly BASE_SCHEMA="$REPO_ROOT/.projexlight/schemas/user-defined-schemas.sql"
 readonly WEB_ROOT="/usr/share/nginx/leadflow"
 readonly DOMAIN="leadflow.projexlight.com"
 
@@ -48,7 +50,7 @@ c_ok()   { printf '\033[0;32m[ ok ]\033[0m %s\n' "$*"; }
 c_warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*"; }
 c_die()  { printf '\033[0;31m[fail]\033[0m %s\n' "$*" >&2; exit 1; }
 
-compose() { docker compose -p "$PROJECT" -f "$COMPOSE_FILE" "$@"; }
+compose() { docker compose -p "$PROJECT" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"; }
 
 # --- preflight ---------------------------------------------------------------
 preflight() {
@@ -65,7 +67,12 @@ preflight() {
   # slipped past — DB_PASSWORD and all three PROJEXCLOUD_* were invisible to
   # this check while JWT_SECRET, which had no comment, was caught. A guard that
   # silently covers only some of what it claims is worse than none.
-  unset_vars="$(grep -E '^[A-Z_]+=[[:space:]]*CHANGE_ME([[:space:]]|#|$)' "$ENV_FILE" | cut -d= -f1 | paste -sd' ' -)"
+  # `|| true` is load-bearing. grep exits 1 when it matches nothing, and with
+  # `set -e` and `pipefail` a bare assignment from that pipeline aborts the
+  # script — silently, before c_ok ever prints. The failure mode was inverted:
+  # a CORRECTLY filled env file killed the deploy with no output and exit 1,
+  # while a file still full of CHANGE_ME sailed through to the c_die below.
+  unset_vars="$(grep -E '^[A-Z_]+=[[:space:]]*CHANGE_ME([[:space:]]|#|$)' "$ENV_FILE" | cut -d= -f1 | paste -sd' ' - || true)"
   [ -z "$unset_vars" ] || c_die "still at CHANGE_ME in $ENV_FILE: $unset_vars"
 
   # The same defaults, spelled out — someone may replace CHANGE_ME with the
@@ -100,13 +107,51 @@ preflight() {
 # migration runner provisions and self-heals on boot, so an empty database
 # becomes a full schema on the API's first start.
 ensure_database() {
-  if docker exec "$PG_CONTAINER" psql -U postgres -tAc \
+  # -U comes from the env file, not a hardcoded 'postgres'. On this host the
+  # shared server was initialised with POSTGRES_USER=projex, so the postgres
+  # ROLE does not exist at all — only a leftover database of that name. Every
+  # psql call here failed with `role "postgres" does not exist`, and under
+  # set -e that aborts the deploy before the API is ever built.
+  local su
+  su="$(grep -E '^LEADFLOW_DB_USER=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' | xargs || true)"
+  : "${su:=postgres}"
+
+  if docker exec "$PG_CONTAINER" psql -U "$su" -d postgres -tAc \
       "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1; then
     c_ok "database $DB_NAME present"
   else
     c_info "creating database $DB_NAME"
-    docker exec "$PG_CONTAINER" psql -U postgres -c "CREATE DATABASE $DB_NAME;"
+    docker exec "$PG_CONTAINER" psql -U "$su" -d postgres -c "CREATE DATABASE $DB_NAME;"
     c_ok "database $DB_NAME created — the API will provision its schema on boot"
+  fi
+}
+
+# --- base schema -------------------------------------------------------------
+# THE MIGRATION RUNNER DOES NOT OWN EVERY TABLE. leads, routing_rules,
+# sla_metrics and analytics_data are declared in
+# .projexlight/schemas/user-defined-schemas.sql, and the migrations are
+# STRICTLY ADDITIVE on top of them (MUSTNOT-04) — 003_lead_routing.sql says so
+# in its own header and then does `ALTER TABLE routing_rules`.
+#
+# In development that base schema is already in the database, so nothing here is
+# visible. On a FRESH production database it is not, and the effect is brutal
+# and misleading: the runner applies 001 and 002, dies on 003 with `relation
+# "routing_rules" does not exist`, and the API crash-loops with 32 of 34
+# migrations unapplied — while `docker ps` reports a container that merely keeps
+# restarting and the database looks perfectly healthy.
+#
+# Every statement in the file is CREATE TABLE IF NOT EXISTS, so this is
+# idempotent and cannot redefine a table a migration has since extended.
+ensure_base_schema() {
+  local su="$1"
+  [ -f "$BASE_SCHEMA" ] || c_die "missing $BASE_SCHEMA — the migrations alter tables it declares"
+
+  # ON_ERROR_STOP so a partial apply fails the deploy here, rather than surfacing
+  # later as an unexplained migration error.
+  if docker exec -i "$PG_CONTAINER" psql -U "$su" -d "$DB_NAME" -v ON_ERROR_STOP=1 -q < "$BASE_SCHEMA"; then
+    c_ok "base schema applied (idempotent)"
+  else
+    c_die "base schema failed to apply — migrations 003+ would fail on its tables"
   fi
 }
 
@@ -121,6 +166,7 @@ publish_client() {
   local staging="${WEB_ROOT}.new"
   sudo rm -rf "$staging"
   sudo mkdir -p "$staging"
+  sudo chown "$(id -un):$(id -gn)" "$staging"
   docker cp "$cid:/app/client-dist/." "$staging/"
   docker rm -v "$cid" >/dev/null
   sudo rm -rf "${WEB_ROOT}.old"
@@ -141,6 +187,11 @@ reload_nginx() {
 cmd_deploy() {
   preflight
   ensure_database
+
+  local su
+  su="$(grep -E '^LEADFLOW_DB_USER=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' | xargs || true)"
+  : "${su:=postgres}"
+  ensure_base_schema "$su"
 
   c_info "building image"
   compose build

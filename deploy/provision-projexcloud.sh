@@ -65,57 +65,111 @@ set_env() {
 # yielded the comment too, never equalled "CHANGE_ME", and this guard fired on
 # a FRESH env — blocking the very first run it exists to protect.
 existing_tenant="$(grep -E '^PROJEXCLOUD_TENANT_ID=' "$ENV_FILE" | head -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' | xargs || true)"
+existing_app="$(grep -E '^PROJEXCLOUD_APP_ID=' "$ENV_FILE" | head -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' | xargs || true)"
+existing_key="$(grep -E '^PROJEXCLOUD_API_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' | xargs || true)"
+
+# A key already in hand means there is nothing left to do. Minting a second one
+# is not destructive the way a duplicate tenant is, but it leaves a live
+# credential nobody tracks, so it takes a deliberate clearing of the field.
+if [ -n "$existing_key" ] && [ "$existing_key" != "CHANGE_ME" ]; then
+  c_die "PROJEXCLOUD_API_KEY is already set. Clear it deliberately to mint a replacement,
+       and revoke the old key upstream once the new one is deployed."
+fi
+
+# KEY-ONLY MODE. The tenant already exists, so signing up again would create a
+# SECOND tenant and a second app — and the consent purposes and role templates
+# LeadFlow seeds at boot would then exist in two places. Sign IN instead and
+# carry on to the key. This is the path taken when a previous run registered the
+# tenant but failed before the key was written.
+RESUME=0
 if [ -n "$existing_tenant" ] && [ "$existing_tenant" != "CHANGE_ME" ]; then
-  c_die "PROJEXCLOUD_TENANT_ID is already set to '$existing_tenant'.
-       Re-running would create a SECOND tenant and a second app, and the consent
-       purposes and role templates LeadFlow seeds at boot would then exist in
-       two places. Clear it deliberately if you really want a new tenant."
+  RESUME=1
 fi
 
 curl -fsS -m 10 "$GATEWAY/health" >/dev/null || c_die "$GATEWAY is not answering"
 c_ok "gateway reachable"
 
 # --- 1. tenant + first person ------------------------------------------------
-c_info "registering tenant '$COMPANY' for $PC_EMAIL"
-signup="$(curl -sS -m 30 -X POST "$GATEWAY/api/auth/signup-tenant" \
-  -H 'Content-Type: application/json' \
-  -d "$(node -e "process.stdout.write(JSON.stringify({
-        email: process.env.PC_EMAIL, password: process.env.PC_PASSWORD,
-        company_name: '$COMPANY', region: '$REGION',
-        given_name: '$GIVEN', family_name: '$FAMILY',
-        display_name: '$GIVEN $FAMILY'
-      }))")" )"
+if [ "$RESUME" = "1" ]; then
+  # tenant_id MUST be in the login body. Without it the issued token carries
+  # tenant_id: null and the keys endpoint refuses it — the header X-Tenant-Id is
+  # not consulted, only the claim.
+  c_info "tenant $existing_tenant already registered — signing in rather than signing up"
+  login="$(curl -sS -m 30 -X POST "$GATEWAY/api/auth/login"     -H 'Content-Type: application/json'     -d "$(node -e "process.stdout.write(JSON.stringify({
+          email: process.env.PC_EMAIL, password: process.env.PC_PASSWORD,
+          tenant_id: '$existing_tenant'
+        }))")" )"
+  TOKEN="$(printf '%s' "$login" | jget 'data.token')"
+  TENANT_ID="$existing_tenant"
+  APP_ID="$existing_app"
+  [ -n "$TOKEN" ] || c_die "login failed for $PC_EMAIL. Response: $(printf '%s' "$login" | head -c 300)"
+  c_ok "signed in to tenant $TENANT_ID"
+else
+  c_info "registering tenant '$COMPANY' for $PC_EMAIL"
+  signup="$(curl -sS -m 30 -X POST "$GATEWAY/api/auth/signup-tenant"     -H 'Content-Type: application/json'     -d "$(node -e "process.stdout.write(JSON.stringify({
+          email: process.env.PC_EMAIL, password: process.env.PC_PASSWORD,
+          company_name: '$COMPANY', region: '$REGION',
+          given_name: '$GIVEN', family_name: '$FAMILY',
+          display_name: '$GIVEN $FAMILY'
+        }))")" )"
 
-TOKEN="$(printf '%s' "$signup" | jget 'data.token')"
-TENANT_ID="$(printf '%s' "$signup" | jget 'data.tenant_id')"
-APP_ID="$(printf '%s' "$signup" | jget 'data.app_id')"
+  TOKEN="$(printf '%s' "$signup" | jget 'data.token')"
+  TENANT_ID="$(printf '%s' "$signup" | jget 'data.tenant_id')"
+  APP_ID="$(printf '%s' "$signup" | jget 'data.app_id')"
 
-[ -n "$TOKEN" ] || c_die "signup-tenant returned no token. Response: $(printf '%s' "$signup" | head -c 300)"
-[ -n "$TENANT_ID" ] || c_die "signup-tenant returned no tenant_id. Response: $(printf '%s' "$signup" | head -c 300)"
-c_ok "tenant $TENANT_ID"
+  [ -n "$TOKEN" ] || c_die "signup-tenant returned no token. Response: $(printf '%s' "$signup" | head -c 300)"
+  [ -n "$TENANT_ID" ] || c_die "signup-tenant returned no tenant_id. Response: $(printf '%s' "$signup" | head -c 300)"
+  c_ok "tenant $TENANT_ID"
+
+  # WRITE THE IDS BEFORE MINTING THE KEY. The tenant is the expensive, one-way
+  # side effect; if the key step then fails, these two values are what let the
+  # next run resume instead of registering a second tenant.
+  set_env PROJEXCLOUD_TENANT_ID "$TENANT_ID"
+  [ -n "$APP_ID" ] && set_env PROJEXCLOUD_APP_ID "$APP_ID"
+fi
 
 # --- 2. the application ------------------------------------------------------
-# signup-tenant may already create a default app. Reuse it rather than making a
-# second one — two apps under one tenant means two sets of role templates and a
-# coin-flip about which the gateway scopes by.
-if [ -z "$APP_ID" ]; then
-  c_info "creating application '$APP_NAME'"
-  app="$(curl -sS -m 30 -X POST "$GATEWAY/api/applications" \
-    -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" \
-    -d "{\"name\":\"$APP_NAME\",\"environment\":\"live\",\"description\":\"Server-to-server calls from the LeadFlow backend\"}")"
-  APP_ID="$(printf '%s' "$app" | jget 'data.application.application_id')"
-  [ -n "$APP_ID" ] || c_die "application create returned no id. Response: $(printf '%s' "$app" | head -c 300)"
-  c_ok "application $APP_ID"
+# signup-tenant answers with an `app_id` that is a SLUG (projexlight-inc-304d62),
+# not an application record. The keys endpoint takes the application UUID and
+# the database rejects anything else with `invalid input syntax for type uuid`,
+# surfaced to the caller only as InternalError. So the slug is never usable
+# here: look up the real application, and create it when there is none.
+is_uuid() { printf '%s' "$1" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; }
+
+if ! is_uuid "${APP_ID:-}"; then
+  c_info "resolving application '$APP_NAME' (signup returned a slug, not a UUID)"
+  apps="$(curl -sS -m 30 "$GATEWAY/api/applications" -H "Authorization: Bearer $TOKEN")"
+  APP_ID="$(printf '%s' "$apps" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const a=(JSON.parse(s).data||{}).applications||[];const m=a.find(x=>x.name==='$APP_NAME')||a[0];process.stdout.write(m&&(m.application_id||m.id)||'')}catch(e){process.stdout.write('')}})")"
+
+  if [ -z "$APP_ID" ]; then
+    c_info "creating application '$APP_NAME'"
+    app="$(curl -sS -m 30 -X POST "$GATEWAY/api/applications"       -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN"       -d "{\"tenant_id\":\"$TENANT_ID\",\"name\":\"$APP_NAME\",\"environment\":\"live\",\"description\":\"Server-to-server calls from the LeadFlow backend\"}")"
+    APP_ID="$(printf '%s' "$app" | jget 'data.application.application_id')"
+    [ -n "$APP_ID" ] || APP_ID="$(printf '%s' "$app" | jget 'data.application_id')"
+    [ -n "$APP_ID" ] || c_die "application create returned no id. Response: $(printf '%s' "$app" | head -c 300)"
+    c_ok "application $APP_ID created"
+  else
+    c_ok "reusing existing application $APP_ID"
+  fi
+
+  is_uuid "$APP_ID" || c_die "application id '$APP_ID' is not a UUID; the keys endpoint would fail on it"
+  # Persist before the key step: if minting fails, the next run must not go
+  # looking for the application again.
+  set_env PROJEXCLOUD_APP_ID "$APP_ID"
 else
-  c_ok "reusing application $APP_ID from signup"
+  c_ok "application $APP_ID"
 fi
 
 # --- 3. the API key ----------------------------------------------------------
 # Written to the env IMMEDIATELY. The plaintext exists only in this response.
-c_info "minting API key (returned once — writing straight to the env file)"
+readonly KEY_NAME="${PC_KEY_NAME:-leadflow-production}"
+c_info "minting API key '$KEY_NAME' (returned once — writing straight to the env file)"
 key="$(curl -sS -m 30 -X POST "$GATEWAY/api/applications/$APP_ID/keys" \
   -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" \
-  -d '{"name":"leadflow-staging","rate_limit_rpm":600}')"
+  -d "$(node -e "process.stdout.write(JSON.stringify({
+        tenant_id: '$TENANT_ID', name: '$KEY_NAME',
+        scopes: ['*'], rate_limit_rpm: 600
+      }))")" )"
 
 API_KEY="$(printf '%s' "$key" | jget 'data.plaintext')"
 KEY_ID="$(printf '%s' "$key" | jget 'data.key.key_id')"

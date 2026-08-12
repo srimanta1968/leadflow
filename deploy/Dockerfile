@@ -41,4 +41,7 @@ COPY --from=build /src/client/dist ./client-dist
 USER node
 
 EXPOSE 3010
-CMD ["node", "dist/index.js"]
+# dist/app.js, not dist/index.js. server/package.json declares both `main` and
+# `start` as dist/app.js and src/ has no index.ts at all, so the old CMD gave a
+# container that built cleanly and then crash-looped on MODULE_NOT_FOUND.
+CMD ["node", "dist/app.js"]
