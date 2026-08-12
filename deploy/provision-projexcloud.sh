@@ -66,6 +66,7 @@ set_env() {
 # a FRESH env — blocking the very first run it exists to protect.
 existing_tenant="$(grep -E '^PROJEXCLOUD_TENANT_ID=' "$ENV_FILE" | head -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' | xargs || true)"
 existing_app="$(grep -E '^PROJEXCLOUD_APP_ID=' "$ENV_FILE" | head -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' | xargs || true)"
+KEY_APP_ID="$(grep -E '^PROJEXCLOUD_KEY_APP_ID=' "$ENV_FILE" | head -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' | xargs || true)"
 existing_key="$(grep -E '^PROJEXCLOUD_API_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//' | xargs || true)"
 
 # A key already in hand means there is nothing left to do. Minting a second one
@@ -129,42 +130,57 @@ else
 fi
 
 # --- 2. the application ------------------------------------------------------
-# signup-tenant answers with an `app_id` that is a SLUG (projexlight-inc-304d62),
-# not an application record. The keys endpoint takes the application UUID and
-# the database rejects anything else with `invalid input syntax for type uuid`,
-# surfaced to the caller only as InternalError. So the slug is never usable
-# here: look up the real application, and create it when there is none.
+# TWO ID SPACES, BOTH CALLED "app", AND THEY ARE NOT INTERCHANGEABLE.
+#
+#   signup-tenant  -> a SLUG (projexlight-inc-304d62) = the `tenant.app` row
+#   POST /api/applications -> a UUID = an `api_keys.application` row
+#
+# Role templates and consent purposes are FK'd to `tenant.app`, so they need the
+# SLUG. The keys endpoint reads `api_keys.application`, so it needs the UUID and
+# rejects the slug with `invalid input syntax for type uuid`, surfaced only as
+# InternalError.
+#
+# An earlier version of this script read the UUID as "the real application id"
+# and overwrote PROJEXCLOUD_APP_ID with it. Everything kept working except role
+# provisioning, which failed every boot with role_template_app_id_fkey — the
+# UUID exists as an application but not as a tenant.app, and nothing a tenant
+# holds can create one. Consent purposes, keyed on the slug from signup, were
+# unaffected throughout, which is what made it look like a ProjexCloud fault.
+#
+# So BOTH are kept, under separate names, and the slug is never overwritten.
 is_uuid() { printf '%s' "$1" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; }
 
-if ! is_uuid "${APP_ID:-}"; then
-  c_info "resolving application '$APP_NAME' (signup returned a slug, not a UUID)"
-  apps="$(curl -sS -m 30 "$GATEWAY/api/applications" -H "Authorization: Bearer $TOKEN")"
-  APP_ID="$(printf '%s' "$apps" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const a=(JSON.parse(s).data||{}).applications||[];const m=a.find(x=>x.name==='$APP_NAME')||a[0];process.stdout.write(m&&(m.application_id||m.id)||'')}catch(e){process.stdout.write('')}})")"
+TENANT_APP_ID="$APP_ID"   # the slug from signup — role templates key on this
 
-  if [ -z "$APP_ID" ]; then
+if ! is_uuid "${KEY_APP_ID:-}"; then
+  c_info "resolving the api_keys.application UUID for '$APP_NAME' (the slug cannot mint a key)"
+  apps="$(curl -sS -m 30 "$GATEWAY/api/applications" -H "Authorization: Bearer $TOKEN")"
+  KEY_APP_ID="$(printf '%s' "$apps" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const a=(JSON.parse(s).data||{}).applications||[];const m=a.find(x=>x.name==='$APP_NAME')||a[0];process.stdout.write(m&&(m.application_id||m.id)||'')}catch(e){process.stdout.write('')}})")"
+
+  if [ -z "$KEY_APP_ID" ]; then
     c_info "creating application '$APP_NAME'"
     app="$(curl -sS -m 30 -X POST "$GATEWAY/api/applications"       -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN"       -d "{\"tenant_id\":\"$TENANT_ID\",\"name\":\"$APP_NAME\",\"environment\":\"live\",\"description\":\"Server-to-server calls from the LeadFlow backend\"}")"
-    APP_ID="$(printf '%s' "$app" | jget 'data.application.application_id')"
-    [ -n "$APP_ID" ] || APP_ID="$(printf '%s' "$app" | jget 'data.application_id')"
-    [ -n "$APP_ID" ] || c_die "application create returned no id. Response: $(printf '%s' "$app" | head -c 300)"
-    c_ok "application $APP_ID created"
+    KEY_APP_ID="$(printf '%s' "$app" | jget 'data.application.application_id')"
+    [ -n "$KEY_APP_ID" ] || KEY_APP_ID="$(printf '%s' "$app" | jget 'data.application_id')"
+    [ -n "$KEY_APP_ID" ] || c_die "application create returned no id. Response: $(printf '%s' "$app" | head -c 300)"
+    c_ok "application $KEY_APP_ID created"
   else
-    c_ok "reusing existing application $APP_ID"
+    c_ok "reusing existing application $KEY_APP_ID"
   fi
 
-  is_uuid "$APP_ID" || c_die "application id '$APP_ID' is not a UUID; the keys endpoint would fail on it"
+  is_uuid "$KEY_APP_ID" || c_die "application id '$KEY_APP_ID' is not a UUID; the keys endpoint would fail on it"
   # Persist before the key step: if minting fails, the next run must not go
   # looking for the application again.
-  set_env PROJEXCLOUD_APP_ID "$APP_ID"
+  set_env PROJEXCLOUD_KEY_APP_ID "$KEY_APP_ID"
 else
-  c_ok "application $APP_ID"
+  c_ok "application $KEY_APP_ID"
 fi
 
 # --- 3. the API key ----------------------------------------------------------
 # Written to the env IMMEDIATELY. The plaintext exists only in this response.
 readonly KEY_NAME="${PC_KEY_NAME:-leadflow-production}"
 c_info "minting API key '$KEY_NAME' (returned once — writing straight to the env file)"
-key="$(curl -sS -m 30 -X POST "$GATEWAY/api/applications/$APP_ID/keys" \
+key="$(curl -sS -m 30 -X POST "$GATEWAY/api/applications/$KEY_APP_ID/keys" \
   -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" \
   -d "$(node -e "process.stdout.write(JSON.stringify({
         tenant_id: '$TENANT_ID', name: '$KEY_NAME',
@@ -180,7 +196,8 @@ if [ -z "$API_KEY" ]; then
 fi
 
 set_env PROJEXCLOUD_TENANT_ID "$TENANT_ID"
-set_env PROJEXCLOUD_APP_ID    "$APP_ID"
+set_env PROJEXCLOUD_APP_ID     "$TENANT_APP_ID"
+set_env PROJEXCLOUD_KEY_APP_ID "$KEY_APP_ID"
 set_env PROJEXCLOUD_API_KEY   "$API_KEY"
 set_env PROJEXCLOUD_GATEWAY_URL "$GATEWAY"
 # The key id, not the key — so a future rotation has something to revoke.
@@ -194,7 +211,8 @@ cat <<EOF
 
   Registered
     tenant       $TENANT_ID
-    application  $APP_ID
+    application  $TENANT_APP_ID (tenant.app slug)
+    key app id   $KEY_APP_ID (api_keys.application uuid)
     key id       $KEY_ID
     owner        $GIVEN $FAMILY <$PC_EMAIL>
 

@@ -123,3 +123,9 @@ deploy/leadflow.env
 # on every run, and of no value to anyone reading the repository — they were
 # tracked, so ignoring alone would not have stopped them reappearing in diffs.
 learning/
+
+# Setup notes that carry live account credentials. A password committed to a
+# repository is a password published, and the QA roster here is for the real
+# production host — not a sample. Ignored as a DIRECTORY so a second file added
+# beside the first is covered without anyone remembering to extend this.
+docs/setup/user/
