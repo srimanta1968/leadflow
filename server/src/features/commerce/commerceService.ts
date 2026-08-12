@@ -274,7 +274,7 @@ export async function alertOverdueHandoff(handoffId: string, subjectRef: string)
   if (SdkGatewayClient.isConfigured()) {
     try {
       await SdkGatewayClient.call({
-        sdk: 'sdk-notification', path: '/api/notifications', method: 'POST',
+        sdk: 'sdk-notification', path: '/api/notifications/send', method: 'POST',
         idempotencyKey: `handoff-overdue:${handoffId}`,
         body: {
           tenant_id: config.projexCloud.tenantId, subject_ref: subjectRef,

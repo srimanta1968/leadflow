@@ -1,0 +1,85 @@
+{
+  "taskId": "db775683-a5a1-4285-a6d9-f12467c1a2b2",
+  "featureId": "936adefc-fbab-42cb-9fd3-a0aa7d00f6ca",
+  "epicId": "350440b3-9f6f-4cbe-bd63-778721adff89",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/records/:ref/save-gate - may this record be saved, and if not, which fields are missing?",
+  "description": "The NO BLANK NEXT gate from SOP §01, asked before the save rather than after (db775683-a5a1-4285-a6d9-f12467c1a2b2#AC1). The UI renders a NEXT composer that blocks submit until it is complete, and that is a CONVENIENCE; this is the control. A client bypassed with one curl meets exactly the same refusal, because the identical gate runs server-side on the write path.\n\nTHE REFUSAL IS STRUCTURED, NEVER A SENTENCE (db775683-a5a1-4285-a6d9-f12467c1a2b2#AC2). Each refusal names the field, why it is required and the remedy in the words the UI renders verbatim. \"Please complete all fields\" cannot be shown against a field, so the operator has to guess which one - and the gate fires on every save, so guessing is a tax on ordinary work. Every missing field is reported at once rather than one per round trip.\n\nCLOSED WON IS NOT TERMINAL until onboarding is accepted and calendarized (db775683-a5a1-4285-a6d9-f12467c1a2b2#AC3). SOP §28 is explicit and the reason is that the handover is where deals are lost AFTER the signature - a record that goes quiet the moment payment clears is exactly the failure this rule prevents. So CLOSED_WON_ONBOARDING_PENDING still requires a NEXT while the other terminal stages do not.\n\nTHE OPEN-RECORD REQUIREMENT IS CHECKED TOO: owner, backup, stage, priority, permission state and last disposition. A record missing any of them is refused with the same per-field shape.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/records/:ref/save-gate",
+  "method": "GET",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "db775683-a5a1-4285-a6d9-f12467c1a2b2#AC1",
+    "db775683-a5a1-4285-a6d9-f12467c1a2b2#AC2",
+    "db775683-a5a1-4285-a6d9-f12467c1a2b2#AC3"
+  ],
+  "testCases": [
+    {
+      "name": "An unknown record cannot be judged, so the gate says so",
+      "coversCriterion": "db775683-a5a1-4285-a6d9-f12467c1a2b2#AC1",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No record with that reference",
+      "when": "the record does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

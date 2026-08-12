@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/consent/receipts",
   "method": "POST",
   "taskId": "787d4f44-9abd-41cd-b589-9c02e793a9df",
+  "featureId": "d62b7a8f-4de4-45c2-b59d-ee4baac4f73d",
+  "epicId": "f7ad7bf2-adea-4b22-b822-510caca24406",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "requiresRole": [
@@ -36,8 +38,13 @@
       "coversCriterion": "787d4f44-9abd-41cd-b589-9c02e793a9df#AC1",
       "payload": {
         "person_id": "{{var:absent_uuid}}",
-        "purpose_id": ["service_updates", "marketing"],
-        "channels": ["email"],
+        "purpose_id": [
+          "service_updates",
+          "marketing"
+        ],
+        "channels": [
+          "email"
+        ],
         "jurisdiction": "GB",
         "notice_hash": "sha256:0000",
         "notice_text": "We will contact you about your job.",
@@ -59,7 +66,10 @@
       "payload": {
         "person_id": "{{var:absent_uuid}}",
         "purpose_id": "service_updates",
-        "channels": ["email", "promotional_offers"],
+        "channels": [
+          "email",
+          "promotional_offers"
+        ],
         "jurisdiction": "GB",
         "notice_hash": "sha256:0000",
         "notice_text": "We will contact you about your job.",
@@ -81,7 +91,9 @@
       "payload": {
         "person_id": "{{var:absent_uuid}}",
         "purpose_id": "service_updates",
-        "channels": ["email"],
+        "channels": [
+          "email"
+        ],
         "jurisdiction": "GB",
         "capture_method": "web_form",
         "captured_by": "qa.privacy@leadflow.test"

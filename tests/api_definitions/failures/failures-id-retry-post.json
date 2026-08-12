@@ -1,0 +1,112 @@
+{
+  "taskId": "4cc3f597-f6c8-4dc5-8044-096ce144e676",
+  "featureId": "36b8ab88-3c05-4528-b9bb-45f058859a33",
+  "epicId": "06998b3d-d057-490d-8cfb-962e43b525c6",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/failures"
+  ],
+  "name": "POST /api/leadflow/failures/:id/retry - exactly one, then a human",
+  "description": "Claims the single retry a provider failure is allowed, then falls back to a HUMAN TASK (4cc3f597-f6c8-4dc5-8044-096ce144e676#AC3). MEASURED LIVE: the first call retried, the second returned human_task_required with the runbook fallback and its owner.\n\nCLAIMED BY THE UPDATE, not decided by a read. Two concurrent handlers would both read retry_count = 0 and both retry - the customer gets two copies of the same message and the incident report says \"we retried once\".\n\nNEVER A THIRD ATTEMPT. Retrying until it works is how a provider outage becomes a duplicate storm the moment it recovers: every queued attempt succeeds at once, into the same inboxes. Two automated attempts and then a person is the SOP, and the second refusal names the call-or-manual-email task rather than leaving the operator to infer it.",
+  "endpoint": "/api/leadflow/failures/:id/retry",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC3"
+  ],
+  "captureResponse": {
+    "failures.retry.response.data.failure_id": "data.failure_id"
+  },
+  "requestBody": {},
+  "testCases": [
+    {
+      "name": "The one permitted retry is claimed, and the next call requires a human task",
+      "coversCriterion": "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC3",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {},
+      "params": {
+        "id": "{{cache:failures.post.response.data.failure_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no failure with that id",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {},
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:failures.post.response.data.failure_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:failures.post.response.data.failure_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No failure with that id",
+      "when": "the failure id does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

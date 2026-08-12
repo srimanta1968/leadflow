@@ -1,0 +1,55 @@
+{
+  "name": "GET /api/leadflow/sequences/guards/log - Why steps were deferred or refused",
+  "description": "The last 200 guard decisions - quiet hours, consent, suppression, stop rules - alongside the circuit breakers and whether each is currently open. THE BREAKER IS VISIBLE RATHER THAN ONLY EFFECTIVE, which is the reason this endpoint exists: an invisible breaker looks exactly like a cadence that quietly stopped working, and the two are investigated completely differently. `open` is computed from opened_at together with retry_after rather than stored, so a breaker whose retry window has elapsed reads as closed without anything having to write to it. QA: depends on register and login for the bearer token.",
+  "endpoint": "/api/leadflow/sequences/guards/log",
+  "method": "GET",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 32,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "captureResponse": {
+    "sequences.guardLog.response.data.entry_count": "data.entry_count"
+  },
+  "testCases": [
+    {
+      "name": "The guard log answers with its entries and the breaker state",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "taskId": "bd991d43-6c82-4842-a375-f62cb4a5439a",
+  "featureId": "e9190d5d-9813-40f7-b61a-d671fe916d74",
+  "epicId": "79cac1c4-3ab0-4f9d-9660-a880c054ac0c",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/workflows",
+    "POST /api/leadflow/workflows/:id/dry-run"
+  ],
+  "name": "POST /api/leadflow/workflows/:id/publish - the server-side gate",
+  "description": "Publishes a version, and REFUSES SERVER-SIDE without a passing dry run and a recorded approval (bd991d43-6c82-4842-a375-f62cb4a5439a#AC1). Both are checked here and a CHECK constraint enforces the same pairing at the row level, so a publish cannot be recorded by any writer that forgets - a rule living only in a reviewer's habits is not followed the first time somebody is in a hurry, which is the only time it matters.\n\nBOTH REFUSALS MEASURED LIVE, each a 409 with its own message: a version never dry-run, and one dry-run but unapproved. The request is well formed in both cases; what is missing is a precondition in the world.\n\nTHE APPROVAL IS REQUESTED BY THE REFUSAL ITSELF where the caller did not bring one, so the publish attempt starts the review instead of leaving somebody to go and find the approval surface - but the publish still does not happen until it lands.\n\nEVERY VERSION CHANGE IS AUDITED with the actor and the approval reference (bd991d43-6c82-4842-a375-f62cb4a5439a#AC4). When sdk-audit is unreachable the response says the version row is the only record for now, rather than reporting an audit that did not happen.\n\nPublishing supersedes the previously live version, and a unique index refuses a second live one.",
+  "endpoint": "/api/leadflow/workflows/:id/publish",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "bd991d43-6c82-4842-a375-f62cb4a5439a#AC1",
+    "bd991d43-6c82-4842-a375-f62cb4a5439a#AC4"
+  ],
+  "captureResponse": {
+    "workflows.publish.response.data.workflow_version_id": "data.workflow_version_id"
+  },
+  "requestBody": {
+    "approval_ref": "appr-manual-1"
+  },
+  "testCases": [
+    {
+      "name": "A dry-run and approved version publishes and supersedes the previous one",
+      "coversCriterion": "bd991d43-6c82-4842-a375-f62cb4a5439a#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "approval_ref": "appr-manual-1"
+      },
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no version with that id",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "approval_ref": "appr-x"
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:workflows.post.response.data.workflow_version_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No workflow version with that id",
+      "when": "the version id does not exist."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "This version has never been dry-run, so it cannot be published. No automation reaches production without a passing simulation.",
+      "when": "the version has no dry run, its dry run did not pass, or no approval reference has been recorded."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

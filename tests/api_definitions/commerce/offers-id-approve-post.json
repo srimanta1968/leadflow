@@ -1,0 +1,158 @@
+{
+  "taskId": "92ce5959-0e5c-4ce8-be7a-02cc870b2120",
+  "featureId": "95512768-e04d-425c-bec5-fea91a60842b",
+  "epicId": "ef8a21ec-c1a9-4d26-ac59-e0fa28b41a3b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/offers"
+  ],
+  "name": "POST /api/leadflow/offers/:id/approve - the multi-party route",
+  "description": "Records sign-off against a draft version (92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC2). EACH PARTY IS STORED SEPARATELY with who recorded it and when - leadership, legal and finance. A single \"approved\" boolean lets one person tick a box on everybody's behalf, which is exactly the shortcut the multi-party route exists to prevent, and afterwards nobody can say who actually read the terms.\n\nawaiting[] NAMES WHO IS STILL OUTSTANDING, because \"not yet approved\" is not an instruction anybody can act on and \"legal has not signed\" is.\n\nRE-RECORDING A PARTY REPLACES THAT PARTY'S ENTRY rather than appending a second, so the approvals array stays a statement of the current position instead of a log that has to be interpreted.\n\nAN ACTIVATED VERSION CANNOT BE RE-APPROVED IN PLACE. Editing the approval state of terms a buyer has already been shown would make the record disagree with what was signed; a change means a new version.\n\nQA: depends on the draft created by POST /api/leadflow/offers, whose id is read from the cache. All three parties are recorded in one call so the chain can proceed to activation - sign-off frequently arrives as three separate emails that a route administrator records together, and refusing them is how the route gets bypassed rather than followed.",
+  "endpoint": "/api/leadflow/offers/:id/approve",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC2"
+  ],
+  "captureResponse": {
+    "offers.approve.response.data.offer_version_id": "data.offer_version_id"
+  },
+  "fieldEnums": {
+    "data.approval_route": [
+      "leadership",
+      "legal",
+      "finance"
+    ]
+  },
+  "requestBody": {
+    "parties": [
+      "leadership",
+      "legal",
+      "finance"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "All three parties sign off and the version becomes activatable",
+      "coversCriterion": "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC2",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "parties": [
+          "leadership",
+          "legal",
+          "finance"
+        ]
+      },
+      "params": {
+        "id": "{{cache:offers.post.response.data.offer_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a party outside the approval route",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "party": "the_rep_who_wrote_it"
+      },
+      "params": {
+        "id": "{{cache:offers.post.response.data.offer_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no version with that id",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "party": "legal"
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:offers.post.response.data.offer_version_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:offers.post.response.data.offer_version_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "party must be one of leadership, legal, finance",
+      "when": "no party is named, or a named party is outside the approval route."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No unactivated offer version with that id - an active version cannot be re-approved in place",
+      "when": "the id does not exist, or the version is already active. Editing the approval state of terms a buyer has been shown would make the record disagree with what was signed."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

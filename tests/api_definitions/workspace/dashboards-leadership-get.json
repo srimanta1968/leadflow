@@ -1,0 +1,67 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/dashboards/leadership - the leadership view",
+  "description": "Pipeline health, onboarding attainment, source performance and open escalations.\n\nONE DASHBOARD PER ROLE, not one dashboard with a filter. A rep looking at leadership's revenue view and a leader looking at a rep's task list are both looking at the wrong screen, and a shared screen means one of them always is. QA: measured live.",
+  "endpoint": "/api/leadflow/dashboards/leadership",
+  "method": "GET",
+  "expectedStatus": 200,
+  "testCases": [
+    {
+      "name": "the leadership view",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+# LeadFlow production stack.
+#
+# ISOLATION IS THE POINT OF THIS FILE. LeadFlow shares a host and a database
+# server with ProjexCloud, and ProjexCloud is what every other project on that
+# box depends on. Everything below is arranged so that stopping, rebuilding or
+# tearing down LeadFlow cannot touch it:
+#
+#   * a SEPARATE COMPOSE PROJECT (-p leadflow, set in deploy.sh), so `down`
+#     enumerates only the services declared here;
+#   * the shared network declared `external: true`, so compose ATTACHES to
+#     projexcloud-prod_projex and never creates or removes it — without this,
+#     `down` would try to delete the network ProjexCloud's containers live on;
+#   * no dependency on, or reference to, any projexcloud_* container beyond the
+#     database hostname, which is resolved over that network.
+#
+# THE DATABASE IS SHARED, THE SCHEMA IS NOT. LeadFlow connects to the existing
+# projexcloud_pg server but to its OWN database (leadflow_db). Dropping or
+# recreating it never touches projexcloud's own databases.
+#
+# NEVER RUN `docker compose down --remove-orphans` HERE. Orphan detection is
+# scoped to the compose project, and a mis-scoped invocation is not theoretical:
+# it deleted the dev MCP container on the development machine during this
+# project's own build, because the container had been started under a different
+# project name.
+
+services:
+  api:
+    container_name: leadflow_api
+    image: leadflow/api:${LEADFLOW_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3010"
+      # The SDK gateway is ProjexCloud's PUBLIC origin rather than the container
+      # name: the gateway terminates TLS and enforces tenancy at its edge, and
+      # bypassing that by talking to the container directly would skip both.
+      PROJEXCLOUD_GATEWAY_URL: https://cloud.projexlight.com
+      # projexcloud_pg is reachable BY CONTAINER NAME over the shared network.
+      # It publishes no host port, so a localhost DSN cannot work here.
+      DATABASE_URL: postgresql://${LEADFLOW_DB_USER:-postgres}:${LEADFLOW_DB_PASSWORD}@projexcloud_pg:5432/${LEADFLOW_DB_NAME:-leadflow_db}
+    env_file:
+      - ./leadflow.env
+    # Bound to loopback: nginx on the host is the only thing that should reach
+    # it, and publishing on 0.0.0.0 would expose the API bypassing TLS.
+    ports:
+      - "127.0.0.1:3010:3010"
+    networks:
+      - projex
+    healthcheck:
+      # The API answers /health only after migrations have run, so a healthy
+      # container genuinely means a provisioned schema rather than a live port.
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3010/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+networks:
+  projex:
+    # EXTERNAL. Compose attaches to ProjexCloud's existing network and will
+    # never create or destroy it. If this were not external, `down` would
+    # attempt to remove the network ProjexCloud is running on.
+    external: true
+    name: projexcloud-prod_projex

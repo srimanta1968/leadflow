@@ -1,0 +1,122 @@
+{
+  "name": "POST /api/users/{id}/activate - Open an account for use",
+  "description": "Sets is_active true, stamps activated_at on the first activation and clears any closure stamps, so the same endpoint completes an invitation and reopens an account that was closed by mistake. Proves criterion 4c12f924-87d1-4be1-b790-d94a936d58b3#AC1 by making an invitation redeemable without touching the database. 200 rather than 201: it is an action on an existing resource. Governed on user.deactivate, deliberately the SAME grant as closure - the authority is 'decides whether this person may sign in', and a model where closing needs a grant that reopening does not is a model where a mistake cannot be undone by the person who made it. The optional initial_password is the only way a person invited here can sign in at all, because LeadFlow has no mail transport and there is no self-service link to send; it is refused with 501 once ProjexCloud is the identity authority, which is the same handover guard that turns off local register and login. The response states credential_issued rather than implying access was granted; the password itself never reaches the audit metadata, only the fact that one was issued. QA: reactivates the account closed by POST /api/users/{id}/deactivate, which is why it runs after it; requiresRole admin, so no Authorization header is declared here (MUST-71).",
+  "endpoint": "/api/users/:id/activate",
+  "method": "POST",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "featureId": "c12362d4-3479-46e6-b243-47c04b68b61e",
+  "epicId": "224f72e3-9444-4923-96da-477e76aa9654",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "admin"
+  ],
+  "testability": "auto",
+  "priority": 20,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "4c12f924-87d1-4be1-b790-d94a936d58b3#AC1"
+  ],
+  "dependsOn": [
+    "POST /api/users/invite",
+    "POST /api/users/:id/deactivate"
+  ],
+  "pathParams": {
+    "id": "{{cache:users.invite.response.data.user.id}}"
+  },
+  "fieldEnums": {
+    "state": [
+      "pending",
+      "active",
+      "deactivated"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Reopen the closed account and issue its initial credential",
+      "coversCriterion": "4c12f924-87d1-4be1-b790-d94a936d58b3#AC1",
+      "capturesResponse": true,
+      "payload": {
+        "initial_password": "{{var:test_password}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "credential_issued": true,
+          "user": {
+            "state": "active",
+            "is_active": true
+          }
+        }
+      },
+      "params": {
+        "id": "{{cache:users.invite.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an initial password shorter than twelve characters",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|initial_password",
+      "payload": {
+        "initial_password": "{{static:short}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "params": {
+        "id": "{{cache:users.invite.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "params": {
+        "id": "{{cache:users.invite.response.data.user.id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "initial_password is present but shorter than twelve characters, or is not a string"
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "NOT_IMPLEMENTED",
+      "status": 501,
+      "when": "an initial_password was supplied while a ProjexCloud identity issuer is configured. Writing a local hash would create the second credential store that AuthService.assertLocalCredentialsPermitted exists to prevent - two stores that both answer 'yes' is how a revoked user keeps working.",
+      "reproducible": false,
+      "_whyNotReproducible": "It is a DEPLOYMENT state, not a request: reproducing it means configuring PROJEXCLOUD_IDENTITY_ISSUER_URL on the server under test, which would simultaneously turn off POST /api/auth/register and POST /api/auth/login and take the entire suite's auth producer with it."
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no user on the register holds that id",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-36 bans a generated id in a path parameter and there is no producer for an id that provably matches no row."
+    },
+    {
+      "code": "FORBIDDEN",
+      "status": 403,
+      "when": "the caller does not hold user.deactivate",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64/MUST-71: it needs a token from a different role, and this definition declares requiresRole so the runner pre-fetches the admin identity."
+    }
+  ]
+}

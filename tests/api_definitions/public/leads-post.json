@@ -4,6 +4,8 @@
   "endpoint": "/api/public/leads",
   "method": "POST",
   "taskId": "8ac5c78e-b994-4513-8da6-2cbd637b287f",
+  "featureId": "897499d9-17fb-49b7-b49d-b087b130ee16",
+  "epicId": "8f1ff867-089c-40e7-b889-0fd4b06ac1f0",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": false,
   "testability": "auto",

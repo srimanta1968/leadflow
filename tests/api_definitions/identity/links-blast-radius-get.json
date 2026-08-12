@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/identity/links/:merge_id/blast-radius",
   "method": "GET",
   "taskId": "34c9cabe-fb00-4487-a48c-8356c92a47ba",
+  "featureId": "4b29408e-b240-456b-a2f6-c336a5a71d82",
+  "epicId": "9b0dd42c-1871-4a47-aae2-ab76e48d0d5c",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "requiresRole": [

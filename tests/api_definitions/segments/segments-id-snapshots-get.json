@@ -1,0 +1,85 @@
+{
+  "taskId": "73357dd8-628f-47fa-9e41-1b42cf1f23fc",
+  "featureId": "cb6618a4-8e73-4585-aa79-af0bd20ea042",
+  "epicId": "60b11414-8cf8-4248-bc8a-22d74d122968",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 11,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/segments",
+    "POST /api/leadflow/segments/:id/compute"
+  ],
+  "name": "GET /api/leadflow/segments/:id/snapshots - the retained trail",
+  "description": "The snapshots retained for a segment (73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC3). RETENTION IS THE POINT: an audience is auditable only for as long as the record of it survives, and the question asked months later - \"was this person in the October campaign, and why\" - cannot be reconstructed from a definition that has since changed.\n\nEach row carries the segment version and the exclusion breakdown, so a reader can see both what the audience was and what the rule was at the time. QA: reads the snapshot created earlier in the chain.",
+  "endpoint": "/api/leadflow/segments/:id/snapshots",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC3"
+  ],
+  "testCases": [
+    {
+      "name": "Snapshots are listed newest first with their version and breakdown",
+      "coversCriterion": "73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC3",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:segments.post.response.data.segment_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:segments.post.response.data.segment_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:segments.post.response.data.segment_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

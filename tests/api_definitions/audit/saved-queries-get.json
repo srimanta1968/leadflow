@@ -1,0 +1,129 @@
+{
+  "name": "GET /api/leadflow/audit/saved-queries - the queries this caller may run, own and shared",
+  "description": "Lists the saved Advanced Queries the CALLER is entitled to run: their own, plus anything shared to their persona role, plus anything shared tenant-wide (a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC2).\n\nSCOPING IS APPLIED IN THE QUERY, NOT AFTER IT. The SQL filters on owner, role and tenant visibility together, so a query the caller may not run is never loaded and never serialised. Fetching everything and filtering in the handler is the shape that leaks: one early return, one refactor, and rows nobody was entitled to see are already in the response object.\n\nWHY NOT sdk-search's OWN LIST. GET /api/search/saved-queries takes a persona_id and returns exactly that persona's queries - it has no concept of sharing, so it can answer 'mine' and nothing else. Reading it alone would make every shared query invisible; reading it for OTHER personas would mean enumerating people to find queries, which is both wrong and impossible without an ACL upstream does not have. So visibility is resolved from leadflow_audit_saved_query, which is the store that knows about it, and each row reports whether its upstream mirror exists.\n\nEVERY ROW SAYS WHY THE CALLER CAN SEE IT. `visible_because` is 'owner', 'role' or 'tenant' - not decoration. An auditor about to run a shared query should know whether they are looking at their own work or somebody else's, because the two carry different assumptions about what the filters were built to prove.\n\nRUNNING A SHARED QUERY IS NOT INHERITING ITS AUTHOR'S ACCESS. A saved query is a FILTER, never a RESULT SET: POST /api/leadflow/audit/query re-executes it under the caller's own scopes, which sdk-search resolves from verified JWT claims and never from the request body. That is what makes sharing safe, and it is why this list is about who may RUN a query rather than about what any of them will return.\n\nTHE HAPPY PATH IS A 200 WITH AN EMPTY LIST in a fresh environment, which is a true statement rather than a degraded one - the local table is authoritative for this read, so an empty list means genuinely nothing saved. `upstream_available.search` reports separately whether the platform mirror could be consulted, so a caller can tell 'you have saved nothing' from 'the mirror is unreadable'.\n\nNO requiresRole: reading the chain is open by the navigation model's own reasoning, and audit.delete_event is the only gated audit capability. THE AUTH HEADER IS PINNED ON EVERY testCase, which is correct HERE and would be wrong on a roled endpoint. There is no requiresRole on this route - reading the chain is open by the navigation model own reasoning - so no token swap happens and MUST-71 does not apply. That also makes both 401 branches authorable rather than documentation-only: they can be expressed by omitting or corrupting the header without defeating anything. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/audit/saved-queries",
+  "method": "GET",
+  "taskId": "a7572b12-ebb1-49c2-864e-01e2bc04fa65",
+  "featureId": "ddd949b4-0c80-46d0-aca6-e2558eec6bfa",
+  "epicId": "00328fe3-4d27-4712-928a-2fa673523c1b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC2",
+    "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/audit/saved-queries"
+  ],
+  "fieldEnums": {
+    "visibility": [
+      "private",
+      "role",
+      "tenant"
+    ],
+    "data.queries.visibility": [
+      "private",
+      "role",
+      "tenant"
+    ],
+    "data.queries.visible_because": [
+      "owner",
+      "role",
+      "tenant"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The list carries the caller's own saved query and says why it is visible",
+      "coversCriterion": "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC2",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "The list can be narrowed to shared queries alone",
+      "coversCriterion": "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC2",
+      "queryParams": {
+        "visibility": "role"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown visibility filter is rejected rather than returning everything",
+      "queryParams": {
+        "visibility": "all_of_them"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "visibility must be one of private, role, tenant",
+      "when": "an unrecognised visibility filter is supplied. Returning the whole list to somebody who asked for one slice is the same failure the detector and identity queues guard against - a screen headed 'Shared with my team' listing private queries misrepresents who else has seen them."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

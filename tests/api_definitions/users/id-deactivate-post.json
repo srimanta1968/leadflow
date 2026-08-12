@@ -1,0 +1,101 @@
+{
+  "name": "POST /api/users/{id}/deactivate - Close an account without erasing the person",
+  "description": "Stamps deactivated_at and deactivated_by, sets is_active false, and leaves the row and every reference to it exactly where they were. Proves criterion 4c12f924-87d1-4be1-b790-d94a936d58b3#AC4, deactivating a user preserves their past actions in the audit chain: there is deliberately NO DELETE on this resource, because every audit entry, routing rule, lead assignment and coverage window names a user id, and removing the row would turn a signed history into dangling references and leave 'what did this person do while they were here' unanswerable. 200 rather than 204: the response carries the resulting register state, and a client that received an empty body could not tell a close from a delete. Governed on user.deactivate, so the closure itself is appended to the chain with the actor who ordered it. Closing YOUR OWN account is refused with 409 - the caller may be the only holder of the grant, and the way back in would be editing the database, which is exactly what this screen exists to remove. THE PERSONA IS NOT REVOKED, and the response says so rather than implying otherwise: persona_revoked is false for an account that projects a ProjexCloud persona and null for a local-only one, with persona_note naming what still has to be done upstream. sdk-persona publishes no deactivation call this codebase already speaks, and guessing an endpoint path would ship a revocation that quietly did nothing - which is the precise failure this screen exists to remove. QA: the subject is the account invited by POST /api/users/invite; requiresRole admin, so no Authorization header is declared here (MUST-71).\n\nQA NOTE: the only id the suite can resolve is the authenticated caller, and self-deactivation is REFUSED by design — an admin who locks themselves out has no way back in. The suite asserts that refusal rather than provisioning a second administrator to delete.",
+  "endpoint": "/api/users/:id/deactivate",
+  "method": "POST",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "featureId": "c12362d4-3479-46e6-b243-47c04b68b61e",
+  "epicId": "224f72e3-9444-4923-96da-477e76aa9654",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "admin"
+  ],
+  "testability": "auto",
+  "priority": 19,
+  "expectedStatus": 409,
+  "coversCriterion": [
+    "4c12f924-87d1-4be1-b790-d94a936d58b3#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/users/invite"
+  ],
+  "pathParams": {
+    "id": "{{cache:users.invite.response.data.user.id}}"
+  },
+  "fieldEnums": {
+    "state": [
+      "pending",
+      "active",
+      "deactivated"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Close the account, and say plainly that its actions stay attributable",
+      "coversCriterion": "4c12f924-87d1-4be1-b790-d94a936d58b3#AC4",
+      "capturesResponse": true,
+      "payload": {
+        "reason": "left the company at the end of the quarter"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "actions_remain_attributable": true,
+          "persona_revoked": null,
+          "user": {
+            "state": "deactivated",
+            "is_active": false
+          }
+        }
+      },
+      "params": {
+        "id": "{{cache:users.invite.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "params": {
+        "id": "{{cache:users.invite.response.data.user.id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "CONFLICT",
+      "status": 409,
+      "when": "the caller is the subject. An administrator who closes their own account may be the only holder of user.deactivate, and there would then be no way back into the product short of editing the database.",
+      "reproducible": false,
+      "_whyNotReproducible": "The path parameter would have to be the ACTING identity's own id, and the acting identity here is pre-fetched by the runner from requiresRole rather than captured, so no cache key names it. Capturing it would mean logging the admin in a second time through an explicit Authorization header, which MUST-71 forbids on a definition that declares requiresRole."
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no user on the register holds that id",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-36 bans a generated id in a path parameter and there is no producer for an id that provably matches no row."
+    },
+    {
+      "code": "FORBIDDEN",
+      "status": 403,
+      "when": "the caller does not hold user.deactivate",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64/MUST-71: it needs a token from a different role, and this definition declares requiresRole so the runner pre-fetches the admin identity."
+    }
+  ]
+}

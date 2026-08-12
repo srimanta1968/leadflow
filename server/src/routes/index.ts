@@ -28,6 +28,12 @@ import { kpiRoutes, insightsRoutes } from '../features/insights';
 import { digestRoutes } from '../features/rhythm';
 import { workflowRoutes } from '../features/workflows';
 import { failureRoutes } from '../features/failures';
+import { contactRoutes, savedViewRoutes } from '../features/contacts';
+import {
+  routingWorkspaceRoutes, routingTraceRoutes, coverageRoutes, pipelineBoardRoutes,
+  nextActionRoutes, inboxRoutes, opportunityRoutes, handoffRoutes, dashboardRoutes,
+  incidentRoutes, governanceRoutes, certificationRoutes,
+} from '../features/workspace';
 import { creditsRoutes } from '../features/enrichment';
 import { dataReviewRoutes } from '../features/dataReview';
 import { aiRoutes } from '../features/ai';
@@ -86,6 +92,20 @@ router.use('/leadflow/analytics', insightsRoutes);
 router.use('/leadflow/digests', digestRoutes);
 router.use('/leadflow/workflows', workflowRoutes);
 router.use('/leadflow/failures', failureRoutes);
+router.use('/leadflow/contacts', contactRoutes);
+router.use('/leadflow/saved-views', savedViewRoutes);
+router.use('/leadflow/routing', routingWorkspaceRoutes);
+router.use('/leadflow/leads', routingTraceRoutes);
+router.use('/leadflow/coverage', coverageRoutes);
+router.use('/leadflow/pipeline', pipelineBoardRoutes);
+router.use('/leadflow/next-actions', nextActionRoutes);
+router.use('/leadflow/inbox', inboxRoutes);
+router.use('/leadflow/opportunities', opportunityRoutes);
+router.use('/leadflow/handoffs', handoffRoutes);
+router.use('/leadflow/dashboards', dashboardRoutes);
+router.use('/leadflow/incidents', incidentRoutes);
+router.use('/leadflow/go-live', governanceRoutes);
+router.use('/leadflow/certification', certificationRoutes);
 router.use('/leadflow/credits', creditsRoutes);
 router.use('/leadflow/data-review', dataReviewRoutes);
 router.use('/leadflow/ai', aiRoutes);

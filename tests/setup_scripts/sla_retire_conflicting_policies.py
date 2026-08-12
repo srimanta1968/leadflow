@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """
+@fixture scope=tenant tier=api
+
 MUST-51 API-based setup: clear the SLA policy slot that POST /api/sla/policies
 creates into, so the definition is re-run-safe.
+
+SCOPE IS TENANT, NOT PLATFORM, and stated rather than derived. The uniqueness
+this clears — active policy per (source_channel, evaluation_order) — is enforced
+inside one tenant's policy set, and the retire calls run under that tenant's
+token. A platform-scoped reading would suggest the fixture reaches rows another
+tenant owns, which it neither does nor should. Tier is api because it retires
+through the SLA endpoints rather than touching the table.
 
 THE PROBLEM. `sla/policies-post.json` creates a live_chat policy at
 evaluation_order 10. An active policy is unique on (source_channel,

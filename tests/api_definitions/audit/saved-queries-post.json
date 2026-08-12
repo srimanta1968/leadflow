@@ -1,0 +1,167 @@
+{
+  "name": "POST /api/leadflow/audit/saved-queries - save an evidence query, with the visibility that decides who else may run it",
+  "description": "Persists a named Advanced Query so an auditor can re-run it, and records WHO ELSE MAY RUN IT (a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC2).\n\nVISIBILITY IS LOCAL BECAUSE UPSTREAM HAS NO CONCEPT OF IT. sdk-search stores a saved query against one persona and lists them with listSavedQueries(tenant_id, persona_id) - there is no share flag, no team scope and no way to express one. Writing sharing into that store would mean inventing a convention it does not enforce, and a query that LOOKS shared while upstream still scopes it to one persona is the worst of both. So LeadFlow keeps leadflow_audit_saved_query as the source of truth for visibility and WRITES THROUGH to sdk-search for the owner's own copy, so the platform store stays populated and the two never disagree about who owns what.\n\nTHREE VISIBILITIES, AND THE MIDDLE ONE IS THE POINT. `private` is the author alone. `role` shares with everyone holding the author's persona role - the case that actually matters, because an audit query is usually written by one privacy officer for all of them. `tenant` is everybody in the tenant. There is deliberately no share-with-named-person: a per-person grant list is an access-control system, and this endpoint is not the place to grow one.\n\nSHARING IS NOT ESCALATION, and the read side enforces that rather than this one. A shared query is a saved FILTER, never a saved RESULT SET: running it re-executes the search under the CALLER'S own scopes, which sdk-search resolves from their verified JWT claims and never from the request body. So a query shared by a privacy officer and run by a rep returns what the rep is allowed to see, not what the officer saw. That is why sharing a query is safe at all, and why the visibility field governs who may RUN it rather than what it returns.\n\nWRITE-THROUGH IS REPORTED, NOT ASSUMED. `mirrored_upstream` says whether sdk-search accepted the owner's copy. A local save that could not reach the platform store is still a usable saved query here, and saying so beats failing the request - but pretending the mirror happened would leave the two stores silently divergent.\n\n201 BECAUSE A SAVED QUERY IS A NEW ADDRESSABLE RECORD, at a collection root, per MUST-54.\n\nNO requiresRole: saving a query is not a privileged act - reading the chain is open by the navigation model's own reasoning, and audit.delete_event is the only gated audit capability. The default suite identity can exercise this. THE AUTH HEADER IS PINNED ON EVERY testCase, which is correct HERE and would be wrong on a roled endpoint. There is no requiresRole on this route - reading the chain is open by the navigation model own reasoning - so no token swap happens and MUST-71 does not apply. That also makes both 401 branches authorable rather than documentation-only: they can be expressed by omitting or corrupting the header without defeating anything. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/audit/saved-queries",
+  "method": "POST",
+  "taskId": "a7572b12-ebb1-49c2-864e-01e2bc04fa65",
+  "featureId": "ddd949b4-0c80-46d0-aca6-e2558eec6bfa",
+  "epicId": "00328fe3-4d27-4712-928a-2fa673523c1b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC2",
+    "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "visibility": [
+      "private",
+      "role",
+      "tenant"
+    ],
+    "data.visibility": [
+      "private",
+      "role",
+      "tenant"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A private query is saved and mirrored to the platform store",
+      "coversCriterion": "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC2",
+      "payload": {
+        "name": "{{dynamic:name}} refusals this month",
+        "visibility": "{{static:private}}",
+        "filters": {
+          "decision_outcome": "denied",
+          "purpose": "lead_management"
+        }
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "A role-visible query is shareable with everyone holding the author's role",
+      "coversCriterion": "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC2",
+      "payload": {
+        "name": "{{dynamic:name}} consent revocations",
+        "visibility": "{{static:role}}",
+        "filters": {
+          "purpose": "compliance"
+        }
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown visibility is refused rather than defaulted to private",
+      "coversCriterion": "a7572b12-ebb1-49c2-864e-01e2bc04fa65#AC2",
+      "payload": {
+        "name": "{{dynamic:name}} everything",
+        "visibility": "{{static:everyone_forever}}",
+        "filters": {}
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a query with no name cannot be found again, so it is refused",
+      "payload": {
+        "visibility": "{{static:private}}",
+        "filters": {}
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "payload": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "payload": {}
+    }
+  ],
+  "captureResponse": {
+    "audit.savedQuery.create.response.data.query_id": "data.query_id"
+  },
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "visibility must be one of private, role, tenant",
+      "when": "an unrecognised visibility is supplied. Defaulting to private would be the safe direction for disclosure but the wrong one for intent - somebody who meant to share with their team would believe they had, and nobody would ever see it."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "name is required",
+      "when": "no name is given. A saved query exists to be found again, and an unnamed one in a list of twenty is indistinguishable from the others."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

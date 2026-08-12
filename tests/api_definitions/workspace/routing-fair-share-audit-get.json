@@ -1,0 +1,67 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/routing/fair-share-audit - skew and starvation",
+  "description": "Distribution across the rep pool over 30 days.\n\nSTARVATION IS REPORTED SEPARATELY FROM SKEW, because they are different problems: a rep receiving far less than the mean has no pipeline and needs an intervention, while an uneven pool is a tuning question. Collapsing them into one \"fairness score\" loses the only distinction that changes what somebody does.\n\nReps with zero assignments do not appear in this window at all — they have no rows to group by — and the note says so rather than letting their absence read as fairness. The coverage console is where an entirely idle rep surfaces.",
+  "endpoint": "/api/leadflow/routing/fair-share-audit",
+  "method": "GET",
+  "expectedStatus": 200,
+  "testCases": [
+    {
+      "name": "skew and starvation",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

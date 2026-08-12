@@ -1,5 +1,6 @@
 import { dataService } from '../../services/DataService';
 import { SdkGatewayClient } from '../../platform/sdkGateway';
+import { dedupeKeyOf, openCase } from '../dataReview/caseStore';
 import { listSuppressions } from './consentGateway';
 import { recordSignal } from './suppressionLedger';
 
@@ -181,23 +182,84 @@ async function openDataReviewCase(
     ? `${divergences.length} suppression divergence(s) between the provider and the platform`
     : 'the provider suppression list could not be read, so no comparison was made';
 
-  try {
-    const res = await SdkGatewayClient.call<{ data?: { case_id?: string; id?: string } }>({
-      sdk: 'sdk-case',
-      path: '/api/cases',
-      method: 'POST',
-      body: {
-        tenant_id: tenantId ?? undefined,
-        type: 'data_review',
-        severity: providerReached ? 'medium' : 'high',
-        summary,
-        detail: { divergences, provider_reached: providerReached },
-      },
-    });
-    const id = res.data?.data?.case_id ?? res.data?.data?.id;
-    if (res.delivered && id) return id;
-  } catch {
-    // Falls through to the local reference.
+  /*
+   * SPLIT BY CAUSE, because these are two different things and one filing
+   * cannot serve both.
+   *
+   * A divergence HELD FOR REVIEW is a per-contact judgement: the platform
+   * suppresses somebody the provider does not. That is the SAFE direction — we
+   * are over-suppressing — and the opposite direction never reaches here,
+   * because `adopted` divergences are written to the ledger above before
+   * anything is filed. So by this point no compliance exposure is open, and
+   * what remains is a worklist somebody must work through one contact at a
+   * time. leadflow_review_case is built for exactly that: keyed per entity,
+   * carrying risk, remediation and an owner, and deduped while open so a
+   * contact nobody has decided about stays ONE case across sweeps.
+   *
+   * The provider being UNREACHABLE is a different animal — nobody could
+   * compare, there is no worklist, and it is the same class of operational
+   * failure as payment-webhook-missing and calendar-sync-failure. That goes to
+   * sdk-incident, where the rest of the runbook already lives.
+   *
+   * The earlier version of this filed ONE incident summarising N contacts,
+   * which gave a reviewer a count instead of a queue and called a routine
+   * over-suppression an outage.
+   */
+  if (!providerReached) {
+    try {
+      const res = await SdkGatewayClient.call<{ data?: { incident_id?: string; id?: string } }>({
+        sdk: 'sdk-incident',
+        path: '/api/incidents',
+        method: 'POST',
+        // Keyed on the tenant alone: a provider that stays unreachable is one
+        // open incident, not a new one every sweep.
+        idempotencyKey: `suppression-provider-unreachable:${tenantId ?? 'default'}`,
+        body: {
+          tenant_id: tenantId ?? undefined,
+          incident_type: 'suppression_provider_unreachable',
+          title: summary,
+          severity: 'high',
+          owner_role: 'revenue_operations',
+        },
+      });
+      const id = res.data?.data?.incident_id ?? res.data?.data?.id;
+      if (res.delivered && id) return id;
+    } catch {
+      // Falls through to the local reference.
+    }
+    return `local:suppression-provider-unreachable:${tenantId ?? 'default'}`;
   }
+
+  // ONE CASE PER CONTACT. A single case listing fifty subjects is a count, not
+  // a queue — nobody can work it, and closing it would close fifty decisions at
+  // once.
+  let opened = 0;
+  for (const d of divergences.filter((x) => x.action === 'held_for_review')) {
+    try {
+      const created = await openCase({
+        caseType: 'suppression_divergence',
+        // The stable identity of THIS disagreement: subject and channel. No
+        // count, no timestamp — either would make every sweep look like a new
+        // problem for a contact nobody has decided about.
+        dedupeKey: dedupeKeyOf(['suppression_divergence', d.subject_ref, d.channel]),
+        risk: 'medium',
+        entityRef: d.subject_ref,
+        entityLabel: null,
+        issue: `The platform suppresses this contact on ${d.channel}; the provider does not. We are over-suppressing, so nothing is at risk — but somebody must decide whether the suppression still stands.`,
+        evidence: [{
+          kind: 'suppression_divergence',
+          detail: `provider=${d.provider_state}, platform=${d.platform_state}, direction=${d.direction}`,
+        }] as never,
+        remediation: {
+          action: 'Confirm the platform suppression is correct and push it to the provider, or lift it if it was recorded in error.',
+        } as never,
+        ownerRole: 'revenue_operations',
+      }, `suppression-reconciliation:${tenantId ?? 'default'}`);
+      if (created) opened += 1;
+    } catch {
+      // One contact failing to file must not stop the rest.
+    }
+  }
+  return opened > 0 ? `review_cases:${opened}` : `review_cases:0`;
   return `local-data-review:${new Date().toISOString()}`;
 }

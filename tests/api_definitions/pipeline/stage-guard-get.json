@@ -1,0 +1,174 @@
+{
+  "taskId": "3ab3a068-0838-4764-9f9a-f0cea1ed2f04",
+  "featureId": "6c22802b-73c7-406c-bfeb-4e95c55e0b2c",
+  "epicId": "350440b3-9f6f-4cbe-bd63-778721adff89",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/pipeline/stage-guard - may this record enter that stage?",
+  "description": "Refuses a transition whose entry evidence is missing (3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC2). The incumbent updateDealStage allowed ANY stage to ANY stage, which is how a record reached Closed Won having never been contacted - so an unknown stage is refused here rather than waved through, and a move the source stage does not lead to is refused with the permitted destinations named.\n\nA ROADMAP FEATURE STATUS CANNOT SATISFY AN EXIT CRITERION (c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC4). Only a dependency recorded as available counts; in_development, roadmap and not_planned all block. VERIFIED LIVE: a record carrying bulk_export at status roadmap returned allowed false with missingEvidence naming the capability and its actual status. Recording \"we promised to build it\" as satisfied evidence is how a deal reaches Closed Won on a capability nobody has written, which SOP §06 calls out by name.\n\nTHE MISSING EVIDENCE IS LISTED, not summarised. \"Entry evidence missing\" cannot be acted on; \"feature:bulk_export is roadmap, not available\" can.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/pipeline/stage-guard",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC2",
+    "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC4"
+  ],
+  "fieldEnums": {
+    "to": [
+      "NEW_UNWORKED",
+      "ATTEMPTING_CONTACT",
+      "CONNECTED_QUALIFYING",
+      "DEMO_SCHEDULED",
+      "DISCOVERY_COMPLETE",
+      "COMMERCIAL_REVIEW",
+      "AGREEMENT_SENT",
+      "CLOSED_WON_ONBOARDING_PENDING",
+      "NURTURE",
+      "CLOSED_LOST"
+    ],
+    "from": [
+      "NEW_UNWORKED",
+      "ATTEMPTING_CONTACT",
+      "CONNECTED_QUALIFYING",
+      "DEMO_SCHEDULED",
+      "DISCOVERY_COMPLETE",
+      "COMMERCIAL_REVIEW",
+      "AGREEMENT_SENT",
+      "CLOSED_WON_ONBOARDING_PENDING",
+      "NURTURE",
+      "CLOSED_LOST"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A permitted move with all evidence present is allowed",
+      "coversCriterion": "3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC2",
+      "queryParams": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "from": "NEW_UNWORKED",
+        "to": "ATTEMPTING_CONTACT"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "A move the source stage does not lead to is refused",
+      "coversCriterion": "3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC2",
+      "queryParams": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "from": "NEW_UNWORKED",
+        "to": "AGREEMENT_SENT"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown target stage is refused rather than created",
+      "coversCriterion": "3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC2",
+      "queryParams": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "to": "NEGOTIATING"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no subject_ref, so there is no record to judge",
+      "queryParams": {
+        "to": "ATTEMPTING_CONTACT"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "when": "no record is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "to is required",
+      "when": "no target stage is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "to must be one of NEW_UNWORKED, ATTEMPTING_CONTACT, CONNECTED_QUALIFYING, DEMO_SCHEDULED, DISCOVERY_COMPLETE, COMMERCIAL_REVIEW, AGREEMENT_SENT, CLOSED_WON_ONBOARDING_PENDING, NURTURE, CLOSED_LOST",
+      "when": "an unrecognised stage is named. Accepting it would let a typo create a stage nothing in the product understands, and a record parked there is invisible to every board and every report."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

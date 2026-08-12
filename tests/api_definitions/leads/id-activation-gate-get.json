@@ -4,6 +4,8 @@
   "endpoint": "/api/leads/:id/activation-gate",
   "method": "GET",
   "taskId": "bdaec986-d033-4fcd-b201-07b81f13b1fc",
+  "featureId": "3092f695-d900-48e1-8422-4cfdafaa9b09",
+  "epicId": "fdd26353-b251-4841-8bed-f9d4378d17be",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 1,
@@ -18,7 +20,10 @@
     "POST /api/leads"
   ],
   "fieldEnums": {
-    "state": ["active", "blocked"],
+    "state": [
+      "active",
+      "blocked"
+    ],
     "group": [
       "identity_and_source",
       "ownership_and_lifecycle",
@@ -32,44 +37,75 @@
     {
       "name": "A freshly captured lead is BLOCKED and every gap is named",
       "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC3",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{cache:leads.create.response.data.lead.id}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "state": "blocked" }
+        "data": {
+          "state": "blocked"
+        }
       }
     },
     {
       "name": "Blocking marks the record, which is what puts it in the manager queue",
       "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{cache:leads.create.response.data.lead.id}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
       "expectedStatus": 200,
-      "expectedResponse": { "success": true, "data": { "state": "blocked" } }
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "state": "blocked"
+        }
+      }
     },
     {
       "name": "404 for a lead that does not exist",
       "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC3",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{static:00000000-0000-0000-0000-000000000000}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{static:00000000-0000-0000-0000-000000000000}}"
+      },
       "expectedStatus": 404,
-      "expectedError": { "code": "NOT_FOUND" }
+      "expectedError": {
+        "code": "NOT_FOUND"
+      }
     },
     {
       "name": "Reject an id that is not a UUID",
       "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC3",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{static:not-a-uuid}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{static:not-a-uuid}}"
+      },
       "expectedStatus": 400,
-      "expectedError": { "code": "VALIDATION_ERROR" }
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
     },
     {
       "name": "Reject an unauthenticated read",
       "coversCriterion": "bdaec986-d033-4fcd-b201-07b81f13b1fc#AC4",
-      "pathParams": { "id": "{{cache:leads.create.response.data.lead.id}}" },
+      "pathParams": {
+        "id": "{{cache:leads.create.response.data.lead.id}}"
+      },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

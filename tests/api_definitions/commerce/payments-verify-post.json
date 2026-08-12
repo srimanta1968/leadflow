@@ -1,0 +1,141 @@
+{
+  "taskId": "b6072947-1983-41b2-8b5b-2a7537ab4b46",
+  "featureId": "caabc6f6-4fbb-4a77-91ee-42cce2fdb519",
+  "epicId": "ef8a21ec-c1a9-4d26-ac59-e0fa28b41a3b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/payments/verify - the gate on Closed Won",
+  "description": "Records a gateway payment verification, and it is the ONLY thing that opens Closed Won (b6072947-1983-41b2-8b5b-2a7537ab4b46#AC1). An intent is not a verification: SOP §22 names \"payment success assumed from checkout intent\" as the gap, so the two are stored as different values rather than one boolean, and only gateway_confirmed returns may_close_won true. A checkout the buyer started and a charge the gateway confirmed are different facts about the world.\n\nREPLAY PRODUCES EXACTLY ONE OF EVERY ARTIFACT (b6072947-1983-41b2-8b5b-2a7537ab4b46#AC2), guaranteed by a UNIQUE constraint on (tenant, charge_ref) with INSERT ... ON CONFLICT DO NOTHING - not by a check-then-write, which has a window that five concurrent webhook deliveries will find. The second call returns 200 with duplicate true rather than 201, so a caller can tell what happened without the outcome changing.\n\nA MISSING WEBHOOK QUERIES THE GATEWAY DIRECTLY AND OPENS A FINANCE TASK (b6072947-1983-41b2-8b5b-2a7537ab4b46#AC3). source=missing_webhook probes sdk-payment and records the answer honestly: an unreachable gateway leaves the charge unconfirmed and Closed Won blocked, because assuming success here is the exact failure the SOP names. The finance task is opened either way, since a webhook that never arrived is a fact somebody must reconcile whichever way the probe lands.\n\nQA: depends on register and login. The happy path posts a fresh charge reference; re-running the suite re-posts the same reference and correctly returns 200 duplicate, which is the guarantee rather than a flake.",
+  "endpoint": "/api/leadflow/payments/verify",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "b6072947-1983-41b2-8b5b-2a7537ab4b46#AC1",
+    "b6072947-1983-41b2-8b5b-2a7537ab4b46#AC2",
+    "b6072947-1983-41b2-8b5b-2a7537ab4b46#AC3"
+  ],
+  "captureResponse": {
+    "payments.verify.post.response.data.charge_ref": "data.charge_ref",
+    "payments.verify.post.response.data.id": "data.charge_ref"
+  },
+  "fieldEnums": {
+    "data.verification": [
+      "gateway_confirmed",
+      "intent_only",
+      "failed"
+    ]
+  },
+  "requestBody": {
+    "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+    "charge_ref": "ch_{{dynamic:uuid}}",
+    "source": "webhook",
+    "amount_cents": 149900,
+    "currency": "USD"
+  },
+  "testCases": [
+    {
+      "name": "A gateway-confirmed charge is recorded once and permits Closed Won",
+      "coversCriterion": "b6072947-1983-41b2-8b5b-2a7537ab4b46#AC1",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+        "charge_ref": "ch_{{dynamic:uuid}}",
+        "source": "webhook",
+        "amount_cents": 149900,
+        "currency": "USD"
+      }
+    },
+    {
+      "name": "A checkout intent is recorded as intent_only and does NOT permit Closed Won",
+      "coversCriterion": "b6072947-1983-41b2-8b5b-2a7537ab4b46#AC1",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+        "charge_ref": "intent_{{dynamic:uuid}}",
+        "source": "checkout_intent"
+      }
+    },
+    {
+      "name": "NEGATIVE: charge_ref omitted",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:x"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "charge_ref is required",
+      "when": "subject_ref or charge_ref is absent or empty - the charge reference is the idempotency key, so a verification without one cannot be deduplicated."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

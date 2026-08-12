@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/capture/:id/resolve",
   "method": "POST",
   "taskId": "7b9e97d6-7838-42be-adbb-4239c1224520",
+  "featureId": "392d524b-32ad-43bb-97d3-e46fa4ddd9bd",
+  "epicId": "befcccab-d3b9-4629-828b-0df9f2c981d6",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 1,

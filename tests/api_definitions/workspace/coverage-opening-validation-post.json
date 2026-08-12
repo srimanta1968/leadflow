@@ -1,0 +1,106 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/coverage/opening-validation - the 8:45 checklist",
+  "description": "Records the opening validation against the day's launch huddle.\n\nTHE MANAGER'S CONFIRMATION IS REQUIRED AND SEPARATE from the checks. A checklist that records itself as confirmed is a form nobody read: the whole point is that a NAMED person looked at the queue and said it was clear, and a boolean the system sets on their behalf records the opposite of what it claims.\n\nA FAILING RESULT IS STILL RECORDED. A validation that refuses to save a bad result is a validation nobody runs on a bad morning, which is the only morning it matters. QA: measured live — the refusal and the recorded pass.",
+  "endpoint": "/api/leadflow/coverage/opening-validation",
+  "method": "POST",
+  "expectedStatus": 201,
+  "captureResponse": {
+    "coverage.opening_validation.response.data.recorded_at": "data.recorded_at"
+  },
+  "requestBody": {
+    "checks": {
+      "queue_cleared": true
+    },
+    "overnight_queue_cleared": true,
+    "manager_confirmed": true
+  },
+  "testCases": [
+    {
+      "name": "The checklist is recorded against the day's huddle with its failures named",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "checks": {
+          "queue_cleared": true
+        },
+        "overnight_queue_cleared": true,
+        "manager_confirmed": true
+      }
+    },
+    {
+      "name": "A checklist that confirms itself is REFUSED",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "checks": {}
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "manager_confirmed must be true - the opening validation records that a named person looked at the queue, and a checklist that confirms itself records the opposite of what it claims",
+      "when": "the manager confirmation is absent or false."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

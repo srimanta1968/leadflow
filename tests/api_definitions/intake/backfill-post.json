@@ -1,0 +1,71 @@
+{
+  "name": "POST /api/leadflow/intake/backfill - Drain the outage queue",
+  "description": "Replays intake events parked while a downstream was unavailable, and reports how many drained and how many failed again. 200 rather than 201: a command against a queue, creating no addressable resource. Governed on data.configure, which is the point - a replay re-runs real side effects across routing, SLA clocks and notifications, and a rep working their own leads has no business triggering it. blockedOn narrows the drain to events parked on ONE dependency, so restoring a single connector does not replay everything parked for every other reason; omitting it drains all. The audit entry names the actor and what was drained, because a backfill nobody can attribute looks identical to a duplicate-send incident afterwards. QA: requiresRole admin, so the runner pre-fetches that identity and no Authorization header is declared here (MUST-71).",
+  "endpoint": "/api/leadflow/intake/backfill",
+  "method": "POST",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "admin"
+  ],
+  "testability": "auto",
+  "priority": 32,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "testCases": [
+    {
+      "name": "Drain everything currently parked",
+      "capturesResponse": true,
+      "payload": {},
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "Drain only what was parked on one dependency",
+      "payload": {
+        "blockedOn": "sdk-assignment"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "payload": {}
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "FORBIDDEN",
+      "status": 403,
+      "when": "the caller does not hold data.configure - a local 'user' account bridges to sales_rep, which does not",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64/MUST-71: it needs a token from a DIFFERENT role, and this definition declares requiresRole so the runner pre-fetches the admin identity. Pinning a second Authorization alongside requiresRole is what MUST-71 forbids."
+    }
+  ]
+}

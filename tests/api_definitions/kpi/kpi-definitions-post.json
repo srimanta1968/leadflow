@@ -1,0 +1,119 @@
+{
+  "taskId": "44fa2588-4db3-48f4-a653-2c0a970f94fc",
+  "featureId": "722a8fca-8bcc-46b6-8a50-0cf286fb9e17",
+  "epicId": "285a56e9-aa8a-46e6-b4cd-0675b52053e5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 8,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/kpi-definitions - register what a metric means",
+  "description": "Registers a version of a metric definition (44fa2588-4db3-48f4-a653-2c0a970f94fc#AC3). SOP §22 names \"metrics disagree across dashboards\" as a launch gap, and they disagree because one tile counts leads by created_at and another by first_response_at, or because one divides by all leads and the other by contactable ones - never because somebody typed a number wrong. So all six fields are MANDATORY: plain language, the exact event timestamps, the source of truth, the filter, the denominator and a named owner. A registry without them records exactly the fields the two dashboards already agreed on.\n\nSUPERSEDE-AND-INSERT, NEVER AN IN-PLACE UPDATE. A definition that changes silently makes every historical chart wrong in a way nobody can see - the numbers move and the label does not. The version is what lets a reader say \"this series changed definition in March\" instead of \"the data looks odd\".\n\nTHE CHANGE IS ALSO AUDITED UPSTREAM, because \"who moved the conversion denominator\" is asked months later and the audit chain is where it is answerable against a record nobody can quietly edit. QA: measured live; a definition missing five fields was refused with all five named.",
+  "endpoint": "/api/leadflow/kpi-definitions",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC3"
+  ],
+  "captureResponse": {
+    "kpi.post.response.data.metric_key": "data.metric_key"
+  },
+  "requestBody": {
+    "metric_key": "contact_rate",
+    "plain_language": "Share of leads a human reached.",
+    "event_timestamps": "leads.created_at and leads.first_response_at",
+    "source_of_truth": "leadflow.leads",
+    "filter_clause": "created_at in the last 30 days",
+    "denominator": "all leads created in the window",
+    "owner_user_id": "{{cache:auth.login.response.data.user.id}}",
+    "change_reason": "initial registration"
+  },
+  "testCases": [
+    {
+      "name": "A complete definition is registered as a new version",
+      "coversCriterion": "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC3",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "metric_key": "contact_rate",
+        "plain_language": "Share of leads a human reached.",
+        "event_timestamps": "leads.created_at and leads.first_response_at",
+        "source_of_truth": "leadflow.leads",
+        "filter_clause": "created_at in the last 30 days",
+        "denominator": "all leads created in the window",
+        "owner_user_id": "{{cache:auth.login.response.data.user.id}}",
+        "change_reason": "initial registration"
+      }
+    },
+    {
+      "name": "NEGATIVE: a definition with only a name",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "metric_key": "half_defined"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "A definition missing plain_language, event_timestamps, source_of_truth, filter_clause, denominator cannot be registered - those are exactly the fields on which two dashboards silently disagree, so a registry without them records only what they already agreed on",
+      "when": "metric_key is absent, or any of the six required fields is missing."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

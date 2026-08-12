@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/intake/adapters",
   "method": "GET",
   "taskId": "3048538d-a5da-4311-bbd5-63d773a0844b",
+  "featureId": "e6ea22a3-3b66-413e-a91c-161a4896949b",
+  "epicId": "fdd26353-b251-4841-8bed-f9d4378d17be",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 2,
@@ -12,7 +14,10 @@
     "3048538d-a5da-4311-bbd5-63d773a0844b#AC1",
     "3048538d-a5da-4311-bbd5-63d773a0844b#AC2"
   ],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "captureResponse": {
     "intake.adapters.response.data.total": "data.total"
   },
@@ -20,15 +25,24 @@
     {
       "name": "Lists every configured adapter with its full declaration",
       "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "expectedStatus": 200,
-      "expectedResponse": { "success": true, "data": { "total": 9 } }
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "total": 9
+        }
+      }
     },
     {
       "name": "Reject an unauthenticated read",
       "coversCriterion": "3048538d-a5da-4311-bbd5-63d773a0844b#AC2",
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

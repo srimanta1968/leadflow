@@ -1,0 +1,99 @@
+{
+  "taskId": "b736b718-a31c-4ac3-a9ef-1a65613dcff5",
+  "featureId": "2a107414-e7a7-4d1f-9d7f-a04fc0328379",
+  "epicId": "2f860885-b8ac-4db6-ba54-62cfa4be5772",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/leads/:id/accept - the owner takes the lead, without buying more time",
+  "description": "Records that the assigned rep has the lead. THE RESPONSE CLOCK RUNS FROM WHEN THE LEAD ARRIVED, not from when its current owner got it. Every handover moves assigned_at and leaves source_timestamp and sla_due_at exactly where they were. That is enforced in three places on purpose: a BEFORE UPDATE trigger in migration 024 RAISES if source_timestamp changes, so an offending UPDATE fails whoever wrote it and whichever path it came through; no statement in ownershipService writes that column; and every handover records the clock it saw into leadflow_ownership_event, which makes the invariant checkable after the fact rather than only assertable at the time. The natural implementation breaks this by accident - reassign sets assigned_at = now(), somebody later recomputes sla_due_at from assigned_at to keep it consistent, and a rep who takes over a breaching lead inherits a fresh clock while the breach vanishes from the report.\n\nACCEPTING IS NOT A NEW LEAD. It stamps accepted_at and touches nothing else about the clock - the customer has been waiting exactly as long as they were a second earlier, and an accept that extended the deadline would let a rep reset their own SLA by clicking a button (b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC1).\n\nIDEMPOTENT. accepted_at uses COALESCE, so a double-clicked button or a retry after a timeout keeps the FIRST acceptance instant. The first accept is when the rep actually picked it up, and a second call must not rewrite that.\n\nONLY THE CURRENT OWNER MAY ACCEPT. The UPDATE is scoped to owner_user_id, so a rep accepting a lead that has since been reassigned away from them matches no row and gets a 404 rather than silently stamping somebody else record.\n\nTHE HAPPY PATH IS 404 here: the suite registers a throwaway user who owns no leads, and no environment seeds one assigned to them. The refusal branch is the real one worth holding - it proves acceptance is scoped to ownership rather than open to anybody with the id. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/leads/:id/accept",
+  "method": "POST",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC1"
+  ],
+  "fieldEnums": {
+    "data.priority": [
+      "P1",
+      "P2",
+      "P3"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Accepting a lead the caller does not own is refused",
+      "coversCriterion": "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC1",
+      "payload": {},
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No lead assigned to you with that id",
+      "when": "the lead does not exist, or is not currently owned by the caller. One code for both, deliberately: telling a caller that a lead exists but belongs to somebody else discloses the existence of a record they have no claim on."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -117,3 +117,4 @@ mcp-server/feedback/history/
 
 # Storybook static build
 client/storybook-static/
+deploy/leadflow.env

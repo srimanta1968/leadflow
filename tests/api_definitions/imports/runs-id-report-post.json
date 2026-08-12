@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/imports/runs/:run_id/report",
   "method": "POST",
   "taskId": "16e54e8c-590d-41d1-9494-9249519c107f",
+  "featureId": "01724402-1fc2-45e4-90e4-f6c46286286f",
+  "epicId": "8eca7fd1-6541-4863-81ec-bf170938403d",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "requiresRole": [

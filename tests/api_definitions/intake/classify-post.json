@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/intake/classify",
   "method": "POST",
   "taskId": "ef327d9d-9a69-48de-9db5-06531c0d03e7",
+  "featureId": "19c7618b-dedd-4907-ae1a-cd25d9f43314",
+  "epicId": "fdd26353-b251-4841-8bed-f9d4378d17be",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 1,
@@ -14,7 +16,10 @@
     "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC3",
     "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC4"
   ],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
   "fieldEnums": {
     "signalKind": [
       "website_lead_form",
@@ -35,8 +40,18 @@
       "impression",
       "page_view"
     ],
-    "decision": ["CREATE", "MERGE", "NO_RECORD", "CLOSED_WON"],
-    "priority": ["highest", "high", "normal", "none"]
+    "decision": [
+      "CREATE",
+      "MERGE",
+      "NO_RECORD",
+      "CLOSED_WON"
+    ],
+    "priority": [
+      "highest",
+      "high",
+      "normal",
+      "none"
+    ]
   },
   "captureResponse": {
     "intake.classify.response.data.decision": "data.decision",
@@ -46,102 +61,183 @@
     {
       "name": "A lead form CREATES, at high priority, with the SLA clock",
       "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "payload": { "signalKind": "website_lead_form", "identifiable": true },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "signalKind": "website_lead_form",
+        "identifiable": true
+      },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "decision": "CREATE", "priority": "high", "ruleKey": "lead_form" }
+        "data": {
+          "decision": "CREATE",
+          "priority": "high",
+          "ruleKey": "lead_form"
+        }
       }
     },
     {
       "name": "An anonymous page view creates NO record and NO identity",
       "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC2",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "payload": { "signalKind": "page_view", "identifiable": false },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "signalKind": "page_view",
+        "identifiable": false
+      },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "decision": "NO_RECORD", "createsRecord": false, "mayInferIdentity": false }
+        "data": {
+          "decision": "NO_RECORD",
+          "createsRecord": false,
+          "mayInferIdentity": false
+        }
       }
     },
     {
       "name": "An identifiable viewer STILL creates no record",
       "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC2",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "payload": { "signalKind": "impression", "identifiable": true },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "signalKind": "impression",
+        "identifiable": true
+      },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "decision": "NO_RECORD", "mayInferIdentity": false }
+        "data": {
+          "decision": "NO_RECORD",
+          "mayInferIdentity": false
+        }
       }
     },
     {
       "name": "A known contact revisiting pricing MERGES and pauses nurture",
       "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC3",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "payload": { "signalKind": "pricing_revisit", "identifiable": true },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "signalKind": "pricing_revisit",
+        "identifiable": true
+      },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "decision": "MERGE", "priority": "high", "ruleKey": "known_contact_revisit" }
+        "data": {
+          "decision": "MERGE",
+          "priority": "high",
+          "ruleKey": "known_contact_revisit"
+        }
       }
     },
     {
       "name": "Checkout started is the HIGHEST priority",
       "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC4",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "payload": { "signalKind": "checkout_started", "identifiable": false },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "signalKind": "checkout_started",
+        "identifiable": false
+      },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "decision": "CREATE", "priority": "highest", "ruleKey": "checkout_started" }
+        "data": {
+          "decision": "CREATE",
+          "priority": "highest",
+          "ruleKey": "checkout_started"
+        }
       }
     },
     {
       "name": "An unidentifiable interested comment is refused, not invented",
       "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC2",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "payload": { "signalKind": "comment_interested", "identifiable": false },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "signalKind": "comment_interested",
+        "identifiable": false
+      },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "decision": "NO_RECORD", "ruleKey": "interested_comment" }
+        "data": {
+          "decision": "NO_RECORD",
+          "ruleKey": "interested_comment"
+        }
       }
     },
     {
       "name": "A completed purchase goes to CLOSED WON, not to a lead",
       "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "payload": { "signalKind": "license_purchase_completed", "identifiable": true },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "signalKind": "license_purchase_completed",
+        "identifiable": true
+      },
       "expectedStatus": 200,
-      "expectedResponse": { "success": true, "data": { "decision": "CLOSED_WON" } }
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "decision": "CLOSED_WON"
+        }
+      }
     },
     {
       "name": "An unknown signal kind defaults to NO_RECORD",
       "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC2",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "payload": { "signalKind": "{{static:some_new_event}}", "identifiable": true },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "signalKind": "{{static:some_new_event}}",
+        "identifiable": true
+      },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "decision": "NO_RECORD", "ruleKey": "unmatched" }
+        "data": {
+          "decision": "NO_RECORD",
+          "ruleKey": "unmatched"
+        }
       }
     },
     {
       "name": "Reject a request with no signal kind",
       "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "payload": { "identifiable": true },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "identifiable": true
+      },
       "expectedStatus": 400,
-      "expectedError": { "code": "VALIDATION_ERROR" }
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
     },
     {
       "name": "Reject an unauthenticated classification",
       "coversCriterion": "ef327d9d-9a69-48de-9db5-06531c0d03e7#AC1",
-      "payload": { "signalKind": "lead_form", "identifiable": true },
+      "payload": {
+        "signalKind": "lead_form",
+        "identifiable": true
+      },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

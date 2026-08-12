@@ -99,8 +99,12 @@ export async function permittedUsesFor(
   try {
     const result = await SdkGatewayClient.call<{ data?: { records?: { subject_ref?: string; permitted_uses?: string[] }[] } }>({
       sdk: 'sdk-source-record',
-      path: '/api/source-records/lookup',
-      method: 'POST',
+      /* THE PERMITTED-USE ENDPOINT, which is what this actually asks. The old
+         /source-records/lookup does not exist; /api/source-rights/permitted-use
+         is the spec's answer to "what may this record be used for", which is
+         the whole question here. */
+      path: '/api/source-rights/permitted-use',
+      method: 'GET',
       idempotencyKey: `segment-rights:${subjectRefs.length}:${subjectRefs[0]}`,
       body: { tenant_id: config.projexCloud.tenantId, subject_refs: subjectRefs.slice(0, 1000) },
     });

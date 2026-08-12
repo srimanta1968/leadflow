@@ -1,0 +1,98 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/dashboards/:role - the five role views",
+  "description": "The role-scoped dashboard. Each role gets the panels its work needs and not the others: a rep gets pipeline health without the source breakdown, client success gets onboarding attainment, revenue operations gets everything.\n\nAN UNKNOWN ROLE IS REFUSED rather than rendered empty. An empty dashboard reads as \"nothing to do\", which is the most dangerous thing a dashboard can say when it actually means \"I did not understand your role\". QA: measured live, including the refusal.",
+  "endpoint": "/api/leadflow/dashboards/:role",
+  "method": "GET",
+  "expectedStatus": 200,
+  "testCases": [
+    {
+      "name": "A known role returns its scoped panels",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "role": "sales_rep"
+      }
+    },
+    {
+      "name": "An unknown role is REFUSED rather than rendered empty",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "role": "sales_rep"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "role": "sales_rep"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "role": "sales_rep"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "role must be one of leadership, sales_manager, sales_rep, client_success, revenue_operations - an unknown role would render an empty dashboard that reads as \"nothing to do\"",
+      "when": "the role is outside the five known ones."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

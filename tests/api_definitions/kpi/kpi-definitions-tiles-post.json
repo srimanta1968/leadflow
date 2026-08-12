@@ -1,0 +1,122 @@
+{
+  "taskId": "44fa2588-4db3-48f4-a653-2c0a970f94fc",
+  "featureId": "722a8fca-8bcc-46b6-8a50-0cf286fb9e17",
+  "epicId": "285a56e9-aa8a-46e6-b4cd-0675b52053e5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/kpi-definitions"
+  ],
+  "name": "POST /api/leadflow/kpi-definitions/tiles - the ship gate",
+  "description": "Declares a dashboard tile, and REFUSES one whose metric is not registered (44fa2588-4db3-48f4-a653-2c0a970f94fc#AC1, 44fa2588-4db3-48f4-a653-2c0a970f94fc#AC4). This is the enforcement point: a tile cannot be declared, and therefore cannot ship, unless the metric it displays already exists in the registry. Putting the check here rather than in a lint rule means it also holds for tiles added at runtime, which a build-time gate cannot see at all.\n\nA 422 rather than a 400 - the request is well formed and the intent is clear; what is missing is a precondition in the world. The refusal names the metric and what to do about it.\n\nQA: measured live; a tile referencing an unregistered metric was refused, and the same call succeeded once the definition existed.",
+  "endpoint": "/api/leadflow/kpi-definitions/tiles",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC1",
+    "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC4"
+  ],
+  "captureResponse": {
+    "kpi.tiles.response.data.tile_id": "data.tile_id"
+  },
+  "requestBody": {
+    "dashboard_key": "exec",
+    "tile_key": "contact",
+    "metric_key": "{{cache:kpi.post.response.data.metric_key}}",
+    "displayed_value": 0.99
+  },
+  "testCases": [
+    {
+      "name": "A tile referencing a registered definition is accepted",
+      "coversCriterion": "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC1",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "dashboard_key": "exec",
+        "tile_key": "contact",
+        "metric_key": "{{cache:kpi.post.response.data.metric_key}}",
+        "displayed_value": 0.99
+      }
+    },
+    {
+      "name": "A tile whose metric is not in the registry is REFUSED",
+      "coversCriterion": "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC4",
+      "expectedStatus": 422,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "422|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "dashboard_key": "exec",
+        "tile_key": "rogue",
+        "metric_key": "made_up_metric"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "dashboard_key, tile_key and metric_key are all required",
+      "when": "any of the three is absent."
+    },
+    {
+      "status": 422,
+      "code": "VALIDATION_ERROR",
+      "message": "No registered KPI definition exists for \"made_up_metric\", so this tile cannot ship. Register the definition first - a tile whose meaning is written only in its own query is how two dashboards end up disagreeing.",
+      "when": "the metric key has no current registered definition."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

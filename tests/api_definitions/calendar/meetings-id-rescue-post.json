@@ -1,0 +1,101 @@
+{
+  "taskId": "11672578-09c5-47e1-ae2b-47af58e6f038",
+  "featureId": "e28933df-3916-47d1-9d17-de4e28572ccc",
+  "epicId": "e000da35-a777-46e7-8589-2d24accdc494",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/meetings/:id/rescue - the rescue message, refused until the rep has called",
+  "description": "THE GATE IS THE POINT (11672578-09c5-47e1-ae2b-47af58e6f038#AC1). SOP §31 requires ONE HUMAN CALL within five minutes before any automated rescue is permitted, and this endpoint refuses with 409 until that attempt is logged through POST /:id/rescue-call. MEASURED LIVE: a rescue attempted before the call returned 409 naming the rule.\n\nWHY THE ORDER MATTERS. Sending the message first turns a missed meeting into a marketing touch - the prospect gets an automated nudge instead of a person noticing they were stood up, which is how a recoverable no-show becomes a lost one. The gate makes the sequence structural rather than a matter of rep discipline.\n\nIDEMPOTENT. A second rescue returns the first send rather than messaging again; somebody who missed a meeting does not need telling twice.\n\nTHE CALENDAR-SYNC FALLBACK IS A SEPARATE ENDPOINT (11672578-09c5-47e1-ae2b-47af58e6f038#AC3): POST /:id/sync-failure REFUSES without a manual_invite_url, because SOP §09 requires the manual invite to be sent and its URL recorded BEFORE contact ends. A customer left without an invitation because an integration was down has no way to know the meeting exists. Verified live at 400. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/meetings/:id/rescue",
+  "method": "POST",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "11672578-09c5-47e1-ae2b-47af58e6f038#AC1",
+    "11672578-09c5-47e1-ae2b-47af58e6f038#AC3"
+  ],
+  "testCases": [
+    {
+      "name": "A rescue for a meeting with no recorded no-show is refused",
+      "coversCriterion": "11672578-09c5-47e1-ae2b-47af58e6f038#AC1",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "channel": "{{static:sms}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No no-show recorded for that meeting",
+      "when": "the meeting has not been marked as a no-show."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "The rescue message is blocked until the rep has called",
+      "when": "no human call attempt has been logged. SOP §31 puts the call first: an automated nudge instead of a person noticing is how a recoverable no-show becomes a lost one."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ],
+  "fieldEnums": {
+    "channel": [
+      "sms",
+      "email"
+    ]
+  }
+}

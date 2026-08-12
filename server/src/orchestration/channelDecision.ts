@@ -433,7 +433,8 @@ async function evaluate(
     await runCheck('timing', 'sdk-notification', async () => {
       const res = pre?.timing ?? await SdkGatewayClient.call<{ data?: { quiet_hours?: boolean; cap_reached?: boolean; next_allowed_at?: string } }>({
         sdk: 'sdk-notification',
-        path: '/api/notifications/send-window',
+        // /send-window is not in the spec; quiet-hours is where the window lives.
+      path: '/api/notifications/quiet-hours',
         method: 'POST',
         body: {
           tenant_id: tenantId,

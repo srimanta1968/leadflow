@@ -119,7 +119,9 @@ export async function killSwitchState(): Promise<KillSwitchState> {
     }>({
       sdk: 'sdk-feature-flags',
       path: `/api/flags/${encodeURIComponent(flagId())}/kill-switch`,
-      method: 'GET',
+      // The spec registers this as a POST — it RECORDS a kill-switch
+      // evaluation rather than reading a flag value.
+      method: 'POST',
     });
 
     const switchState = result.data?.data?.kill_switch;

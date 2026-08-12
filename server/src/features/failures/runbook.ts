@@ -141,8 +141,13 @@ export async function readDlq(): Promise<{ items: DlqItem[]; sources: Record<str
   try {
     const c = await SdkGatewayClient.call<{ data?: { items?: Record<string, unknown>[] } }>({
       sdk: 'sdk-connectors',
-      path: `/api/connectors/tenants/${encodeURIComponent(config.projexCloud.tenantId ?? '')}/dlq`,
-      method: 'GET', idempotencyKey: 'dlq-read:connectors',
+      /* THE SPEC EXPOSES NO CONNECTOR DLQ READ — only /dlq/replay and
+         /dlq/retry-tick. retry-tick is the closest thing that reports queue
+         state, so it is used as the reachability probe and the items come back
+         empty with the source flagged, rather than calling a read path that
+         does not exist and reporting the queue as clear. */
+      path: '/api/connectors/dlq/retry-tick',
+      method: 'POST', idempotencyKey: 'dlq-read:connectors',
     });
     if (c.delivered) {
       sources['sdk-connectors'] = true;
@@ -160,7 +165,10 @@ export async function readDlq(): Promise<{ items: DlqItem[]; sources: Record<str
 
   try {
     const w = await SdkGatewayClient.call<{ data?: { deliveries?: Record<string, unknown>[] } }>({
-      sdk: 'sdk-webhook', path: '/api/webhooks/dlq', method: 'GET', idempotencyKey: 'dlq-read:webhook',
+      sdk: 'sdk-webhook',
+      // The spec exposes deliveries, not a dlq collection: failed ones are
+      // filtered out of it rather than living on their own path.
+      path: '/api/webhooks/deliveries?status=failed', method: 'GET', idempotencyKey: 'dlq-read:webhook',
     });
     if (w.delivered) {
       sources['sdk-webhook'] = true;
@@ -248,7 +256,8 @@ export async function setKillSwitch(input: {
   if (SdkGatewayClient.isConfigured()) {
     try {
       const result = await SdkGatewayClient.call({
-        sdk: 'sdk-feature-flags', path: '/api/feature-flags', method: 'POST',
+        // PUT /api/flags is the upsert; /api/feature-flags does not exist.
+        sdk: 'sdk-feature-flags', path: '/api/flags', method: 'PUT',
         idempotencyKey: `kill-switch:${input.key}:${input.engaged}`,
         body: {
           tenant_id: config.projexCloud.tenantId, key: input.key,

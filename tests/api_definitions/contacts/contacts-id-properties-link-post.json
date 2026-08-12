@@ -1,0 +1,124 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 11,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "GET /api/leadflow/contacts"
+  ],
+  "name": "POST /api/leadflow/contacts/:id/properties/link - a contextual role",
+  "description": "Links a property to a person as a CONTEXTUAL ROLE.\n\nTHE ADDRESS IS CANONICALISED UPSTREAM before the relationship is written, which is why this takes a raw address rather than an id — resolving it in the browser would let the client decide which place a string means, and two operators typing the same house differently would create two properties. An unresolvable address REFUSES rather than linking against the raw string.\n\nNO PROPERTY FACT IS WRITTEN ONTO THE PERSON, and person_attributes_written: 0 is returned as proof rather than as a promise. A role is a relationship between a person and a place; copying \"owns 14 Elm St\" onto the person record is how it survives the sale of the house.\n\nEvidence and a start date are mandatory: a role with neither is an assertion nobody can date or defend.\n\nQA NOTE: sdk-geo is not configured in this environment, so the canonicalisation refusal is the path under test. That refusal IS the guarantee — linking against a raw address string would create a second property for the same place the next time somebody types it differently, and a duplicate property is not recoverable by editing.",
+  "endpoint": "/api/leadflow/contacts/:id/properties/link",
+  "method": "POST",
+  "expectedStatus": 503,
+  "requestBody": {
+    "address": "14 Elm Street, Chicago IL",
+    "role": "owner",
+    "trust_state": "Confirmed",
+    "valid_from": "2026-01-01",
+    "evidence_type": "deed"
+  },
+  "testCases": [
+    {
+      "name": "Linking is REFUSED when the address cannot be canonicalised",
+      "expectedStatus": 503,
+      "expectedResponse": {
+        "success": false,
+        "code": "UPSTREAM_UNAVAILABLE"
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "address": "14 Elm Street, Chicago IL",
+        "role": "owner",
+        "trust_state": "Confirmed",
+        "valid_from": "2026-01-01",
+        "evidence_type": "deed"
+      },
+      "params": {
+        "id": "{{cache:contacts.list.response.data.contacts.0.contact_id}}"
+      }
+    },
+    {
+      "name": "A link with no evidence and no start date is REFUSED",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "address": "14 Elm Street",
+        "role": "owner"
+      },
+      "params": {
+        "id": "{{cache:contacts.list.response.data.contacts.0.contact_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:contacts.list.response.data.contacts.0.contact_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:contacts.list.response.data.contacts.0.contact_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "trust_state, valid_from, evidence_type are required - a role with no evidence and no start date is an assertion nobody can date or defend",
+      "when": "any of address, role, trust_state, valid_from or evidence_type is missing."
+    },
+    {
+      "status": 503,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "message": "The address could not be canonicalised, so no relationship was written. Linking against a raw string would create a second property for the same place the next time somebody types it differently.",
+      "when": "the geo service cannot resolve the address. Refusing is deliberate — a duplicate property is not recoverable by editing."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

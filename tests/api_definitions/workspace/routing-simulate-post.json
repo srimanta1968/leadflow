@@ -1,0 +1,98 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/routing/simulate - replay, zero side effects",
+  "description": "Replays a historical window through the current configuration and reports which rule WOULD have matched.\n\nZERO SIDE EFFECTS BY CONSTRUCTION: the simulation never calls the assignment SDK, so there is no code path from here to a real assignment, notification or clock. A rep who gets a notification from a simulation stops trusting the simulation.\n\nTHE NUMBER THAT MATTERS IS would_route_differently, not the match count. \"412 leads matched\" says nothing about whether a change is safe; \"38 would have gone to a different rep\" does. Leads matching no rule are counted separately, because a growing unmatched number is a configuration gap rather than a routing failure. QA: measured live over 90 days — 5000 replayed, 1679 would route differently, 3302 unmatched.",
+  "endpoint": "/api/leadflow/routing/simulate",
+  "method": "POST",
+  "expectedStatus": 200,
+  "captureResponse": {
+    "routing.simulate.response.data.leads_replayed": "data.leads_replayed"
+  },
+  "requestBody": {
+    "window_days": 90
+  },
+  "testCases": [
+    {
+      "name": "The replay reports what would change, with no assignments made",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "window_days": 90
+      }
+    },
+    {
+      "name": "NEGATIVE: an out-of-range window",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "window_days": 900
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "window_days must be between 1 and 180",
+      "when": "the window is absent, non-numeric or out of range."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "taskId": "b7eceb85-6dd9-4335-b950-ff0cf1de6822",
+  "featureId": "473fa734-e824-4bae-9830-3b209b38b9f5",
+  "epicId": "60b11414-8cf8-4248-bc8a-22d74d122968",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/analytics/attribution - evidence, not reconstruction",
+  "description": "Campaign, ad, creative and UTM performance grouped from columns stamped at intake (b7eceb85-6dd9-4335-b950-ff0cf1de6822#AC1). EVIDENCE-BASED RATHER THAN RECONSTRUCTED: the attribution fields travel with the lead from intake to closed-won, so this is a GROUP BY over facts recorded at the time rather than a guess assembled later from timestamps and campaign windows. That difference is what makes a number marketing can defend.\n\nBOTH THE ORIGINAL AND THE LATEST SOURCE SURVIVE, in separate columns. leads.source is the ORIGINAL and never moves; latest_source is its own column added for this task, because overwriting the first on a later touch is exactly how a paid channel takes credit for an organic lead.\n\nTHE DERIVATION IS REGISTERED WITH sdk-analytics so its lineage is inspectable (b7eceb85-6dd9-4335-b950-ff0cf1de6822#AC4). A disputed attribution number is then followed back to its inputs rather than defended by assertion; when the registration cannot be made the response says so rather than implying a lineage ref that does not exist.\n\nQA: measured live over 90 days.",
+  "endpoint": "/api/leadflow/analytics/attribution",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "b7eceb85-6dd9-4335-b950-ff0cf1de6822#AC1",
+    "b7eceb85-6dd9-4335-b950-ff0cf1de6822#AC4"
+  ],
+  "testCases": [
+    {
+      "name": "Attribution rows carry both original and latest source, with a lineage note",
+      "coversCriterion": "b7eceb85-6dd9-4335-b950-ff0cf1de6822#AC1",
+      "endpoint": "/api/leadflow/analytics/attribution?days=90",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

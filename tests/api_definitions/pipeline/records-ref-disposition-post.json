@@ -1,0 +1,166 @@
+{
+  "taskId": "c3bf29f3-da93-407b-8ecc-fdb35c245cdc",
+  "featureId": "5804edc4-c360-4241-90c2-38ecb36554b6",
+  "epicId": "350440b3-9f6f-4cbe-bd63-778721adff89",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/records/:ref/disposition - log an outcome and run the automation it implies",
+  "description": "A disposition is not a label. SOP §07 makes each outcome DRIVE automation: connected pauses prospecting, callback creates an exact date-time task, no-answer sends the approved email plus eligible SMS, wrong number suppresses the channel and opens a Data Repair case, STOP cancels the sequence and applies suppression.\n\nEXACTLY ONCE, NO DUPLICATE SENDS (c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC1). The automation claims its slot by INSERTing a dedupe key into leadflow_disposition_event, which carries a UNIQUE index - so a rep who logs no-answer twice, or a retry after a timeout, cannot send the prospect two follow-ups. VERIFIED LIVE: the first NO_ANSWER returned already_ran false with actions [email.send, sms.send_if_eligible]; the second returned already_ran true with no actions.\n\nWITHIN TWO MINUTES, and the window is in the response rather than buried. Two minutes is short enough that the prospect still remembers the missed call and long enough that a rep who dialled by mistake can undo it.\n\nELIGIBILITY IS NOT DECIDED HERE (c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC1). The SMS is queued with require_eligibility and the channel decision engine runs the consent, suppression and quiet-hours checks. Deciding it here would put a second, weaker copy of that logic in front of the customer - and the two would disagree the first time either changed.\n\nWRONG NUMBER DOES BOTH THINGS (c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC2): suppresses the channel AND opens a Data Repair case. Suppressing without a case leaves nobody to fix the record; a case without suppression keeps dialling the wrong person meanwhile.\n\nQA: depends on register and login.\n\nQA NOTE: the first-log and repeat-log cases need OPPOSITE determinism — one must never have been seen before, the other must always have been. They therefore use a dynamic ref and a fixed ref respectively. Sharing one ref made the 201 case fail on every re-run once the fixture had been logged.",
+  "endpoint": "/api/leadflow/records/:ref/disposition",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC1",
+    "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC2"
+  ],
+  "fieldEnums": {
+    "code_key": [
+      "CONNECTED",
+      "VOICEMAIL",
+      "NO_ANSWER",
+      "WRONG_NUMBER",
+      "CALLBACK_REQUESTED",
+      "REPLIED",
+      "BOUNCED",
+      "OPTED_OUT",
+      "NO_RESPONSE"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A no-answer disposition queues the follow-up email and eligible SMS",
+      "coversCriterion": "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC1",
+      "payload": {
+        "code_key": "{{static:NO_ANSWER}}"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "ref": "{{cache:auth.register.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "Logging the same disposition again sends nothing",
+      "coversCriterion": "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC1",
+      "payload": {
+        "code_key": "{{static:NO_ANSWER}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "ref": "00000000-0000-0000-0000-000000000000"
+      }
+    },
+    {
+      "name": "A wrong number suppresses the channel and opens a Data Repair case",
+      "coversCriterion": "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC2",
+      "payload": {
+        "code_key": "{{static:WRONG_NUMBER}}"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "ref": "{{cache:auth.register.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown disposition code is refused",
+      "payload": {
+        "code_key": "{{static:HUNG_UP_ANGRILY}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "ref": "{{cache:auth.register.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "ref": "{{cache:auth.register.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "ref": "{{cache:auth.register.response.data.user.id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "code_key must be one of CONNECTED, VOICEMAIL, NO_ANSWER, WRONG_NUMBER, CALLBACK_REQUESTED, REPLIED, BOUNCED, OPTED_OUT, NO_RESPONSE",
+      "when": "an unrecognised disposition is supplied. Accepting it would let a new spelling become a category that drives no automation and appears in no report."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ],
+  "captureResponse": {
+    "records.disposition.response.data.code_key": "data.code_key"
+  }
+}

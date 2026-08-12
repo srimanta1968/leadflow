@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/ai/sdr/qualify",
   "method": "POST",
   "taskId": "74a0891b-3892-4e93-aad4-450bfd776afa",
+  "featureId": "3b3d8b6b-4485-4e0b-8b9a-ffb42351f2cd",
+  "epicId": "34925c81-88e1-4115-8220-a1441a258108",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 1,
@@ -12,10 +14,21 @@
     "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
     "74a0891b-3892-4e93-aad4-450bfd776afa#AC2"
   ],
-  "dependsOn": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/leads"],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leads"
+  ],
   "fieldEnums": {
-    "status": ["proposed", "accepted", "rejected"],
-    "channel": ["email", "sms"]
+    "status": [
+      "proposed",
+      "accepted",
+      "rejected"
+    ],
+    "channel": [
+      "email",
+      "sms"
+    ]
   },
   "captureResponse": {
     "ai.sdrProposal.response.data.proposal.id": "data.proposal.id"
@@ -24,7 +37,9 @@
     {
       "name": "Qualifying a lead returns a PROPOSAL, never a sent message",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "leadId": "{{cache:leads.create.response.data.lead.id}}",
         "channel": "email"
@@ -32,45 +47,64 @@
       "expectedStatus": 201,
       "expectedResponse": {
         "success": true,
-        "data": { "proposal": { "status": "proposed", "sent": false } }
+        "data": {
+          "proposal": {
+            "status": "proposed",
+            "sent": false
+          }
+        }
       }
     },
     {
       "name": "Reject a research source outside the permitted registry",
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC2",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "leadId": "{{cache:leads.create.response.data.lead.id}}",
         "channel": "email",
-        "researchSources": ["scraped_social_profile"]
+        "researchSources": [
+          "scraped_social_profile"
+        ]
       },
       "expectedStatus": 422,
-      "expectedError": { "code": "RESEARCH_SOURCE_NOT_PERMITTED" }
+      "expectedError": {
+        "code": "RESEARCH_SOURCE_NOT_PERMITTED"
+      }
     },
     {
       "name": "Reject an unknown lead",
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "leadId": "{{var:absent_uuid}}",
         "channel": "email"
       },
       "expectedStatus": 404,
-      "expectedError": { "code": "NOT_FOUND" }
+      "expectedError": {
+        "code": "NOT_FOUND"
+      }
     },
     {
       "name": "Reject a channel that is not email or sms",
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
       "payload": {
         "leadId": "{{cache:leads.create.response.data.lead.id}}",
         "channel": "carrier_pigeon"
       },
       "expectedStatus": 400,
-      "expectedError": { "code": "VALIDATION_ERROR" }
+      "expectedError": {
+        "code": "VALIDATION_ERROR"
+      }
     },
     {
       "name": "Reject an unauthenticated qualification",
@@ -81,7 +115,9 @@
         "channel": "email"
       },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

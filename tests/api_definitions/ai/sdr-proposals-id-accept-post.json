@@ -4,11 +4,15 @@
   "endpoint": "/api/leadflow/ai/sdr/proposals/:id/accept",
   "method": "POST",
   "taskId": "74a0891b-3892-4e93-aad4-450bfd776afa",
+  "featureId": "3b3d8b6b-4485-4e0b-8b9a-ffb42351f2cd",
+  "epicId": "34925c81-88e1-4115-8220-a1441a258108",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 2,
   "expectedStatus": 200,
-  "coversCriterion": ["74a0891b-3892-4e93-aad4-450bfd776afa#AC1"],
+  "coversCriterion": [
+    "74a0891b-3892-4e93-aad4-450bfd776afa#AC1"
+  ],
   "dependsOn": [
     "POST /api/auth/register",
     "POST /api/auth/login",
@@ -21,43 +25,75 @@
     {
       "name": "A rep accepts the draft and it becomes sendable",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{cache:ai.sdrProposal.response.data.proposal.id}}" },
-      "payload": { "acceptedAsWritten": true },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:ai.sdrProposal.response.data.proposal.id}}"
+      },
+      "payload": {
+        "acceptedAsWritten": true
+      },
       "expectedStatus": 200,
       "expectedResponse": {
         "success": true,
-        "data": { "proposal": { "status": "accepted" } }
+        "data": {
+          "proposal": {
+            "status": "accepted"
+          }
+        }
       }
     },
     {
       "name": "Accepting an already-accepted proposal is a conflict",
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{cache:ai.sdrProposal.response.data.proposal.id}}" },
-      "payload": { "acceptedAsWritten": true },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{cache:ai.sdrProposal.response.data.proposal.id}}"
+      },
+      "payload": {
+        "acceptedAsWritten": true
+      },
       "expectedStatus": 409,
-      "expectedError": { "code": "CONFLICT" }
+      "expectedError": {
+        "code": "CONFLICT"
+      }
     },
     {
       "name": "Reject acceptance of an unknown proposal",
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
-      "headers": { "Authorization": "Bearer {{cache:auth.login.response.data.token}}" },
-      "pathParams": { "id": "{{var:absent_uuid}}" },
-      "payload": { "acceptedAsWritten": true },
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "acceptedAsWritten": true
+      },
       "expectedStatus": 404,
-      "expectedError": { "code": "NOT_FOUND" }
+      "expectedError": {
+        "code": "NOT_FOUND"
+      }
     },
     {
       "name": "Reject an unauthenticated acceptance",
       "testType": "negative",
       "coversCriterion": "74a0891b-3892-4e93-aad4-450bfd776afa#AC1",
-      "pathParams": { "id": "{{cache:ai.sdrProposal.response.data.proposal.id}}" },
-      "payload": { "acceptedAsWritten": true },
+      "pathParams": {
+        "id": "{{cache:ai.sdrProposal.response.data.proposal.id}}"
+      },
+      "payload": {
+        "acceptedAsWritten": true
+      },
       "expectedStatus": 401,
-      "expectedError": { "code": "UNAUTHENTICATED" }
+      "expectedError": {
+        "code": "UNAUTHENTICATED"
+      }
     }
   ],
   "errorCases": [

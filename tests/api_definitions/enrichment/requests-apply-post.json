@@ -1,0 +1,187 @@
+{
+  "name": "POST /api/leadflow/enrichment/requests/:request_id/apply - a steward confirms one enrichment candidate into an operational contact point",
+  "description": "The ONE governed step between a bought answer and an operational contact point. An enrichment result never becomes usable by arriving; it lands as a candidate ASSERTION and stays one until a steward confirms it here (53e42da2-7b47-49c0-8bc9-3a04a459578b#AC1).\n\nWHAT CONFIRMATION DOES AND, MORE IMPORTANTLY, WHAT IT DOES NOT DO. It supersedes the candidate assertion with a PRIMARY one carrying the SAME origin class and the SAME confidence - confirming that a number is the right number is not a claim about where it came from, and rewriting LICENSED_THIRD_PARTY to something warmer on confirmation would launder bought data into first-party evidence with one click. It does NOT create a consent basis, does NOT make the value contactable, and the response says so in `consent_basis_created: false` and `sms_eligible: false` rather than leaving the caller to infer it (53e42da2-7b47-49c0-8bc9-3a04a459578b#AC2).\n\nAC2 IS ENFORCED BY THE CHANNEL DECISION ENGINE, NOT BY THIS ENDPOINT, and that is the point. POST /api/leadflow/channel-decision runs a consent check against sdk-consent before it will allow an SMS, and an appended phone has no receipt behind it - so the verdict is `review` or `deny` no matter how confidently the number was confirmed here. Proving it needs BOTH definitions: this one shows the confirmation refuses to mint a permission, and orchestration/channel-decision-post.json shows the send is refused for want of one. A single endpoint asserting its own harmlessness proves nothing.\n\nSETTLEMENT IS NOT THIS ENDPOINT'S JOB. Credits are settled where the capability RUNS, inside recordEnrichmentResult - charged only on MATCHED, and zero on NO_MATCH, TECHNICAL_FAILURE and CACHE_HIT alike (53e42da2-7b47-49c0-8bc9-3a04a459578b#AC3). Those three are free to the tenant but are NOT the same event, so they settle separately rather than being collapsed into one no-charge branch. That arithmetic has no HTTP surface reachable in any environment available here - no LeadFlow environment has a funded credit account, so no request can ever reach a settled state - and it is therefore covered by server/tests/unit/enrichmentWriteback.test.ts per MUST-67, which is the only runner that can reach it.\n\nGOVERNED ON source_record.promote, NOT data.configure. Raising an enrichment request is a spending decision, which Revenue Operations makes; turning a bought claim into the number the business will actually dial is a provenance decision, which the Data Steward makes. They are different authorities and this codebase already separates them - config/policies.ts grants the capture-resolution actions to data_steward alone. Reusing the spend grant here would let whoever authorised the purchase also declare the result true, which is the separation this whole epic exists to keep.\n\nrequiresRole:[\"data_steward\"] and NO testCase pins an Authorization header: the suite's default identity bridges to sales_rep and would only ever see 403, so the runner swaps to testCredentials.data_steward, and a pinned header would take PRECEDENCE over that token and defeat the swap (MUST-71). The 401 cases are documented in errorCases rather than authored.\n\nTHE HAPPY PATH IS 404, and expectedStatus says so rather than describing an environment that does not exist. Nothing in any available environment can produce a confirmable candidate: sdk-data-credits has no funded credit account here, so no capability request can be reserved, executed or settled, so no candidate assertion is ever written. What the suite exercises is the not-found branch and the validation branches, which are real and worth holding - they prove the endpoint refuses to confirm something it cannot find rather than writing a PRIMARY assertion for an id nobody recognises. Point this at a tenant with credits and the same call returns the confirmed assertion. NO PRODUCER EXISTS FOR EITHER ID, so both use {{var:absent_uuid}} rather than {{dynamic:uuid}} — the no-producer form MUST-36 prescribes, and the same one events/events-outbox-replay-post.json uses for its dead-letter 404. A generated id in a foreign-key position is indistinguishable from a producer somebody forgot to wire; a named absent id says the absence is the point. WHY `reason` CARRIES NO fieldEnums. The review flags it as enum-backed; it is not. This reason is FREE PROSE written by the person taking the action, and it is required precisely because a code cannot carry what a code cannot carry - a steward confirming a bought phone number, a rep declining a lead, or somebody ending a decision authority is explaining a judgement, and the explanation is the only part a later reader can assess. Offering a picklist would produce the same six sentences forever and lose the one case that mattered. Documented here rather than satisfied with an invented vocabulary, because a false enum in the API docs would tell QA to expect values the handler never constrains.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/enrichment/requests/:request_id/apply",
+  "method": "POST",
+  "taskId": "53e42da2-7b47-49c0-8bc9-3a04a459578b",
+  "featureId": "4f84b131-dbba-461d-a298-31c587b12689",
+  "epicId": "c889c809-5a56-4eb6-b499-0e940d93c83e",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "data_steward"
+  ],
+  "testability": "auto",
+  "priority": 10,
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "53e42da2-7b47-49c0-8bc9-3a04a459578b#AC1",
+    "53e42da2-7b47-49c0-8bc9-3a04a459578b#AC2",
+    "53e42da2-7b47-49c0-8bc9-3a04a459578b#AC4"
+  ],
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "data.origin_class": [
+      "USER_PROVIDED",
+      "FIRST_PARTY_DIRECT",
+      "TENANT_FIRST_PARTY_CRM",
+      "USER_AUTHORIZED_CONTACT_STORE",
+      "PUBLIC_RECORD",
+      "LICENSED_THIRD_PARTY",
+      "PARTNER_PROVIDED",
+      "UNKNOWN_QUARANTINED"
+    ],
+    "data.status": [
+      "SURVIVES",
+      "ASSERTION",
+      "SUPERSEDED",
+      "PRIMARY"
+    ],
+    "data.attribute": [
+      "phone",
+      "email",
+      "profile_url"
+    ]
+  },
+  "statusTransitions": {
+    "entity": "source_assertion",
+    "field": "status",
+    "flow": [
+      "ASSERTION",
+      "PRIMARY"
+    ],
+    "transitions": [
+      {
+        "from": "ASSERTION",
+        "to": "PRIMARY",
+        "via": "POST /api/leadflow/enrichment/requests/:request_id/apply - a steward confirms the candidate; the prior row is retained as SUPERSEDED, never deleted, so what was believed before the confirmation stays readable"
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "name": "An unknown request cannot be confirmed, so nothing is promoted",
+      "coversCriterion": "53e42da2-7b47-49c0-8bc9-3a04a459578b#AC1",
+      "pathParams": {
+        "request_id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "assertion_id": "{{var:absent_uuid}}",
+        "confirmed": true,
+        "reason": "{{static:Confirmed against the recorded call, the number reaches the contact}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive"
+    },
+    {
+      "name": "NEGATIVE: a confirmation with no stated reason is refused",
+      "coversCriterion": "53e42da2-7b47-49c0-8bc9-3a04a459578b#AC1",
+      "pathParams": {
+        "request_id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "assertion_id": "{{var:absent_uuid}}",
+        "confirmed": true
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR"
+    },
+    {
+      "name": "NEGATIVE: confirmed must be stated explicitly, never defaulted to true",
+      "coversCriterion": "53e42da2-7b47-49c0-8bc9-3a04a459578b#AC1",
+      "pathParams": {
+        "request_id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "assertion_id": "{{var:absent_uuid}}",
+        "reason": "{{static:Confirmed against the recorded call}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR"
+    },
+    {
+      "name": "NEGATIVE: no assertion named, so there is no candidate to confirm",
+      "pathParams": {
+        "request_id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "confirmed": true,
+        "reason": "{{static:Confirmed against the recorded call}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR"
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "assertion_id is required",
+      "when": "no candidate is named. Confirming 'the result' of a request that produced several candidates would promote whichever one the code happened to read first, and the steward would have confirmed a value they never saw."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "confirmed must be stated explicitly as true or false",
+      "when": "the flag is absent. Defaulting it to true would let a malformed request promote a bought value into the number the business dials, which is the one direction this endpoint must never fail in."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason is required to confirm a candidate",
+      "when": "a confirmation carries no reason. The steward is asserting that a value bought from outside the business is correct; 'why' is the only part of that a later reader can assess, and a confirmation nobody explained is indistinguishable from a mistake."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No enrichment request with that id produced a confirmable candidate",
+      "when": "the request id is unknown upstream, or produced no candidate assertion. Deliberately NOT a 200 with an empty body: a caller that reads 200 as 'confirmed' would tell a steward their decision was recorded when nothing was written."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer. Not authored as a testCase: it can only be expressed by pinning a header, which would defeat the role swap (MUST-71)."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify. Not authored, for the same reason as above."
+    },
+    {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "No policy grants this action to the caller's roles.",
+      "when": "the caller's roles do not grant source_record.promote, which the Data Steward alone holds. NOT reachable while this definition runs under requiresRole, and kept because it is the real branch a Revenue Operations caller receives - the person who authorised the spend is deliberately not the person who may declare the result true."
+    },
+    {
+      "status": 502,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "message": "The provenance store did not confirm the promotion, so nothing is operational",
+      "when": "sdk-source-record could not be reached or refused the supersede. Reported rather than absorbed: a confirmation that silently did not land would leave a steward believing the number is usable while the record still says candidate."
+    }
+  ]
+}

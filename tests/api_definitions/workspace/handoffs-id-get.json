@@ -1,0 +1,83 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/onboarding"
+  ],
+  "name": "GET /api/leadflow/handoffs/:id - the sales-to-onboarding record",
+  "description": "The handoff, its 24-hour clock and its acceptance state.\n\nACCEPTANCE AND A BOOKED KICKOFF ARE SEPARATE FACTS and closed_won_terminal is their conjunction. Accepted-with-no-kickoff is the state that looks finished on a list and is not — somebody said \"yes, mine\" and then nothing happened, which from the customer's side is identical to nobody accepting at all.\n\nWhen sdk-handoff is unreachable the drafted document is unavailable but the LOCAL record still answers, and the local record is the one the 24-hour alert reads.",
+  "endpoint": "/api/leadflow/handoffs/:id",
+  "method": "GET",
+  "expectedStatus": 200,
+  "testCases": [
+    {
+      "name": "the sales-to-onboarding record",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:onboarding.post.response.data.handoff_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No handoff with that id",
+      "when": "the handoff id does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -1529,7 +1529,148 @@ export const api = {
 
   templates: (signal?: AbortSignal) =>
     request<TemplateList>('/leadflow/templates', { signal }),
+
+  /* ------------------------------------------------------ the user register */
+
+  /**
+   * The team register with its lifecycle states.
+   *
+   * Distinct from `listUsers`, which is the roster every screen that must name a
+   * colleague already calls. This one carries invitation stamps and closures,
+   * which only the administration screen has any use for.
+   */
+  userRegister: (includeDeactivated = false, signal?: AbortSignal) =>
+    request<UserRegisterList>(`/users/register?deactivated=${includeDeactivated}`, { signal }),
+
+  /** What each assignable role grants, in SOP terms. */
+  assignableRoles: (signal?: AbortSignal) =>
+    request<{ roles: LocalRoleSummary[]; total: number }>('/users/roles', { signal }),
+
+  /** The SOP §28 grid as the policy decision point evaluates it. Read-only. */
+  permissionMatrix: (signal?: AbortSignal) =>
+    request<PermissionMatrixResponse>('/users/permission-matrix', { signal }),
+
+  /** Add a colleague to the register, pending. */
+  inviteUser: (payload: {
+    email: string;
+    role: string;
+    first_name?: string;
+    last_name?: string;
+  }) => request<{ user: RegisterUser }>('/users/invite', { method: 'POST', body: payload }),
+
+  /** Change what a colleague may do. Governed and audited with both roles. */
+  assignUserRole: (userId: string, role: string) =>
+    request<{
+      user: RegisterUser;
+      previous_role: string;
+      changed: boolean;
+      /** Whether the change reached the ProjexCloud persona, when there is one. */
+      persona: PersonaMirror;
+    }>(`/users/${encodeURIComponent(userId)}/role`, { method: 'PATCH', body: { role } }),
+
+  /**
+   * Open an account for use, optionally issuing its first credential.
+   *
+   * `initial_password` is omitted rather than sent blank when absent: the server
+   * treats a blank string as "no password supplied" too, but a request body that
+   * carries an empty password field is one refactor away from being read as one.
+   */
+  activateUser: (userId: string, initialPassword?: string) =>
+    request<{ user: RegisterUser; credential_issued: boolean }>(
+      `/users/${encodeURIComponent(userId)}/activate`,
+      { method: 'POST', body: initialPassword ? { initial_password: initialPassword } : {} },
+    ),
+
+  /** Close an account. Never a delete — see the endpoint's own note. */
+  deactivateUser: (userId: string, reason: string) =>
+    request<{
+      user: RegisterUser;
+      actions_remain_attributable: boolean;
+      /** False when a linked persona still holds its grants. Null when local-only. */
+      persona_revoked: boolean | null;
+      persona_note: string;
+    }>(`/users/${encodeURIComponent(userId)}/deactivate`, { method: 'POST', body: { reason } }),
 };
+
+/* ------------------------------------------------------- the user register */
+
+/** The three states an account can be in. Never a boolean — see the server note. */
+export type RegisterState = 'pending' | 'active' | 'deactivated';
+
+export interface RegisterUser {
+  id: string;
+  email: string;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  role: string;
+  state: RegisterState;
+  is_active: boolean;
+  email_verified: boolean;
+  invited_at: string | null;
+  invited_by: string | null;
+  activated_at: string | null;
+  deactivated_at: string | null;
+  deactivated_by: string | null;
+  last_login: string | null;
+  created_at: string;
+  /**
+   * The ProjexCloud persona this account projects, or null for a local-only one.
+   *
+   * It changes what a role assignment MEANS: a platform session enforces the
+   * persona's grants, not `users.role`, so for a linked account the register
+   * mirrors the change upstream and reports whether that landed.
+   */
+  platform_persona_id: string | null;
+}
+
+/** What happened when a local role change was pushed to the linked persona. */
+export interface PersonaMirror {
+  /** Null when nothing needed mirroring — no persona, or nothing changed. */
+  applied: boolean | null;
+  role: string | null;
+  detail: string;
+}
+
+export interface UserRegisterList {
+  users: RegisterUser[];
+  total: number;
+  pending: number;
+  /** False once ProjexCloud is the identity authority — no password may be set here. */
+  local_credentials_permitted: boolean;
+}
+
+/** One SOP §28 actor a local role speaks for. */
+export interface SopRoleSummary {
+  key: string;
+  label: string;
+  purpose: string;
+  can_do: string[];
+  requires_approval: string[];
+  sop_basis: string;
+}
+
+/** One assignable `users.role` value, with the authority it confers. */
+export interface LocalRoleSummary {
+  key: string;
+  sop_roles: SopRoleSummary[];
+  can_do: string[];
+  requires_approval: string[];
+  grants_nothing: boolean;
+}
+
+export interface PermissionMatrixResponse {
+  rows: {
+    role_key: string;
+    role_label: string;
+    decisions: PolicyDecisionResponse[];
+  }[];
+  total: number;
+  /** The files the grid is derived from, quoted back so the screen can name them. */
+  source: string;
+  /** Always false. The matrix is a view of versioned code, not configuration. */
+  editable: boolean;
+}
 
 /* -------------------------------------------- sequences and templates */
 

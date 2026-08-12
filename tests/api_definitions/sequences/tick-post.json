@@ -1,0 +1,95 @@
+{
+  "taskId": "d38a1e71-d293-4cc5-9371-1c9b92163b49",
+  "featureId": "39956ff3-083e-4b84-9a58-67bab8cdaa2a",
+  "epicId": "c50a5ef2-74d3-4583-9f70-19f9499ad11a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/sequences/tick - advance every active enrolment, exactly once per due step",
+  "description": "THE ACCEPTANCE CRITERION IS A UNIQUE CONSTRAINT (d38a1e71-d293-4cc5-9371-1c9b92163b49#AC1). \"Running the tick twice in the same minute produces exactly one send per due step\" cannot be achieved by checking whether a step has run: two ticks a millisecond apart both read \"step 4 has not run\" and both send. So a step is CLAIMED by INSERT against UNIQUE (enrollment_id, step_number), and a refused insert means another tick owns it. MEASURED LIVE: two consecutive ticks returned steps_claimed 1 then steps_claimed 0.\n\nCLAIMED IS NOT SENT. dispatched reports what the provider actually accepted, because a claimed step whose send failed must not look like a message the prospect received. The two counts are separate for that reason.\n\nSEND WINDOWS DIFFER BY CHANNEL (d38a1e71-d293-4cc5-9371-1c9b92163b49#AC2). Calls and voicemails are gated on BUSINESS hours through the named business calendar; SMS goes through the full eligibility gate including recipient-local quiet hours; email has no window beyond suppression. Treating them alike would either block harmless email or permit calls nobody wants.\n\nEVERY STEP WRITES ITS NEXT (d38a1e71-d293-4cc5-9371-1c9b92163b49#AC3) and completes the previous one, so a cadence cannot leave a record without an owner action between touches.\n\nTHE CIRCUIT BREAKER OPENS AFTER FIVE CONSECUTIVE FAILURES and half-opens after fifteen minutes (d38a1e71-d293-4cc5-9371-1c9b92163b49#AC4). A breaker that never retries is an outage that outlives the outage. Every refusal and deferral is written to the guard log, so a cadence that has gone quiet is explainable rather than mysterious. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/sequences/tick",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "d38a1e71-d293-4cc5-9371-1c9b92163b49#AC1",
+    "d38a1e71-d293-4cc5-9371-1c9b92163b49#AC2",
+    "d38a1e71-d293-4cc5-9371-1c9b92163b49#AC3"
+  ],
+  "testCases": [
+    {
+      "name": "A tick reports what it claimed, suppressed and dispatched",
+      "coversCriterion": "d38a1e71-d293-4cc5-9371-1c9b92163b49#AC1",
+      "payload": {},
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "Re-ticking claims nothing it has already claimed",
+      "coversCriterion": "d38a1e71-d293-4cc5-9371-1c9b92163b49#AC1",
+      "payload": {},
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "captureResponse": {
+    "sequences.tick.response.data.steps_claimed": "data.steps_claimed"
+  },
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

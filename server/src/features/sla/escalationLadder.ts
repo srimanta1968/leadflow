@@ -128,7 +128,7 @@ async function notify(lead: LadderLead, rung: Rung): Promise<Reached<null>> {
   try {
     const result = await SdkGatewayClient.call({
       sdk: 'sdk-notification',
-      path: '/api/notifications',
+      path: '/api/notifications/send',
       method: 'POST',
       idempotencyKey: `escalation:${lead.id}:${rung.offset}`,
       body: {

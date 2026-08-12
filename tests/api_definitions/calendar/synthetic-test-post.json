@@ -1,0 +1,86 @@
+{
+  "taskId": "2fc627e9-9a59-4d21-ad5e-b7301b6d1990",
+  "featureId": "7605d8da-4ebb-4d6e-86f8-3c1573476924",
+  "epicId": "e000da35-a777-46e7-8589-2d24accdc494",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/calendar/synthetic-test - exercise the booking link before a prospect does",
+  "description": "The weekly synthetic booking test (2fc627e9-9a59-4d21-ad5e-b7301b6d1990#AC3). THE ONLY WAY TO KNOW A LINK WORKS IS TO USE IT: reading configuration proves the settings exist, it does not prove the provider will accept a booking, which is the failure a prospect otherwise discovers on the company behalf.\n\nAN UNREACHABLE SERVICE IS A FAILURE, NOT AN UNKNOWN. An untested link is exactly the state this catches, so the verdict is false rather than null - reporting \"we could not check\" weekly would let a broken link sit indefinitely behind a soft status.\n\nNO BOOKABLE SLOTS IS ALSO A FAILURE. A link offering nothing is indistinguishable to a prospect from one that is broken, so an empty availability response fails rather than passing with a zero. VERIFIED LIVE: the probe reached sdk-scheduling and returned exactly that verdict, correctly, because no rep calendar is connected in this environment.\n\nTHE PROBE ASKS ABOUT TOMORROW rather than today. A test run late in the afternoon would find no remaining slots on a perfectly working link and report it broken.\n\nA FAILURE ALERTS rather than only being recorded, because a weekly test nobody reads is a weekly test that catches nothing. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/calendar/synthetic-test",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "2fc627e9-9a59-4d21-ad5e-b7301b6d1990#AC3"
+  ],
+  "testCases": [
+    {
+      "name": "The test exercises the link and reports a pass or a fail with its reason",
+      "coversCriterion": "2fc627e9-9a59-4d21-ad5e-b7301b6d1990#AC3",
+      "payload": {},
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "captureResponse": {
+    "calendar.synthetic.response.data.ok": "data.ok"
+  },
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "rep_user_id is required",
+      "when": "no rep is named and the caller has no session user to fall back on."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

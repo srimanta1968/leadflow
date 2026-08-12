@@ -8,6 +8,8 @@
   "endpoint": "/api/analytics/overview",
   "method": "GET",
   "taskId": "126418a5-93a2-4cea-8813-bc5f1fd9d424",
+  "featureId": "a63a3ca6-90ba-43fc-b342-1de04bfa8350",
+  "epicId": "8f1ff867-089c-40e7-b889-0fd4b06ac1f0",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "testability": "auto",

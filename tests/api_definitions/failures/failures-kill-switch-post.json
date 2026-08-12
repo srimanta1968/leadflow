@@ -1,0 +1,107 @@
+{
+  "taskId": "4cc3f597-f6c8-4dc5-8044-096ce144e676",
+  "featureId": "36b8ab88-3c05-4528-b9bb-45f058859a33",
+  "epicId": "06998b3d-d057-490d-8cfb-962e43b525c6",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 12,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/failures/kill-switch - halt every automated send",
+  "description": "Engages or releases the global send pause (4cc3f597-f6c8-4dc5-8044-096ce144e676#AC4). THE LOCAL ROW IS THE AUTHORITY: every send path reads it, so engaging the switch stops sending on the next tick whether or not sdk-feature-flags is reachable. A kill switch that depends on a remote service is unavailable exactly when the incident that needs it is happening.\n\nThe upstream flag is set too, best-effort, and the response says plainly when it was not - reporting an upstream state that does not exist would be worse than reporting none.\n\nA REASON IS REQUIRED TO ENGAGE. Halting every automated send is an incident, and the record of why is what the post-mortem reads. Releasing needs no reason: the harm of a slow release is worse than the harm of an unexplained one.\n\nQA: measured live, including the refusal, both directions, and the replay 409 while engaged.",
+  "endpoint": "/api/leadflow/failures/kill-switch",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC4"
+  ],
+  "captureResponse": {
+    "failures.kill_switch.response.data.switch_key": "data.switch_key"
+  },
+  "requestBody": {
+    "engaged": true,
+    "reason": "duplicate send loop on sequence 4"
+  },
+  "testCases": [
+    {
+      "name": "The switch engages with a reason and takes effect on the next tick",
+      "coversCriterion": "4cc3f597-f6c8-4dc5-8044-096ce144e676#AC4",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "engaged": true,
+        "reason": "duplicate send loop on sequence 4"
+      }
+    },
+    {
+      "name": "Engaging with no reason is REFUSED",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "engaged": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason is required to engage the kill switch - halting every automated send is an incident, and the record of why is what the post-mortem reads",
+      "when": "the switch is being engaged without a reason."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

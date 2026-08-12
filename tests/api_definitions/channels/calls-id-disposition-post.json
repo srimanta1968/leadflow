@@ -1,0 +1,141 @@
+{
+  "taskId": "60720417-6bbe-4f69-97f4-18e8a6dfc1c0",
+  "featureId": "a1cbc245-a300-4092-b6e0-73bf587fc3eb",
+  "epicId": "6691a598-597d-42a8-82fc-ddec2442b572",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/calls/:id/disposition - close a call with its outcome, its NEXT and any voicemail",
+  "description": "EVERY CALL PRODUCES A CRM ACTIVITY WITH A DISPOSITION AND A NEXT (60720417-6bbe-4f69-97f4-18e8a6dfc1c0#AC3). The NEXT is required HERE rather than left to the save gate, because a call with no next action is precisely the record that goes quiet - and the moment the rep hangs up is the only moment they still remember what it should be.\n\nTHE VOICEMAIL AND THE ATTEMPT ARE ONE EVENT (60720417-6bbe-4f69-97f4-18e8a6dfc1c0#AC4). A transcript logged separately leaves a timeline with a call and an unattached transcript that a reader has to correlate by timestamp, which they will get wrong on a busy day. The attempt row is written and its id stored back on the call, so the two are linked in both directions.\n\nA VOICEMAIL DOES NOT SATISFY THE RESPONSE SLA, and the attempt is written with satisfies_sla false to say so. Leaving a message is an attempt but not a conversation - the same rule the valid-human-attempt gate enforces, applied here so the two cannot disagree.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/calls/:id/disposition",
+  "method": "POST",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "60720417-6bbe-4f69-97f4-18e8a6dfc1c0#AC3",
+    "60720417-6bbe-4f69-97f4-18e8a6dfc1c0#AC4"
+  ],
+  "testCases": [
+    {
+      "name": "Closing an unknown call is refused",
+      "coversCriterion": "60720417-6bbe-4f69-97f4-18e8a6dfc1c0#AC3",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "disposition": "{{static:CONNECTED}}",
+        "next_action": "{{static:Send quote Thursday}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a disposition with no NEXT is refused",
+      "coversCriterion": "60720417-6bbe-4f69-97f4-18e8a6dfc1c0#AC3",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "disposition": "{{static:CONNECTED}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no disposition at all",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "next_action": "{{static:Call back}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "disposition is required",
+      "when": "the outcome was not recorded."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "next_action is required - a call with no next action is the record that goes quiet",
+      "when": "no NEXT is given."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No call with that id",
+      "when": "the call does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

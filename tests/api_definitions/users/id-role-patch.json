@@ -1,0 +1,156 @@
+{
+  "name": "PATCH /api/users/{id}/role - Change what a colleague may do",
+  "description": "Writes a new local role onto an existing account and returns the register projection together with the previous role. Proves criteria 4c12f924-87d1-4be1-b790-d94a936d58b3#AC1, an admin can assign a role without touching the database, and #AC5, every role change is audited with actor, subject, previous role and new role - the previous role is read BEFORE the write and travels in the audit metadata, because 'the role was changed to manager' cannot answer the question anybody actually asks, which is what this person could do before and whether somebody quietly widened it. 200 rather than 201: it changes an existing row and creates nothing addressable. Governed on user.role_assign; the actor, the subject id and the decision reference are appended to the tamper-evident chain by governed(). Re-asserting the role somebody already holds answers 200 with changed=false rather than 409, so an idempotent retry does not look like a conflict. THE CHANGE IS ALSO PUSHED TO THE PROJEXCLOUD PERSONA when the account projects one, and the `persona` block in the response says whether that landed: rolesFor() prefers a platform session's persona grants over the local users.role column, so writing the column alone would change nothing a platform-authenticated colleague can do while the register cheerfully reported the new role. The mirror is best effort and never fails the local write - the row is already committed - but it is always REPORTED, in the response and in the audit metadata as persona_role_mirrored. Where a local value bridges to several SOP roles ('admin' is four) only the first is sent, because the persona endpoint carries a single role label, and the others are named in the detail rather than silently dropped. QA: the subject is the account invited by POST /api/users/invite, which projects no persona, so persona.applied is null in this environment; requiresRole admin, so no Authorization header is declared here (MUST-71).",
+  "endpoint": "/api/users/:id/role",
+  "method": "PATCH",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "featureId": "c12362d4-3479-46e6-b243-47c04b68b61e",
+  "epicId": "224f72e3-9444-4923-96da-477e76aa9654",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "requiresRole": [
+    "admin"
+  ],
+  "testability": "auto",
+  "priority": 18,
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "4c12f924-87d1-4be1-b790-d94a936d58b3#AC1",
+    "4c12f924-87d1-4be1-b790-d94a936d58b3#AC5"
+  ],
+  "dependsOn": [
+    "POST /api/users/invite"
+  ],
+  "pathParams": {
+    "id": "{{cache:users.invite.response.data.user.id}}"
+  },
+  "fieldEnums": {
+    "role": [
+      "admin",
+      "manager",
+      "user",
+      "steward",
+      "privacy"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Promote the invited steward to manager, and report what they were",
+      "coversCriterion": "4c12f924-87d1-4be1-b790-d94a936d58b3#AC5",
+      "capturesResponse": true,
+      "payload": {
+        "role": "manager"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "previous_role": "steward",
+          "changed": true,
+          "user": {
+            "role": "manager",
+            "platform_persona_id": null
+          },
+          "persona": {
+            "applied": null
+          }
+        }
+      },
+      "params": {
+        "id": "{{cache:users.invite.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "Re-asserting the role already held is a no-op, not a conflict",
+      "payload": {
+        "role": "manager"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "changed": false,
+          "user": {
+            "role": "manager"
+          }
+        }
+      },
+      "params": {
+        "id": "{{cache:users.invite.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a role the bridge does not recognise",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|role",
+      "payload": {
+        "role": "{{static:superuser}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "params": {
+        "id": "{{cache:users.invite.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no role in the body",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|missing",
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "params": {
+        "id": "{{cache:users.invite.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "payload": {
+        "role": "user"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "params": {
+        "id": "{{cache:users.invite.response.data.user.id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "role is absent, blank, or not one of admin, manager, user, steward, privacy"
+    },
+    {
+      "code": "NOT_FOUND",
+      "status": 404,
+      "when": "no user on the register holds that id",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-36 bans a generated id in a path parameter, and there is no producer for an id that provably matches no row on this route. A well-formed absent uuid would have to be declared as a config variable per environment, which is more machinery than the case is worth on a path whose only other failure mode is already covered."
+    },
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "FORBIDDEN",
+      "status": 403,
+      "when": "the caller does not hold user.role_assign",
+      "reproducible": false,
+      "_whyNotReproducible": "MUST-64/MUST-71: it needs a token from a different role, and this definition declares requiresRole so the runner pre-fetches the admin identity. Pinning a second Authorization alongside requiresRole is what MUST-71 forbids."
+    }
+  ]
+}

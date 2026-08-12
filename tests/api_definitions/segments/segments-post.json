@@ -1,0 +1,134 @@
+{
+  "taskId": "73357dd8-628f-47fa-9e41-1b42cf1f23fc",
+  "featureId": "cb6618a4-8e73-4585-aa79-af0bd20ea042",
+  "epicId": "60b11414-8cf8-4248-bc8a-22d74d122968",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/segments - a versioned, purpose-bound definition",
+  "description": "Saves a segment definition as a new VERSION (73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC4). A definition is immutable once written and an edit supersedes rather than updates, because an audience computed last week must stay explainable against the definition that produced it - an in-place update silently rewrites the reason every past snapshot exists.\n\nTHE PURPOSE AND CHANNEL ARE PART OF THE DEFINITION, not of the send. A segment built for project operations and later reused for marketing SMS is how a licensed record ends up in an audience its source rights forbid; making the purpose a property of the segment turns that reuse into a NEW segment, which gets its own eligibility pass.\n\nA partial unique index keeps exactly one current version per key, so \"which definition is live\" has one answer. QA: measured live.",
+  "endpoint": "/api/leadflow/segments",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC4"
+  ],
+  "captureResponse": {
+    "segments.post.response.data.segment_id": "data.segment_id",
+    "segments.post.response.data.id": "data.segment_id"
+  },
+  "fieldEnums": {
+    "data.channel": [
+      "email",
+      "sms",
+      "voice",
+      "in_app",
+      "any"
+    ]
+  },
+  "requestBody": {
+    "segment_key": "seg_{{dynamic:uuid}}",
+    "name": "Warm first-party SMS",
+    "purpose_key": "marketing.sms",
+    "channel": "sms",
+    "criteria": {
+      "origin_class": [
+        "first_party"
+      ]
+    }
+  },
+  "testCases": [
+    {
+      "name": "A definition is stored as version 1 with its purpose and channel",
+      "coversCriterion": "73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC4",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "segment_key": "seg_{{dynamic:uuid}}",
+        "name": "Warm first-party SMS",
+        "purpose_key": "marketing.sms",
+        "channel": "sms",
+        "criteria": {
+          "origin_class": [
+            "first_party"
+          ]
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: a channel outside the known list",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "segment_key": "seg_bad",
+        "name": "x",
+        "purpose_key": "marketing.sms",
+        "channel": "carrier_pigeon"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "segment_key, name, purpose_key and channel are all required",
+      "when": "any required field is missing, or the channel is outside email, sms, voice, in_app, any."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

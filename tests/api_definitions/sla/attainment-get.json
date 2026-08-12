@@ -1,0 +1,112 @@
+{
+  "taskId": "12ce1f53-ba07-4f62-a2ac-a0b065100b28",
+  "featureId": "cb33fe98-4b8f-403e-8f75-bb94b4ae9c1c",
+  "epicId": "be026e56-403d-441b-9a82-4055aad09d66",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/sla/attainment - the 95% report, with cause and recovery on every miss",
+  "description": "The SLA attainment report SOP §04 requires: at least 95% during business hours, with the cause and the customer recovery on EVERY miss (12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC3), broken down by source, rep, day and hour, plus median and P95 first human attempt (12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC4).\n\nEVERY MISS CARRIES ITS CAUSE AND RECOVERY because a percentage on its own changes nobody behaviour. The breach table makes both mandatory, so a miss without them cannot exist to be reported - the guarantee comes from the schema rather than from this endpoint remembering to join.\n\nPERCENTILES COME FROM THE ATTEMPT LEDGER, NOT FROM first_response_at, because the ledger knows which attempts actually COUNTED. Measuring from any recorded activity would report a median first attempt that nobody ever made - a task click would count as contact, which is precisely what the valid-human-attempt rule exists to prevent.\n\nA NULL RATE IS NOT A PASS. An empty window has said nothing about the target rather than met it, so meets_target is false when there is nothing to measure. Reporting true would be a green light nobody earned, and an SLA report that is green by default is worse than no report. Verified live: an empty window returned rate null and meets_target false.\n\nFOUR BREAKDOWNS FROM ONE ROW SET, so a slice cannot disagree with the total. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/sla/attainment",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC3",
+    "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC4"
+  ],
+  "testCases": [
+    {
+      "name": "The report carries the overall rate, the four breakdowns and every miss",
+      "coversCriterion": "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC3",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "The window can be narrowed",
+      "coversCriterion": "12ce1f53-ba07-4f62-a2ac-a0b065100b28#AC4",
+      "queryParams": {
+        "days": "7"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an out-of-range window is refused rather than clamped",
+      "queryParams": {
+        "days": "4000"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "days must be an integer between 1 and 365",
+      "when": "an out-of-range window is requested. Refused rather than clamped: a caller who asked for 4000 days and silently got 365 would read the rate as covering eleven years."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

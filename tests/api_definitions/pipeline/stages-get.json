@@ -1,0 +1,90 @@
+{
+  "taskId": "3ab3a068-0838-4764-9f9a-f0cea1ed2f04",
+  "featureId": "6c22802b-73c7-406c-bfeb-4e95c55e0b2c",
+  "epicId": "350440b3-9f6f-4cbe-bd63-778721adff89",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/pipeline/stages - the ten stages with entry evidence, exit evidence and per-stage guidance",
+  "description": "All ten SOP §06 stages with their entry condition, exit condition and mandatory NEXT (3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC1). VERIFIED LIVE returning stage_count 10 in position order from NEW_UNWORKED through CLOSED_LOST.\n\nCONFIGURATION, NOT CODE (3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC4). The set is declared once in config/verticalProfile.ts and projected into leadflow_stage_config at boot, so changing a stage evidence requirement or its allowed transitions is an edit to one declaration rather than a change to a handler. The incumbent system hard-coded five stages - none of them the customer own - with no entry or exit criteria, no staleness rule and no guard on invalid moves; reproducing that would reproduce the gap the customer is paying to close. The response says where the set lives so a reader knows what to edit.\n\nEACH STAGE CARRIES CRM, REP AND MANAGER GUIDANCE (3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC3), derived from the same entry and exit evidence the guard enforces. Derived rather than written out separately on purpose: prose maintained beside a rule drifts from it, and guidance that contradicts the guard is worse than none because the operator follows it and is then refused.\n\nSTALENESS IS NULLABLE AND THAT IS DELIBERATE. Nurture and the closed stages return null rather than a large number, because ageing is meaningless there - a closed record is not going stale, and Nurture is a holding pattern by design rather than neglect. A default would make both look like oversights.\n\nOpen to any authenticated caller: a rep needs the entry and exit evidence for the stage they are working, and gating it would leave people guessing at the criteria they are measured against. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/pipeline/stages",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC1",
+    "3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC3",
+    "3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC4"
+  ],
+  "fieldEnums": {
+    "data.stages.key": [
+      "NEW_UNWORKED",
+      "ATTEMPTING_CONTACT",
+      "CONNECTED_QUALIFYING",
+      "DEMO_SCHEDULED",
+      "DISCOVERY_COMPLETE",
+      "COMMERCIAL_REVIEW",
+      "AGREEMENT_SENT",
+      "CLOSED_WON_ONBOARDING_PENDING",
+      "NURTURE",
+      "CLOSED_LOST"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "All ten stages come back in position order with their evidence and guidance",
+      "coversCriterion": "3ab3a068-0838-4764-9f9a-f0cea1ed2f04#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

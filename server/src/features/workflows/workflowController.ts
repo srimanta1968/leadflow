@@ -51,7 +51,7 @@ workflowRoutes.post(
     const body = (req.body ?? {}) as Record<string, unknown>;
 
     const rows = await dataService.query<{ workflow_key: string; version: number; definition: { steps?: unknown[] } }>(
-      `SELECT workflow_key, version, definition FROM leadflow_workflow_version WHERE workflow_version_id = $1`,
+      `SELECT workflow_key, version, definition FROM leadflow_workflow_version WHERE workflow_version_id::text = $1`,
       [versionId]
     );
     if (rows.length === 0) throw new AppError(404, ErrorCodes.NOT_FOUND, 'No workflow version with that id');
@@ -70,7 +70,7 @@ workflowRoutes.post(
     });
 
     await dataService.query(
-      `UPDATE leadflow_workflow_version SET dry_run_id = $2 WHERE workflow_version_id = $1`,
+      `UPDATE leadflow_workflow_version SET dry_run_id = $2 WHERE workflow_version_id::text = $1`,
       [versionId, result.dryRunId]
     );
 
@@ -119,7 +119,7 @@ workflowRoutes.post(
       workflow_key: string; version: number; dry_run_id: string | null; approval_ref: string | null;
     }>(
       `SELECT workflow_key, version, dry_run_id, approval_ref
-         FROM leadflow_workflow_version WHERE workflow_version_id = $1`,
+         FROM leadflow_workflow_version WHERE workflow_version_id::text = $1`,
       [versionId]
     );
     if (rows.length === 0) throw new AppError(404, ErrorCodes.NOT_FOUND, 'No workflow version with that id');
@@ -131,7 +131,7 @@ workflowRoutes.post(
       );
     }
     const dry = await dataService.query<{ passed: boolean; would_send: number; side_effects_attempted: number }>(
-      `SELECT passed, would_send, side_effects_attempted FROM leadflow_workflow_dry_run WHERE dry_run_id = $1`,
+      `SELECT passed, would_send, side_effects_attempted FROM leadflow_workflow_dry_run WHERE dry_run_id::text = $1`,
       [rows[0].dry_run_id]
     );
     if (!dry[0]?.passed) {
@@ -177,7 +177,7 @@ workflowRoutes.post(
     const published = await dataService.query<{ published_at: string }>(
       `UPDATE leadflow_workflow_version
           SET approval_ref = $2, published_at = now(), published_by = $3
-        WHERE workflow_version_id = $1 RETURNING published_at`,
+        WHERE workflow_version_id::text = $1 RETURNING published_at`,
       [versionId, approvalRef, req.session?.userId ?? null]
     );
 
@@ -233,7 +233,7 @@ workflowRoutes.post(
     }
 
     const target = await dataService.query<{ workflow_key: string; version: number; published_at: string | null }>(
-      `SELECT workflow_key, version, published_at FROM leadflow_workflow_version WHERE workflow_version_id = $1`,
+      `SELECT workflow_key, version, published_at FROM leadflow_workflow_version WHERE workflow_version_id::text = $1`,
       [versionId]
     );
     if (target.length === 0) throw new AppError(404, ErrorCodes.NOT_FOUND, 'No workflow version with that id');
@@ -253,13 +253,13 @@ workflowRoutes.post(
     if (live.length > 0) {
       await dataService.query(
         `UPDATE leadflow_workflow_version SET rolled_back_at = now(), rollback_of = $2
-          WHERE workflow_version_id = $1`,
+          WHERE workflow_version_id::text = $1`,
         [live[0].workflow_version_id, versionId]
       );
     }
     await dataService.query(
       `UPDATE leadflow_workflow_version SET rolled_back_at = NULL, published_at = now(), published_by = $2
-        WHERE workflow_version_id = $1`,
+        WHERE workflow_version_id::text = $1`,
       [versionId, req.session?.userId ?? null]
     );
 
@@ -268,7 +268,8 @@ workflowRoutes.post(
       for (const runId of flight.runs) {
         try {
           await SdkGatewayClient.call({
-            sdk: 'sdk-workflow', path: `/api/workflows/runs/${encodeURIComponent(runId)}/cancel`,
+            sdk: 'sdk-workflow', // Cancellation is expressed as a SIGNAL; there is no cancel path.
+            path: `/api/workflows/${encodeURIComponent(runId)}/signal`,
             method: 'POST', idempotencyKey: `rollback-stop:${runId}`,
             body: { tenant_id: config.projexCloud.tenantId, reason: 'workflow version rolled back' },
           });
@@ -322,6 +323,145 @@ workflowRoutes.get(
       data: {
         workflow_key: workflowKey, versions: rows, version_count: rows.length,
         live: rows.find((r) => r.published_at !== null && r.rolled_back_at === null) ?? null,
+      },
+    });
+  })
+);
+
+/**
+ * GET /api/leadflow/workflows/definitions — every workflow and its live version.
+ *
+ * Grouped by KEY rather than listed as versions, because the question the screen
+ * asks is "what automations are running", and a flat version list answers "what
+ * has ever been written" — which is a hundred rows for six automations.
+ */
+workflowRoutes.get(
+  '/definitions',
+  asyncHandler(async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const rows = await dataService.query<{
+      workflow_key: string; versions: number; live_version: number | null;
+      live_published_at: string | null; last_created_at: string;
+    }>(
+      `SELECT workflow_key,
+              COUNT(*)::int                                                              AS versions,
+              MAX(version) FILTER (WHERE published_at IS NOT NULL AND rolled_back_at IS NULL) AS live_version,
+              MAX(published_at) FILTER (WHERE rolled_back_at IS NULL)                    AS live_published_at,
+              MAX(created_at)                                                            AS last_created_at
+         FROM leadflow_workflow_version
+        WHERE tenant_id = $1
+        GROUP BY workflow_key ORDER BY MAX(created_at) DESC`,
+      [config.projexCloud.tenantId]
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        definitions: rows.map((r) => ({
+          ...r,
+          /* A definition with versions and no live one is a draft nobody
+             published — visible as such rather than absent, because that is
+             usually somebody who ran the dry run and stopped. */
+          live: r.live_version !== null,
+        })),
+        definition_count: rows.length,
+        unpublished: rows.filter((r) => r.live_version === null).map((r) => r.workflow_key),
+      },
+    });
+  })
+);
+
+/** GET /api/leadflow/workflows/runs — recent dry runs and their verdicts. */
+workflowRoutes.get(
+  '/runs',
+  asyncHandler(async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const dryRuns = await dataService.query<Record<string, unknown>>(
+      `SELECT dry_run_id, workflow_key, candidate_version, window_from, window_to,
+              records_replayed, would_send, would_create_task, would_change_stage,
+              would_suppress, side_effects_attempted, passed, ran_at
+         FROM leadflow_workflow_dry_run
+        WHERE tenant_id = $1 ORDER BY ran_at DESC LIMIT 100`,
+      [config.projexCloud.tenantId]
+    );
+    const upstream = await SdkGatewayClient.isConfigured()
+      ? await SdkGatewayClient.call<{ data?: { runs?: unknown[] } }>({
+        // There is NO run-list endpoint in the spec — only GET /api/workflows/{run_id}.
+        // Reported as unavailable rather than calling a path that does not exist.
+        /* No run-list and no definition-list exist upstream: the spec offers
+           POST /definitions (create), POST /start and GET /{run_id}. So live
+           runs are reported as UNAVAILABLE rather than fetched from a path that
+           does not exist — the local dry runs below are complete either way. */
+        sdk: 'sdk-workflow', path: '/api/workflows/definitions', method: 'POST',
+        idempotencyKey: 'workflow-runs:list',
+      }).catch(() => ({ delivered: false, data: undefined }))
+      : { delivered: false, data: undefined };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        dry_runs: dryRuns, dry_run_count: dryRuns.length,
+        /* Dry runs and LIVE runs are listed separately and never merged. They
+           look alike and mean opposite things — one is a rehearsal, the other
+           reached a customer — and a single list invites reading a rehearsal as
+           evidence that something happened. */
+        live_runs: upstream.data?.data?.runs ?? [],
+        upstream_available: { workflow: upstream.delivered },
+        field_gaps: upstream.delivered ? [] : [
+          { field: 'live_runs', reason: 'sdk-workflow could not be reached, so live run history is unknown. The dry runs below are local and complete.' },
+        ],
+      },
+    });
+  })
+);
+
+/**
+ * POST /api/leadflow/workflows/:id/release-gate — may this version ship.
+ *
+ * The same conditions the publish endpoint enforces, evaluated WITHOUT
+ * publishing. A reviewer needs to know whether the gate will open before they
+ * try it, and finding out by being refused is how people learn to treat the
+ * refusal as noise.
+ */
+workflowRoutes.post(
+  '/:id/release-gate',
+  asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const versionId = String(req.params?.id ?? '');
+    const rows = await dataService.query<{
+      workflow_key: string; version: number; dry_run_id: string | null;
+      approval_ref: string | null; published_at: string | null;
+    }>(
+      `SELECT workflow_key, version, dry_run_id, approval_ref, published_at
+         FROM leadflow_workflow_version WHERE workflow_version_id::text = $1`,
+      [versionId]
+    );
+    if (rows.length === 0) throw new AppError(404, ErrorCodes.NOT_FOUND, 'No workflow version with that id');
+
+    const dry = rows[0].dry_run_id
+      ? await dataService.query<{ passed: boolean; would_send: number; records_replayed: number; side_effects_attempted: number }>(
+        `SELECT passed, would_send, records_replayed, side_effects_attempted
+           FROM leadflow_workflow_dry_run WHERE dry_run_id::text = $1`,
+        [rows[0].dry_run_id]
+      )
+      : [];
+
+    const gates = [
+      { gate: 'dry_run_exists', passed: rows[0].dry_run_id !== null, detail: 'A simulation has been run against this exact version.' },
+      { gate: 'dry_run_passed', passed: dry[0]?.passed === true, detail: 'The simulation replayed real records with no unrecognised actions and no attempt to leave the simulation.' },
+      { gate: 'approval_recorded', passed: Boolean(rows[0].approval_ref), detail: 'A recorded approval says somebody read what the simulation reported.' },
+    ];
+    const blocking = gates.filter((g) => !g.passed).map((g) => g.gate);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        workflow_version_id: versionId, workflow_key: rows[0].workflow_key, version: rows[0].version,
+        already_published: rows[0].published_at !== null,
+        gates, may_publish: blocking.length === 0,
+        blocking,
+        /* The dry run's headline number travels with the verdict, because
+           "may_publish: true" on a rule that would send 5000 messages is a
+           different decision from one that would send four. */
+        would_send: dry[0]?.would_send ?? null,
+        records_replayed: dry[0]?.records_replayed ?? null,
       },
     });
   })

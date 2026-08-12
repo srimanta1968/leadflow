@@ -1,0 +1,72 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 8,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/contacts - the faceted list",
+  "description": "The contacts worklist, read from the LOCAL lead projection rather than from sdk-search. A search index that has not caught up would drop a lead somebody created two minutes ago, and on a worklist that reads as the lead being lost.\n\nEVERY FACET GOES TO THE SERVER so the counts always describe the window the rows came from, and a filtered list is shareable by URL.\n\nWHAT THE LIST DOES NOT KNOW IS STATED, not blanked. trust_state and channel_state come back null with a field_gaps entry explaining where they live — a blank trust column reads as \"no trust concerns\", and an eligibility verdict cached onto a list row would outlive the consent that produced it. QA: measured live returning 1327 contacts over the web_form facet with 4 declared gaps.",
+  "endpoint": "/api/leadflow/contacts",
+  "method": "GET",
+  "expectedStatus": 200,
+  "captureResponse": {
+    "contacts.list.response.data.contacts.0.contact_id": "data.contacts.0.contact_id",
+    "contacts.list.response.data.id": "data.contacts.0.contact_id"
+  },
+  "testCases": [
+    {
+      "name": "The list returns rows, totals, facets and its declared gaps",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "endpoint": "/api/leadflow/contacts?origin=web_form"
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

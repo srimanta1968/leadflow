@@ -1,0 +1,117 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 8,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/saved-views - store a filter, never a result",
+  "description": "Saves a contact-list view. THE FILTER IS STORED, NEVER A RESULT SET: a stored result says \"5\" forever while the queue it described moves on, and a sidebar count a month stale is worse than no count because somebody plans their morning around it.\n\nA PRIVATE VIEW NEEDS AN OWNER, enforced by a CHECK constraint as well as here — one with no owner is visible to nobody and deletable by nobody, which is a row that exists only to confuse the next person who finds it. QA: measured live.",
+  "endpoint": "/api/leadflow/saved-views",
+  "method": "POST",
+  "expectedStatus": 201,
+  "captureResponse": {
+    "saved_views.post.response.data.view.view_id": "data.view.view_id"
+  },
+  "fieldEnums": {
+    "data.view.scope": [
+      "private",
+      "team",
+      "organization"
+    ]
+  },
+  "requestBody": {
+    "name": "My queue",
+    "filters": {
+      "origin": "web_form"
+    },
+    "scope": "private",
+    "pinned": true
+  },
+  "testCases": [
+    {
+      "name": "A view is stored with its filter, scope and pin state",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "name": "My queue",
+        "filters": {
+          "origin": "web_form"
+        },
+        "scope": "private",
+        "pinned": true
+      }
+    },
+    {
+      "name": "NEGATIVE: a scope outside private, team, organization",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "name": "Bad scope",
+        "filters": {},
+        "scope": "everyone"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "scope must be one of private, team, organization",
+      "when": "the name is empty, the scope is unknown, or a private view has no owner."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

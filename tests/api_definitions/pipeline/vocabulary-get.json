@@ -1,0 +1,58 @@
+{
+  "name": "GET /api/leadflow/pipeline/vocabulary - The closed vocabularies a stage change must use",
+  "description": "Returns the dispositions, close reasons and lost-reason codes the pipeline accepts, straight from config/verticalProfile.ts. A CLOSED SET SERVED FROM ONE PLACE is the whole value: a client that hardcodes its own copy drifts from the server the first time a reason is added or retired, and the failure surfaces as a stage change refused for a reason the operator can see in their own dropdown. No upstream and no database, so it neither degrades nor needs a producer. QA: depends on register and login for the bearer token.",
+  "endpoint": "/api/leadflow/pipeline/vocabulary",
+  "method": "GET",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 32,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "captureResponse": {
+    "pipeline.vocabulary.response.data.source": "data.source"
+  },
+  "testCases": [
+    {
+      "name": "The three vocabularies, and the file they are served from",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "source": "config/verticalProfile.ts"
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

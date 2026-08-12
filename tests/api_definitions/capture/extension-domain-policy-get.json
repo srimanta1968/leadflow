@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/capture/extension/domain-policy",
   "method": "GET",
   "taskId": "4691fc71-6138-4a33-b3d9-54be4f9d693c",
+  "featureId": "a02f1e89-b5d4-4e48-a8e2-1933a20171a1",
+  "epicId": "befcccab-d3b9-4629-828b-0df9f2c981d6",
   "requiresAuth": true,
   "testability": "auto",
   "priority": 1,

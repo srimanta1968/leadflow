@@ -118,15 +118,18 @@ export async function runDispositionAutomation(input: {
       actions.push({
         kind: 'email.send',
         detail: `Approved no-answer email queued for ${sendAt} (T+${NO_ANSWER_FOLLOW_UP_MINUTES}m).`,
-        performed: await call('sdk-notification', '/api/notifications',
-          { tenant_id: config.projexCloud.tenantId, subject_ref: input.subjectRef, channels: ['email'], template: 'no_answer_follow_up', send_at: sendAt },
+        /* /api/notifications does not exist — the spec registers /send, and it
+           is point-to-point: template_code, person_id, channel, destination.
+           `channels[]` and `template` were read by nothing. */
+        performed: await call('sdk-notification', '/api/notifications/send',
+          { tenant_id: config.projexCloud.tenantId, person_id: input.subjectRef, channel: 'email', template_code: 'no_answer_follow_up', destination: input.subjectRef, scheduled_at: sendAt },
           `disp-email:${input.subjectRef}:no_answer`),
       });
       actions.push({
         kind: 'sms.send_if_eligible',
         detail: 'SMS queued subject to the channel decision engine — consent, suppression and quiet hours are checked there, not here.',
-        performed: await call('sdk-notification', '/api/notifications',
-          { tenant_id: config.projexCloud.tenantId, subject_ref: input.subjectRef, channels: ['sms'], template: 'no_answer_follow_up', send_at: sendAt, require_eligibility: true },
+        performed: await call('sdk-notification', '/api/notifications/send',
+          { tenant_id: config.projexCloud.tenantId, person_id: input.subjectRef, channel: 'sms', template_code: 'no_answer_follow_up', destination: input.subjectRef, scheduled_at: sendAt },
           `disp-sms:${input.subjectRef}:no_answer`),
       });
       break;

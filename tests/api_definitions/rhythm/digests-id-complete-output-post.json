@@ -1,0 +1,128 @@
+{
+  "taskId": "3070e925-615d-429e-8209-1568671c3502",
+  "featureId": "905a8bb9-e0ea-4d1c-b5e8-2a3c4c27740b",
+  "epicId": "285a56e9-aa8a-46e6-b4cd-0675b52053e5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 12,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/digests/run"
+  ],
+  "name": "POST /api/leadflow/digests/:id/complete-output - close a required output",
+  "description": "Marks one of a review's required outputs complete (3070e925-615d-429e-8209-1568671c3502#AC1). A NOTE IS MANDATORY: the point of tracking the output is that somebody can read, three weeks later, what the 11:30 sweep actually decided, and a completion recording only \"done\" leaves the tracking without the thing being tracked.\n\nWHETHER IT HAD ALREADY ESCALATED IS RETURNED (3070e925-615d-429e-8209-1568671c3502#AC3), so a manager sees the pattern rather than only the closure - an output that is always completed late is a capacity problem, not a discipline problem, and the two have different fixes.\n\nA SECOND COMPLETION IS A 200, NOT A CONFLICT. A repeat click is a person confirming, and returning the first completion is more useful than refusing it.\n\nQA: measured live; the no-note refusal, the completion and the idempotent repeat were all exercised. Depends on the run that generates the digests, whose id is read from the listing.",
+  "endpoint": "/api/leadflow/digests/:id/complete-output",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "3070e925-615d-429e-8209-1568671c3502#AC1",
+    "3070e925-615d-429e-8209-1568671c3502#AC3"
+  ],
+  "captureResponse": {
+    "digests.complete_output.response.data.digest_id": "data.digest_id"
+  },
+  "requestBody": {
+    "output_key": "queue_cleared",
+    "completion_note": "Queue cleared; three deferred with reasons."
+  },
+  "testCases": [
+    {
+      "name": "An output is completed with its note and its escalation state reported",
+      "coversCriterion": "3070e925-615d-429e-8209-1568671c3502#AC1",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "output_key": "queue_cleared",
+        "completion_note": "Queue cleared; three deferred with reasons."
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "A completion with no note is REFUSED",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "output_key": "queue_cleared"
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:digests.list.response.data.digests.0.digest_id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:digests.list.response.data.digests.0.digest_id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "completion_note is required - the point of tracking the output is that somebody can read later what the review actually decided, and \"done\" is not that",
+      "when": "output_key is missing or the completion note is empty."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No such output on that digest",
+      "when": "the digest id or the output key does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

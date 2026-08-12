@@ -1,0 +1,55 @@
+{
+  "name": "GET /api/leadflow/channels/voice/tracking-numbers - The attribution numbers in use",
+  "description": "Lists the tracking numbers this tenant holds, newest first, with how many are still active. A tracking number per source or campaign means an inbound call carries its own attribution rather than depending on somebody remembering to ask the caller where they heard about us. The local register is authoritative for what we allocated; the voice connector is consulted for what the carrier believes, and upstream_available reports whether that comparison could be made at all - an empty carrier list and an unreachable carrier are opposites, and only the first means no numbers exist. Retired numbers carry released_at rather than being deleted, so a call arriving on one is still explainable. QA: depends on register and login for the bearer token.",
+  "endpoint": "/api/leadflow/channels/voice/tracking-numbers",
+  "method": "GET",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 32,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "captureResponse": {
+    "channels.trackingNumbers.response.data.number_count": "data.number_count"
+  },
+  "testCases": [
+    {
+      "name": "The register answers with its count and the carrier's reachability",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

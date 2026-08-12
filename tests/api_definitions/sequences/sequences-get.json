@@ -1,0 +1,98 @@
+{
+  "taskId": "2edf499d-6ee0-4e05-9f11-98c42334356a",
+  "featureId": "1f91dfcc-feb4-444c-8728-0025cdb6fc89",
+  "epicId": "c50a5ef2-74d3-4583-9f70-19f9499ad11a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "GET /api/leadflow/sequences - the 14-day cadence as configuration",
+  "description": "All thirteen SOP §33 steps with their timing, channel, objective and required NEXT (2edf499d-6ee0-4e05-9f11-98c42334356a#AC1). VERIFIED LIVE returning step_count 13 at offsets 0, 5, 25 minutes then 4h, day 2 AM and PM, day 4, 5, 7, 9, 10, 12 and 14.\n\nCONFIGURATION, NOT CODE. The executor reads this list and knows nothing about step 7 specifically, so changing the cadence is an edit to a declaration rather than a code change.\n\nEVERY STEP LEAVES A NEXT (2edf499d-6ee0-4e05-9f11-98c42334356a#AC2). SOP §01 applies inside a cadence too: an automated touch that leaves no next action produces a record nobody owns between steps. Verified live - every one of the thirteen carries an action type, a due offset, a purpose and an intended outcome.\n\nEVERY STEP BINDS TO A TEMPLATE KEY (2edf499d-6ee0-4e05-9f11-98c42334356a#AC3) rather than composing its own copy, because a step that writes its own message bypasses the approval gate entirely. Verified live - all thirteen name at least one template.\n\nTHE STOP RULES AND NURTURE TRACKS ARE RETURNED ALONGSIDE, because an authoring UI showing the cadence without showing what interrupts it invites somebody to design a step that a reply would have cancelled anyway. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/sequences",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "2edf499d-6ee0-4e05-9f11-98c42334356a#AC1",
+    "2edf499d-6ee0-4e05-9f11-98c42334356a#AC2",
+    "2edf499d-6ee0-4e05-9f11-98c42334356a#AC3"
+  ],
+  "fieldEnums": {
+    "data.stop_rules.signal": [
+      "inbound_reply",
+      "booking_made",
+      "callback_requested",
+      "opt_out",
+      "hard_bounce",
+      "payment_verified",
+      "status_change",
+      "rep_activity",
+      "service_issue"
+    ],
+    "data.nurture_tracks.segment": [
+      "timing_or_season",
+      "budget_or_approval",
+      "current_contract",
+      "product_gap",
+      "trust_or_prelaunch",
+      "no_response",
+      "no_fit_today"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "All thirteen steps come back with timing, channel, template and required NEXT",
+      "coversCriterion": "2edf499d-6ee0-4e05-9f11-98c42334356a#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

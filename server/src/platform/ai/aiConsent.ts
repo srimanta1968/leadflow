@@ -105,7 +105,7 @@ export async function verifyAiConsentBasis(
       data?: { active?: boolean; revoked?: boolean; purpose?: string };
     }>({
       sdk: 'sdk-consent',
-      path: `/api/consent/receipts/${encodeURIComponent(basisRef)}`,
+      path: `/api/consent/receipts?subject_ref=${encodeURIComponent(basisRef)}`,
       method: 'GET',
     });
 

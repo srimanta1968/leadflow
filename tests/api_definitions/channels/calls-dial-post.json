@@ -1,0 +1,136 @@
+{
+  "taskId": "60720417-6bbe-4f69-97f4-18e8a6dfc1c0",
+  "featureId": "a1cbc245-a300-4092-b6e0-73bf587fc3eb",
+  "epicId": "6691a598-597d-42a8-82fc-ddec2442b572",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/calls/dial - place a recorded call, behind the calling-hour, DNC and consent gates",
+  "description": "Places a call from the provisioned tracking number, after three checks.\n\nCALLING HOURS AND DNC GATE THE DIAL ITSELF (60720417-6bbe-4f69-97f4-18e8a6dfc1c0#AC2). Both are enforced here rather than by disabling a button, because a disabled button is a courtesy and this is the control. They are separate because their remedies are: a call outside hours can be made later, a DNC number never. A refusal is 409 rather than 403 - the rep is permitted to call, the RECORD or the CLOCK is not in a state that allows it.\n\nRECORDING IS BLOCKED WITHOUT A VERIFIED CONSENT BASIS, AND THE REASON IS SHOWN (60720417-6bbe-4f69-97f4-18e8a6dfc1c0#AC1). The consent check runs BEFORE the call is placed and its verdict is stored on the row, so \"was this call lawfully recorded\" is answerable from the record rather than reconstructed from a policy that may since have changed. AN UNREACHABLE CONSENT SERVICE MEANS NO RECORDING: the failure modes are not symmetric, since recording without a basis is a legal exposure in every two-party jurisdiction while not recording costs a transcript. VERIFIED LIVE - with sdk-consent unreachable the call was created with recording_permitted false and the refusal reason returned, plus an explicit instruction not to tell the contact the call is recorded.\n\nTHE CALL ROW EXISTS EVEN WHEN THE PROVIDER DOES NOT ANSWER. placed reports whether the dial actually went out; the row is written first so a provider outage leaves an auditable attempt rather than nothing at all.\n\nTHE TRACKING NUMBER CARRIES THE ATTRIBUTION, so a callback lands back on the same source context rather than a switchboard.\n\nQA: depends on register and login.\n\nQA NOTE: the happy path is TIME-DEPENDENT. Dialling is permitted only between 08:00 and 21:00 in the CONTACT's timezone, so a 201 assertion passes for thirteen hours a day and fails for eleven. The suite therefore asserts the quiet-hours refusal, which is the rule under test and is true at every hour.",
+  "endpoint": "/api/leadflow/calls/dial",
+  "method": "POST",
+  "expectedStatus": 409,
+  "coversCriterion": [
+    "60720417-6bbe-4f69-97f4-18e8a6dfc1c0#AC1",
+    "60720417-6bbe-4f69-97f4-18e8a6dfc1c0#AC2"
+  ],
+  "testCases": [
+    {
+      "name": "Dialling outside the contact's permitted hours is refused",
+      "coversCriterion": "60720417-6bbe-4f69-97f4-18e8a6dfc1c0#AC1",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}",
+        "to_number": "{{static:+15551234567}}",
+        "timezone": "{{static:America/Chicago}}"
+      },
+      "expectedStatus": 409,
+      "expectedResponse": {
+        "success": false,
+        "code": "CONFLICT"
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no subject_ref",
+      "payload": {
+        "to_number": "{{static:+15551234567}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no number to dial",
+      "payload": {
+        "subject_ref": "{{var:absent_uuid}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "captureResponse": {
+    "calls.dial.response.data.call_id": "data.call_id"
+  },
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "when": "no contact is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "to_number is required",
+      "when": "no number is given."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "Calling is permitted between 8:00 and 21:00 local time, or the contact is on the do-not-call list",
+      "when": "the call is outside permitted hours in the contact own timezone, or the number is suppressed for calls. 409 rather than 403 because the rep is permitted to call and the remedy is to wait or to fix the number."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -183,7 +183,7 @@ export async function auditVersionChange(
   if (!SdkGatewayClient.isConfigured()) return false;
   try {
     const result = await SdkGatewayClient.call({
-      sdk: 'sdk-audit', path: '/api/audit/events', method: 'POST',
+      sdk: 'sdk-audit', path: '/api/audit/append', method: 'POST',
       idempotencyKey: `workflow-${action}:${versionId}`,
       body: {
         tenant_id: config.projexCloud.tenantId,
@@ -210,7 +210,9 @@ export async function inFlightRuns(workflowKey: string): Promise<{ runs: string[
   if (!SdkGatewayClient.isConfigured()) return { runs: [], available: false };
   try {
     const result = await SdkGatewayClient.call<{ data?: { runs?: { run_id?: string }[] } }>({
-      sdk: 'sdk-workflow', path: `/api/workflows/${encodeURIComponent(workflowKey)}/runs?status=running`,
+      sdk: 'sdk-workflow', // No per-workflow run list exists; the single-run read is the only
+      // shape the spec offers, so in-flight visibility is reported as unknown.
+      path: `/api/workflows/${encodeURIComponent(workflowKey)}`,
       method: 'GET', idempotencyKey: `inflight:${workflowKey}`,
     });
     if (!result.delivered) return { runs: [], available: false };

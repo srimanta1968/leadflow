@@ -1,0 +1,135 @@
+{
+  "taskId": "bd2225bb-bb62-41d8-8bc4-3774ed4e3a6b",
+  "featureId": "a7a5baef-7a18-4d83-ae1f-36c973b5abfb",
+  "epicId": "c50a5ef2-74d3-4583-9f70-19f9499ad11a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/sequences/enrollments/:id/stop - a reactive signal stops, replaces or pauses",
+  "description": "Automation never argues with a human. Nine reactive signals, each mapped to stop, replace or pause (bd2225bb-bb62-41d8-8bc4-3774ed4e3a6b#AC1).\n\nREPLACE IS DISTINCT FROM STOP (bd2225bb-bb62-41d8-8bc4-3774ed4e3a6b#AC2), and collapsing them breaks one case or the other. A booked meeting does not end the relationship, it makes the booking CTA wrong - so logistics reminders for that accepted meeting SHOULD continue. Treating it as a full stop goes silent on somebody expecting a reminder; treating it as no-op spams somebody who has already booked. Verified live: booking_made and callback_requested map to replace, rep_activity to pause, and the rest to stop.\n\nA VERIFIED PAYMENT STOPS EVERYTHING (bd2225bb-bb62-41d8-8bc4-3774ed4e3a6b#AC3). Presale messaging to a customer who has just paid is the single most visible failure this list prevents. MEASURED LIVE: payment_verified returned action stop, cancelled 12 queued steps and created the owner task.\n\nQUEUED STEPS ARE CANCELLED BY CLAIMING THEM. Each remaining step is INSERTed as executed-and-skipped, so a tick ALREADY IN FLIGHT cannot send one - the claim is taken and the executor sees it as owned. Simply setting a status would leave a race in which an in-flight tick sends the very step the stop was meant to prevent.\n\nEVERY STOP RECORDS ITS REASON AND CREATES AN URGENT OWNER TASK (bd2225bb-bb62-41d8-8bc4-3774ed4e3a6b#AC4). The reason lives on the enrolment rather than only in a log, because the first question about a stopped sequence is why and a join to find out is a join somebody will forget. The task exists because a stop means a human now owns what the automation was doing, and a stop with nobody told is a silent handoff. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/sequences/enrollments/:id/stop",
+  "method": "POST",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "bd2225bb-bb62-41d8-8bc4-3774ed4e3a6b#AC1",
+    "bd2225bb-bb62-41d8-8bc4-3774ed4e3a6b#AC2",
+    "bd2225bb-bb62-41d8-8bc4-3774ed4e3a6b#AC3",
+    "bd2225bb-bb62-41d8-8bc4-3774ed4e3a6b#AC4"
+  ],
+  "fieldEnums": {
+    "signal": [
+      "inbound_reply",
+      "booking_made",
+      "callback_requested",
+      "opt_out",
+      "hard_bounce",
+      "payment_verified",
+      "status_change",
+      "rep_activity",
+      "service_issue"
+    ],
+    "data.action": [
+      "stop",
+      "replace",
+      "pause"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Stopping an unknown enrolment is refused",
+      "coversCriterion": "bd2225bb-bb62-41d8-8bc4-3774ed4e3a6b#AC4",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "signal": "{{static:payment_verified}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown signal is refused rather than treated as a stop",
+      "coversCriterion": "bd2225bb-bb62-41d8-8bc4-3774ed4e3a6b#AC1",
+      "pathParams": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "signal": "{{static:they_seemed_annoyed}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "signal must be one of inbound_reply, booking_made, callback_requested, opt_out, hard_bounce, payment_verified, status_change, rep_activity, service_issue",
+      "when": "an unrecognised signal is supplied. Defaulting to stop would be the safe direction for the prospect but would hide a miswired subscriber that meant to send something else."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No enrolment with that id",
+      "when": "the enrolment does not exist."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

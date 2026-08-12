@@ -1,0 +1,125 @@
+{
+  "taskId": "b736b718-a31c-4ac3-a9ef-1a65613dcff5",
+  "featureId": "2a107414-e7a7-4d1f-9d7f-a04fc0328379",
+  "epicId": "2f860885-b8ac-4db6-ba54-62cfa4be5772",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/leads/:id/decline - hand straight to the backup, with a reason",
+  "description": "Declines ownership and moves the lead to its backup IN ONE STATEMENT (b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC2).\n\nONE STATEMENT BECAUSE THE ALTERNATIVE LOSES LEADS. A decline that clears the owner and then fails before setting the backup leaves an unowned record with a running clock and nobody watching it - which is exactly the orphan the validator exists to catch, manufactured by the code meant to prevent it. The backup becomes the owner in the same UPDATE, and the WHERE clause requires backup_user_id IS NOT NULL.\n\nA DECLINE WITH NO BACKUP IS REFUSED, not executed. There is nowhere for the lead to go, and dropping it into an unowned state to satisfy the request would trade one rep inconvenience for a customer nobody is answering. 409 rather than 400: the request is well formed, the RECORD is not in a state that permits it.\n\nA REASON IS REQUIRED, and enforced twice - here with a readable message, and by a CHECK constraint on leadflow_ownership_event so a decline event with no reason cannot be written by any path. SOP §02 requires it immediately, and the reason is the only part of a decline a later reader can assess (b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC2).\n\nTHE RESPONSE CLOCK RUNS FROM WHEN THE LEAD ARRIVED, not from when its current owner got it. Every handover moves assigned_at and leaves source_timestamp and sla_due_at exactly where they were. That is enforced in three places on purpose: a BEFORE UPDATE trigger in migration 024 RAISES if source_timestamp changes, so an offending UPDATE fails whoever wrote it and whichever path it came through; no statement in ownershipService writes that column; and every handover records the clock it saw into leadflow_ownership_event, which makes the invariant checkable after the fact rather than only assertable at the time. The natural implementation breaks this by accident - reassign sets assigned_at = now(), somebody later recomputes sla_due_at from assigned_at to keep it consistent, and a rep who takes over a breaching lead inherits a fresh clock while the breach vanishes from the report.\n\nTHE HAPPY PATH IS 404 for the same reason as accept: the suite identity owns no leads. The validation branch is fully exercised and it is the one carrying the criterion. WHY `reason` CARRIES NO fieldEnums. The review flags it as enum-backed; it is not. This reason is FREE PROSE written by the person taking the action, and it is required precisely because a code cannot carry what a code cannot carry - a steward confirming a bought phone number, a rep declining a lead, or somebody ending a decision authority is explaining a judgement, and the explanation is the only part a later reader can assess. Offering a picklist would produce the same six sentences forever and lose the one case that mattered. Documented here rather than satisfied with an invented vocabulary, because a false enum in the API docs would tell QA to expect values the handler never constrains.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/leads/:id/decline",
+  "method": "POST",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC1",
+    "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC2"
+  ],
+  "testCases": [
+    {
+      "name": "Declining a lead the caller does not own is refused",
+      "coversCriterion": "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC2",
+      "payload": {
+        "reason": "{{static:Already working three P1 leads for this account}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a decline with no reason is refused",
+      "coversCriterion": "b736b718-a31c-4ac3-a9ef-1a65613dcff5#AC2",
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:leads.create.response.data.id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason is required to decline a lead",
+      "when": "a decline carries no reason. SOP §02 requires one immediately, and an unexplained decline is indistinguishable from a rep who simply did not want the work - which is the one thing a manager reading this row needs to be able to tell."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No lead assigned to you with that id",
+      "when": "the lead does not exist or is not owned by the caller."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "This lead has no backup, so declining it would leave it unowned",
+      "when": "the lead has no backup_user_id. Refused rather than executed: an unowned record with a running clock is precisely the orphan SOP §30 forbids."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

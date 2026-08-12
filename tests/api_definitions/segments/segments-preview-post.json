@@ -1,0 +1,163 @@
+{
+  "taskId": "73357dd8-628f-47fa-9e41-1b42cf1f23fc",
+  "featureId": "cb6618a4-8e73-4585-aa79-af0bd20ea042",
+  "epicId": "60b11414-8cf8-4248-bc8a-22d74d122968",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/segments/preview - eligibility with every refusal named",
+  "description": "Estimates an audience over the GOVERNED dimensions and returns every refusal with its reason (73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC2). The breakdown is the deliverable, not the count: \"412 eligible\" tells a marketer nothing they can act on, while naming that 60 have no consent, 21 are suppressed and 7 are licensed records whose rights forbid this channel tells them which of those they can fix and which they must never try to.\n\nSOURCE RIGHTS ARE CHECKED FIRST AND SEPARATELY (73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC1). It is the one check that is contractual rather than operational - consent can be re-obtained and a suppression can expire, but a licence that forbids marketing SMS forbids it permanently. A record that fails here never reaches the channel decision at all, not even to be denied there, because a denial is still a decision about a record we should not be considering.\n\nTHE PURPOSE-TO-PERMITTED-USE MAP IS EXPLICIT, never a substring match. \"marketing\" in a purpose key and \"Marketing SMS\" in a licence are different vocabularies, and matching them loosely is exactly how a record licensed for Marketing Email enters an SMS audience.\n\nAN UNREACHABLE RIGHTS SERVICE EXCLUDES RATHER THAN ADMITS, under its own reason code so an outage is distinguishable from a genuine restriction. Unknown rights are not permissive rights, and \"the service was down\" is not a defence anybody accepts after a contractual breach.\n\nBudget exhaustion in the bulk eligibility pass is also NAMED rather than treated as eligible - a caller that believes it holds a verdict it never got would send to it. QA: measured live; both a first-party and a licensed candidate were correctly held out with different reasons.",
+  "endpoint": "/api/leadflow/segments/preview",
+  "method": "POST",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC1",
+    "73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC2"
+  ],
+  "captureResponse": {
+    "segments.preview.response.data.eligible_count": "data.eligible_count"
+  },
+  "fieldEnums": {
+    "data.exclusion_reasons": [
+      "source_rights_forbid_purpose",
+      "no_consent_for_purpose",
+      "suppressed",
+      "channel_ineligible",
+      "trust_state_too_low",
+      "undeliverable",
+      "criteria_not_met",
+      "rights_unknown"
+    ]
+  },
+  "requestBody": {
+    "purpose_key": "marketing.sms",
+    "channel": "sms",
+    "candidates": [
+      {
+        "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+        "origin_class": "first_party",
+        "trust_state": "P1"
+      }
+    ],
+    "criteria": {}
+  },
+  "testCases": [
+    {
+      "name": "The estimate breaks down eligible versus excluded with a reason on each refusal",
+      "coversCriterion": "73357dd8-628f-47fa-9e41-1b42cf1f23fc#AC2",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "purpose_key": "marketing.sms",
+        "channel": "sms",
+        "candidates": [
+          {
+            "subject_ref": "contact:{{cache:auth.login.response.data.user.id}}",
+            "origin_class": "first_party",
+            "trust_state": "P1"
+          },
+          {
+            "subject_ref": "licensed:probe",
+            "origin_class": "licensed_third_party",
+            "trust_state": "P2"
+          }
+        ],
+        "criteria": {}
+      }
+    },
+    {
+      "name": "NEGATIVE: no purpose_key, so source rights cannot be checked at all",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "channel": "sms",
+        "candidates": [
+          {
+            "subject_ref": "contact:x"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NEGATIVE: an empty candidate set",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "purpose_key": "marketing.sms",
+        "channel": "sms",
+        "candidates": []
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "purpose_key and channel are both required - eligibility is a property of the pair, and a segment with no stated purpose cannot be checked against source rights at all",
+      "when": "purpose_key or channel is missing, or candidates is empty."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

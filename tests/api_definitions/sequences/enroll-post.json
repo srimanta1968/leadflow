@@ -1,0 +1,126 @@
+{
+  "taskId": "d38a1e71-d293-4cc5-9371-1c9b92163b49",
+  "featureId": "39956ff3-083e-4b84-9a58-67bab8cdaa2a",
+  "epicId": "c50a5ef2-74d3-4583-9f70-19f9499ad11a",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/sequences/enroll - put a subject on a cadence, once",
+  "description": "Enrols a subject. A SECOND ENROLMENT ON THE SAME CADENCE IS A DOUBLE SEND, so it is refused 409 rather than silently ignored - a caller that believes it enrolled and did not is how a prospect ends up on two parallel cadences. VERIFIED LIVE at 409. Enforced by a UNIQUE constraint on (tenant, subject, sequence) so two concurrent enrolments cannot both succeed.\n\nTHE OWNER IS CAPTURED AT ENROLMENT, because every step writes a NEXT and a NEXT needs an owner. An enrolment with no owner produces steps whose required action nobody holds. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/sequences/enroll",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "d38a1e71-d293-4cc5-9371-1c9b92163b49#AC3"
+  ],
+  "testCases": [
+    {
+      "name": "A subject is enrolled and the enrolment id returned",
+      "coversCriterion": "d38a1e71-d293-4cc5-9371-1c9b92163b49#AC3",
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:{{cache:auth.register.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "Enrolling the same subject twice is refused",
+      "coversCriterion": "d38a1e71-d293-4cc5-9371-1c9b92163b49#AC1",
+      "expectedStatus": 409,
+      "expectedResponse": {
+        "success": false,
+        "code": "CONFLICT"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "subject_ref": "contact:{{cache:auth.register.response.data.user.id}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no subject_ref",
+      "payload": {
+        "sequence_key": "{{static:active_14_day}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "captureResponse": {
+    "sequences.enroll.response.data.enrollment_id": "data.enrollment_id"
+  },
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "subject_ref is required",
+      "when": "no subject is named."
+    },
+    {
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "This subject is already enrolled on that sequence",
+      "when": "an active enrolment already exists. Two enrolments on one cadence is a double send."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

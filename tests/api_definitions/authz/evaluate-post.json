@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/authz/evaluate",
   "method": "POST",
   "taskId": "a5844a5e-6b4f-4dac-86ac-241f68c9d405",
+  "featureId": "1a2db95c-d9e2-4aa9-91d6-20006318065c",
+  "epicId": "dd07c04e-0b66-4f94-a52d-66af3f4b3ea5",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "testability": "auto",

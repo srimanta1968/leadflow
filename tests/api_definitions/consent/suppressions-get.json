@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/consent/suppressions",
   "method": "GET",
   "taskId": "4dbe4897-970c-4c3c-bc2d-bc09f01f4aec",
+  "featureId": "967fd9d1-56bf-4580-a86c-f758f16415cf",
+  "epicId": "f7ad7bf2-adea-4b22-b822-510caca24406",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "requiresRole": [

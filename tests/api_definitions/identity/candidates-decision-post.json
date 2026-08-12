@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/identity/candidates/:link_id/decision",
   "method": "POST",
   "taskId": "1ea70941-8524-4dfb-9b62-72904e0a44ff",
+  "featureId": "f8f31c62-4212-49b1-bc23-8fb5a2846591",
+  "epicId": "9b0dd42c-1871-4a47-aae2-ab76e48d0d5c",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "requiresRole": [

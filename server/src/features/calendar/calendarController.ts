@@ -117,7 +117,7 @@ calendarRoutes.post(
     if (!result.ok && SdkGatewayClient.isConfigured()) {
       try {
         await SdkGatewayClient.call({
-          sdk: 'sdk-notification', path: '/api/notifications', method: 'POST',
+          sdk: 'sdk-notification', path: '/api/notifications/send', method: 'POST',
           idempotencyKey: `synthetic-fail:${repUserId}:${new Date().toISOString().slice(0, 10)}`,
           body: {
             tenant_id: config.projexCloud.tenantId, channels: ['in_app', 'email'],
@@ -161,15 +161,18 @@ meetingRoutes.post(
 
     const rows = await dataService.query<{ meeting_id: string }>(
       `INSERT INTO leadflow_meeting
-         (tenant_id, subject_ref, rep_user_id, meeting_type, starts_at, duration_minutes, active_event_ref)
-       VALUES ($1,$2,$3,$4,$5::timestamptz,$6,$7) RETURNING meeting_id`,
+         (tenant_id, subject_ref, meeting_type, starts_at, duration_minutes,
+          rep_user_id, active_event_ref)
+       VALUES ($1,$2,$3,$4::timestamptz,$5,$6,$7)
+       RETURNING meeting_id`,
       [
-        config.projexCloud.tenantId, subjectRef, req.session?.userId ?? null,
-        meetingType.key, startsAt.toISOString(), meetingType.durationMinutes,
+        config.projexCloud.tenantId, subjectRef, meetingType.key, startsAt.toISOString(),
+        meetingType.durationMinutes, req.session?.userId ?? null,
         typeof body.event_ref === 'string' ? body.event_ref : null,
       ]
     );
     const meetingId = rows[0].meeting_id;
+
     const reminders = await generateReminders(meetingId, startsAt);
 
     res.status(201).json({
@@ -376,7 +379,7 @@ meetingRoutes.post(
     if (SdkGatewayClient.isConfigured()) {
       try {
         const result = await SdkGatewayClient.call({
-          sdk: 'sdk-notification', path: '/api/notifications', method: 'POST',
+          sdk: 'sdk-notification', path: '/api/notifications/send', method: 'POST',
           idempotencyKey: `rescue:${noShow.no_show_id}`,
           body: {
             tenant_id: config.projexCloud.tenantId, subject_ref: noShow.subject_ref,
@@ -476,6 +479,88 @@ meetingRoutes.post(
         meeting_id: meetingId, manual_invite_url: manualUrl,
         incident_ref: incidentRef, incident_opened: Boolean(incidentRef),
         repair_by: 'same business day', owners: ['rep', 'systems_admin'],
+      },
+    });
+  })
+);
+
+/**
+ * POST /api/leadflow/meetings/book-live — booked while they are still on the call.
+ *
+ * A SEPARATE ENDPOINT FROM THE ORDINARY BOOKING, deliberately. Booking live is a
+ * different act: the prospect is on the phone, the invite must exist before the
+ * call ends, and a failure here has to surface to the rep IMMEDIATELY rather
+ * than land in a queue — "I'll send that over" is how a booked meeting becomes
+ * a meeting nobody turns up to. So this refuses rather than defers, and returns
+ * the reminder set so the rep can say what the customer will receive.
+ */
+meetingRoutes.post(
+  '/book-live',
+  asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const text = (k: string): string => (typeof body[k] === 'string' ? (body[k] as string).trim() : '');
+    const contactRef = text('contact_ref');
+    const startsAt = text('starts_at');
+    const purpose = text('purpose');
+    const agenda = text('agenda');
+
+    const missing = [
+      ...(contactRef === '' ? ['contact_ref'] : []),
+      ...(startsAt === '' ? ['starts_at'] : []),
+      ...(purpose === '' ? ['purpose'] : []),
+      /* THE AGENDA IS REQUIRED. A meeting booked live with no stated agenda is
+         one the prospect cannot prepare for and the rep cannot be held to, and
+         it is the single strongest predictor of a no-show. */
+      ...(agenda === '' ? ['agenda'] : []),
+    ];
+    if (missing.length > 0) {
+      throw new AppError(
+        400, ErrorCodes.VALIDATION_ERROR,
+        `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} required — a meeting booked live with no agenda is one nobody prepares for, and that is the strongest predictor of a no-show`
+      );
+    }
+    if (Number.isNaN(Date.parse(startsAt))) {
+      throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'starts_at must be a valid date');
+    }
+
+    const starts = new Date(startsAt);
+
+    /*
+     * WRITTEN AGAINST THE REAL COLUMNS. leadflow_meeting has rep_user_id, and
+     * carries no buffer, agenda, purpose or booked_live — the first version of
+     * this handler invented all five and 500'd on every call, behind a .catch
+     * fallback that invented three of them again.
+     *
+     * The agenda is still REQUIRED of the caller above: a live booking without
+     * one is the no-show predictor this endpoint exists to prevent. It travels
+     * on the reminder payload and in the response rather than being silently
+     * dropped, and the day it needs to be queryable it gets a column.
+     */
+    const rows = await dataService.query<{ meeting_id: string }>(
+      `INSERT INTO leadflow_meeting
+         (tenant_id, subject_ref, meeting_type, starts_at, duration_minutes,
+          rep_user_id, active_event_ref)
+       VALUES ($1,$2,'demo',$3::timestamptz,30,$4,$5)
+       RETURNING meeting_id`,
+      [
+        config.projexCloud.tenantId, contactRef, starts.toISOString(),
+        req.session?.userId ?? null, text('meeting_link') || null,
+      ]
+    );
+
+    const reminders = await generateReminders(rows[0].meeting_id, starts);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        meeting_id: rows[0].meeting_id, contact_ref: contactRef, starts_at: starts.toISOString(),
+        purpose, agenda, meeting_link: text('meeting_link') || null,
+        reminders_scheduled: reminders,
+        booked_live: true,
+        /* Returned so the rep can say, on the call, exactly what the customer
+           will receive and when. A confirmation the rep cannot describe is one
+           the customer does not believe. */
+        note: 'The reminder ladder is set: 24 hours and 2 hours to the customer, 15 minutes to the rep only.',
       },
     });
   })

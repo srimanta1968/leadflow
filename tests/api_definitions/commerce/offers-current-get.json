@@ -1,0 +1,123 @@
+{
+  "taskId": "92ce5959-0e5c-4ce8-be7a-02cc870b2120",
+  "featureId": "95512768-e04d-425c-bec5-fea91a60842b",
+  "epicId": "ef8a21ec-c1a9-4d26-ac59-e0fa28b41a3b",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/offers",
+    "POST /api/leadflow/offers/:id/activate"
+  ],
+  "name": "GET /api/leadflow/offers/current - the only version a rep may quote",
+  "description": "Returns the APPROVED ACTIVE version of an offer and nothing else (92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC1). Improvisation is made structurally impossible rather than discouraged: a rep who cannot see last quarter's pricing cannot quote it by accident, and one who cannot see an unapproved draft cannot quote terms nobody reviewed. A partial unique index enforces one active version per offer, because two would mean two reps quoting different terms and both believing they were current.\n\nAN ABSENT ACTIVE VERSION IS A 404, NOT AN EMPTY 200. A rep handed nothing would improvise, which is the exact failure this endpoint prevents, so the refusal says why: nothing may be quoted until a version is published and activated.\n\nEVERY COMMERCIAL FIELD SOP §12 REQUIRES IS REPORTED RATHER THAN ASSUMED PRESENT (92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC4) - price, quantity basis, payment options, licence limits, implementation expectations, refund and cancellation terms, included features, variable charges and third-party charges. The ten columns are NOT NULL in the schema, and missing_required_fields is returned alongside so a caller can see the sheet is complete rather than trusting that it is.\n\nTHE APPROVAL ROUTE IS RETURNED WITH THE VERSION (92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC2): leadership, legal and finance, with approval_complete as their conjunction. A CHECK constraint refuses activation without approval, so an unapproved sheet is unquotable rather than merely unmarked - activating one would put unreviewed terms in front of a buyer.\n\nversion_stamp is the string a checkout link and a quote carry, so a later dispute about terms is settleable. QA: depends on the offer drafted, approved and activated earlier in the chain; offer_key is read from the cache.",
+  "endpoint": "/api/leadflow/offers/current?offer_key=leadflow_core_qa",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC1",
+    "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC2",
+    "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC4"
+  ],
+  "fieldEnums": {
+    "data.approval_route": [
+      "leadership",
+      "legal",
+      "finance"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The active approved version is returned with its approval route and required-field check",
+      "coversCriterion": "92ce5959-0e5c-4ce8-be7a-02cc870b2120#AC1",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an offer with no approved active version is refused rather than returned empty",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: offer_key omitted",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "offer_key is required",
+      "when": "the offer_key query parameter is absent or empty."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No approved active version exists for that offer. Nothing may be quoted until one is published and activated.",
+      "when": "the offer has no version that is both approved and active - the refusal is deliberate, because a rep handed nothing would improvise."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

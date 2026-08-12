@@ -1,0 +1,164 @@
+{
+  "taskId": "c3bf29f3-da93-407b-8ecc-fdb35c245cdc",
+  "featureId": "5804edc4-c360-4241-90c2-38ecb36554b6",
+  "epicId": "350440b3-9f6f-4cbe-bd63-778721adff89",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/records/:ref/feature-dependency - record a required capability and its REAL status",
+  "description": "Records a capability the deal depends on, with its actual status: available, in_development, roadmap or not_planned.\n\nA ROADMAP PROMISE MAY NEVER SUBSTITUTE FOR AN EXIT CRITERION (c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC4). Only available satisfies; the response returns satisfies_exit_criteria so the caller cannot mistake a promise for a capability, and the stage guard reads the same rows and refuses the transition. VERIFIED LIVE END TO END: recording bulk_export at status roadmap returned satisfies_exit_criteria false, and the stage guard then returned allowed false with missingEvidence \"feature:bulk_export is roadmap, not available\".\n\nWHY THE STATUS IS STORED RATHER THAN A BLOCKER BOOLEAN. \"Blocked\" collapses four different situations into one and loses the only thing that decides what happens next - a capability in development has a date, one that is not planned needs a different conversation, and a boolean cannot tell a rep which they are in.\n\nUPSERT ON (record, capability) so revising a status is an edit rather than a second row. Two rows disagreeing about the same capability would let the guard read whichever it found first. QA: depends on register and login.",
+  "endpoint": "/api/leadflow/records/:ref/feature-dependency",
+  "method": "POST",
+  "expectedStatus": 201,
+  "coversCriterion": [
+    "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC4"
+  ],
+  "fieldEnums": {
+    "status": [
+      "available",
+      "in_development",
+      "roadmap",
+      "not_planned"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A roadmap capability is recorded and does not satisfy an exit criterion",
+      "coversCriterion": "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC4",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "capability": "{{static:bulk_export}}",
+        "status": "{{static:roadmap}}"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "An available capability does satisfy one",
+      "coversCriterion": "c3bf29f3-da93-407b-8ecc-fdb35c245cdc#AC4",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "capability": "{{static:api_access}}",
+        "status": "{{static:available}}"
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: an unknown status is refused",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "capability": "{{static:bulk_export}}",
+        "status": "{{static:coming_soon}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no capability named",
+      "pathParams": {
+        "ref": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "status": "{{static:available}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "capability is required",
+      "when": "no capability is named."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "status must be one of available, in_development, roadmap, not_planned",
+      "when": "an unrecognised status is supplied. A status the guard does not understand would be treated as not-available, which is the safe direction but hides a typo."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ],
+  "captureResponse": {
+    "records.featureDependency.response.data.capability": "data.capability"
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "name": "GET /api/leadflow/sequences/{key}/performance - Per-step rates and why enrolments stopped",
+  "description": "Reports, per step of one cadence, how many executed, how many actually dispatched and how many were skipped, plus a tally of the reasons enrolments stopped. dispatch_rate is NULL rather than 0 when a step has never executed, and that distinction is the point: 0% reads as a step that always fails, while null says nobody has reached it yet - opposite conclusions about whether to change the cadence. The stop reasons are grouped on the prefix before the colon, so 'sms_stop' and 'unsubscribe' aggregate as themselves rather than fragmenting across the free-text detail appended to each. QA: depends on register and login for the bearer token; a cadence with no enrolments answers 200 with empty arrays, which is a real answer rather than a 404.",
+  "endpoint": "/api/leadflow/sequences/:key/performance",
+  "method": "GET",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 32,
+  "expectedStatus": 200,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "key": [
+      "active_14_day",
+      "timing_or_season",
+      "budget_or_approval",
+      "current_contract",
+      "product_gap"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "The active cadence reports its per-step rates",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "key": "active_14_day"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "sequence_key": "active_14_day"
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "params": {
+        "key": "active_14_day"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    }
+  ]
+}

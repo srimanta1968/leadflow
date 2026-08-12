@@ -1,0 +1,104 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/contacts/export - only what the purpose permits",
+  "description": "Exports only the rows the stated purpose is actually permitted for, evaluated at export time.\n\nTHE PURPOSE IS REQUIRED, NEVER DEFAULTED. An export with no stated purpose cannot be eligibility-checked against anything, and a default would silently pick one on the operator's behalf — which is how a marketing extract gets taken from a list assembled for operations.\n\nEXCLUDED ROWS ARE COUNTED AND EXPLAINED. An export that silently drops rows is a lie: the operator believes they hold the whole list and reconciles against it later. QA: measured live — the refusal, and an export reporting its exclusions grouped by reason.",
+  "endpoint": "/api/leadflow/contacts/export",
+  "method": "POST",
+  "expectedStatus": 200,
+  "captureResponse": {
+    "contacts.export.response.data.exported": "data.exported"
+  },
+  "requestBody": {
+    "purpose": "project_operations",
+    "filters": {
+      "origin": "web_form"
+    }
+  },
+  "testCases": [
+    {
+      "name": "The export reports what it took and what it excluded, with reasons",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "purpose": "project_operations",
+        "filters": {
+          "origin": "web_form"
+        }
+      }
+    },
+    {
+      "name": "An export with no stated purpose is REFUSED",
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "requestBody": {
+        "filters": {}
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "purpose is required - an export with no stated purpose cannot be checked against anybody's permitted uses, and defaulting one would pick it on the operator's behalf",
+      "when": "no purpose is supplied."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

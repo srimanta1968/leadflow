@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
@@ -234,5 +235,68 @@ export class AuthService {
       throw AppError.notFound('User not found');
     }
     return AuthService.toPublicUser(user);
+  }
+
+  /**
+   * Whether this deployment still mints local credentials.
+   *
+   * Exposed so the user register can TELL an administrator that issuing a
+   * password here would be refused, rather than offering the control and
+   * answering 501 after they have typed one. The refusal itself still lives in
+   * `issueLocalCredential` — this is the question, not the guard.
+   */
+  static localCredentialsPermitted(): boolean {
+    return !config.projexCloud.identity.issuerUrl;
+  }
+
+  /**
+   * Set an invited colleague's initial password.
+   *
+   * WHY AN ADMINISTRATOR SETS IT AND NOT THE INVITEE: LeadFlow has no mail
+   * transport, so there is nowhere to send a self-service link. The choice was
+   * between this and an invitation that can never be redeemed, and an account
+   * that cannot sign in is not an invitation — it is a row.
+   *
+   * SUBJECT TO THE SAME HANDOVER AS register/login. The moment ProjexCloud is
+   * the identity authority, writing a local hash would create the second
+   * credential store that `assertLocalCredentialsPermitted` exists to prevent,
+   * and this refuses with the same 501 for the same reason.
+   *
+   * @param userId   The invited user's UUID.
+   * @param password The initial password, already length-validated by the caller.
+   * @throws AppError(501 NOT_IMPLEMENTED) when an identity issuer is configured.
+   * @throws AppError(404 NOT_FOUND) when no such user exists.
+   */
+  static async issueLocalCredential(userId: string, password: string): Promise<void> {
+    AuthService.assertLocalCredentialsPermitted();
+
+    const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
+    const updated = await dataService.queryOne<UserRow>(
+      `UPDATE users
+          SET password_hash = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *`,
+      [userId, passwordHash]
+    );
+
+    if (!updated) {
+      throw AppError.notFound('User not found');
+    }
+  }
+
+  /**
+   * A hash no password can match.
+   *
+   * A REAL BCRYPT HASH OF A SECRET NOBODY HOLDS, not a sentinel string. The
+   * column is NOT NULL and an invited account has no credential yet, so
+   * something has to go there — and a recognisable placeholder like
+   * '!invite-pending' relies on every future comparison path rejecting a
+   * malformed hash, which is an assumption about a library rather than a fact
+   * about the data. Hashing 256 bits of randomness needs no such assumption:
+   * the value is well-formed, it compares in constant time like any other, and
+   * there is no input that satisfies it.
+   */
+  static async unusableCredential(): Promise<string> {
+    return bcrypt.hash(`${randomUUID()}${randomUUID()}`, config.bcryptRounds);
   }
 }

@@ -4,6 +4,8 @@
   "endpoint": "/api/leadflow/data-review/detectors/run",
   "method": "POST",
   "taskId": "e5f74ac6-188f-4126-a210-eb02aacb4a3f",
+  "featureId": "959563d2-0d22-4723-b11b-5a5174a50652",
+  "epicId": "3d26a52b-753c-4ee4-849c-6433f98473d6",
   "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
   "requiresAuth": true,
   "requiresRole": [

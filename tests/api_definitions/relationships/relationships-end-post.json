@@ -1,0 +1,166 @@
+{
+  "taskId": "74f2a183-98b3-4858-a215-1d600056d332",
+  "featureId": "1ba43067-6c89-474d-a242-f37cdf9d997f",
+  "epicId": "2979a602-317e-49cd-8b38-2d2914a88afa",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/relationships/:relationship_id/end - close a role by dating it, never by deleting it",
+  "description": "Ends one contextual role. THE ROW SURVIVES (74f2a183-98b3-4858-a215-1d600056d332#AC2): valid_to is set, closed_reason is recorded, and the role stays readable in provenance forever. Setting a date keeps the row answering \"who was the decision maker last March\", which is exactly the question asked when something has gone wrong, and a deleted row cannot answer it. That is why this endpoint exists at all rather than a DELETE - the HTTP verb would advertise the wrong semantics even if the handler behaved.\n\nIDEMPOTENT, AND THAT MATTERS MORE THAN IT LOOKS. Closing an already-closed role returns it unchanged rather than moving valid_to. The first close is when the role actually stopped being true; a retry after a timeout, or a double-clicked button, must not rewrite that instant. Upstream enforces the same with COALESCE(valid_to, ...) so the guarantee holds even if a second writer arrives by another path.\n\nA REASON IS REQUIRED. Ending a decision authority or an occupancy is a claim about the world changing, and \"why\" is the only part of it a later reader can assess. An unexplained close is indistinguishable from a mistake, and this is precisely the row somebody will be reading when they are trying to work out whether it was one.\n\nENDING IS NOT RETRACTING. This says the role STOPPED being true, not that it never was. A role asserted in error needs the evidence corrected upstream rather than an end date, because an end date leaves the historical period intact and readable - which for a wrongly-asserted role is the opposite of what is wanted. The response says so rather than leaving it to be inferred.\n\nTHE HAPPY PATH IS 404 in the environments available here: sdk-rebac is not provisioned against a LeadFlow tenant, so no role exists to close. That branch is worth holding - it proves the endpoint refuses to report a close it did not perform, rather than answering 200 and leaving an operator believing a live authority had been ended. WHY `reason` CARRIES NO fieldEnums. The review flags it as enum-backed; it is not. This reason is FREE PROSE written by the person taking the action, and it is required precisely because a code cannot carry what a code cannot carry - a steward confirming a bought phone number, a rep declining a lead, or somebody ending a decision authority is explaining a judgement, and the explanation is the only part a later reader can assess. Offering a picklist would produce the same six sentences forever and lose the one case that mattered. Documented here rather than satisfied with an invented vocabulary, because a false enum in the API docs would tell QA to expect values the handler never constrains.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/relationships/:relationship_id/end",
+  "method": "POST",
+  "expectedStatus": 404,
+  "coversCriterion": [
+    "74f2a183-98b3-4858-a215-1d600056d332#AC2"
+  ],
+  "fieldEnums": {
+    "data.trust_state": [
+      "CANDIDATE",
+      "CONFIRMED",
+      "DOCUMENTED"
+    ]
+  },
+  "statusTransitions": {
+    "entity": "contextual_role",
+    "field": "valid_to",
+    "flow": [
+      "live",
+      "closed"
+    ],
+    "transitions": [
+      {
+        "from": "live",
+        "to": "closed",
+        "via": "POST /api/leadflow/relationships/:relationship_id/end - sets valid_to and closed_reason. The row is NEVER removed, so the closed period stays queryable through GET /api/leadflow/relationships?include_closed=true"
+      }
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Ending an unknown role reports that nothing was closed",
+      "coversCriterion": "74f2a183-98b3-4858-a215-1d600056d332#AC2",
+      "pathParams": {
+        "relationship_id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "reason": "{{static:The management agreement was terminated by the owner}}"
+      },
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a close with no stated reason is refused",
+      "coversCriterion": "74f2a183-98b3-4858-a215-1d600056d332#AC2",
+      "pathParams": {
+        "relationship_id": "{{var:absent_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a valid_to in the future is refused",
+      "pathParams": {
+        "relationship_id": "{{var:absent_uuid}}"
+      },
+      "payload": {
+        "reason": "{{static:Ended at handover}}",
+        "valid_to": "{{dynamic:futuredate+30d}}"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "pathParams": {
+        "relationship_id": "{{var:absent_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "pathParams": {
+        "relationship_id": "{{var:absent_uuid}}"
+      },
+      "payload": {},
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "reason is required to end a relationship",
+      "when": "a close carries no reason. Ending a decision authority is a claim about the world changing, and an unexplained end is indistinguishable from a mistake - which is exactly what somebody will be trying to determine when they read this row."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "valid_to cannot be in the future",
+      "when": "a future end date is supplied. A role that has not stopped being true yet is still live; dating its end forward would make every reachability check between now and then answer on a role the record says has ended."
+    },
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No relationship with that id could be closed",
+      "when": "the id is unknown upstream, or the relationship store could not confirm the close. Deliberately NOT a 200: a caller reading 200 as closed would leave an operator believing a live authority had been ended."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

@@ -120,6 +120,24 @@ const LOCAL_ROLE_BRIDGE: Record<string, string[]> = {
 };
 
 /**
+ * Every local `users.role` value the bridge recognises.
+ *
+ * DERIVED FROM THE BRIDGE ITSELF, so the role picker on the administration
+ * screen cannot offer a value that maps to nothing. A hand-kept second list is
+ * how you end up assigning somebody the role `owner`, watching it save, and
+ * watching every screen lock for them — `rolesFor` returns [] for an unmapped
+ * value, which is correct and completely silent.
+ */
+export function assignableLocalRoles(): string[] {
+  return Object.keys(LOCAL_ROLE_BRIDGE);
+}
+
+/** The SOP roles one local role speaks for. Empty for an unrecognised value. */
+export function sopRolesForLocalRole(local: string): string[] {
+  return LOCAL_ROLE_BRIDGE[local] ?? [];
+}
+
+/**
  * The caller's roles, failing closed to none.
  *
  * A platform session wins outright: its roles come from persona grants resolved

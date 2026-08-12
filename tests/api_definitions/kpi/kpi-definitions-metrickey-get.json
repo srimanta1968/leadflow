@@ -1,0 +1,106 @@
+{
+  "taskId": "44fa2588-4db3-48f4-a653-2c0a970f94fc",
+  "featureId": "722a8fca-8bcc-46b6-8a50-0cf286fb9e17",
+  "epicId": "285a56e9-aa8a-46e6-b4cd-0675b52053e5",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/leadflow/kpi-definitions"
+  ],
+  "name": "GET /api/leadflow/kpi-definitions/:metric_key - the version history",
+  "description": "Every version of one definition, newest first (44fa2588-4db3-48f4-a653-2c0a970f94fc#AC3). The history is the artifact that makes a changed chart explainable: a reader who sees a series jump in March can find that the denominator changed on the 12th, who changed it and why they said they did. A registry that keeps only the current version answers \"what does this mean today\" and leaves every historical comparison silently wrong.\n\nQA: reads the metric registered earlier in the chain.",
+  "endpoint": "/api/leadflow/kpi-definitions/:metric_key",
+  "method": "GET",
+  "expectedStatus": 200,
+  "coversCriterion": [
+    "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC3"
+  ],
+  "testCases": [
+    {
+      "name": "The current version and its full history are returned",
+      "coversCriterion": "44fa2588-4db3-48f4-a653-2c0a970f94fc#AC3",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "metric_key": "{{cache:kpi.post.response.data.metric_key}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a metric nobody ever registered",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "metric_key": "{{var:absent_uuid}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "metric_key": "{{cache:kpi.post.response.data.metric_key}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "metric_key": "{{cache:kpi.post.response.data.metric_key}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No definition has ever been registered for that metric",
+      "when": "no version of that metric key exists."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

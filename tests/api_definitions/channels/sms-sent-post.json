@@ -1,0 +1,90 @@
+{
+  "name": "POST /api/leadflow/channels/sms/sent - Log an SMS that actually went out",
+  "description": "Records that a text was dispatched for one subject, so the volume ledger the SMS gate reads is built from sends that HAPPENED rather than sends that were intended. 201 because it inserts a log row at a collection root. `automated` defaults to true and is the field that matters: an automated send counts against pacing and consent rules while a rep typing a message by hand does not, and defaulting the other way would let automation hide inside manual traffic. template_key is optional, because an improvised message is exactly the thing worth recording as having had no template. QA: depends on register and login for the bearer token.",
+  "endpoint": "/api/leadflow/channels/sms/sent",
+  "method": "POST",
+  "taskId": "4c12f924-87d1-4be1-b790-d94a936d58b3",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 32,
+  "expectedStatus": 201,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "fieldEnums": {
+    "automated": [
+      "true",
+      "false"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "An automated send is logged against its template",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "subject_ref": "{{cache:auth.register.response.data.user.id}}",
+        "template_key": "no_answer_sms",
+        "automated": true
+      },
+      "expectedStatus": 201,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "logged": true
+        }
+      }
+    },
+    {
+      "name": "NEGATIVE: a send with nobody to attribute it to",
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR|subject_ref",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "payload": {
+        "template_key": "no_answer_sms"
+      },
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "noAuth": true,
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "payload": {
+        "subject_ref": "{{cache:auth.register.response.data.user.id}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "code": "UNAUTHENTICATED",
+      "status": 401,
+      "when": "the Authorization header is absent, or present without a bearer token"
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "status": 401,
+      "when": "the bearer token fails verification or has expired"
+    },
+    {
+      "code": "VALIDATION_ERROR",
+      "status": 400,
+      "when": "subject_ref is absent or blank. A logged send with no subject cannot be counted against anybody's pacing or consent, which is the only reason the ledger exists."
+    }
+  ]
+}

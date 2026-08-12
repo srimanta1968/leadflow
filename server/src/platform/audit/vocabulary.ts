@@ -171,6 +171,26 @@ export const AUDIT_EVENTS = {
   // call" is the question asked first when somebody complains, and the answer
   // must live in the tamper-evident chain rather than only in a server log.
   RECORDING_ACCESSED: 'recording.accessed.v1',
+
+  // The user register. FOUR names rather than one `user.changed`, because these
+  // are the entries read when the question is "how did this person get the
+  // authority they used" — and that question is answered by finding the role
+  // change, not by parsing a payload discriminator. `user.role.changed` in
+  // particular carries the previous and the new role in its metadata, which is
+  // the only way an entry can answer "what could they do BEFORE this".
+  USER_INVITED: 'user.invited.v1',
+  USER_ROLE_CHANGED: 'user.role.changed.v1',
+  USER_ACTIVATED: 'user.activated.v1',
+  // A closure, not a deletion. The row and every action attributed to it stay
+  // exactly where they were — see migration 034.
+  USER_DEACTIVATED: 'user.deactivated.v1',
+
+  // The loop breaker. Its own name rather than a variant of the per-enrolment
+  // stop, because the two answer opposite questions: `sequence.paused` is "we
+  // suspected the automation and stopped it", while an enrolment stop is "this
+  // person asked us to". An incident review queries the first; a complaint
+  // queries the second, and one name would return the other's rows to both.
+  SEQUENCE_PAUSED: 'sequence.paused.v1',
 } as const;
 
 /** Any name in the vocabulary. Nothing else is appendable. */
@@ -198,4 +218,8 @@ export const REVERSAL_EVENTS: AuditEventName[] = [
   AUDIT_EVENTS.IDENTITY_LINK_RETRACTED,
   AUDIT_EVENTS.CONSENT_RECEIPT_REVOKED,
   AUDIT_EVENTS.RELATIONSHIP_ENDED,
+  // Reopening an account reverses its closure. The closure entry stays: an
+  // account that was shut and reopened is a different fact from one that was
+  // never shut, and only the pair records it.
+  AUDIT_EVENTS.USER_ACTIVATED,
 ];
