@@ -275,3 +275,172 @@ export async function requestApproval(input: {
   if (!result.delivered) return unreachable(null);
   return { value: result.data?.data ?? null, available: true };
 }
+
+/* ------------------------------------------------- result write-back (#91) */
+
+/**
+ * Settle a held reservation against how the lookup actually ended.
+ *
+ * THE OUTCOME IS PASSED THROUGH VERBATIM rather than being reduced to a boolean.
+ * Upstream charges on MATCHED and nothing else, but it also RECORDS which of the
+ * three free outcomes occurred, and that distinction is the difference between a
+ * bad provider, a bad question and our own cache working. A caller that sent
+ * `charged: false` would settle the credits correctly and destroy the report.
+ */
+export async function settleReservation(
+  reservationId: string,
+  outcome: 'MATCHED' | 'NO_MATCH' | 'TECHNICAL_FAILURE' | 'CACHE_HIT',
+  result: unknown,
+): Promise<Reached<Record<string, unknown> | null>> {
+  const call = await callOrUnreached<{ data?: Record<string, unknown> }>({
+    sdk: 'sdk-data-credits',
+    path: `/api/credits/reservations/${encodeURIComponent(reservationId)}/settle`,
+    method: 'POST',
+    // Keyed on the reservation, so a retry after a timeout settles once. Settling
+    // twice would charge twice for one answer.
+    idempotencyKey: `enrich-settle:${reservationId}`,
+    body: { tenant_id: config.projexCloud.tenantId, outcome, result: result ?? null },
+  });
+  if (!call.delivered) return unreachable(null);
+  return { value: call.data?.data ?? null, available: true };
+}
+
+/**
+ * Write one enrichment answer back as provenance.
+ *
+ * `status` is the caller's, and every caller in this feature passes 'ASSERTION'.
+ * It is not defaulted here: a default would make the safe value invisible at the
+ * call site, and the one thing a reader of that call site must be able to see is
+ * that nothing bought is being written as operational.
+ */
+export async function writeSourceAssertion(input: {
+  subjectRef: string;
+  attribute: string;
+  value: string;
+  originClass: string;
+  confidence: number | null;
+  status: 'ASSERTION' | 'PRIMARY';
+  actorId: string;
+  metadata?: Record<string, unknown>;
+}): Promise<Reached<{ assertion_id?: string } | null>> {
+  const call = await callOrUnreached<{ data?: { assertion?: { assertion_id?: string } } }>({
+    sdk: 'sdk-source-record',
+    path: '/api/source-assertions',
+    method: 'POST',
+    idempotencyKey: `enrich-assert:${input.subjectRef}:${input.attribute}:${input.value}`,
+    body: {
+      tenant_id: config.projexCloud.tenantId,
+      subject_ref: input.subjectRef,
+      attribute: input.attribute,
+      value: input.value,
+      origin_class: input.originClass,
+      // Omitted rather than sent as 0 when the provider scored nothing: 0 means
+      // "we checked and it is worthless", which is a different claim from
+      // "nobody scored it" and the one nothing here is entitled to make.
+      ...(input.confidence === null ? {} : { confidence: input.confidence }),
+      status: input.status,
+      is_pii: input.attribute === 'phone' || input.attribute === 'email',
+      retrieved_at: new Date().toISOString(),
+      actor_id: input.actorId,
+      purpose: 'lead_management',
+      metadata: input.metadata,
+    },
+  });
+  if (!call.delivered) return unreachable(null);
+  return { value: call.data?.data?.assertion ?? null, available: true };
+}
+
+/**
+ * Promote a confirmed candidate by superseding it with a PRIMARY assertion.
+ *
+ * THE PRIOR ROW IS RETAINED, NEVER DELETED — that is what `supersede` does and
+ * why it is used instead of an update. What the system believed before a steward
+ * confirmed it is exactly the thing an audit asks about afterwards.
+ *
+ * ORIGIN CLASS AND CONFIDENCE ARE CARRIED THROUGH UNCHANGED. Confirming that a
+ * number is the right number says nothing about where it came from, and
+ * rewriting LICENSED_THIRD_PARTY to something warmer on confirmation would
+ * launder bought data into first-party evidence with one click.
+ */
+export async function promoteAssertion(input: {
+  assertionId: string;
+  subjectRef: string;
+  attribute: string;
+  value: string;
+  originClass: string;
+  confidence: number | null;
+  reason: string;
+  actorId: string;
+}): Promise<Reached<Record<string, unknown> | null>> {
+  const call = await callOrUnreached<{ data?: Record<string, unknown> }>({
+    sdk: 'sdk-source-record',
+    path: `/api/source-assertions/${encodeURIComponent(input.assertionId)}/supersede`,
+    method: 'POST',
+    idempotencyKey: `enrich-promote:${input.assertionId}`,
+    body: {
+      tenant_id: config.projexCloud.tenantId,
+      subject_ref: input.subjectRef,
+      attribute: input.attribute,
+      value: input.value,
+      origin_class: input.originClass,
+      ...(input.confidence === null ? {} : { confidence: input.confidence }),
+      status: 'PRIMARY',
+      reason: input.reason,
+      actor_id: input.actorId,
+      purpose: 'lead_management',
+      metadata: {
+        confirmed_by_steward: true,
+        /* The claim this endpoint is most often assumed to make, denied in the
+           record itself so nothing downstream has to infer it. */
+        creates_consent_basis: false,
+      },
+    },
+  });
+  if (!call.delivered) return unreachable(null);
+  return { value: call.data?.data ?? null, available: true };
+}
+
+/** One stored assertion, as sdk-source-record's list returns it. */
+export interface SourceAssertionRow {
+  assertion_id?: string;
+  subject_ref?: string;
+  attribute?: string;
+  value?: string;
+  origin_class?: string;
+  confidence?: number | null;
+  status?: string;
+  metadata?: Record<string, unknown> | null;
+}
+
+/**
+ * The candidate assertions one enrichment request produced.
+ *
+ * Filtered on the request id in metadata rather than on the subject, because a
+ * contact enriched twice has candidates from both runs and confirming one must
+ * not offer the other's values.
+ */
+export async function listCandidateAssertions(
+  subjectRef: string,
+  requestId: string,
+): Promise<Reached<SourceAssertionRow[]>> {
+  const params = new URLSearchParams({
+    tenant_id: config.projexCloud.tenantId,
+    subject_ref: subjectRef,
+    status: 'ASSERTION',
+    exclude_superseded: 'true',
+  });
+  const read = await degradingRead<SourceAssertionRow[]>(
+    'sdk-source-record',
+    `/api/source-assertions?${params.toString()}`,
+    [],
+    (body) => {
+      const bag = (body ?? {}) as Record<string, unknown>;
+      const rows = bag.assertions;
+      return Array.isArray(rows) ? (rows as SourceAssertionRow[]) : [];
+    },
+  );
+  return {
+    value: read.value.filter((row) => row.metadata?.request_id === requestId),
+    available: read.available,
+  };
+}

@@ -50,20 +50,97 @@ interface NavItemBase {
   planned?: boolean;
 }
 
+/**
+ * The four experience levels, from the phase-7 usability package.
+ *
+ * PROGRESSIVE DISCLOSURE, NOT ACCESS CONTROL. Changing experience changes which
+ * screens are VISIBLE and nothing else — the reference panel says so in as many
+ * words, and the distinction has to survive contact with this codebase or
+ * somebody will eventually reach for an experience level to hide a screen from
+ * a role. Permission is `action`, evaluated by the PDP, and renders as Locked.
+ * Experience is a preference the operator sets for themselves and can undo in
+ * one click. A screen hidden by experience is NOT denied, and a screen denied by
+ * policy stays denied at every experience.
+ *
+ * Nested on purpose: each level is a superset of the one before, so raising it
+ * only ever adds. A non-nested model would let an operator lose a screen by
+ * moving "up", which is the one behaviour that would stop people exploring.
+ */
+export const EXPERIENCES = [
+  { level: 1, key: 'guided', label: 'Guided Start', detail: 'A calm first-day workspace: capture, calendar and setup.' },
+  { level: 2, key: 'customer_jobs', label: 'Customer & Jobs', detail: 'Daily customer, contact, consent and import workflows.' },
+  { level: 3, key: 'business_ops', label: 'Business Operations', detail: 'Routing, coverage, insight and the configuration behind them.' },
+  { level: 4, key: 'full', label: 'Full Workspace', detail: 'All available screens and advanced settings are visible.' },
+] as const;
+
+export type ExperienceLevel = 1 | 2 | 3 | 4;
+
+/** The level a new workspace starts at. */
+export const DEFAULT_EXPERIENCE: ExperienceLevel = 4;
+
 export interface NavGroup {
   /** The mockup renders these as .navgroup eyebrows. */
   label: string;
   items: NavItem[];
+  /**
+   * The FIRST group never collapses. Everything an operator does all day starts
+   * there, and a sidebar whose top section can be hidden lets somebody hide the
+   * product's front door and not find it again. Every other group folds, and the
+   * state persists — the sidebar is on screen constantly, so re-collapsing four
+   * sections on every load is a tax paid forever.
+   */
+  collapsible?: boolean;
+  /** Folded on first load. Setup-shaped groups are visited rarely. */
+  defaultCollapsed?: boolean;
+  /**
+   * The lowest experience level at which this group appears. Absent means 4 —
+   * visible only in the Full Workspace — so a group added later is hidden from
+   * the calm views until somebody deliberately places it, rather than
+   * appearing in a beginner's first-day workspace by default.
+   */
+  experience?: ExperienceLevel;
 }
 
 export const NAV_GROUPS: NavGroup[] = [
   {
+    /*
+     * THE HOURLY WORK, PINNED AND NEVER FOLDABLE.
+     *
+     * These were scattered across three groups by SUBJECT MATTER — Capture
+     * Inbox under contacts, Lead queue and Calendar under revenue, Inbox
+     * halfway down a thirteen-item list — which is a filing system, not a
+     * workspace. A rep touches every one of these several times an hour and
+     * should never hunt for them or scroll; everything else is a place you go
+     * when a task sends you there.
+     *
+     * Calendar earns its place here for a reason the SOP is explicit about: the
+     * rep books the meeting WHILE STILL ON THE CALL, so the control has to be
+     * one click away at the moment they are talking. Buried under Revenue it
+     * was four scrolls and a decision.
+     *
+     * These are MOVED here, not copied. Listing Calendar twice would leave an
+     * operator wondering whether the two entries differ, and the nav test
+     * rightly refuses a duplicated route — a sidebar with one screen in two
+     * places is the ambiguity that guard exists to prevent.
+     */
+    label: 'Daily work',
+    experience: 1,
+    items: [
+      { label: 'Capture Inbox', to: '/app', ungated: 'every operator triages their own tenant queue; the rows are scoped server side and the per-row ACTIONS are gated individually', count: 'captureUnresolved' },
+      { label: 'Lead queue', to: '/app/leads', action: 'lead.work_assigned', count: 'leadsOpen' },
+      { label: 'Inbox', to: '/app/inbox', ungated: 'an operator reads the threads on their own records; the per-message SEND is gated by the channel decision, which is the control that matters' },
+      { label: 'Calendar', to: '/app/calendar', action: 'meeting.book' },
+      { label: 'Pipeline', to: '/app/pipeline', action: 'stage.update' },
+      { label: 'Quick Capture', to: '/app/capture', ungated: 'capturing a lead is the one thing every role may do; refusing it would lose the lead' },
+    ],
+  },
+  {
     label: 'Contact operations',
+    experience: 2,
+    collapsible: true,
     items: [
       { label: 'Contact Command', to: '/app/command', action: 'dashboard.view_team', planned: true },
-      { label: 'Contacts', to: '/app/contacts', ungated: 'reading contacts is tenant-scoped by the endpoint, not role-gated', planned: true },
-      { label: 'Capture Inbox', to: '/app', ungated: 'every operator triages their own tenant queue; the rows are scoped server side and the per-row ACTIONS are gated individually', count: 'captureUnresolved' },
-      { label: 'Quick Capture', to: '/app/capture', ungated: 'capturing a lead is the one thing every role may do; refusing it would lose the lead' },
+      { label: 'Contacts', to: '/app/contacts', ungated: 'reading contacts is tenant-scoped by the endpoint, not role-gated' },
       { label: 'Import Center', to: '/app/import', action: 'import.run_read' },  // Gated on the READ grant, not import.commit: this screen reviews imports,
       // it does not apply them, and requiring the commit grant to LOOK would hide
       // the register from the Privacy Officer who audits it.
@@ -71,42 +148,93 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Identity & trust',
+    experience: 3,
+    collapsible: true,
     items: [
-      { label: 'Identity Review', to: '/app/identity', action: 'identity.merge_review', planned: true },
-      { label: 'Consent & Preferences', to: '/app/consent', action: 'consent.purpose_manage', planned: true },
-      { label: 'Enrichment Queue', to: '/app/enrichment', action: 'data.configure', planned: true },
-      { label: 'Data Review', to: '/app/data-review', action: 'source_record.promote', planned: true },
-      { label: 'Audit & History', to: '/app/audit', ungated: 'reading the chain is deliberately open — audit.delete_event is the only gated audit capability, and gating READS would defeat the point of an audit trail', planned: true },
+      // NOT `planned`. Both shipped (TK-3957, TK-3961), both routed in App.tsx,
+      // and both sat here flagged Soon — so the sidebar rendered a finished
+      // screen as an unclickable span. A stale flag in this file is invisible
+      // in review and total for the operator: the screen may as well not exist.
+      { label: 'Identity Review', to: '/app/identity', action: 'identity.merge_review' },
+      { label: 'Consent & Preferences', to: '/app/consent', action: 'consent.purpose_manage' },
+      { label: 'Enrichment Queue', to: '/app/enrichment', action: 'data.configure' },
+      { label: 'Data Review', to: '/app/data-review', action: 'source_record.promote' },
+      { label: 'Audit & History', to: '/app/audit', ungated: 'reading the chain is deliberately open — audit.delete_event is the only gated audit capability, and gating READS would defeat the point of an audit trail' },
     ],
   },
   {
     label: 'Revenue',
+    experience: 2,
     items: [
-      { label: 'Lead queue', to: '/app/leads', action: 'lead.work_assigned', count: 'leadsOpen' },
-      { label: 'Pipeline', to: '/app/pipeline', action: 'stage.update', planned: true },
-      { label: 'Routing rules', to: '/app/routing', action: 'routing.configure' },
-      { label: 'SLA targets', to: '/app/sla', action: 'sla.configure', count: 'captureSlaRisk' },
-      { label: 'Sequences', to: '/app/sequences', action: 'automation.publish', planned: true },
-      { label: 'Calendar', to: '/app/calendar', action: 'meeting.book', planned: true },
-      { label: 'Offers', to: '/app/offers', action: 'offer.change_terms', planned: true },
+      { label: 'Offers', to: '/app/offers', action: 'offer.change_terms' },
+      { label: 'Onboarding handoff', to: '/app/handoffs', action: 'handoff.accept' },
     ],
+    collapsible: true,
+  },
+  {
+    /*
+     * SPLIT OUT OF REVENUE, which had grown to thirteen items — the longest
+     * group by far and a mix of two different jobs. A rep works the first list
+     * every hour; nobody edits a routing rule twice a week. Interleaving them
+     * made the daily items harder to find and the rarely-used ones look urgent.
+     */
+    label: 'Configuration',
+    experience: 3,
+    items: [
+      { label: 'Routing rules', to: '/app/routing', action: 'routing.configure' },
+      { label: 'Routing configuration', to: '/app/routing-config', action: 'routing.configure' },
+      { label: 'Routing simulation', to: '/app/routing-simulation', action: 'routing.configure' },
+      { label: 'Coverage', to: '/app/coverage', action: 'sla.configure' },
+      { label: 'SLA targets', to: '/app/sla', action: 'sla.configure', count: 'captureSlaRisk' },
+      { label: 'Sequences', to: '/app/sequences', action: 'automation.publish' },
+      { label: 'Message templates', to: '/app/templates', action: 'message.publish_template' },
+    ],
+    collapsible: true,
+    defaultCollapsed: true,
   },
   {
     label: 'Insight',
+    experience: 3,
+    collapsible: true,
     items: [
       { label: 'Analytics', to: '/app/analytics', action: 'dashboard.view_team' },
-      { label: 'Workflow Studio', to: '/app/workflows', action: 'automation.publish', planned: true },
-      { label: 'Incidents', to: '/app/incidents', action: 'escalation.receive', planned: true },
+      { label: 'Leadership', to: '/app/leadership', action: 'dashboard.view_team' },
+      { label: 'Dashboards', to: '/app/dashboards', action: 'dashboard.view_team' },
+      { label: 'Workflow Studio', to: '/app/workflows', action: 'automation.publish' },
+      { label: 'Runs & release gate', to: '/app/workflow-runs', action: 'automation.publish' },
+      { label: 'Incidents', to: '/app/incidents', action: 'escalation.receive' },
+      { label: 'Governance', to: '/app/governance', action: 'legal_policy.approve' },
     ],
   },
   {
     label: 'Related',
+    experience: 4,
+    collapsible: true,
+    defaultCollapsed: true,
     items: [
       { label: 'Associated Properties', to: '/app/properties', ungated: 'a read of related records, scoped by the endpoint', planned: true },
-      { label: 'Campaign Enrollment', to: '/app/campaigns', action: 'campaign.configure', planned: true },
+      { label: 'Campaign Enrollment', to: '/app/campaigns', action: 'campaign.configure' },
+    ],
+  },
+  {
+    label: 'Administration',
+    experience: 4,
+    items: [
+      { label: 'User Administration', to: '/app/admin/users', action: 'user.invite' },
+      // UNGATED, and it is the one gate worth arguing about. This is the screen
+      // that explains why the OTHER items render Locked, so gating it would
+      // leave the operator who most needs it — the one just told they may not
+      // open Governance — with a refusal and no way to find out why.
+      { label: 'Permission Matrix', to: '/app/admin/permissions', ungated: 'this screen explains why other screens are Locked; hiding it from the people who are being refused is the one case where a gate makes the product less honest rather than more secure' },
+      { label: 'Training Centre', to: '/app/training', ungated: 'guides describe what the product does; a reader who cannot use a capability still needs to know which grant it needs, which is the answer to most support questions' },
     ],
   },
 ];
+
+/** The groups visible at a given experience level. */
+export function groupsForExperience(level: ExperienceLevel): NavGroup[] {
+  return NAV_GROUPS.filter((group) => (group.experience ?? 4) <= level);
+}
 
 /** Every item, flattened — for permission prefetch and for the tests. */
 export const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
@@ -124,4 +252,31 @@ export const SCREEN_SUBTITLE: Record<string, string> = {
   '/app/routing': 'Routing rules — first match wins, in evaluation order',
   '/app/sla': 'SLA targets — response commitments by lead type',
   '/app/analytics': 'Analytics — response times and conversion across the funnel',
+  '/app/enrichment': 'Enrichment Queue — permissioned data capabilities, priced in credits',
+  '/app/contacts': 'Contacts — canonical people and organizations',
+  '/app/data-review': 'Data Review — governed case queues',
+  '/app/import': 'Import Center — runs, templates and the rollback register',
+  '/app/identity': 'Identity Review — candidate links awaiting a decision',
+  '/app/consent': 'Consent & Preferences — receipts, purposes and suppression',
+  '/app/audit': 'Audit & History — evidence, causality and reversibility',
+  '/app/routing-config': 'Routing configuration — the six-step decision engine',
+  '/app/routing-simulation': 'Routing simulation — replay before you publish',
+  '/app/coverage': 'Coverage — every window resolves to a named person',
+  '/app/pipeline': 'Pipeline — stages, NEXT actions and the clocks on them',
+  '/app/inbox': 'Inbox — every channel in one chronological thread',
+  '/app/calendar': 'Calendar — book live and verify receipt on the call',
+  '/app/offers': 'Commercial Review — offer version stamping and exceptions',
+  '/app/handoffs': 'Onboarding handoff — what sales sold, in the words used',
+  '/app/campaigns': 'Campaign Enrollment — eligibility evaluated at send time',
+  '/app/leadership': 'Leadership — nine signals, each drilling into its list',
+  '/app/dashboards': 'Dashboards — five roles over one KPI registry',
+  '/app/workflows': 'Workflow Studio — canvas and keyboard outline, one model',
+  '/app/workflow-runs': 'Runs & release gate — per-step state and the twelve tests',
+  '/app/incidents': 'Incidents — severity-ordered, with a verification step to close',
+  '/app/governance': 'Governance — post-mortems, certification and go-live',
+  '/app/sequences': 'Sequences — automated follow-up that stops when a human replies',
+  '/app/templates': 'Message templates — the approved library and the SMS gate',
+  '/app/admin/users': 'User Administration — who is on the team and what they may do',
+  '/app/admin/permissions': 'Permission Matrix — SOP §28, evaluated rather than described',
+  '/app/training': 'Training Centre — step-by-step guides for every shipped screen',
 };

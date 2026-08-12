@@ -254,7 +254,7 @@ export function QuickContactModal({ open, onClose, onCaptured }: QuickContactMod
       title="Quick Contact Capture"
       subtitle="Creates a provisional P0 source record. No paid enrichment or destructive merge."
     >
-      <div>
+      <div className="lf-form-body">
 
         <div role="tablist" aria-label="Capture mode">
           {CAPTURE_MODES.map((option) => (

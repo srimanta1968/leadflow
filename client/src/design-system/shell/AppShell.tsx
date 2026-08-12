@@ -1,17 +1,35 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { ScreenErrorBoundary } from '../../components/app/ScreenErrorBoundary';
 import { Logo } from '../../components/marketing/Logo';
 import { useSession } from '../../context/SessionContext';
 import { ProfileChip } from '../../features/auth';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { SUCCESS } from '../../content/messages';
 import { isAllowed, usePermissions } from '../../platform/permissions/usePermissions';
-import { NAV_ACTIONS, NAV_GROUPS, SCREEN_SUBTITLE, type NavItem } from './navModel';
+import {
+  DEFAULT_EXPERIENCE,
+  NAV_ACTIONS,
+  NAV_GROUPS,
+  SCREEN_SUBTITLE,
+  groupsForExperience,
+  type ExperienceLevel,
+  type NavItem,
+} from './navModel';
+import { ExperienceSwitcher } from './ExperienceSwitcher';
+import { IconRail, type RailItem } from './IconRail';
 import { useShellCounts, type ShellCounts } from './useShellCounts';
+
+/** Where the operator's folded-group choice lives between visits. */
+const NAV_FOLD_KEY = 'leadflow.nav.folded';
+
+/** The operator's chosen experience, remembered between visits. */
+const NAV_EXPERIENCE_KEY = 'leadflow.nav.experience';
 import { CommandPalette } from './CommandPalette';
 import { COMMAND_ACTIONS } from './commandRegistry';
 import { QuickContactModal } from '../../components/app/QuickContactModal';
 import { ExtensionPreviewModal } from '../../components/app/ExtensionPreviewModal';
+import { guideForPath } from '../../content/trainingGuides';
 
 /**
  * The application shell: sidebar, brandbar, topbar and the view outlet.
@@ -116,6 +134,65 @@ export function AppShell() {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const counts = useShellCounts(pathname);
+
+  /*
+   * Which groups are folded, remembered across loads.
+   *
+   * The sidebar is on screen constantly, so re-folding the same four sections
+   * on every visit is a tax paid forever. Seeded from the model's
+   * defaultCollapsed the first time only; after that the operator's choice
+   * wins, because they know what they use and the default does not.
+   */
+  const [foldedGroups, setFoldedGroups] = useState<Set<string>>(() => {
+    try {
+      const stored = window.localStorage.getItem(NAV_FOLD_KEY);
+      if (stored) return new Set(JSON.parse(stored) as string[]);
+    } catch {
+      // A blocked or corrupt store must not stop the shell rendering.
+    }
+    return new Set(NAV_GROUPS.filter((g) => g.defaultCollapsed).map((g) => g.label));
+  });
+
+  const [experience, setExperience] = useState<ExperienceLevel>(() => {
+    try {
+      const stored = Number(window.localStorage.getItem(NAV_EXPERIENCE_KEY));
+      if (stored === 1 || stored === 2 || stored === 3 || stored === 4) return stored;
+    } catch {
+      // A blocked store must not stop the shell rendering.
+    }
+    return DEFAULT_EXPERIENCE;
+  });
+
+  const changeExperience = useCallback((next: ExperienceLevel) => {
+    setExperience(next);
+    try {
+      window.localStorage.setItem(NAV_EXPERIENCE_KEY, String(next));
+    } catch {
+      // Persistence is a convenience; the choice still holds this session.
+    }
+  }, []);
+
+  /*
+   * The groups this experience shows. Permission is applied SEPARATELY, per
+   * item, further down — a screen hidden here is not denied, and a denied one
+   * stays Locked at every level.
+   */
+  const visibleGroups = useMemo(() => groupsForExperience(experience), [experience]);
+
+  const toggleGroup = useCallback((label: string) => {
+    setFoldedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      try {
+        window.localStorage.setItem(NAV_FOLD_KEY, JSON.stringify([...next]));
+      } catch {
+        // Persistence is a convenience; the fold still works this session.
+      }
+      return next;
+    });
+  }, []);
+
   // ONE batch for the whole shell. The nav and the palette gate on overlapping
   // actions, and two hooks would ask the PDP the same question twice per mount.
   const permissions = usePermissions(
@@ -189,19 +266,55 @@ export function AppShell() {
         <Logo to="/app" />
       </div>
 
+      {/* The experience picker sits ABOVE the nav and scrolls with nothing:
+          it governs what the list below contains, so it must not be inside the
+          thing it governs. Hidden on the collapsed rail, where there is no room
+          for it and no labels for it to affect. */}
+      {!collapsed && (
+        <div className="px-3 pb-1 pt-2">
+          <ExperienceSwitcher level={experience} onChange={changeExperience} />
+        </div>
+      )}
+
       <nav
         className="flex-1 space-y-4 overflow-y-auto p-3"
         aria-label="Application"
         data-collapsed={collapsed}
       >
-        {NAV_GROUPS.map((group) => (
+        {visibleGroups.map((group) => {
+          /*
+           * A collapsed RAIL hides every label already, so folding is only
+           * meaningful in the expanded sidebar. Treating a group as open while
+           * the rail is collapsed keeps the icons reachable instead of hiding
+           * them behind a control that is not on screen.
+           */
+          const foldable = Boolean(group.collapsible) && !collapsed;
+          const folded = foldable && foldedGroups.has(group.label);
+
+          return (
           <div key={group.label}>
             {!collapsed && (
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-soft">
-                {group.label}
-              </p>
+              foldable ? (
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.label)}
+                  aria-expanded={!folded}
+                  className="flex w-full items-center justify-between px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-soft hover:text-muted"
+                >
+                  <span>{group.label}</span>
+                  {/* The count is what makes a folded group honest: it says how
+                      much is hidden rather than implying the section is empty. */}
+                  <span className="ml-2 font-normal tracking-normal">
+                    {folded ? `${group.items.length}` : '−'}
+                  </span>
+                </button>
+              ) : (
+                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-soft">
+                  {group.label}
+                </p>
+              )
             )}
-            <div className="space-y-0.5">
+            <div className={`space-y-0.5 ${folded ? 'hidden' : ''}`}>
               {group.items.map((item) => (
                 <NavRow
                   key={item.to}
@@ -234,7 +347,8 @@ export function AppShell() {
               ))}
             </div>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="border-t border-line">
@@ -256,8 +370,31 @@ export function AppShell() {
     </>
   );
 
+  /*
+   * The rail's destinations. Deliberately the six things an operator does
+   * hourly and nothing else — it is not a favourites bar and not a second copy
+   * of the sidebar. Counts come from the same projection the sidebar reads, so
+   * the two can never disagree about how many captures are waiting.
+   */
+  const railItems: RailItem[] = [
+    { to: '/app', label: 'Capture Inbox', count: counts.captureUnresolved,
+      path: 'M3 12l9-9 9 9M5 10v10h14V10' },
+    { to: '/app/leads', label: 'Lead queue', count: counts.leadsOpen,
+      path: 'M4 6h16M4 12h16M4 18h10' },
+    { to: '/app/inbox', label: 'Inbox',
+      path: 'M3 8l9 6 9-6M3 8v8a2 2 0 002 2h14a2 2 0 002-2V8l-9-5-9 5z' },
+    { to: '/app/calendar', label: 'Calendar',
+      path: 'M8 3v4M16 3v4M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z' },
+    { to: '/app/pipeline', label: 'Pipeline',
+      path: 'M4 5h5v14H4zM10 5h5v9h-5zM16 5h4v6h-4z' },
+    { to: '/app/contacts', label: 'Contacts',
+      path: 'M16 19v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 7.5a3 3 0 106 0 3 3 0 00-6 0M17 11h4' },
+  ];
+
   return (
     <div className="flex min-h-screen bg-bg">
+      <IconRail items={railItems} />
+
       {/* Desktop rail */}
       <aside
         className={`hidden shrink-0 flex-col border-r border-line bg-sidebar transition-[width] lg:flex ${
@@ -304,6 +441,26 @@ export function AppShell() {
           </p>
 
           <div className="flex items-center gap-3">
+            {/*
+              THE GUIDE AFFORDANCE, and it is persistent for a reason. A training
+              area nobody can find from the screen they are stuck on gets read
+              once during onboarding and never again, so this deep-links to the
+              guide for the CURRENT path and falls back to the index when no
+              guide covers this screen — never to a plausible-looking wrong one.
+            */}
+            <NavLink
+              to={guideForPath(pathname) ? `/app/training/${guideForPath(pathname)?.id}` : '/app/training'}
+              onClick={() => setDrawerOpen(false)}
+              className="lf-btn-ghost px-3 py-1.5 text-xs"
+              title={
+                guideForPath(pathname)
+                  ? `Guide: ${guideForPath(pathname)?.title}`
+                  : 'No guide covers this screen yet — open the training centre'
+              }
+            >
+              Guide
+            </NavLink>
+
             {/* The mockup's .searchbox. Now a real control rather than the
                 honest placeholder it was while the palette did not exist. */}
             <button
@@ -325,7 +482,11 @@ export function AppShell() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          <Outlet />
+          {/* Wraps ONLY the routed pane, so a screen that throws does not take
+              the sidebar and the top bar down with it. */}
+          <ScreenErrorBoundary>
+            <Outlet />
+          </ScreenErrorBoundary>
         </main>
       </div>
 

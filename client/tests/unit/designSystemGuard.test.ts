@@ -124,7 +124,24 @@ describe('no bespoke structural markup', () => {
      * `.modal` was defined nowhere in this codebase, so both were plain divs.
      * Every test passed because none of them assert layout.
      */
-    const mockupOnly = ['modal', 'overlay', 'drawer', 'kpis', 'tablewrap', 'wizardpage', 'statusrail'];
+    /*
+     * `lf-card` is on this list because it ALREADY happened: two shipped
+     * screens (DataReview, EnrichmentQueue) styled tiles with `lf-card` while
+     * no stylesheet defined it, so both rendered as unstyled divs and every
+     * test still passed. The list was mockup-only class names; the same failure
+     * arrives just as easily through an `lf-` name somebody assumed existed.
+     */
+    const mockupOnly = [
+      'modal', 'overlay', 'drawer', 'kpis', 'tablewrap', 'wizardpage', 'statusrail',
+      'lf-card', 'lf-panel', 'lf-pill', 'lf-input', 'lf-label', 'lf-eyebrow',
+      // `sub` joins the list for the same reason `lf-card` did, and it cost more:
+      // QuickContactModal and ResolveCaptureModal carried NO other class at all,
+      // so both dialogs rendered as raw browser defaults — labels run together,
+      // radios as bare bullets, the action row as plain text — while every test
+      // stayed green, because nothing asserts layout and the .feature scenarios
+      // assert TEXT, which an unstyled modal still contains.
+      'sub',
+    ];
     const css = sourceFiles(SRC, /\.css$/).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
     const offenders: string[] = [];
 

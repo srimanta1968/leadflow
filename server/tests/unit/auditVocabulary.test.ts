@@ -78,7 +78,22 @@ describe('the audit vocabulary', () => {
     // register and reading the rights ATTESTATION behind a run are different
     // disclosures, and a single name would make "who read who swore this data
     // was lawfully obtained" unanswerable, which is the one a complaint asks.
-    expect(allAuditEventNames()).toHaveLength(50);
+    // 2 more for the identity risk work, and they are deliberately NOT one
+    // name. `identity.risk_profile.changed` records a human moving the
+    // auto-link threshold - a policy act, with a reason, that changes how every
+    // FUTURE link is judged. `identity.link.verified` records a human agreeing
+    // with one particular link under whatever policy was live at that moment.
+    // Collapsing them would make the question a complaint actually asks - "was
+    // this link approved on its merits, or did somebody lower the bar until it
+    // passed" - unanswerable, because both acts would return the same rows.
+    // 1 more for the Enrichment Queue's read surface, on the same reasoning as
+    // the import pair above: the register names which contacts somebody asked a
+    // PAID question about, so opening it is a disclosure even when nothing is
+    // spent. Separate from `enrichment.requested` because "who looked at what we
+    // have been buying" and "who bought this" are different questions, and one
+    // name would make each query return the other's rows.
+    expect(allAuditEventNames()).toHaveLength(54);
+    expect(isAuditEventName('enrichment.queue.inspected.v1')).toBe(true);
     expect(isAuditEventName('capture.created.v1')).toBe(true);
     expect(isAuditEventName('sla.breached.v1')).toBe(true);
     expect(isAuditEventName('lead.routed.v1')).toBe(true);
@@ -92,6 +107,9 @@ describe('the audit vocabulary', () => {
     // outcome in the metadata; pulling the kill switch is its own.
     expect(isAuditEventName('ai.proposal.decided.v1')).toBe(true);
     expect(isAuditEventName('ai.kill_switch.engaged.v1')).toBe(true);
+    // A policy change and a decision made under it are separate names.
+    expect(isAuditEventName('identity.risk_profile.changed.v1')).toBe(true);
+    expect(isAuditEventName('identity.link.verified.v1')).toBe(true);
   });
 
   it('rejects a plausible-looking name that is not canonical', () => {

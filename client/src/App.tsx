@@ -23,6 +23,27 @@ import ImportCenter from './pages/app/ImportCenter';
 import IdentityReview from './pages/app/IdentityReview';
 import ConsentPreferences from './pages/app/ConsentPreferences';
 import EnrichmentQueue from './pages/app/EnrichmentQueue';
+import DataReview from './pages/app/DataReview';
+import Contacts from './pages/app/Contacts';
+import Contact360 from './pages/app/Contact360';
+import AuditHistory from './pages/app/AuditHistory';
+import RoutingConfiguration from './pages/app/RoutingConfiguration';
+import CoverageConsole from './pages/app/CoverageConsole';
+import RoutingSimulation from './pages/app/RoutingSimulation';
+import Pipeline from './pages/app/Pipeline';
+import Inbox from './pages/app/Inbox';
+import Calendar from './pages/app/Calendar';
+import CommercialReview from './pages/app/CommercialReview';
+import OnboardingHandoff from './pages/app/OnboardingHandoff';
+import CampaignEnrollment from './pages/app/CampaignEnrollment';
+import LeadershipDashboard from './pages/app/LeadershipDashboard';
+import RoleDashboards from './pages/app/RoleDashboards';
+import WorkflowStudio from './pages/app/WorkflowStudio';
+import WorkflowRuns from './pages/app/WorkflowRuns';
+import Incidents from './pages/app/Incidents';
+import Governance from './pages/app/Governance';
+import Sequences from './pages/app/Sequences';
+import Templates from './pages/app/Templates';
 import NotFound from './pages/NotFound';
 
 /**
@@ -73,7 +94,40 @@ export default function App() {
               <Route path="identity" element={<IdentityReview />} />
               <Route path="consent" element={<ConsentPreferences />} />
               <Route path="enrichment" element={<EnrichmentQueue />} />
+              <Route path="data-review" element={<DataReview />} />
               <Route path="analytics" element={<Analytics />} />
+
+              {/*
+                Contact 360 is one screen with eight DEEP-LINKABLE tabs, so the
+                tab is a route segment rather than component state. The bare
+                /app/contacts/:id form redirects into the default tab so a link
+                without a segment still lands on a real pane instead of an empty
+                workspace.
+              */}
+              <Route path="contacts" element={<Contacts />} />
+              <Route path="contacts/:contactId" element={<Contact360 />} />
+              <Route path="contacts/:contactId/:tab" element={<Contact360 />} />
+
+              <Route path="audit" element={<AuditHistory />} />
+              <Route path="routing-config" element={<RoutingConfiguration />} />
+              <Route path="coverage" element={<CoverageConsole />} />
+              <Route path="routing-simulation" element={<RoutingSimulation />} />
+              <Route path="pipeline" element={<Pipeline />} />
+              <Route path="inbox" element={<Inbox />} />
+              <Route path="calendar" element={<Calendar />} />
+              <Route path="offers" element={<CommercialReview />} />
+              <Route path="handoffs" element={<OnboardingHandoff />} />
+              <Route path="campaigns" element={<CampaignEnrollment />} />
+              <Route path="leadership" element={<LeadershipDashboard />} />
+              {/* The role is a route segment so each dashboard is linkable. */}
+              <Route path="dashboards" element={<RoleDashboards />} />
+              <Route path="dashboards/:role" element={<RoleDashboards />} />
+              <Route path="workflows" element={<WorkflowStudio />} />
+              <Route path="workflow-runs" element={<WorkflowRuns />} />
+              <Route path="incidents" element={<Incidents />} />
+              <Route path="governance" element={<Governance />} />
+              <Route path="sequences" element={<Sequences />} />
+              <Route path="templates" element={<Templates />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
