@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { dataService } from '../../services/DataService';
+import { sendInvitationEmail } from '../../platform/email';
 import { AuthService } from '../../services/AuthService';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { AppError, ErrorCodes } from '../../utils/errors';
@@ -90,6 +91,18 @@ async function requireUser(userId: string): Promise<UserRow> {
 /** The acting user's local id, for the `invited_by` / `deactivated_by` stamp. */
 function actorUserId(req: GovernedRequest): string | null {
   return req.session?.userId ?? null;
+}
+
+/**
+ * Who to name as the sender in an invitation.
+ *
+ * The EMAIL, not the id: the recipient is being asked to trust a link, and
+ * "srimanta@… invited you" is checkable in a way that a UUID is not. Null when
+ * the session carries neither, and the template then says "an administrator"
+ * rather than inventing a name.
+ */
+function actorName(req: GovernedRequest): string | null {
+  return req.session?.email ?? null;
 }
 
 /** What happened when a local role change was pushed to the linked persona. */
@@ -327,7 +340,42 @@ export class UserAdminController {
         throw new AppError(500, ErrorCodes.INTERNAL_ERROR, 'The invitation could not be recorded');
       }
 
-      res.status(201).json({ success: true, data: { user: toRegisterUser(created) } });
+      /*
+       * THE INVITATION EMAIL IS THE ONLY WAY INTO THIS ACCOUNT. The row above is
+       * created with an unusable credential and is_active FALSE, so an invitation
+       * that never arrives leaves a person who cannot sign in and cannot ask for
+       * a reset either — a dead end with no signal. That is why the outcome is
+       * REPORTED on the response rather than assumed: an administrator who sees
+       * "invited" and hears nothing back needs to know whether to chase it.
+       *
+       * It does not throw. The account is already on the register; failing the
+       * request would leave the row created and tell the caller it was not.
+       */
+      const delivery = await sendInvitationEmail({
+        userId: created.id,
+        email: created.email,
+        firstName: created.first_name ?? null,
+        roleLabel: role,
+        invitedBy: actorName(req),
+        invitedByUserId: actorUserId(req),
+      });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          user: toRegisterUser(created),
+          invitation: {
+            sent: delivery.status === 'sent',
+            status: delivery.status,
+            detail:
+              delivery.status === 'sent'
+                ? `An invitation has been sent to ${created.email}. It expires in 7 days.`
+                : delivery.status === 'skipped'
+                  ? 'Email is not configured on this deployment, so no invitation was sent. This account cannot be signed in to until one is.'
+                  : 'The invitation could not be sent. This account cannot be signed in to until it is — send another once email is working.',
+          },
+        },
+      });
     }
   );
 

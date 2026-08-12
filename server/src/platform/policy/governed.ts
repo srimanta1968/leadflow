@@ -63,7 +63,7 @@ export interface GovernedSpec {
  * see `AuthService.assertLocalCredentialsPermitted`. A platform session carries
  * real persona grants and never reaches this function.
  *
- * `admin` maps to THREE SOP roles because the local `admin` was unrestricted in
+ * `admin` maps to FOUR SOP roles because the local `admin` was unrestricted in
  * this app: it configured routing, reassigned leads AND worked them. Dropping
  * any of the three would take away authority the app already granted, which is a
  * migration rather than a bridge — and it showed up immediately as `admin`
@@ -117,6 +117,31 @@ const LOCAL_ROLE_BRIDGE: Record<string, string[]> = {
    * its own account, held or not held.
    */
   privacy: ['privacy_officer'],
+  /*
+   * The last three actors to get a local holder, and each is its own role for a
+   * reason rather than folded into an existing one.
+   *
+   * `backup_rep` carries the SAME grants as sales_rep, so bridging it to `user`
+   * would have been the tidy move and the wrong one: the whole point of the
+   * actor is that it names the SECOND owner who carries a lead when the first
+   * cannot. Collapsing it into `user` makes every rep everybody's backup and
+   * leaves "who picks this up" unanswerable — which is the question the role
+   * exists to answer.
+   *
+   * `leadership` is NOT folded into admin. It holds commercial_exception.approve
+   * and product_claim.approve — the two approvals whose value is that somebody
+   * ACCOUNTABLE gave them. An approval that could have come from any of forty
+   * admins is not the approval the SOP describes, and the same argument that
+   * kept privacy_officer separate applies unchanged here.
+   *
+   * `marketing` is separate because it publishes templates and configures
+   * campaigns — reach-shaping work. Folding it into admin would hand campaign
+   * configuration to every operator, which is how an audience gets widened by
+   * somebody who was only trying to fix a routing rule.
+   */
+  backup_rep: ['backup_rep'],
+  leadership: ['leadership'],
+  marketing: ['marketing_ops'],
 };
 
 /**

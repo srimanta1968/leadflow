@@ -12,6 +12,8 @@ import Security from './pages/marketing/Security';
 import Pricing from './pages/marketing/Pricing';
 import Demo from './pages/marketing/Demo';
 import SignIn from './pages/auth/SignIn';
+import VerifyEmail from './pages/auth/VerifyEmail';
+import AcceptInvitation from './pages/auth/AcceptInvitation';
 import SignUp from './pages/auth/SignUp';
 import CaptureInbox from './pages/app/CaptureInbox';
 import LeadQueue from './pages/app/LeadQueue';
@@ -77,6 +79,10 @@ export default function App() {
 
             {/* Auth */}
             <Route path="/signin" element={<SignIn />} />
+            {/* PUBLIC, both: somebody confirming an address cannot sign in
+                until they have, and an invited account has no password yet. */}
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/accept-invitation" element={<AcceptInvitation />} />
             <Route path="/signup" element={<SignUp />} />
 
             {/* Signed-in application */}

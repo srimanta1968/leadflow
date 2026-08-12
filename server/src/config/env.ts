@@ -12,6 +12,21 @@ export interface AppConfig {
   nodeEnv: string;
   port: number;
   appName: string;
+  /**
+   * Account-lifecycle email. NOT a path to the customer — see
+   * platform/email/transport.ts. Absent configuration is a valid deployment
+   * state and produces `skipped` sends rather than errors.
+   */
+  email: {
+    sendgridApiKey: string;
+    fromAddress: string;
+    fromName: string;
+    /** Where a verification or invitation link points. Per deployment. */
+    appBaseUrl: string;
+    timeoutMs: number;
+    /** When false, registration issues no token and does not gate on the address. */
+    verificationRequired: boolean;
+  };
   db: {
     host: string;
     port: number;
@@ -173,6 +188,23 @@ export const config: AppConfig = {
   // proxy target and scripts/check-ports.js.
   port: parseInt(process.env.PORT || '3010', 10),
   appName: process.env.APP_NAME || 'LeadFlow',
+
+  // Account-lifecycle email
+  email: {
+    sendgridApiKey: process.env.SENDGRID_API_KEY || '',
+    fromAddress: process.env.EMAIL_FROM_ADDRESS || '',
+    fromName: process.env.EMAIL_FROM_NAME || process.env.APP_NAME || 'LeadFlow',
+    // Defaults to the browser origin, which is the only address a link in an
+    // email can usefully point at — the API origin would 404 in a mail client.
+    appBaseUrl:
+      process.env.APP_BASE_URL || process.env.CORS_ORIGIN?.split(',')[0] || 'http://localhost:5173',
+    timeoutMs: parseInt(process.env.EMAIL_TIMEOUT_MS || '10000', 10),
+    /* OPT-IN, and off by default. Turning verification on before a provider is
+       configured would lock every new account out of a product that had been
+       working — so this stays false until somebody sets it deliberately, and
+       the send path warns when it is on with no provider behind it. */
+    verificationRequired: process.env.EMAIL_VERIFICATION_REQUIRED === 'true',
+  },
 
   // Database
   db: {

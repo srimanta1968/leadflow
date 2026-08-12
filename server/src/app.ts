@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { config } from './config/env';
+import { reportEmailReadiness } from './platform/email';
 import routes from './routes';
 import { dataService } from './services/DataService';
 import { runMigrations } from './db/migrationRunner';
@@ -199,6 +200,12 @@ async function bootstrap(): Promise<void> {
   } else {
     console.log(`[app] event receiver not registered: ${receiver.skipped}`);
   }
+
+  /* Said once, at boot. Verification required with no provider configured means
+     every new account is issued a token nobody can receive — a deployment
+     mistake rather than a code one, and this is the only place it can be caught
+     before a user finds it. */
+  reportEmailReadiness();
 
   /*
    * The two background ticks.

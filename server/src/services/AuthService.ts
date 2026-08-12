@@ -57,6 +57,59 @@ export class AuthService {
     );
   }
 
+  /** Record that an address has been confirmed. Idempotent by construction. */
+  static async markEmailVerified(userId: string): Promise<void> {
+    await dataService.query(
+      'UPDATE users SET email_verified = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [userId],
+    );
+  }
+
+  /**
+   * An account that registered but has not confirmed its address.
+   *
+   * Scoped to UNVERIFIED deliberately: a resend for an already-confirmed
+   * account would issue a live token for an account somebody is using, which is
+   * a credential nobody asked for.
+   */
+  static async findUnverifiedByEmail(email: string): Promise<UserRow | null> {
+    return dataService.queryOne<UserRow>(
+      'SELECT * FROM users WHERE email = $1 AND email_verified = FALSE',
+      [email],
+    );
+  }
+
+  /**
+   * Set the first password on an invited account and let it sign in.
+   *
+   * ONE STATEMENT, and it is the whole activation: password, active, verified.
+   * Splitting it would leave a window where the credential works but the
+   * account is still inactive, which reads to the person as a wrong password.
+   *
+   * @returns A session, because somebody who has just chosen a password should
+   *          be signed in rather than sent to a login form to type it again.
+   */
+  static async acceptInvitation(userId: string, password: string): Promise<AuthResult> {
+    AuthService.assertLocalCredentialsPermitted();
+
+    const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
+    const row = await dataService.queryOne<UserRow>(
+      `UPDATE users
+          SET password_hash = $2, is_active = TRUE, email_verified = TRUE,
+              updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *`,
+      [userId, passwordHash],
+    );
+    if (!row) throw AppError.notFound('That invitation points at an account that no longer exists');
+
+    return {
+      user: AuthService.toPublicUser(row),
+      token: AuthService.issueToken(row),
+      expires_in: config.jwt.expiresIn,
+    };
+  }
+
   /** Strip the password hash and normalise timestamps for API responses. */
   private static toPublicUser(row: UserRow): PublicUser {
     return {

@@ -166,7 +166,15 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Revenue',
     experience: 2,
     items: [
-      { label: 'Offers', to: '/app/offers', action: 'offer.change_terms' },
+      // UNGATED, and it was the one genuinely unreachable item in the nav.
+      // `offer.change_terms` sits in requiresApproval for every role that has it
+      // at all and in no role's canDo, so the PDP answers `requires_approval` —
+      // which isAllowed() correctly does not treat as a permit. The result was a
+      // screen Locked for all nine actors forever: an endpoint nobody can call
+      // is dead code wearing a permission check. READING the offer register is
+      // tenant-scoped by the endpoint; CHANGING terms is the governed act, and
+      // it stays gated per row where the approval path can actually run.
+      { label: 'Offers', to: '/app/offers', ungated: 'reading the offer register is tenant-scoped by the endpoint; offer.change_terms is approval-gated per offer inside the screen, which is where a second party can actually be asked' },
       { label: 'Onboarding handoff', to: '/app/handoffs', action: 'handoff.accept' },
     ],
     collapsible: true,

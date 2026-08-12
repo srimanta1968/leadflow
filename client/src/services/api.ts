@@ -1257,6 +1257,24 @@ export const api = {
    * rather than deleted: what the record was waiting on before is part of its
    * history.
    */
+/* ------------------------------------------------ account lifecycle email */
+
+  /** Redeem a confirmation link. Unauthenticated — the token IS the proof. */
+  verifyEmail: (token: string) =>
+    request<{ verified: boolean; email: string }>('/auth/verify-email', {
+      method: 'POST', body: { token },
+    }),
+
+  /** Ask for another confirmation link. Answers identically for unknown addresses. */
+  resendVerification: (email: string) =>
+    request<{ note: string }>('/auth/resend-verification', { method: 'POST', body: { email } }),
+
+  /** Set the first password on an invited account and get a session back. */
+  acceptInvitation: (token: string, password: string) =>
+    request<AuthResult>('/auth/accept-invitation', {
+      method: 'POST', body: { token, password },
+    }),
+
   createNextAction: (
     subjectRef: string,
     payload: {
