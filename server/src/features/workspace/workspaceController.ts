@@ -407,14 +407,25 @@ inboxRoutes.get(
      */
     const leads = await dataService.query<{
       id: string; name: string | null; email: string | null; source: string | null;
-      owner_user_id: string | null; first_response_at: string | null; sla_due_at: string | null;
-      sla_breached: boolean | null; updated_at: string | null;
+      owner_user_id: string | null; owner_name: string | null; first_response_at: string | null;
+      sla_due_at: string | null; sla_breached: boolean | null; updated_at: string | null;
     }>(
-      `SELECT id, name, email, source, owner_user_id::text AS owner_user_id, first_response_at,
-              sla_due_at, sla_breached, updated_at
-         FROM leads
-        WHERE stage IS NULL OR stage NOT IN ('closed_won','closed_lost')
-        ORDER BY updated_at DESC NULLS LAST LIMIT 200`
+      // ONE JOIN, not a lookup per row. The inbox renders 200 threads and a
+      // per-row name lookup is the N+1 that makes a queue screen feel slow —
+      // the same reason LeadCaptureService.LEAD_SELECT joins rather than
+      // resolving afterwards. Without it this sent the bare owner_user_id and
+      // the column rendered `Unresolved (803cc65c)`, because ownerLabel()
+      // refuses to pass a UUID off as a person's name.
+      `SELECT l.id, l.name, l.email, l.source, l.owner_user_id::text AS owner_user_id,
+              COALESCE(
+                NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+                u.email
+              ) AS owner_name,
+              l.first_response_at, l.sla_due_at, l.sla_breached, l.updated_at
+         FROM leads l
+         LEFT JOIN users u ON u.id = l.owner_user_id
+        WHERE l.stage IS NULL OR l.stage NOT IN ('closed_won','closed_lost')
+        ORDER BY l.updated_at DESC NULLS LAST LIMIT 200`
     );
 
     const now = Date.now();
@@ -437,7 +448,11 @@ inboxRoutes.get(
         // Reserved for the review queue, which lives on its own screen. False
         // rather than omitted, so the column renders instead of showing blank.
         needs_review: false,
-        owner: l.owner_user_id,
+        // The NAME. A row whose owner column reads as an id tells a rep nothing
+        // about who to chase, which is the only question the column exists to
+        // answer. Null when the owner is not a local user — ownerLabel() renders
+        // that as "Unassigned", which is at least true.
+        owner: l.owner_name,
       };
     });
 

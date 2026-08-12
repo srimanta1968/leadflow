@@ -131,7 +131,7 @@ contactRoutes.get(
           : null,
         relationship_label: null,
         organization: null,
-        record_owner: contact.owner_user_id ? { name: contact.owner_user_id, business_unit: null } : null,
+        record_owner: contact.owner_user_id ? { name: contact.owner_name, business_unit: null } : null,
         badges: [contact.source ?? 'unknown', ...(contact.stage ? [contact.stage] : [])],
         trust_rail: trustRail(contact),
         saved_at: contact.updated_at,
@@ -190,7 +190,7 @@ contactRoutes.get(
           contextual_role: null,
           role_scope_note: 'A role is confirmed FOR a property or an organisation, never globally — none is confirmed for this record.',
           organization: null,
-          record_owner: contact.owner_user_id ? { name: contact.owner_user_id, business_unit: null } : null,
+          record_owner: contact.owner_user_id ? { name: contact.owner_name, business_unit: null } : null,
         },
         contactability: {
           score: Number((eligible / channels.length).toFixed(2)),

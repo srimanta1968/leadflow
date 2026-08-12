@@ -147,16 +147,30 @@ export async function localContact(contactId: string): Promise<{
   stage: string | null; owner_user_id: string | null; created_at: string | null;
   updated_at: string | null; canonical_email: string | null; canonical_phone: string | null;
   source_timestamp: string | null; next_action: string | null; next_due_at: string | null;
+  owner_name: string | null;
 } | null> {
   const rows = await dataService.query<{
     id: string; name: string | null; email: string | null; source: string | null;
     stage: string | null; owner_user_id: string | null; created_at: string | null;
     updated_at: string | null; canonical_email: string | null; canonical_phone: string | null;
     source_timestamp: string | null; next_action: string | null; next_due_at: string | null;
+    owner_name: string | null;
   }>(
-    `SELECT id, name, email, source, stage, owner_user_id::text AS owner_user_id, created_at,
-            updated_at, canonical_email, canonical_phone, source_timestamp, next_action, next_due_at
-       FROM leads WHERE id::text = $1 LIMIT 1`,
+    // owner_name is JOINED, not derived at render time. The record header showed
+    // the raw owner UUID because the controller had nothing else to put there —
+    // an id displayed where a person's name belongs reads as data corruption to
+    // whoever sees it. Same COALESCE as LeadCaptureService.LEAD_SELECT: a full
+    // name when there is one, the email when there is not, NULL when the owner
+    // is not a local user, so the caller can say "Not recorded" honestly.
+    `SELECT l.id, l.name, l.email, l.source, l.stage, l.owner_user_id::text AS owner_user_id, l.created_at,
+            l.updated_at, l.canonical_email, l.canonical_phone, l.source_timestamp, l.next_action, l.next_due_at,
+            COALESCE(
+              NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+              u.email
+            ) AS owner_name
+       FROM leads l
+       LEFT JOIN users u ON u.id = l.owner_user_id
+      WHERE l.id::text = $1 LIMIT 1`,
     [contactId]
   );
   return rows[0] ?? null;

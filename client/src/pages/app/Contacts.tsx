@@ -12,6 +12,7 @@ import { Modal } from '../../design-system/overlays/Modal';
 import { originChipClass } from '../../design-system/tokens';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { SavedViewsPanel } from '../../features/contacts/SavedViewsPanel';
+import { QuickContactModal } from '../../components/app/QuickContactModal';
 import { formatWhen, ownerLabel } from '../../utils/display';
 
 /**
@@ -79,6 +80,7 @@ export default function Contacts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
 
   /** The facets, read FROM the URL so the URL is the single source of truth. */
   const filters = useMemo<ContactFacets>(() => {
@@ -182,10 +184,20 @@ export default function Contacts() {
           <p className="mt-1.5 max-w-3xl text-sm text-muted">{FRAMING}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button type="button" name="import_contacts" className="lf-btn-secondary px-4 py-2">
+          <button
+            type="button"
+            name="import_contacts"
+            className="lf-btn-secondary px-4 py-2"
+            onClick={() => navigate('/app/import')}
+          >
             Import
           </button>
-          <button type="button" name="quick_contact" className="lf-btn-primary px-4 py-2">
+          <button
+            type="button"
+            name="quick_contact"
+            className="lf-btn-primary px-4 py-2"
+            onClick={() => setQuickOpen(true)}
+          >
             Quick Contact
           </button>
         </div>
@@ -273,6 +285,19 @@ export default function Contacts() {
         open={exportOpen}
         filters={filters}
         onClose={() => setExportOpen(false)}
+      />
+
+      <QuickContactModal
+        open={quickOpen}
+        onClose={() => setQuickOpen(false)}
+        onCaptured={() => {
+          setQuickOpen(false);
+          // Re-read rather than splice the new row in locally. Capture creates a
+          // provisional P0 record and the server decides its trust state, owner
+          // and eligibility — a row assembled here would show a guess at all
+          // three until the next refresh.
+          void load();
+        }}
       />
     </div>
   );
