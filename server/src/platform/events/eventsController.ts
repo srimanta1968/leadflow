@@ -6,6 +6,7 @@ import { AppError, ErrorCodes } from '../../utils/errors';
 import { advancePipeline, ingest, rebuildPipeline, projectionFingerprint } from './consumer';
 import { dispatchOutbox, listOutboxDlq, replayOutbox } from './outboxDispatcher';
 import { verifyDelivery } from './signature';
+import { detectorsForEvent, runDetectors } from '../../features/dataReview/detectors';
 
 /** Express augments the request with the raw bytes; see app.ts. */
 interface WebhookRequest extends Request {
@@ -84,6 +85,29 @@ eventRoutes.post(
     advancePipeline().catch((error: Error) => {
       console.error('[events] projection advance failed:', error.message);
     });
+
+    /*
+     * The event-driven half of the governed case detectors (#93, AC3).
+     *
+     * DELIBERATELY NOT INSIDE advancePipeline. A detector reads five upstreams
+     * and can be slow or unreachable; folding it into the projection consumer
+     * would let a data-review outage dead-letter events that projected
+     * perfectly well. They are separate concerns and they fail separately.
+     *
+     * ONLY THE DETECTORS THAT CARE ABOUT THIS EVENT run, rather than a full
+     * sweep per delivery — a busy tenant would otherwise sweep eight detectors
+     * across five upstreams on every webhook.
+     *
+     * Fire-and-forget with errors swallowed, like the projection advance above,
+     * and safe to overlap with the scheduled sweep because the register
+     * deduplicates in the database rather than in the caller.
+     */
+    const eventType = String(body.event_type ?? body.type ?? 'unknown');
+    for (const detector of detectorsForEvent(eventType)) {
+      runDetectors('event', { detector, triggerRef: eventType }).catch((error: Error) => {
+        console.error(`[detectors] ${detector} on ${eventType} failed:`, error.message);
+      });
+    }
   }),
 );
 

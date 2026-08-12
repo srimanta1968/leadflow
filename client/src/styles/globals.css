@@ -61,6 +61,82 @@
     @apply rounded-xl border border-line2 bg-panel2 transition-colors duration-150 hover:border-blue/60;
   }
 
+  /* The dialog body treatment, applied to a wrapper rather than to 150 nodes.
+
+     WHY ELEMENT SELECTORS HERE, when every other rule in this file is a class
+     the caller opts into. Two shipped dialogs — Quick Contact Capture and
+     Resolve Capture — were authored as clean SEMANTIC markup (section, label,
+     select, textarea, h3) carrying NO classes at all, so they rendered as raw
+     browser defaults: labels run together on one line, radios as bare bullets,
+     the action row as plain text. The markup was right and only the styling was
+     absent, so scoping the defaults to a wrapper repairs both without touching
+     the structure, and any child that needs to differ still overrides by adding
+     its own class.
+
+     This is deliberately NOT a general-purpose escape hatch. New screens use the
+     explicit primitives; this exists so semantic form markup inside a dialog has
+     a sane baseline instead of none. */
+  .lf-form-body {
+    @apply space-y-5 text-sm text-text;
+  }
+
+  .lf-form-body section {
+    @apply space-y-2;
+  }
+
+  .lf-form-body h3 {
+    @apply text-sm font-semibold text-text;
+  }
+
+  .lf-form-body > p,
+  .lf-form-body .sub {
+    @apply text-xs leading-relaxed text-soft;
+  }
+
+  .lf-form-body label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wider text-muted;
+  }
+
+  /* A radio's own label sits beside it and must not inherit the block/uppercase
+     treatment above, or every option becomes its own shouting paragraph. */
+  .lf-form-body label:has(input[type='radio']),
+  .lf-form-body label:has(input[type='checkbox']) {
+    @apply mb-0 inline-flex items-start gap-2 text-sm font-normal normal-case tracking-normal text-text;
+  }
+
+  .lf-form-body input[type='text'],
+  .lf-form-body input[type='email'],
+  .lf-form-body input[type='tel'],
+  .lf-form-body input[type='date'],
+  .lf-form-body input:not([type]),
+  .lf-form-body textarea,
+  .lf-form-body select {
+    @apply w-full rounded-xl border border-line bg-panel2 px-3 py-2 text-sm text-text placeholder:text-soft focus:border-blue/60;
+  }
+
+  .lf-form-body textarea {
+    @apply min-h-[7rem] resize-y;
+  }
+
+  .lf-form-body input[type='radio'],
+  .lf-form-body input[type='checkbox'] {
+    @apply mt-1 h-4 w-4 shrink-0 accent-blue;
+  }
+
+  /* Buttons inside the body are secondary by default; the primary action lives
+     in the Modal footer and keeps its own explicit class. */
+  .lf-form-body button:not([class*='lf-btn']) {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line2 bg-panel2 px-4 py-2 text-sm font-semibold text-text transition-colors duration-150 hover:border-blue/60 hover:bg-panel3;
+  }
+
+  .lf-form-body fieldset {
+    @apply space-y-2 rounded-xl border border-line bg-panel2 p-3;
+  }
+
+  .lf-form-body legend {
+    @apply px-1 text-xs font-semibold uppercase tracking-wider text-muted;
+  }
+
   /* Eyebrow label above a section heading. */
   .lf-eyebrow {
     @apply text-xs font-semibold uppercase tracking-[0.18em] text-muted;

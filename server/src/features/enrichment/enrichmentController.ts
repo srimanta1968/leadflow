@@ -10,6 +10,7 @@ import { createHash } from 'crypto';
 import { config } from '../../config/env';
 import { BUDGET_TIERS, requiresApproval, tierForRole } from './budgetTiers';
 import { CATALOG_KEYS } from './capabilityCatalog';
+import { recordEnrichmentResult, type SettlementOutcome } from './resultWriteback';
 import {
   evaluateEligibility,
   executeCapabilityRequest,
@@ -17,11 +18,14 @@ import {
   reserveCapabilityRequest,
   listCapabilities,
   listCapabilityRequests,
+  listCandidateAssertions,
   listLedgerEntries,
+  promoteAssertion,
   readBalance,
   type CapabilityRequestRow,
   type CapabilityRow,
   type LedgerEntryRow,
+  type SourceAssertionRow,
 } from './enrichmentGateway';
 
 /**
@@ -677,7 +681,7 @@ enrichmentRoutes.post(
       }),
       obligations: NOT_AN_OWNED_RECORD,
     },
-    async (req: GovernedRequest, res: Response): Promise<void> => {
+    async (req: GovernedRequest, res: Response, decision): Promise<void> => {
       const body = (req.body ?? {}) as Record<string, unknown>;
       const { capabilityKeys, purpose, subjectRef } = readSelection(body);
 
@@ -752,11 +756,46 @@ enrichmentRoutes.post(
           continue;
         }
         const ran = await executeCapabilityRequest(requestId, { subject_ref: subjectRef });
+        const ranBody = (ran.value ?? {}) as { outcome?: string; result?: unknown; reservation_id?: string };
+
+        /*
+         * THE ANSWER BECOMES PROVENANCE HERE, AS A CANDIDATE (#91).
+         *
+         * Settled and written back in the same step that ran it, because a
+         * result that lands without settling leaves the tenant's credits held
+         * forever, and a result that settles without landing charges them for an
+         * answer nobody can read. An unreachable broker leaves `outcome` null,
+         * which is treated as a TECHNICAL_FAILURE — free to the tenant, and the
+         * one reading that cannot overcharge somebody for our own outage.
+         */
+        const outcome = (ranBody.outcome ?? 'TECHNICAL_FAILURE') as SettlementOutcome;
+        const writeback = await recordEnrichmentResult({
+          requestId,
+          reservationId: ranBody.reservation_id ?? null,
+          capabilityKey: String(reservation.capability_key ?? ''),
+          subjectRef,
+          outcome,
+          quotedCredits: Number(reservation.estimated_credits ?? 0),
+          result: ranBody.result ?? null,
+          actor: req.session?.userId ?? 'unknown',
+          personaRole: tier.localRole ?? tier.label,
+          decisionRef: decision.decisionRef,
+        });
+
         executions.push({
           capability_key: reservation.capability_key,
           request_id: requestId,
           executed: ran.available,
-          outcome: (ran.value as { outcome?: string } | null)?.outcome ?? null,
+          outcome: ranBody.outcome ?? null,
+          /* AC3 — what the tenant actually paid, which is zero unless matched. */
+          credits_charged: writeback.creditsCharged,
+          settled: writeback.settled,
+          /* AC1 — how many CANDIDATES landed. Never "values applied": nothing
+             here is operational until a steward confirms it. */
+          candidates_written: writeback.assertionsWritten,
+          provenance_recorded: writeback.provenanceRecorded,
+          requires_human_confirmation: true,
+          creates_consent_basis: false,
         });
       }
 
@@ -775,4 +814,179 @@ enrichmentRoutes.post(
       });
     },
   )),
+);
+
+/** The request whose candidate is being confirmed. */
+const requestIdOf = (req: GovernedRequest): string => String(req.params?.request_id ?? '');
+
+/**
+ * POST /api/leadflow/enrichment/requests/:request_id/apply — a steward turns one
+ * bought candidate into the value the business will actually use.
+ *
+ * THE ONE PLACE A PURCHASED VALUE BECOMES OPERATIONAL, and it is deliberately
+ * narrow: one named assertion, one stated reason, one explicit confirmation. A
+ * bulk "apply all results" would be the same click with none of the reading, and
+ * the reading is the entire control.
+ *
+ * GOVERNED ON source_record.promote RATHER THAN data.configure. Authorising the
+ * SPEND is Revenue Operations' call; declaring the ANSWER true is the Data
+ * Steward's. Letting one grant cover both would mean the person who chose to buy
+ * the data also certifies it, which is the separation this epic exists to keep.
+ *
+ * IT CREATES NO PERMISSION TO CONTACT, and the response says so rather than
+ * leaving it to be inferred. A confirmed phone number is still refused by the
+ * channel decision engine until a consent basis exists, because that engine asks
+ * sdk-consent independently and an appended value has no receipt behind it.
+ */
+enrichmentRoutes.post(
+  '/requests/:request_id/apply',
+  asyncHandler(governed(
+    {
+      action: PERMISSIONS.SOURCE_RECORD_PROMOTE,
+      event: AUDIT_EVENTS.ENRICHMENT_SETTLED,
+      purpose: 'lead_management',
+      resourceType: 'enrichment_candidate',
+      resourceId: requestIdOf,
+      metadata: (req) => ({
+        request_id: requestIdOf(req),
+        assertion_id: String((req.body as Record<string, unknown>)?.assertion_id ?? ''),
+        confirmed: (req.body as Record<string, unknown>)?.confirmed === true,
+      }),
+      obligations: NOT_AN_OWNED_RECORD,
+    },
+    async (req: GovernedRequest, res: Response): Promise<void> => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const requestId = requestIdOf(req);
+      const assertionId = typeof body.assertion_id === 'string' ? body.assertion_id.trim() : '';
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+      const subjectRef = typeof body.subject_ref === 'string' ? body.subject_ref.trim() : '';
+
+      /*
+       * NAMED, NOT INFERRED. A request that produced three candidates has no
+       * "the" result, and confirming whichever one the code read first would
+       * have the steward certify a value they never saw.
+       */
+      if (assertionId === '') {
+        throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'assertion_id is required');
+      }
+
+      /*
+       * EXPLICIT, NEVER DEFAULTED. Treating a missing flag as true would let a
+       * malformed request promote bought data into the number the business
+       * dials — the one direction this endpoint must never fail in.
+       */
+      if (body.confirmed !== true && body.confirmed !== false) {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'confirmed must be stated explicitly as true or false'
+        );
+      }
+
+      if (body.confirmed === true && reason === '') {
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          'reason is required to confirm a candidate'
+        );
+      }
+
+      const candidates = await listCandidateAssertions(subjectRef, requestId);
+      const candidate: SourceAssertionRow | undefined = candidates.value.find(
+        (row) => row.assertion_id === assertionId
+      );
+
+      /*
+       * 404, NOT A 200 WITH AN EMPTY BODY. A caller that reads 200 as "confirmed"
+       * would tell a steward their decision was recorded when nothing was
+       * written, and the number would stay a candidate while everyone believed
+       * otherwise.
+       */
+      if (!candidate) {
+        // NOT_FOUND, not a bespoke ENRICHMENT_REQUEST_NOT_FOUND: the project has
+        // exactly one code for "no such thing" and MUST-66 keeps it that way, so
+        // a client branching on absence does not need a per-feature dictionary.
+        throw new AppError(
+          404,
+          ErrorCodes.NOT_FOUND,
+          'No enrichment request with that id produced a confirmable candidate'
+        );
+      }
+
+      /*
+       * DECLINING IS RECORDED AND WRITES NOTHING UPSTREAM. The candidate stays a
+       * candidate rather than being deleted: "a steward looked at this and said
+       * no" is a fact worth keeping, and removing the row would let the same
+       * value be re-proposed by the next run with nobody the wiser.
+       */
+      if (body.confirmed === false) {
+        res.status(200).json({
+          success: true,
+          data: {
+            request_id: requestId,
+            assertion_id: assertionId,
+            confirmed: false,
+            promoted: false,
+            status: 'ASSERTION',
+            attribute: candidate.attribute ?? null,
+            origin_class: candidate.origin_class ?? null,
+            confidence: candidate.confidence ?? null,
+            consent_basis_created: false,
+            sms_eligible: false,
+            note: 'Declined. The candidate is retained rather than deleted, so a later run cannot re-propose it unnoticed.',
+          },
+        });
+        return;
+      }
+
+      const promoted = await promoteAssertion({
+        assertionId,
+        subjectRef,
+        attribute: candidate.attribute ?? '',
+        value: candidate.value ?? '',
+        /* Carried through UNCHANGED. Confirming that a number is correct says
+           nothing about where it came from. */
+        originClass: candidate.origin_class ?? 'UNKNOWN_QUARANTINED',
+        confidence: candidate.confidence ?? null,
+        reason,
+        actorId: req.session?.userId ?? 'unknown',
+      });
+
+      /*
+       * REPORTED, NOT ABSORBED. A confirmation that silently failed to land
+       * would leave a steward believing the number is usable while the record
+       * still says candidate — the worst of the three possible outcomes.
+       */
+      if (!promoted.available) {
+        throw new AppError(
+          502,
+          ErrorCodes.UPSTREAM_UNAVAILABLE,
+          'The provenance store did not confirm the promotion, so nothing is operational'
+        );
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          request_id: requestId,
+          assertion_id: assertionId,
+          confirmed: true,
+          promoted: true,
+          status: 'PRIMARY',
+          attribute: candidate.attribute ?? null,
+          /* AC4 — the provenance survives the promotion, rather than being
+             upgraded by it. */
+          origin_class: candidate.origin_class ?? null,
+          confidence: candidate.confidence ?? null,
+          /* AC2 — stated in the response, not left to be inferred. Confirming a
+             value is not obtaining permission to use it, and the channel
+             decision engine will still refuse an SMS for want of a receipt. */
+          consent_basis_created: false,
+          sms_eligible: false,
+          note: 'Operational for reference. Contacting on this value still requires a consent basis, which this confirmation does not create.',
+          reason,
+        },
+      });
+    }
+  ))
 );

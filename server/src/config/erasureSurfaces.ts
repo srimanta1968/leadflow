@@ -360,6 +360,20 @@ export const ERASURE_SURFACES: ErasureSurface[] = [
     rationale:
       'One row per systemic episode: a time-bucket key, a tenant, a count and the upstream incident reference. Describes an OUTAGE rather than a person - the whole point of the table is that it is about many subjects at once and names none of them. The incident itself lives in sdk-incident.',
   },
+  {
+    surface: 'leadflow_identity_risk_profile',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'Versioned tenant POLICY - the auto-link threshold, the review floor, the weights and the reason a human changed them. It holds no data about a data subject: no name, email, phone or lead id, and no per-subject row of any kind. The one column that looks personal is created_by_user_id, and it follows the same rule as lead_source_event.lead_id - the operator is identified only through an id whose personal columns the `users` surface redacts, so erasing the operator is done there and reaches this row automatically. CLASSIFIED no_subject_data RATHER THAN LEFT OFF THE LIST, because the table is append-only policy history and the temptation on an erasure sweep is to clear it: deleting a superseded version would destroy the answer to "what was the threshold when this link was made", which is the entire reason the table is versioned. An erasure request must not be able to rewrite the policy a past decision was made under.',
+  },
+  {
+    surface: 'leadflow_dedup_audit_run',
+    method: 'no_subject_data',
+    personalColumns: [],
+    rationale:
+      'One AGGREGATE row per tenant per day: five measured rates, a drift flag and a case link. There are no per-subject rows here at all - a rate is a count over a population and cannot be traced back to a person, so there is nothing an erasure could act on. Recorded explicitly rather than omitted so that "we checked and it is clean" does not look like "we forgot it existed", which is what the rest of this list exists to prevent.',
+  },
 ];
 
 /** Surfaces that actually require an erasure action. */

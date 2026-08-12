@@ -58,6 +58,18 @@ export interface AppConfig {
      */
     tickMs: number;
   };
+  dataReview: {
+    /**
+     * How often the eight governed case detectors sweep.
+     *
+     * Far slower than the outbox tick, and deliberately: a review case is a
+     * question for a human that will sit in a queue for hours either way, so
+     * sweeping five upstreams every few seconds would spend the tenant rate
+     * limits rediscovering the same findings. Event-driven passes cover the
+     * cases where latency actually matters.
+     */
+    sweepMs: number;
+  };
   projexCloud: {
     gatewayUrl: string;
     apiKey: string;
@@ -215,6 +227,9 @@ export const config: AppConfig = {
   // unconfigured and callers apply their documented local fallback.
   outbox: {
     tickMs: Number(process.env.OUTBOX_TICK_MS || 15000),
+  },
+  dataReview: {
+    sweepMs: Number(process.env.DATA_REVIEW_SWEEP_MS || 900000),
   },
   projexCloud: {
     gatewayUrl: process.env.PROJEXCLOUD_GATEWAY_URL || '',

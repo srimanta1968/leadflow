@@ -6,7 +6,7 @@ import { governed, type GovernedRequest } from '../platform/policy/governed';
 import { PERMISSIONS } from '../config/roles';
 import { AUDIT_EVENTS } from '../platform/audit/vocabulary';
 import { orchestrateIntake } from './leadIntakeOrchestrator';
-import { runClosedWon } from './closedWonSaga';
+import { runClosedWon, PURCHASE_PATHS, type PurchasePath } from './closedWonSaga';
 import { sagaSteps } from './saga';
 import { dataService } from '../services/DataService';
 import {
@@ -379,10 +379,23 @@ orchestrationRoutes.post(
         );
       }
 
+      const purchasePath = typeof body.purchasePath === 'string' ? body.purchasePath : 'direct_online';
+      if (!(PURCHASE_PATHS as readonly string[]).includes(purchasePath)) {
+        /* Refused rather than defaulted. Silently treating an unknown path as
+           direct_online would provision and welcome on a close whose money the
+           caller was not claiming had arrived. */
+        throw new AppError(
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+          `purchasePath must be one of ${PURCHASE_PATHS.join(', ')}`,
+        );
+      }
+
       const result = await runClosedWon({
         dealId,
         chargeId,
         subjectRef,
+        purchasePath: purchasePath as PurchasePath,
         tenantId: typeof body.tenantId === 'string' ? body.tenantId : null,
         ownerId: typeof body.ownerId === 'string' ? body.ownerId : null,
         enrollmentIds: Array.isArray(body.enrollmentIds) ? (body.enrollmentIds as string[]) : [],

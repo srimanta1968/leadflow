@@ -1,4 +1,6 @@
 import { SdkGatewayClient } from '../platform/sdkGateway';
+import { dataService } from '../services/DataService';
+import { config } from '../config/env';
 import { compose } from './channelDecision';
 import { runSaga, type SagaResult, type SagaStep, type StepContext } from './saga';
 
@@ -25,12 +27,29 @@ import { runSaga, type SagaResult, type SagaStep, type StepContext } from './sag
  * plausible endpoint would produce a saga that passes review and 404s forever.
  */
 
+/**
+ * How the money arrived. SOP §22.
+ *
+ * ONE SAGA, THREE ENTRY PATHS — not three sagas. The steps after payment are
+ * identical whichever way the buyer paid, and duplicating them would guarantee
+ * they drift: somebody fixes the welcome ordering in the online path and leaves
+ * the rep-assisted one sending "still thinking it over?" to a paying customer.
+ *
+ * `payment_pending` is the one that behaves differently, and deliberately: an
+ * invoice raised is not money received, so provisioning and the welcome are
+ * withheld until a gateway confirmation arrives.
+ */
+export const PURCHASE_PATHS = ['direct_online', 'rep_assisted', 'payment_pending'] as const;
+export type PurchasePath = (typeof PURCHASE_PATHS)[number];
+
 export interface ClosedWonInput {
   /** The deal that closed. Half the idempotency key. */
   dealId: string;
   /** The charge that paid for it. The other half, and the payment evidence. */
   chargeId: string;
   subjectRef: string;
+  /** Which of the three purchase paths this close came in on. */
+  purchasePath?: PurchasePath;
   tenantId?: string | null;
   ownerId?: string | null;
   /** Enrolment ids to stop. Empty is legitimate — not every deal was sequenced. */
@@ -82,42 +101,104 @@ async function call<T>(
 
 export function closedWonSteps(input: ClosedWonInput): SagaStep[] {
   const tenant_id = input.tenantId ?? undefined;
+  const purchasePath: PurchasePath = input.purchasePath ?? 'direct_online';
+  /* On the pending path the money has not arrived, so nothing that costs money
+     or greets a customer may run. The steps still EXIST in the saga and record
+     why they were held, rather than being absent — a step that was never
+     attempted and one that was deliberately withheld look identical in a ledger
+     that only stores what ran. */
+  const paid = purchasePath !== 'payment_pending';
 
   return [
     {
       name: 'verify_payment',
       run: async (ctx) => {
         /*
-         * VERIFIED FROM THE EVIDENCE PRESENTED, not by reading the charge back.
-         * sdk-payment exposes charge, refund, distribute, methods and provider —
-         * there is no GET for a charge, so there is nothing to verify against.
+         * VERIFIED FROM THE RECORDED VERIFICATION, not by reading the charge
+         * back. sdk-payment exposes charge, refund, distribute, methods and
+         * provider — there is no GET for a charge — so the evidence is the row
+         * POST /api/leadflow/payments/verify wrote when the gateway spoke.
          *
-         * What CAN be enforced, and is: no chargeId, no saga. Starting a
-         * closed-won flow with no payment evidence at all is the failure that
-         * matters, and it is caught here rather than eight steps later when a
-         * licence has already been issued.
+         * AN INTENT IS NOT A VERIFICATION. A checkout the buyer started and a
+         * charge the gateway confirmed are different facts, and only the second
+         * one may open Closed Won. This is the specific gap SOP §22 names.
          */
         if (!input.chargeId) {
           throw new Error('chargeId is required — a closed-won saga with no payment evidence must not start');
         }
-        return { chargeId: input.chargeId, verifiedFrom: 'caller_evidence', correlationId: ctx.correlationId };
+        /* The configured tenant when the caller did not name one. The
+           verification endpoint always writes the configured tenant, so reading
+           back with a NULL would miss every row — and a lookup that silently
+           finds nothing reports "no gateway confirmation" for a charge that was
+           confirmed, which is the wrong direction to fail in on a gate. */
+        const rows = await dataService.query<{ verification: string; verified_at: string }>(
+          `SELECT verification, verified_at FROM leadflow_payment_verification
+            WHERE tenant_id = $1 AND charge_ref = $2 LIMIT 1`,
+          [input.tenantId ?? config.projexCloud.tenantId, input.chargeId]
+        );
+        const recorded = rows[0]?.verification ?? null;
+
+        if (paid && recorded !== null && recorded !== 'gateway_confirmed') {
+          throw new Error(
+            `charge ${input.chargeId} is recorded as ${recorded}, not gateway_confirmed — `
+            + 'a checkout intent is not a payment, so Closed Won stays closed',
+          );
+        }
+        return {
+          chargeId: input.chargeId,
+          purchasePath,
+          /* An absent row on a rep-assisted close is not proof of fraud: the rep
+             may have taken the confirmation over the phone before the webhook
+             landed. It IS reported, so a later reconciliation can find it. */
+          verifiedFrom: recorded === 'gateway_confirmed' ? 'gateway_confirmed' : 'caller_evidence',
+          gatewayConfirmed: recorded === 'gateway_confirmed',
+          verifiedAt: rows[0]?.verified_at ?? null,
+          correlationId: ctx.correlationId,
+        };
       },
       compensate: async () => undefined,
     },
     {
       name: 'transition_deal',
+      /*
+       * `stage`, not `to_stage`, and `closed-won`, not an
+       * ONBOARDING_PENDING variant. sdk-crm validates the body's `stage` field
+       * against exactly five lowercase hyphenated values and rejects everything
+       * else as "invalid stage" — which is what this step did on every run until
+       * a live probe caught it.
+       *
+       * "Onboarding pending" IS NOT A CRM STAGE and deliberately is not made one
+       * here. sdk-crm's `closed-won` is terminal by design; the non-terminal
+       * part — CS has not accepted, no kickoff is booked — lives in
+       * leadflow_onboarding_handoff, where the 24-hour clock and the alert can
+       * actually read it. Inventing a sixth CRM stage would move that state
+       * somewhere nothing in LeadFlow watches.
+       */
       run: (ctx) => call(ctx, 'sdk-crm', `/api/crm/deals/${encodeURIComponent(input.dealId)}/transition`, {
         tenant_id,
-        to_stage: 'CLOSED_WON_ONBOARDING_PENDING',
-        reason_key: 'WON_STANDARD',
+        stage: 'closed-won',
       }),
       compensate: async (ctx) => {
-        // Forward action: move it back rather than pretending the transition
-        // never happened. The stage history keeps both moves, which is correct —
-        // a deal that briefly reached Closed Won and was rolled back is a fact.
-        await call(ctx, 'sdk-crm', `/api/crm/deals/${encodeURIComponent(input.dealId)}/transition`, {
-          tenant_id, to_stage: 'COMMERCIAL_REVIEW', reason_key: 'closed-won saga rolled back',
-        });
+        /*
+         * closed-won IS TERMINAL UPSTREAM: sdk-crm permits no transition out of
+         * it, so a rollback cannot move the deal back and pretending otherwise
+         * would leave the saga reporting a compensation that never happened.
+         *
+         * The attempt is made and the refusal is recorded rather than swallowed,
+         * because "the deal is at closed-won and the saga rolled back" is
+         * precisely the state an operator must reconcile by hand — and a silent
+         * catch would hide the one fact they need.
+         */
+        try {
+          await call(ctx, 'sdk-crm', `/api/crm/deals/${encodeURIComponent(input.dealId)}/transition`, {
+            tenant_id, stage: 'negotiation',
+          });
+        } catch (error) {
+          throw new Error(
+            `the deal reached closed-won, which sdk-crm treats as terminal, so it could not be moved back: `
+            + `${error instanceof Error ? error.message : 'unknown'}. Reconcile the deal stage by hand.`,
+          );
+        }
       },
     },
     {
@@ -176,6 +257,11 @@ export function closedWonSteps(input: ClosedWonInput): SagaStep[] {
        */
       optional: true,
       run: async () => {
+        if (!paid) {
+          // Provisioning against an unpaid invoice hands over the product for
+          // free and makes the follow-up conversation adversarial.
+          return { held: true, reason: 'payment_pending: no licence is issued until the gateway confirms' };
+        }
         throw new ProvisioningGapError(
           'Customer and licence provisioning',
           'sdk-billing',
@@ -189,6 +275,12 @@ export function closedWonSteps(input: ClosedWonInput): SagaStep[] {
       // AFTER stop_presale, always. The ordering is asserted in the tests.
       optional: true,
       run: async (ctx) => {
+        if (!paid) {
+          /* "Welcome aboard" to somebody who has not paid is worse than silence:
+             it tells them the transaction is finished, and every later chase
+             reads as a mistake on our side. */
+          return { sent: false, held: true, reason: 'payment_pending: the welcome waits for the gateway' };
+        }
         const decision = await compose({
           subjectRef: input.subjectRef,
           channel: 'email',
@@ -249,13 +341,27 @@ export function closedWonSteps(input: ClosedWonInput): SagaStep[] {
     },
     {
       name: 'create_handoff',
-      run: (ctx) => call(ctx, 'sdk-handoff', '/api/handoffs', {
-        tenant_id,
-        subject_ref: input.subjectRef,
-        deal_id: input.dealId,
-        from_owner_id: input.ownerId ?? null,
-        kind: 'sales_to_onboarding',
-      }),
+      run: async (ctx) => {
+        const handoff = await call<Record<string, unknown>>(ctx, 'sdk-handoff', '/api/handoffs', {
+          tenant_id,
+          subject_ref: input.subjectRef,
+          deal_id: input.dealId,
+          from_owner_id: input.ownerId ?? null,
+          kind: 'sales_to_onboarding',
+        });
+        if (paid) {
+          /* THE 24-HOUR CLOCK STARTS HERE, from the payment rather than from
+             whenever CS gets around to looking. ON CONFLICT DO NOTHING because a
+             resumed saga must not restart the clock — a retry that reset it
+             would hide exactly the overdue handoff the alert exists to find. */
+          await dataService.query(
+            `INSERT INTO leadflow_onboarding_handoff (tenant_id, subject_ref, deal_ref, charge_ref, paid_at)
+             VALUES ($1,$2,$3,$4, now()) ON CONFLICT (tenant_id, subject_ref) DO NOTHING`,
+            [input.tenantId ?? null, input.subjectRef, input.dealId, input.chargeId]
+          );
+        }
+        return handoff;
+      },
       compensate: async (ctx, result) => {
         await call(
           ctx,

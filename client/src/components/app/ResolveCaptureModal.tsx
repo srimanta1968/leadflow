@@ -120,7 +120,7 @@ export function ResolveCaptureModal({
       title="Resolve Quick Capture"
       subtitle="Raw evidence → normalized handles → candidate search."
     >
-      <div>
+      <div className="lf-form-body">
 
         <ol aria-label="Trust state">
           {RAIL_NODES.map((node) => {

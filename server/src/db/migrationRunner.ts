@@ -59,17 +59,40 @@ export async function runMigrations(): Promise<void> {
     throw error;
   }
 
-  const pending = files.filter((file) => !alreadyApplied.has(file));
-  if (pending.length === 0) {
-    console.log(`[migrations] schema up to date (${files.length} applied)`);
-    return;
-  }
+  /*
+   * EVERY FILE IS APPLIED ON EVERY BOOT, not just the unrecorded ones.
+   *
+   * The ledger records what was RUN; it cannot know what the schema actually
+   * CONTAINS, and those two drift apart in ordinary use — a database restored
+   * from an older dump, a branch switched after some migrations were applied, a
+   * transaction rolled back by an unrelated failure. When they drift, the old
+   * behaviour skipped the file that would have repaired the schema and the
+   * server died in a SEED instead, several steps later, with an error naming a
+   * column rather than the migration that provides it. That is exactly the
+   * failure this replaced: `startup failed: column "superseded_at" does not
+   * exist`, thrown from seedVerticalProfile while 031_segments_and_kpi.sql sat
+   * recorded-but-absent.
+   *
+   * This is only safe because every statement in every migration is idempotent
+   * by construction — CREATE ... IF NOT EXISTS, ALTER TABLE ... ADD COLUMN IF
+   * NOT EXISTS, with no exceptions across the whole directory. Re-applying is a
+   * no-op against a correct schema and a repair against a drifted one, so the
+   * database provisions AND heals itself with no manual step.
+   *
+   * THE RULE THIS DEPENDS ON: a migration is never edited once shipped, and a
+   * correction ships as a new file. A non-idempotent statement added here would
+   * now fail on the second boot rather than silently on the first, which is the
+   * right direction for that mistake to fail in.
+   */
+  const unseen = files.filter((file) => !alreadyApplied.has(file));
 
-  for (const file of pending) {
+  for (const file of files) {
     const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8');
     await dataService.applyMigration(file, sql);
-    console.log(`[migrations] applied ${file}`);
   }
 
-  console.log(`[migrations] ${pending.length} migration(s) applied`);
+  console.log(
+    `[migrations] ${files.length} migration(s) applied`
+    + (unseen.length > 0 ? `, ${unseen.length} new: ${unseen.join(', ')}` : ' (all previously recorded)'),
+  );
 }

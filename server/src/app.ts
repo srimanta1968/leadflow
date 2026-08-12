@@ -14,6 +14,10 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { platformSession } from './platform/auth';
 import { provisionRoles } from './platform/identity';
 import { provisionConsentPurposes } from './platform/consent';
+import { tick as runRhythm } from './features/rhythm';
+import { runDetectors } from './features/dataReview/detectors';
+import { seedTemplates } from './db/templateSeed';
+import { pollInboundSignals } from './features/sequences';
 
 const app = express();
 
@@ -99,6 +103,14 @@ async function bootstrap(): Promise<void> {
   // the schema exists and before anything serves. A screen that reads a stage
   // label from an unseeded table renders a blank pipeline, which looks like a
   // data problem rather than a boot-order one.
+  // The approved copy every sequence step dispatches against. Seeded before
+  // anything serves, because a cadence pointing at keys that resolve to nothing
+  // sends blank messages rather than failing loudly.
+  const templates = await seedTemplates();
+  console.log(
+    `[app] templates: ${templates.created} created, ${templates.alreadyPresent} already present, ${templates.published} published`
+  );
+
   const vertical = await seedVerticalProfile();
   console.log(
     `[app] vertical profile: ${vertical.stages} stages, ${vertical.dispositions} dispositions, `
@@ -207,6 +219,59 @@ async function bootstrap(): Promise<void> {
     advancePipeline().catch((e: Error) => console.error('[events] advance failed:', e.message));
   }, config.outbox.tickMs);
   projectionTimer.unref();
+
+  /*
+   * The governed-case sweep (#93, AC3).
+   *
+   * MUCH SLOWER THAN THE OTHER TWO, and deliberately so. The outbox and the
+   * projection pipeline are latency-sensitive; a data-review case is a question
+   * for a human that will sit in a queue for hours either way, and sweeping
+   * eight detectors across five upstreams every few seconds would spend the
+   * tenant's rate limits to find the same findings over and over.
+   *
+   * Safe to run alongside the event-driven passes because the register
+   * deduplicates in the database rather than in the caller: two passes landing
+   * on the same finding at the same instant produce one case, not two.
+   *
+   * unref()'d like the others, so a pending sweep never turns SIGTERM into a
+   * hang, and failures are logged and swallowed — the next tick simply retries.
+   */
+  /*
+   * Inbound signals: replies, hard bounces and SMS keywords.
+   *
+   * POLLED because sdk-deliverability emits no events - it exposes reply and
+   * bounce events as read endpoints only. Runs more often than the detector
+   * sweep because a reply that leaves a cadence running for another hour is a
+   * message arguing with a human, which is the failure the stop rules exist to
+   * prevent.
+   */
+  const inboundTimer = setInterval(() => {
+    pollInboundSignals().catch((e: Error) => console.error('[inbound] poll failed:', e.message));
+  }, Math.max(60_000, Math.floor(config.dataReview.sweepMs / 5)));
+  inboundTimer.unref();
+
+  const detectorTimer = setInterval(() => {
+    runDetectors('schedule').catch((e: Error) =>
+      console.error('[detectors] sweep failed:', e.message)
+    );
+  }, config.dataReview.sweepMs);
+  detectorTimer.unref();
+
+  /*
+   * THE OPERATING RHYTHM. Fires every five minutes rather than at nine exact
+   * local times, because a process that restarts at 8:44 must not miss the 8:45
+   * huddle pack — the generator is idempotent per rhythm per business day, so
+   * an extra tick costs a no-op and a missed one costs the meeting its pack.
+   *
+   * The same tick escalates review outputs that are open past their due time,
+   * including on weekends: an output that came due on Friday afternoon was
+   * overdue all weekend, and holding the escalation until Monday loses the one
+   * signal that it slipped.
+   */
+  const rhythmTimer = setInterval(() => {
+    runRhythm(new Date()).catch((e: Error) => console.error('[rhythm] tick failed:', e.message));
+  }, 5 * 60_000);
+  rhythmTimer.unref();
 
   const server = app.listen(PORT, () => {
     console.log(`LeadFlow API listening on port ${PORT} (${config.nodeEnv})`);

@@ -134,6 +134,13 @@ describe('no bespoke structural markup', () => {
     const mockupOnly = [
       'modal', 'overlay', 'drawer', 'kpis', 'tablewrap', 'wizardpage', 'statusrail',
       'lf-card', 'lf-panel', 'lf-pill', 'lf-input', 'lf-label', 'lf-eyebrow',
+      // `sub` joins the list for the same reason `lf-card` did, and it cost more:
+      // QuickContactModal and ResolveCaptureModal carried NO other class at all,
+      // so both dialogs rendered as raw browser defaults — labels run together,
+      // radios as bare bullets, the action row as plain text — while every test
+      // stayed green, because nothing asserts layout and the .feature scenarios
+      // assert TEXT, which an unstyled modal still contains.
+      'sub',
     ];
     const css = sourceFiles(SRC, /\.css$/).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
     const offenders: string[] = [];

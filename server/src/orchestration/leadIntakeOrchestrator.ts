@@ -95,10 +95,23 @@ export function intakeSteps(input: IntakeInput): SagaStep[] {
     },
     {
       name: 'crm_contact',
+      /*
+       * `persona_id`, which sdk-crm requires and rejects the request without.
+       * It previously sent `subject_ref` plus the spread of the parse result,
+       * neither of which sdk-crm reads — so this was a 400 whenever the parse
+       * happened not to contain a persona_id by coincidence.
+       *
+       * The resolver's subject is the persona: that is the whole point of
+       * resolving identity before touching the CRM, and passing the raw source
+       * record through instead would create a second contact for every repeat
+       * enquiry from the same person.
+       */
       run: (ctx) => call<Ref>(ctx, 'sdk-crm', '/api/crm/contacts', {
         tenant_id,
-        subject_ref: idOf(ctx.results.resolve_identity, 'subject_ref', 'entity_id', 'id'),
-        ...(ctx.results.parse_contact as Record<string, unknown>),
+        persona_id: idOf(ctx.results.resolve_identity, 'persona_id', 'subject_ref', 'entity_id', 'id'),
+        lifecycle_stage: 'lead',
+        source: input.platform,
+        external_refs: { leadflow_source_event_id: input.sourceEventId },
       }),
       compensate: async (ctx, result) => {
         await SdkGatewayClient.call({
@@ -114,11 +127,48 @@ export function intakeSteps(input: IntakeInput): SagaStep[] {
       },
     },
     {
+      /*
+       * OPENED BEFORE THE DEAL, because sdk-crm requires an encounter_id and
+       * will not create one for you. The enquiry IS the encounter — the span of
+       * contact this deal belongs to — so opening it here rather than reusing
+       * some ambient one keeps the deal attached to the conversation that
+       * produced it.
+       *
+       * Optional: an unreachable sdk-engagement should not lose the lead. The
+       * deal step reports the gap instead, which is the honest outcome.
+       */
+      name: 'open_encounter',
+      optional: true,
+      run: (ctx) => call<Ref>(ctx, 'sdk-engagement', '/api/encounters', {
+        tenant_id,
+        kind: 'inbound_enquiry',
+        parent_key_id: idOf(ctx.results.resolve_identity, 'persona_id', 'subject_ref', 'entity_id', 'id'),
+        // The residency the encounter is opened in. LeadFlow is a single-region
+        // deployment, so this is a constant rather than a lookup — when that stops
+        // being true it becomes a tenant setting, not a per-call guess.
+        region: 'us',
+        retention_policy: 'standard',
+      }),
+      compensate: async () => undefined,
+    },
+    {
       name: 'crm_deal',
+      /*
+       * `stage` is not accepted on create — sdk-crm defaults a new deal to
+       * `qualifying` and validates transitions separately, so the previous
+       * `stage_key: 'NEW_UNWORKED'` was both an unknown field and an unknown
+       * value. Together with the missing encounter_id and name it made this step
+       * a guaranteed 400 on every intake, which is why the saga never reached
+       * the steps after it.
+       */
       run: (ctx) => call<Ref>(ctx, 'sdk-crm', '/api/crm/deals', {
         tenant_id,
+        encounter_id: idOf(ctx.results.open_encounter, 'encounter_id', 'id'),
         contact_id: idOf(ctx.results.crm_contact, 'contact_id', 'id'),
-        stage_key: 'NEW_UNWORKED',
+        // Named after the signal, so a deal is identifiable in the CRM before
+        // anybody has spoken to the person.
+        name: `Inbound enquiry — ${input.platform} ${input.sourceEventId}`,
+        external_refs: { leadflow_source_event_id: input.sourceEventId },
       }),
       compensate: async (ctx, result) => {
         await SdkGatewayClient.call({

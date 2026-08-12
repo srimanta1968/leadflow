@@ -108,7 +108,15 @@ export class DataService {
   async applyMigration(name: string, sql: string): Promise<void> {
     await this.transaction(async (client) => {
       await client.query(sql);
-      await client.query('INSERT INTO _leadflow_migrations (name) VALUES ($1)', [name]);
+      // ON CONFLICT because the runner now re-applies EVERY migration on every
+      // boot rather than only unrecorded ones (see migrationRunner.ts for why).
+      // A plain INSERT violated the primary key the second time a file was
+      // applied, which would turn the self-healing pass into a boot failure.
+      await client.query(
+        `INSERT INTO _leadflow_migrations (name) VALUES ($1)
+         ON CONFLICT (name) DO NOTHING`,
+        [name],
+      );
     });
   }
 
