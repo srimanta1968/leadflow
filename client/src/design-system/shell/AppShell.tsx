@@ -7,11 +7,24 @@ import { ProfileChip } from '../../features/auth';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { SUCCESS } from '../../content/messages';
 import { isAllowed, usePermissions } from '../../platform/permissions/usePermissions';
-import { NAV_ACTIONS, NAV_GROUPS, SCREEN_SUBTITLE, type NavItem } from './navModel';
+import {
+  DEFAULT_EXPERIENCE,
+  NAV_ACTIONS,
+  NAV_GROUPS,
+  SCREEN_SUBTITLE,
+  groupsForExperience,
+  type ExperienceLevel,
+  type NavItem,
+} from './navModel';
+import { ExperienceSwitcher } from './ExperienceSwitcher';
+import { IconRail, type RailItem } from './IconRail';
 import { useShellCounts, type ShellCounts } from './useShellCounts';
 
 /** Where the operator's folded-group choice lives between visits. */
 const NAV_FOLD_KEY = 'leadflow.nav.folded';
+
+/** The operator's chosen experience, remembered between visits. */
+const NAV_EXPERIENCE_KEY = 'leadflow.nav.experience';
 import { CommandPalette } from './CommandPalette';
 import { COMMAND_ACTIONS } from './commandRegistry';
 import { QuickContactModal } from '../../components/app/QuickContactModal';
@@ -140,6 +153,32 @@ export function AppShell() {
     return new Set(NAV_GROUPS.filter((g) => g.defaultCollapsed).map((g) => g.label));
   });
 
+  const [experience, setExperience] = useState<ExperienceLevel>(() => {
+    try {
+      const stored = Number(window.localStorage.getItem(NAV_EXPERIENCE_KEY));
+      if (stored === 1 || stored === 2 || stored === 3 || stored === 4) return stored;
+    } catch {
+      // A blocked store must not stop the shell rendering.
+    }
+    return DEFAULT_EXPERIENCE;
+  });
+
+  const changeExperience = useCallback((next: ExperienceLevel) => {
+    setExperience(next);
+    try {
+      window.localStorage.setItem(NAV_EXPERIENCE_KEY, String(next));
+    } catch {
+      // Persistence is a convenience; the choice still holds this session.
+    }
+  }, []);
+
+  /*
+   * The groups this experience shows. Permission is applied SEPARATELY, per
+   * item, further down — a screen hidden here is not denied, and a denied one
+   * stays Locked at every level.
+   */
+  const visibleGroups = useMemo(() => groupsForExperience(experience), [experience]);
+
   const toggleGroup = useCallback((label: string) => {
     setFoldedGroups((current) => {
       const next = new Set(current);
@@ -227,12 +266,22 @@ export function AppShell() {
         <Logo to="/app" />
       </div>
 
+      {/* The experience picker sits ABOVE the nav and scrolls with nothing:
+          it governs what the list below contains, so it must not be inside the
+          thing it governs. Hidden on the collapsed rail, where there is no room
+          for it and no labels for it to affect. */}
+      {!collapsed && (
+        <div className="px-3 pb-1 pt-2">
+          <ExperienceSwitcher level={experience} onChange={changeExperience} />
+        </div>
+      )}
+
       <nav
         className="flex-1 space-y-4 overflow-y-auto p-3"
         aria-label="Application"
         data-collapsed={collapsed}
       >
-        {NAV_GROUPS.map((group) => {
+        {visibleGroups.map((group) => {
           /*
            * A collapsed RAIL hides every label already, so folding is only
            * meaningful in the expanded sidebar. Treating a group as open while
@@ -321,8 +370,31 @@ export function AppShell() {
     </>
   );
 
+  /*
+   * The rail's destinations. Deliberately the six things an operator does
+   * hourly and nothing else — it is not a favourites bar and not a second copy
+   * of the sidebar. Counts come from the same projection the sidebar reads, so
+   * the two can never disagree about how many captures are waiting.
+   */
+  const railItems: RailItem[] = [
+    { to: '/app', label: 'Capture Inbox', count: counts.captureUnresolved,
+      path: 'M3 12l9-9 9 9M5 10v10h14V10' },
+    { to: '/app/leads', label: 'Lead queue', count: counts.leadsOpen,
+      path: 'M4 6h16M4 12h16M4 18h10' },
+    { to: '/app/inbox', label: 'Inbox',
+      path: 'M3 8l9 6 9-6M3 8v8a2 2 0 002 2h14a2 2 0 002-2V8l-9-5-9 5z' },
+    { to: '/app/calendar', label: 'Calendar',
+      path: 'M8 3v4M16 3v4M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z' },
+    { to: '/app/pipeline', label: 'Pipeline',
+      path: 'M4 5h5v14H4zM10 5h5v9h-5zM16 5h4v6h-4z' },
+    { to: '/app/contacts', label: 'Contacts',
+      path: 'M16 19v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 7.5a3 3 0 106 0 3 3 0 00-6 0M17 11h4' },
+  ];
+
   return (
     <div className="flex min-h-screen bg-bg">
+      <IconRail items={railItems} />
+
       {/* Desktop rail */}
       <aside
         className={`hidden shrink-0 flex-col border-r border-line bg-sidebar transition-[width] lg:flex ${

@@ -50,6 +50,34 @@ interface NavItemBase {
   planned?: boolean;
 }
 
+/**
+ * The four experience levels, from the phase-7 usability package.
+ *
+ * PROGRESSIVE DISCLOSURE, NOT ACCESS CONTROL. Changing experience changes which
+ * screens are VISIBLE and nothing else — the reference panel says so in as many
+ * words, and the distinction has to survive contact with this codebase or
+ * somebody will eventually reach for an experience level to hide a screen from
+ * a role. Permission is `action`, evaluated by the PDP, and renders as Locked.
+ * Experience is a preference the operator sets for themselves and can undo in
+ * one click. A screen hidden by experience is NOT denied, and a screen denied by
+ * policy stays denied at every experience.
+ *
+ * Nested on purpose: each level is a superset of the one before, so raising it
+ * only ever adds. A non-nested model would let an operator lose a screen by
+ * moving "up", which is the one behaviour that would stop people exploring.
+ */
+export const EXPERIENCES = [
+  { level: 1, key: 'guided', label: 'Guided Start', detail: 'A calm first-day workspace: capture, calendar and setup.' },
+  { level: 2, key: 'customer_jobs', label: 'Customer & Jobs', detail: 'Daily customer, contact, consent and import workflows.' },
+  { level: 3, key: 'business_ops', label: 'Business Operations', detail: 'Routing, coverage, insight and the configuration behind them.' },
+  { level: 4, key: 'full', label: 'Full Workspace', detail: 'All available screens and advanced settings are visible.' },
+] as const;
+
+export type ExperienceLevel = 1 | 2 | 3 | 4;
+
+/** The level a new workspace starts at. */
+export const DEFAULT_EXPERIENCE: ExperienceLevel = 4;
+
 export interface NavGroup {
   /** The mockup renders these as .navgroup eyebrows. */
   label: string;
@@ -64,6 +92,13 @@ export interface NavGroup {
   collapsible?: boolean;
   /** Folded on first load. Setup-shaped groups are visited rarely. */
   defaultCollapsed?: boolean;
+  /**
+   * The lowest experience level at which this group appears. Absent means 4 —
+   * visible only in the Full Workspace — so a group added later is hidden from
+   * the calm views until somebody deliberately places it, rather than
+   * appearing in a beginner's first-day workspace by default.
+   */
+  experience?: ExperienceLevel;
 }
 
 export const NAV_GROUPS: NavGroup[] = [
@@ -89,6 +124,7 @@ export const NAV_GROUPS: NavGroup[] = [
      * places is the ambiguity that guard exists to prevent.
      */
     label: 'Daily work',
+    experience: 1,
     items: [
       { label: 'Capture Inbox', to: '/app', ungated: 'every operator triages their own tenant queue; the rows are scoped server side and the per-row ACTIONS are gated individually', count: 'captureUnresolved' },
       { label: 'Lead queue', to: '/app/leads', action: 'lead.work_assigned', count: 'leadsOpen' },
@@ -100,6 +136,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Contact operations',
+    experience: 2,
     collapsible: true,
     items: [
       { label: 'Contact Command', to: '/app/command', action: 'dashboard.view_team', planned: true },
@@ -111,6 +148,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Identity & trust',
+    experience: 3,
     collapsible: true,
     items: [
       // NOT `planned`. Both shipped (TK-3957, TK-3961), both routed in App.tsx,
@@ -126,6 +164,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Revenue',
+    experience: 2,
     items: [
       { label: 'Offers', to: '/app/offers', action: 'offer.change_terms' },
       { label: 'Onboarding handoff', to: '/app/handoffs', action: 'handoff.accept' },
@@ -140,6 +179,7 @@ export const NAV_GROUPS: NavGroup[] = [
      * made the daily items harder to find and the rarely-used ones look urgent.
      */
     label: 'Configuration',
+    experience: 3,
     items: [
       { label: 'Routing rules', to: '/app/routing', action: 'routing.configure' },
       { label: 'Routing configuration', to: '/app/routing-config', action: 'routing.configure' },
@@ -154,6 +194,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Insight',
+    experience: 3,
     collapsible: true,
     items: [
       { label: 'Analytics', to: '/app/analytics', action: 'dashboard.view_team' },
@@ -167,6 +208,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Related',
+    experience: 4,
     collapsible: true,
     defaultCollapsed: true,
     items: [
@@ -176,6 +218,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Administration',
+    experience: 4,
     items: [
       { label: 'User Administration', to: '/app/admin/users', action: 'user.invite' },
       // UNGATED, and it is the one gate worth arguing about. This is the screen
@@ -187,6 +230,11 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
 ];
+
+/** The groups visible at a given experience level. */
+export function groupsForExperience(level: ExperienceLevel): NavGroup[] {
+  return NAV_GROUPS.filter((group) => (group.experience ?? 4) <= level);
+}
 
 /** Every item, flattened — for permission prefetch and for the tests. */
 export const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
