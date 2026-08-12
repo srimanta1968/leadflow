@@ -12,6 +12,7 @@ import { Modal } from '../../design-system/overlays/Modal';
 import { originChipClass } from '../../design-system/tokens';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { SavedViewsPanel } from '../../features/contacts/SavedViewsPanel';
+import { formatWhen, ownerLabel } from '../../utils/display';
 
 /**
  * Contacts (#view-contacts) — canonical people and organizations.
@@ -169,8 +170,8 @@ export default function Contacts() {
         </div>
       ),
     },
-    { key: 'owner', header: 'Owner', cell: (r) => shown(r.owner), width: '7%' },
-    { key: 'updated', header: 'Updated', cell: (r) => shown(r.updated_at), width: '5%' },
+    { key: 'owner', header: 'Owner', cell: (r) => ownerLabel(r.owner), width: '7%' },
+    { key: 'updated', header: 'Updated', cell: (r) => formatWhen(r.updated_at), width: '5%' },
   ];
 
   return (

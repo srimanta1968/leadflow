@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, ApiError, type UnifiedInbox } from '../../services/api';
 import { DataTable, type Column } from '../../design-system/data/DataTable';
 import type { InboxThread } from '../../services/api';
+import { formatWhen, ownerLabel } from '../../utils/display';
 
 /**
  * The unified inbox — one chronological timeline (SOP P0).
@@ -72,7 +73,7 @@ export default function Inbox() {
       ),
     },
     { key: 'subject', header: 'Subject', cell: (r) => shown(r.subject), width: '32%' },
-    { key: 'owner', header: 'Owner', cell: (r) => shown(r.owner), width: '16%' },
+    { key: 'owner', header: 'Owner', cell: (r) => ownerLabel(r.owner), width: '16%' },
     {
       key: 'state',
       header: 'State',
@@ -95,7 +96,7 @@ export default function Inbox() {
       width: '12%',
       // Sorted on the normalized occurrence time the server supplies.
       sortValue: (r) => r.last_message_at,
-      cell: (r) => shown(r.last_message_at),
+      cell: (r) => formatWhen(r.last_message_at),
     },
   ];
 
