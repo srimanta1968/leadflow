@@ -406,10 +406,10 @@ export default function WorkflowStudio() {
           <h3 className="lf-label mt-5">Definitions</h3>
           <ul className="mt-2 space-y-2">
             {(definitions?.definitions ?? []).map((definition) => (
-              <li key={definition.definition_id} className="text-sm">
-                <p className="text-text">{definition.name}</p>
+              <li key={String(definition.definition_id ?? definition.workflow_key)} className="text-sm">
+                <p className="text-text">{String(definition.name ?? definition.workflow_key ?? 'Unnamed')}</p>
                 <p className="text-[11px] text-soft">
-                  v{definition.version ?? '--'} · {definition.status ?? 'unknown'}
+                  v{String(definition.version ?? '--')} · {String(definition.status ?? 'unknown')}
                   {definition.kill_switch_engaged ? ' · kill switch engaged' : ''}
                 </p>
               </li>

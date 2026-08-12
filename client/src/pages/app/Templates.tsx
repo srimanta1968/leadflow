@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { api, ApiError, type TemplateList, type TemplateRow } from '../../services/api';
+import { api, ApiError, type TemplateList } from '../../services/api';
 import { DataTable, type Column } from '../../design-system/data/DataTable';
 import { isAllowed, usePermissions } from '../../platform/permissions';
-import { chipClass } from '../../design-system/tokens';
 
 /**
  * The approved message template library (SOP, "SMS TEMPLATE LIBRARY").
@@ -31,7 +30,6 @@ import { chipClass } from '../../design-system/tokens';
  * actually sent, and a template edited in place cannot answer that.
  */
 
-const VERDICT_ROLE = { allow: 'success', review: 'warning', deny: 'blocked' } as const;
 
 /** The ten triggers the playbook requires an approved template for. */
 const REQUIRED_TRIGGERS = [
@@ -70,59 +68,42 @@ export default function Templates() {
   }, []);
 
   /** Triggers with no approved template. The gap the register exists to show. */
-  const covered = new Set((data?.templates ?? []).map((t) => t.trigger).filter(Boolean));
+  const covered = new Set((data?.templates ?? []).map((t) => t.template_key).filter(Boolean));
   const missing = REQUIRED_TRIGGERS.filter((t) => !covered.has(t as never));
 
-  const columns: Column<TemplateRow>[] = [
-    { key: 'trigger', header: 'Trigger', cell: (r) => shown(r.trigger), width: '14%' },
-    { key: 'channel', header: 'Channel', cell: (r) => r.channel, width: '9%' },
+  const columns: Column<NonNullable<TemplateList['templates']>[number]>[] = [
+    { key: 'template_key', header: 'Template', cell: (r) => shown(r.template_key), width: '24%' },
+    { key: 'channel', header: 'Channel', cell: (r) => r.channel, width: '10%' },
+    { key: 'purpose', header: 'Purpose', cell: (r) => shown(r.purpose_key), width: '18%' },
     {
-      key: 'body',
-      header: 'Approved template',
-      width: '34%',
-      cell: (r) => <span className="text-text">{r.body}</span>,
-    },
-    {
-      key: 'action',
-      header: 'Intended action',
-      width: '14%',
-      // One. See the module comment.
-      cell: (r) => shown(r.intended_action),
-    },
-    {
-      key: 'optout',
-      header: 'Opt-out',
-      width: '11%',
+      key: 'approved',
+      header: 'Approved',
+      width: '12%',
       cell: (r) =>
-        r.opt_out_affordance ? (
-          <span className="text-green">{r.opt_out_affordance}</span>
+        r.approved ? (
+          <span className="text-green">Approved</span>
         ) : (
-          <span className="text-red">Absent - cannot publish</span>
+          /* NOT PUBLISHABLE, stated rather than implied by a blank cell. */
+          <span className="text-red">Not approved</span>
         ),
     },
     {
-      key: 'status',
-      header: 'Status',
-      width: '10%',
+      key: 'live',
+      header: 'Live version',
+      width: '14%',
       cell: (r) => (
-        <span className={`lf-pill ${chipClass(r.status === 'published' ? 'success' : 'warning')}`}>
-          {r.status ?? 'unknown'}
-          {r.version !== null ? ` v${r.version}` : ''}
+        <span className="text-text">
+          {r.live_version === null ? 'none live' : `v${r.live_version}`}
+          {r.draft_versions ? ` · ${r.draft_versions} draft` : ''}
         </span>
       ),
     },
+    { key: 'cta', header: 'CTAs', cell: (r) => (r.cta_count ?? '--'), width: '8%' },
     {
-      key: 'gate',
-      header: 'Gate',
-      width: '8%',
-      cell: (r) =>
-        r.gate ? (
-          <span className={`lf-pill ${chipClass(VERDICT_ROLE[r.gate.verdict])}`}>
-            {r.gate.verdict}
-          </span>
-        ) : (
-          '--'
-        ),
+      key: 'published',
+      header: 'Published',
+      width: '14%',
+      cell: (r) => shown(r.live_published_at),
     },
   ];
 
@@ -164,7 +145,7 @@ export default function Templates() {
           do-not-contact suppresses queued sales texts immediately.
         </p>
         <p className="mt-2 text-xs text-soft">
-          {data?.gate_owner ?? 'Legal and Compliance'} owns the final rules. This screen reports
+          Legal and Compliance own the final rules. This screen reports
           them; it does not let a sender vary them.
         </p>
       </section>
@@ -191,7 +172,7 @@ export default function Templates() {
         <DataTable
           rows={data?.templates ?? []}
           columns={columns}
-          rowKey={(r) => r.template_id}
+          rowKey={(r) => r.id}
           loading={loading}
           density="dense"
           height={520}

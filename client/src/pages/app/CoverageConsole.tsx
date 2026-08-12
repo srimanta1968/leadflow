@@ -97,52 +97,38 @@ export default function CoverageConsole() {
         </p>
       )}
 
-      {/* ------------------------------------------- gaps, before they open */}
+      {/* ------------------------------------------- gaps, computed locally */}
       <section className="lf-panel mt-6 p-5" aria-label="Coverage gaps">
-        <h2 className="lf-eyebrow">Upcoming coverage gaps</h2>
+        <h2 className="lf-eyebrow">Coverage gaps</h2>
         <p className="mt-1 text-xs text-soft">
-          Detected before the window begins. An alert after it opens is a post-mortem.
+          Counted locally and always answered. An outage in the tool that finds unowned leads is
+          exactly when leads go unowned, so these two never depend on sdk-coverage.
         </p>
 
-        <ul className="mt-3 space-y-2">
-          {(data?.upcoming_gaps ?? []).map((gap) => (
-            <li
-              key={`${gap.window}:${gap.starts_at}`}
-              className="rounded-lg border border-red/40 bg-red/10 p-3 text-sm"
-            >
-              <p className="text-text">
-                {gap.window} opens {gap.starts_at} with nobody named.
-              </p>
-              <p className="mt-0.5 text-xs text-soft">{gap.reason}</p>
-            </li>
-          ))}
-          {!loading && (data?.upcoming_gaps ?? []).length === 0 && (
-            <li className="text-sm text-muted">
-              {data
-                ? 'No gap is detected in the windows ahead.'
-                : 'The coverage register could not be read, so no gap can be claimed either way.'}
-            </li>
-          )}
-        </ul>
-      </section>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className={`rounded-lg border p-3 ${(data?.gaps?.unowned_active ?? 0) > 0 ? 'border-red/40 bg-red/10' : 'border-line bg-panel2'}`}>
+            <p className={`text-2xl ${(data?.gaps?.unowned_active ?? 0) > 0 ? 'text-red' : 'text-text'}`}>
+              {data ? data.gaps.unowned_active : '--'}
+            </p>
+            <p className="mt-0.5 text-xs text-soft">
+              Active leads with no owner. Every one is somebody nobody is answering.
+            </p>
+          </div>
+          <div className={`rounded-lg border p-3 ${(data?.gaps?.overnight_unreleased ?? 0) > 0 ? 'border-red/40 bg-red/10' : 'border-line bg-panel2'}`}>
+            <p className={`text-2xl ${(data?.gaps?.overnight_unreleased ?? 0) > 0 ? 'text-red' : 'text-text'}`}>
+              {data ? data.gaps.overnight_unreleased : '--'}
+            </p>
+            <p className="mt-0.5 text-xs text-soft">
+              Held overnight and never released back to the queue.
+            </p>
+          </div>
+        </div>
 
-      {/* --------------------------------------------------- the windows */}
-      <section className="lf-panel mt-4 p-5" aria-label="Coverage windows">
-        <h2 className="lf-eyebrow">Windows</h2>
-        <ul className="mt-3 space-y-2">
-          {(data?.windows ?? []).map((window) => (
-            <li key={window.label} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-              <span className="text-text">{window.label}</span>
-              <span className={window.covered_by ? 'text-muted' : 'text-red'}>
-                {/* A window with no name is a GAP, never "the team". */}
-                {window.covered_by ?? 'Uncovered - no named person'}
-              </span>
-            </li>
-          ))}
-          {!loading && (data?.windows ?? []).length === 0 && (
-            <li className="text-sm text-muted">No windows are configured.</li>
-          )}
-        </ul>
+        <p className="mt-3 text-xs text-soft">
+          {data
+            ? `Business date ${data.business_date} (${data.timezone}) — ${data.within_business_hours ? 'inside' : 'outside'} business hours.`
+            : 'The console could not be read.'}
+        </p>
       </section>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -222,9 +208,9 @@ export default function CoverageConsole() {
           </button>
 
           <p className="mt-2 text-xs text-soft">
-            {data?.opening_validation?.recorded_at
-              ? `Last recorded ${data.opening_validation.recorded_at}`
-              : 'Not recorded today.'}
+            {/* The POST is real; the server does not return a last-recorded
+                timestamp on this read, so claiming one would be inventing it. */}
+            Recorded validations are written to the audit chain rather than read back here.
           </p>
         </section>
 
@@ -237,20 +223,22 @@ export default function CoverageConsole() {
           </p>
 
           <ul className="mt-3 space-y-1">
-            {(data?.late_coverage?.roster ?? []).map((person) => (
-              <li key={person} className="text-sm text-text">
-                {person}
+            {(data?.on_call ?? []).map((person, index) => (
+              <li key={index} className="text-sm text-text">
+                {String(person.name ?? person.rep ?? person.person ?? 'Named in sdk-coverage')}
               </li>
             ))}
-            {!loading && (data?.late_coverage?.roster ?? []).length === 0 && (
+            {!loading && (data?.on_call ?? []).length === 0 && (
               <li className="text-sm text-red">
-                Nobody is rostered for late coverage, so a 4:59pm lead has no named owner.
+                {data?.upstream_available?.coverage === false
+                  ? 'sdk-coverage is unreachable, so who is on call is UNKNOWN — not empty. Do not read this as nobody being rostered.'
+                  : 'Nobody is rostered for late coverage, so a 4:59pm lead has no named owner.'}
               </li>
             )}
           </ul>
 
           <p className="mt-3 text-xs text-soft">
-            {data?.late_coverage?.note ?? 'Enforced to 5:30pm.'}
+            Enforced to 5:30pm.
           </p>
         </section>
       </div>
@@ -260,58 +248,44 @@ export default function CoverageConsole() {
         <section className="lf-panel p-5" aria-label="Schedules">
           <h2 className="lf-eyebrow">Schedules</h2>
           <ul className="mt-3 space-y-2">
-            {(data?.schedules ?? []).map((schedule) => (
-              <li key={schedule.rep} className="text-sm">
-                <p className="text-text">{schedule.rep}</p>
+            {(data?.schedules ?? []).map((schedule, index) => (
+              <li key={index} className="text-sm">
+                <p className="text-text">{String(schedule.rep ?? schedule.name ?? 'Unnamed')}</p>
                 <p className="text-xs text-soft">
-                  {schedule.hours} · {schedule.timezone} · {schedule.status}
+                  {[schedule.hours, schedule.timezone, schedule.status]
+                    .filter(Boolean).map(String).join(' · ') || 'No detail recorded'}
                 </p>
               </li>
             ))}
             {!loading && (data?.schedules ?? []).length === 0 && (
-              <li className="text-sm text-muted">No schedules recorded.</li>
+              <li className="text-sm text-muted">
+                {data?.upstream_available?.coverage === false
+                  ? 'sdk-coverage is unreachable, so the rota is unknown rather than empty.'
+                  : 'No schedules recorded.'}
+              </li>
             )}
           </ul>
         </section>
 
         <section className="lf-panel p-5" aria-label="Time off and holidays">
           <h2 className="lf-eyebrow">Time off &amp; holidays</h2>
-          <ul className="mt-3 space-y-2">
-            {(data?.time_off ?? []).map((entry, index) => (
-              <li key={`${entry.rep}:${index}`} className="text-sm">
-                <p className="text-text">{entry.rep}</p>
-                <p className="text-xs text-soft">
-                  {entry.from} to {entry.to} · {entry.kind}
-                </p>
-              </li>
-            ))}
-            {(data?.holiday_calendar ?? []).map((holiday) => (
-              <li key={holiday.date} className="text-sm">
-                <p className="text-text">{holiday.name}</p>
-                <p className="text-xs text-soft">{holiday.date}</p>
-              </li>
-            ))}
-            {!loading &&
-              (data?.time_off ?? []).length === 0 &&
-              (data?.holiday_calendar ?? []).length === 0 && (
-                <li className="text-sm text-muted">Nothing recorded.</li>
-              )}
-          </ul>
+          {/* NOT RENDERED AS AN EMPTY LIST. This console reads sdk-coverage,
+              which returns schedules and on-call and nothing else — there is no
+              time-off or holiday feed behind it. An empty "Nothing recorded"
+              list claims every rep is available, which is the opposite of
+              unknown and the more dangerous of the two to show a manager. */}
+          <p className="mt-3 text-sm text-muted">
+            Not available. sdk-coverage supplies the rota and the on-call list; time off and the
+            holiday calendar are not part of that feed, so this console cannot state either.
+          </p>
         </section>
 
         <section className="lf-panel p-5" aria-label="Manager on duty">
           <h2 className="lf-eyebrow">Manager on duty</h2>
-          <ul className="mt-3 space-y-2">
-            {(data?.manager_on_duty ?? []).map((entry) => (
-              <li key={entry.date} className="text-sm">
-                <p className="text-text">{entry.manager ?? 'Nobody named'}</p>
-                <p className="text-xs text-soft">{entry.date}</p>
-              </li>
-            ))}
-            {!loading && (data?.manager_on_duty ?? []).length === 0 && (
-              <li className="text-sm text-muted">No roster recorded.</li>
-            )}
-          </ul>
+          <p className="mt-3 text-sm text-muted">
+            Not available from sdk-coverage. The on-call list above is who is named for the
+            current window.
+          </p>
         </section>
       </div>
     </div>

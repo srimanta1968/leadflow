@@ -3,10 +3,8 @@ import {
   api,
   ApiError,
   type SequenceList,
-  type SequenceSummary,
 } from '../../services/api';
 import { Modal } from '../../design-system/overlays/Modal';
-import { chipClass } from '../../design-system/tokens';
 import { useToast } from '../../components/feedback/ToastProvider';
 
 /**
@@ -51,13 +49,19 @@ const TRIGGERS = [
   { key: 'breakup', label: 'Breakup' },
 ];
 
-const VERDICT_ROLE = { allow: 'success', review: 'warning', deny: 'blocked' } as const;
+
+/** Cadence offsets are minutes; nobody reads "5760 minutes" as four days. */
+function formatOffset(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 24 * 60) return `${Math.round(minutes / 60)}h`;
+  return `${Math.round(minutes / (24 * 60))}d`;
+}
 
 export default function Sequences() {
   const [data, setData] = useState<SequenceList | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pausing, setPausing] = useState<SequenceSummary | null>(null);
+  const [pausing, setPausing] = useState<NonNullable<SequenceList['sequences']>[number] | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -116,15 +120,12 @@ export default function Sequences() {
       )}
 
       {(data?.sequences ?? []).map((sequence) => (
-        <section key={sequence.sequence_id} className="lf-panel mt-4 p-5" aria-label={sequence.name}>
+        <section key={sequence.key} className="lf-panel mt-4 p-5" aria-label={sequence.label}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-text">{sequence.name}</h2>
+              <h2 className="text-lg font-semibold text-text">{sequence.label}</h2>
               <p className="mt-0.5 text-xs text-soft">
-                {sequence.trigger ?? 'no trigger'} · {sequence.status ?? 'unknown status'} ·{' '}
-                {sequence.active_enrollments === null
-                  ? 'enrollments unknown'
-                  : `${sequence.active_enrollments} active`}
+                {sequence.key} · {sequence.step_count} step{sequence.step_count === 1 ? '' : 's'}
               </p>
             </div>
             <button
@@ -137,91 +138,85 @@ export default function Sequences() {
             </button>
           </div>
 
-          {sequence.paused && (
-            <p className="mt-3 rounded border border-red/40 bg-red/10 px-3 py-2 text-sm text-red">
-              Paused {sequence.paused.at ?? ''} by {sequence.paused.by ?? 'unknown'} -{' '}
-              {sequence.paused.reason}
-            </p>
-          )}
-
           {/* --------------------------------------------------- the steps */}
           <ol className="mt-3 space-y-2">
             {(sequence.steps ?? []).map((step) => (
-              <li key={step.step_id ?? `step-${step.order}`} className="lf-card p-3">
+              <li key={step.step} className="lf-card p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-sm text-text">
-                    {step.order}. {step.channel} after {step.delay}
+                    {step.step}. {(step.channels ?? []).join(' + ') || 'no channel'}
+                    {step.offset_minutes === 0 ? ' immediately' : ` after ${formatOffset(step.offset_minutes)}`}
                   </span>
-                  {step.gate ? (
-                    <span className={`lf-pill ${chipClass(VERDICT_ROLE[step.gate.verdict])}`}>
-                      {step.gate.verdict}
-                    </span>
-                  ) : (
-                    <span className="lf-pill border-line2 text-soft">no gate verdict</span>
-                  )}
+                  <span className="lf-pill border-line2 text-soft">
+                    {(step.template_keys ?? []).length > 0
+                      ? `${step.template_keys.length} template${step.template_keys.length === 1 ? '' : 's'}`
+                      : 'no template'}
+                  </span>
                 </div>
-                <p className="mt-0.5 text-[11px] text-soft">
-                  {step.purpose}
-                  {step.template_ref ? ` · ${step.template_ref}` : ' · no approved template'}
-                </p>
-                {/* The gate verdict, verbatim. A step may not be enabled without one. */}
-                <p className="mt-1 text-[11px] text-soft">
-                  {step.gate
-                    ? step.gate.reason
-                    : 'No eligibility or hours verdict was returned, so this step stays disabled.'}
-                </p>
+                <p className="mt-0.5 text-[11px] text-soft">{step.objective}</p>
+                {/* THE REQUIRED NEXT ACTION. A cadence step that ends without one
+                    is how a sequence runs out and nobody notices the record
+                    stopped moving. */}
+                {step.required_next && (
+                  <p className="mt-1 text-[11px] text-soft">
+                    Requires: {step.required_next.actionType} within{' '}
+                    {formatOffset(step.required_next.dueOffsetMinutes)} — {step.required_next.purpose}
+                  </p>
+                )}
+                {(step.template_keys ?? []).length > 0 && (
+                  <p className="mt-1 text-[11px] text-soft">{step.template_keys.join(', ')}</p>
+                )}
               </li>
             ))}
             {(sequence.steps ?? []).length === 0 && (
               <li className="text-sm text-muted">This sequence has no steps.</li>
             )}
           </ol>
-
-          {/* ------------------------------------------- reply-paused set */}
-          <div className="mt-4 border-t border-line pt-4">
-            <h3 className="lf-label">Paused by an inbound reply</h3>
-            <p className="mt-1 text-xs text-soft">
-              A human conversation is active on these records, so automated persuasion has
-              stopped and the owner holds an urgent task.
-            </p>
-            <ul className="mt-2 space-y-1">
-              {(sequence.reply_paused ?? []).map((entry, index) => (
-                <li key={entry.contact ?? index} className="text-sm">
-                  <span className="text-text">{entry.contact}</span>
-                  <span className="text-soft">
-                    {' '}
-                    — replied {entry.replied_at ?? 'time not recorded'} ·{' '}
-                    {entry.task_ref ?? 'no task reference'}
-                  </span>
-                </li>
-              ))}
-              {(sequence.reply_paused ?? []).length === 0 && (
-                <li className="text-sm text-muted">No enrollment is currently reply-paused.</li>
-              )}
-            </ul>
-
-            <h3 className="lf-label mt-4">Cancelled by opt-out or suppression</h3>
-            <p className="mt-1 text-xs text-soft">
-              Cancelled, not suspended. A suspended step is one configuration change away from
-              reaching somebody who asked not to hear from us.
-            </p>
-            <ul className="mt-2 space-y-1">
-              {(sequence.suppressed ?? []).map((entry, index) => (
-                <li key={entry.contact ?? index} className="text-sm">
-                  <span className="text-text">{entry.contact}</span>
-                  <span className="text-soft">
-                    {' '}
-                    — {entry.reason} · {entry.cancelled_steps} queued steps cancelled
-                  </span>
-                </li>
-              ))}
-              {(sequence.suppressed ?? []).length === 0 && (
-                <li className="text-sm text-muted">No enrollment has been suppressed.</li>
-              )}
-            </ul>
-          </div>
         </section>
       ))}
+
+      {/* ------------------------------------------------ the stop rules */}
+      {(data?.stop_rules ?? []).length > 0 && (
+        <section className="lf-panel mt-4 p-5" aria-label="Stop rules">
+          <h2 className="lf-eyebrow">Stop rules</h2>
+          <p className="mt-1 text-xs text-soft">
+            What ends a cadence, and why. Cancelled rather than suspended: a suspended step is one
+            configuration change away from reaching somebody who asked not to hear from us.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {(data?.stop_rules ?? []).map((rule) => (
+              <li key={rule.signal} className="text-sm">
+                <span className="text-text">{rule.signal}</span>
+                <span className="text-soft"> → {rule.action}</span>
+                <p className="text-[11px] text-soft">{rule.because}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* -------------------------------------------- the nurture tracks */}
+      {(data?.nurture_tracks ?? []).length > 0 && (
+        <section className="lf-panel mt-4 p-5" aria-label="Nurture tracks">
+          <h2 className="lf-eyebrow">Nurture tracks</h2>
+          <ul className="mt-3 space-y-3">
+            {(data?.nurture_tracks ?? []).map((track) => (
+              <li key={track.segment} className="text-sm">
+                <p className="text-text">{track.label}</p>
+                <p className="text-[11px] text-soft">
+                  Touch days {(track.touchDays ?? []).join(', ')} · {track.approach}
+                </p>
+                <p className="text-[11px] text-soft">{track.constraint}</p>
+              </li>
+            ))}
+          </ul>
+          {(data?.reactivation_triggers ?? []).length > 0 && (
+            <p className="mt-3 text-xs text-soft">
+              Reactivation triggers: {(data?.reactivation_triggers ?? []).join(', ')}
+            </p>
+          )}
+        </section>
+      )}
 
       {!loading && (data?.sequences ?? []).length === 0 && (
         <p className="mt-6 text-sm text-muted">
@@ -255,7 +250,7 @@ function PauseModal({
   onClose,
   onPaused,
 }: {
-  sequence: SequenceSummary | null;
+  sequence: NonNullable<SequenceList['sequences']>[number] | null;
   onClose: () => void;
   onPaused: () => void;
 }) {
@@ -267,7 +262,7 @@ function PauseModal({
     if (!sequence) return;
     setPausing(true);
     try {
-      const result = await api.pauseSequence(sequence.sequence_id, reason.trim());
+      const result = await api.pauseSequence(sequence.key, reason.trim());
       notify({
         tone: 'success',
         title: 'Sequence paused',

@@ -1249,6 +1249,33 @@ export const api = {
     body: payload,
   }),
 
+  /**
+   * Save the NEXT action on a record — what it is waiting on, and by when.
+   *
+   * A record with no dated NEXT is one nothing will ever surface again, which
+   * is why the save gate refuses it. Any previously open NEXT is COMPLETED
+   * rather than deleted: what the record was waiting on before is part of its
+   * history.
+   */
+  createNextAction: (
+    subjectRef: string,
+    payload: {
+      action_type: string;
+      due_at: string;
+      purpose: string;
+      intended_outcome: string;
+      owner_user_id?: string | null;
+    },
+  ) =>
+    request<{
+      next_id: string; subject_ref: string; action_type: string;
+      owner_user_id: string | null; due_at: string; purpose: string;
+      intended_outcome: string; note: string;
+    }>(`/leadflow/records/${encodeURIComponent(subjectRef)}/next-action`, {
+      method: 'POST',
+      body: payload,
+    }),
+
   /** Everything the Data Credits drawer renders, in one call. */
   creditsSummary: (signal?: AbortSignal) =>
     request<CreditsSummary>('/leadflow/credits/summary', { signal }),
@@ -1736,9 +1763,33 @@ export interface SequenceSummary {
 }
 
 export interface SequenceList {
-  sequences: SequenceSummary[];
-  upstream_available: { workflow: boolean; campaign: boolean; decision: boolean };
-  field_gaps: { field: string; reason: string }[];
+  /* THE CONFIGURED CADENCE, not live sequence instances. This endpoint reads
+     the cadence definition — there is no enrollment, pause or status behind it,
+     and a screen that showed those would be inventing them. */
+  sequences: {
+    key: string;
+    label: string;
+    step_count: number;
+    steps: {
+      step: number;
+      offset_minutes: number;
+      channels: string[];
+      objective: string;
+      template_keys: string[];
+      required_next: {
+        actionType: string;
+        dueOffsetMinutes: number;
+        purpose: string;
+        intendedOutcome: string;
+      } | null;
+    }[];
+  }[];
+  stop_rules: { signal: string; action: string; because: string }[];
+  nurture_tracks: {
+    segment: string; label: string; touchDays: number[]; approach: string; constraint: string;
+  }[];
+  reactivation_triggers: string[];
+  source: string;
 }
 
 export interface TemplateRow {
@@ -1758,11 +1809,24 @@ export interface TemplateRow {
 }
 
 export interface TemplateList {
-  templates: TemplateRow[];
-  /** Who owns the final rules, stated rather than implied. */
-  gate_owner: string;
-  upstream_available: { content: boolean; notification: boolean; decision: boolean };
-  field_gaps: { field: string; reason: string }[];
+  templates: {
+    id: string;
+    template_key: string;
+    channel: string;
+    purpose_key: string | null;
+    current_version: number | null;
+    cta_count: number | null;
+    approved: boolean | null;
+    live_version: number | null;
+    live_published_at: string | null;
+    draft_versions: number | null;
+  }[];
+  template_count: number;
+  /** What the catalogue REQUIRES, so a missing template is visible as missing. */
+  required_catalog: { key: string; channel: string; purpose: string }[];
+  expected_email: number;
+  expected_sms: number;
+  rules: { cta: string; feature_honesty: string };
 }
 
 /* ------------------------------------------------------ contacts workspace */
@@ -2269,14 +2333,23 @@ export interface CreditsSummary {
 export type PriorityBand = 'P0' | 'P1' | 'P2' | 'P3';
 
 export interface RoutingConfig {
-  version: number | null;
-  status: 'draft' | 'published' | null;
-  eligibility_predicates: { key: string; expression: string; description: string }[];
-  /** Band -> the SOP definition it maps to. Never a local re-interpretation. */
-  priority_bands: { band: PriorityBand; definition: string; sources: string[] }[];
-  specialty_matchers: { dimension: string; enabled: boolean; detail: string }[];
-  requires_approval_to_publish: boolean;
-  upstream_available: { assignment: boolean; coverage: boolean; scoring: boolean };
+  rules: {
+    id: string;
+    name: string | null;
+    priority: number | null;
+    source_channel: string | null;
+    target_user_id: string | null;
+    is_active: boolean | null;
+    created_at: string | null;
+    updated_at: string | null;
+  }[];
+  rule_count: number;
+  /* The local rules are the tenant's PREFERENCE; sdk-assignment makes the
+     decision. Both are reported so an operator can tell "my rule did not match"
+     from "the assignment service never saw it". */
+  decision_owner: string;
+  preference_owner: string;
+  upstream_available: { assignment: boolean };
   field_gaps: { field: string; reason: string }[];
 }
 
@@ -2321,12 +2394,22 @@ export interface RoutingSimulation {
 }
 
 export interface FairShareAudit {
-  /** A rep receiving disproportionate volume, or one being starved. */
-  skew: { rep: string; band: PriorityBand; share: number; expected_share: number; verdict: string }[];
-  starved: string[];
-  rotation_healthy: boolean | null;
-  rotation_note: string;
-  upstream_available: { assignment: boolean; analytics: boolean };
+  window_days: number;
+  /** `owner` is the resolved NAME; `owner_user_id` is the id behind it. */
+  distribution: {
+    owner: string | null;
+    owner_user_id: string | null;
+    assigned: number;
+    worked: number;
+    share: number;
+  }[];
+  mean_per_rep: number;
+  spread: number;
+  /* Starvation is reported separately from skew: a rep receiving far less than
+     the mean is somebody with no pipeline, which is a different problem from
+     the pool being uneven. */
+  starved: (string | null)[];
+  note: string;
 }
 
 export interface CoverageWindow {
@@ -2339,21 +2422,18 @@ export interface CoverageWindow {
 }
 
 export interface CoverageConsole {
-  schedules: { rep: string; timezone: string; hours: string; status: string }[];
-  time_off: { rep: string; from: string; to: string; kind: string }[];
-  holiday_calendar: { date: string; name: string }[];
-  manager_on_duty: { date: string; manager: string | null }[];
-  windows: CoverageWindow[];
-  /** Gaps detected BEFORE the window opens, which is the only useful time. */
-  upcoming_gaps: { window: string; starts_at: string; reason: string }[];
-  opening_validation: {
-    checks: { key: string; label: string; passed: boolean | null }[];
-    overnight_queue_cleared: boolean | null;
-    manager_confirmed: boolean | null;
-    recorded_at: string | null;
-  };
-  late_coverage: { roster: string[]; enforced_until: string; note: string };
-  upstream_available: { coverage: boolean; notification: boolean };
+  business_date: string;
+  timezone: string;
+  within_business_hours: boolean;
+  /* Passed through from sdk-coverage verbatim, so the element shape is theirs
+     rather than ours. Empty whenever that SDK is unreachable — which is what
+     `upstream_available.coverage` is for. */
+  schedules: Record<string, unknown>[];
+  on_call: Record<string, unknown>[];
+  /* COMPUTED LOCALLY AND ALWAYS ANSWERED. An outage in the tool that finds
+     unowned leads is exactly when leads go unowned. */
+  gaps: { unowned_active: number; overnight_unreleased: number };
+  upstream_available: { coverage: boolean };
   field_gaps: { field: string; reason: string }[];
 }
 
@@ -2384,25 +2464,41 @@ export interface PipelineStage {
 }
 
 export interface PipelineBoard {
-  stages: PipelineStage[];
-  total_open: number;
-  stale: { record_id: string; title: string; days_since_activity: number }[];
-  upstream_available: { crm: boolean; sla: boolean };
-  field_gaps: { field: string; reason: string }[];
+  columns: { stage: string; count: number; oldest_days: number }[];
+  pipeline_health: {
+    unowned: number;
+    active_without_next: number;
+    aging: { stage: string; count: number; oldest_days: number }[];
+  };
+  hard_targets: { unowned: number; active_without_next: number };
+  targets_met: boolean;
 }
 
 export interface OverdueNextActions {
   overdue: {
-    record_id: string;
-    title: string;
+    lead_id: string;
+    name: string | null;
+    stage: string | null;
     owner: string | null;
+    owner_user_id: string | null;
     next_action: string | null;
-    minutes_overdue: number | null;
-    manager_alerted: boolean;
-    push_history: { pushed_at: string; reason: string | null; by: string | null }[];
+    next_due_at: string | null;
+    hours_overdue: number | null;
   }[];
-  repeated_pushers: { record_id: string; push_count: number }[];
-  upstream_available: { crm: boolean };
+  overdue_count: number;
+  /* A SEPARATE LIST, and the worse of the two: a lead with a date that has
+     passed is somebody's slipped commitment; one with no date at all was never
+     committed to, and nothing date-based will ever surface it. */
+  no_next_action: {
+    lead_id: string;
+    name: string | null;
+    stage: string | null;
+    owner: string | null;
+    owner_user_id: string | null;
+    updated_at: string | null;
+  }[];
+  no_next_action_count: number;
+  target: string;
 }
 
 /* -------------------------------------------------------------- inbox */
@@ -2498,19 +2594,25 @@ export interface LeadershipSignal {
 }
 
 export interface LeadershipDashboard {
-  signals: LeadershipSignal[];
-  /** The SOP's five success-test questions, answered per record. */
-  success_test: {
-    record_id: string;
-    owner: string | null;
-    last_activity: string | null;
-    next_action: string | null;
-    due_at: string | null;
-    blocker: string | null;
+  role: string;
+  pipeline_health: {
+    unowned: number;
+    active_without_next: number;
+    aging: { stage: string; count: number; oldest_days: number }[];
+  };
+  open_escalations: number;
+  hard_targets: { unowned: number; active_without_next: number };
+  onboarding_attainment: {
+    paid: number;
+    assigned_and_booked: number;
+    within_one_business_day: number;
+    attainment: number;
+  };
+  sources: {
+    source: string;
+    leads: number; contacted: number; booked: number; shown: number; won: number;
+    contact_rate: number; booking_rate: number; show_rate: number; win_rate: number;
   }[];
-  kpi_registry_version: string | null;
-  upstream_available: { sla: boolean; crm: boolean; notification: boolean; handoff: boolean };
-  field_gaps: { field: string; reason: string }[];
 }
 
 export interface RoleDashboard {
@@ -2541,11 +2643,10 @@ export interface WorkflowDefinitionSummary {
 }
 
 export interface WorkflowDefinitionList {
-  definitions: WorkflowDefinitionSummary[];
-  /** The palette the canvas and the outline view both render. */
-  node_types: { key: string; label: string; description: string }[];
-  upstream_available: { workflow: boolean; flags: boolean; approval: boolean };
-  field_gaps: { field: string; reason: string }[];
+  definitions: { workflow_key?: string; version?: number | string; published?: boolean; [k: string]: unknown }[];
+  definition_count: number;
+  /** Definitions with no published version — the ones that run nowhere yet. */
+  unpublished: { workflow_key?: string; version?: number | string; [k: string]: unknown }[];
 }
 
 export interface WorkflowRunSummary {
@@ -2569,8 +2670,12 @@ export interface WorkflowRunSummary {
 }
 
 export interface WorkflowRunList {
-  runs: WorkflowRunSummary[];
-  upstream_available: { workflow: boolean; trace: boolean };
+  /* DRY RUNS AND LIVE RUNS ARE SEPARATE LISTS, never merged: a dry run that
+     reads as live is how a rehearsal gets mistaken for a result. */
+  dry_runs: { run_id?: string; workflow_key?: string; status?: string; started_at?: string; [k: string]: unknown }[];
+  dry_run_count: number;
+  live_runs: { run_id?: string; workflow_key?: string; status?: string; started_at?: string; [k: string]: unknown }[];
+  upstream_available: { workflow: boolean };
   field_gaps: { field: string; reason: string }[];
 }
 
@@ -2602,11 +2707,22 @@ export interface IncidentRow {
 }
 
 export interface IncidentList {
-  incidents: IncidentRow[];
-  /** A recurring type escalates to leadership without anybody noticing it. */
-  systemic_patterns: { type: string; occurrences: number; escalated: boolean; detail: string }[];
-  on_call: { incident_type: string; role: string; person: string | null }[];
-  upstream_available: { incident: boolean; sla: boolean };
+  /* LOCAL FAILURE EVENTS merged with whatever sdk-incident returns. The local
+     columns are the ones below; upstream items carry the platform's own shape,
+     so everything past `incident_id` is optional rather than assumed. */
+  incidents: {
+    incident_id: string;
+    kind?: string | null;
+    source_ref?: string | null;
+    detected_at?: string | null;
+    owner_role?: string | null;
+    fallback_taken?: string | null;
+    retry_count?: number | null;
+    resolved_at?: string | null;
+  }[];
+  local_count: number;
+  upstream_count: number;
+  upstream_available: { incident: boolean };
   field_gaps: { field: string; reason: string }[];
 }
 
@@ -2631,12 +2747,10 @@ export interface CertificationRecord {
 }
 
 export interface GoLiveStatus {
-  gates: { key: string; label: string; passed: boolean | null; detail: string }[];
-  signatures: { role: string; name: string | null; signed_at: string | null }[];
-  /** True only with all twelve gates and all five signatures. */
   ready: boolean;
-  blocked_reason: string | null;
-  audit_ref: string | null;
-  immutable: boolean;
-  upstream_available: { approval: boolean; audit: boolean };
+  checks: { key: string; detail: string; passed: boolean }[];
+  /** The checks standing between here and ready, named rather than counted. */
+  blocking: string[];
+  evaluated_at: string;
+  basis: string;
 }

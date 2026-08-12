@@ -1,8 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api, ApiError, type LeadershipDashboard as Data } from '../../services/api';
-import { DataTable, type Column } from '../../design-system/data/DataTable';
-import { toneClass } from '../../design-system/tokens';
 
 /**
  * Leadership Operational Dashboard (SOP §05).
@@ -25,21 +22,9 @@ import { toneClass } from '../../design-system/tokens';
  */
 
 /** The nine signals, so the screen shows WHAT it watches even when it cannot read them. */
-const SIGNALS = [
-  { key: 'leads_waiting', label: 'Leads waiting', drill: '/app/leads' },
-  { key: 'oldest_wait', label: 'Oldest wait', drill: '/app/leads' },
-  { key: 'sla_at_risk', label: 'SLA at risk', drill: '/app/sla' },
-  { key: 'sla_breached', label: 'SLA breached', drill: '/app/sla' },
-  { key: 'unowned_records', label: 'Unowned records', drill: '/app/leads' },
-  { key: 'missing_next', label: 'Missing NEXT', drill: '/app/pipeline' },
-  { key: 'failed_messages', label: 'Failed messages', drill: '/app/inbox' },
-  { key: 'purchases_awaiting_onboarding', label: 'Purchases awaiting onboarding', drill: '/app/handoffs' },
-  { key: 'stale_opportunities', label: 'Stale opportunities', drill: '/app/pipeline' },
-];
 
 export default function LeadershipDashboard() {
   const [data, setData] = useState<Data | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,35 +38,11 @@ export default function LeadershipDashboard() {
         setData(null);
         setError(caught instanceof ApiError ? caught.message : 'The dashboard could not be read.');
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
       }
     })();
     return () => controller.abort();
   }, []);
 
-  const columns: Column<NonNullable<Data['success_test']>[number]>[] = [
-    { key: 'record', header: 'Record', cell: (r) => r.record_id, width: '16%' },
-    { key: 'owner', header: 'Who owns this lead?', cell: (r) => r.owner ?? 'Nobody', width: '16%' },
-    {
-      key: 'last',
-      header: 'What happened last?',
-      cell: (r) => r.last_activity ?? 'Nothing recorded',
-      width: '20%',
-    },
-    {
-      key: 'next',
-      header: 'What happens next?',
-      cell: (r) => r.next_action ?? 'No NEXT action',
-      width: '20%',
-    },
-    { key: 'due', header: 'When is it due?', cell: (r) => r.due_at ?? 'No date', width: '12%' },
-    {
-      key: 'blocker',
-      header: 'What is blocking the sale?',
-      cell: (r) => r.blocker ?? 'Nothing recorded',
-      width: '16%',
-    },
-  ];
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -99,57 +60,97 @@ export default function LeadershipDashboard() {
         </p>
       )}
 
-      {/* ---------------------------------------------------- nine tiles */}
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {SIGNALS.map((signal) => {
-          const live = data?.signals?.find((s) => s.key === signal.key);
-          return (
-            <Link
-              key={signal.key}
-              to={live?.drill_to ?? signal.drill}
-              className="lf-card p-4"
-            >
-              <p className="text-xs text-muted">{live?.label ?? signal.label}</p>
-              <p
-                className={`mt-1 text-3xl font-bold ${
-                  live?.role ? toneClass(live.role) : 'text-text'
-                }`}
-              >
-                {/* Never a false zero. See the module comment. */}
-                {live?.value === null || live?.value === undefined ? '--' : live.value}
-              </p>
-              <p className="mt-1 text-[11px] text-soft">
-                {live?.detail ?? 'Not read - this is not a claim that the figure is zero.'}
-              </p>
-            </Link>
-          );
-        })}
+      {/* ------------------------------------------- what the server returns */}
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="lf-card p-4">
+          <p className="text-xs text-muted">Unowned</p>
+          <p className={`mt-1 text-3xl font-bold ${(data?.pipeline_health?.unowned ?? 0) > 0 ? 'text-red' : 'text-text'}`}>
+            {data ? data.pipeline_health.unowned : '--'}
+          </p>
+          <p className="mt-1 text-[11px] text-soft">
+            Target {data ? data.hard_targets.unowned : '--'}. Every one is a lead nobody is answering.
+          </p>
+        </div>
+        <div className="lf-card p-4">
+          <p className="text-xs text-muted">Active without a NEXT action</p>
+          <p className={`mt-1 text-3xl font-bold ${(data?.pipeline_health?.active_without_next ?? 0) > 0 ? 'text-red' : 'text-text'}`}>
+            {data ? data.pipeline_health.active_without_next : '--'}
+          </p>
+          <p className="mt-1 text-[11px] text-soft">
+            Target {data ? data.hard_targets.active_without_next : '--'}.
+          </p>
+        </div>
+        <div className="lf-card p-4">
+          <p className="text-xs text-muted">Open escalations</p>
+          <p className="mt-1 text-3xl font-bold text-text">{data ? data.open_escalations : '--'}</p>
+        </div>
+        <div className="lf-card p-4">
+          <p className="text-xs text-muted">Onboarding attainment</p>
+          <p className="mt-1 text-3xl font-bold text-text">
+            {data ? `${Math.round(data.onboarding_attainment.attainment * 100)}%` : '--'}
+          </p>
+          <p className="mt-1 text-[11px] text-soft">
+            {data
+              ? `${data.onboarding_attainment.within_one_business_day} of ${data.onboarding_attainment.paid} paid within one business day`
+              : 'Not read — this is not a claim that the figure is zero.'}
+          </p>
+        </div>
       </div>
 
-      {/* --------------------------------------- the five success questions */}
-      <section className="lf-panel mt-6 p-5" aria-label="Success test">
-        <h2 className="lf-eyebrow">The five questions, per record</h2>
-        <p className="mb-3 mt-1 text-xs text-soft">
-          A record that cannot answer all five is not being worked, whatever its pipeline stage
-          says.
-        </p>
+      {/* ------------------------------------------------ aging by stage */}
+      <section className="lf-panel mt-6 p-5" aria-label="Stage aging">
+        <h2 className="lf-eyebrow">Aging by stage</h2>
+        <ul className="mt-3 space-y-1">
+          {(data?.pipeline_health?.aging ?? []).map((row) => (
+            <li key={row.stage} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+              <span className="text-text">{row.stage}</span>
+              <span className="text-soft">
+                {row.count} open · oldest {row.oldest_days}d
+              </span>
+            </li>
+          ))}
+          {(data?.pipeline_health?.aging ?? []).length === 0 && (
+            <li className="text-sm text-muted">No open stages.</li>
+          )}
+        </ul>
+      </section>
 
-        <DataTable
-          rows={data?.success_test ?? []}
-          columns={columns}
-          rowKey={(r) => r.record_id}
-          loading={loading}
-          density="dense"
-          height={420}
-          caption="Success test per record"
-          error={error ? <span>{error}</span> : undefined}
-          empty={<span>No records are returned for the success test.</span>}
-        />
+      {/* ----------------------------------------------- funnel by source */}
+      <section className="lf-panel mt-4 p-5" aria-label="Funnel by source">
+        <h2 className="lf-eyebrow">Funnel by source</h2>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-soft">
+                <th className="py-1.5 pr-3">Source</th>
+                <th className="py-1.5 pr-3">Leads</th>
+                <th className="py-1.5 pr-3">Contact</th>
+                <th className="py-1.5 pr-3">Booking</th>
+                <th className="py-1.5 pr-3">Show</th>
+                <th className="py-1.5">Win</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data?.sources ?? []).map((row) => (
+                <tr key={row.source} className="border-t border-line">
+                  <td className="py-1.5 pr-3 text-text">{row.source}</td>
+                  <td className="py-1.5 pr-3 text-soft">{row.leads}</td>
+                  <td className="py-1.5 pr-3 text-soft">{Math.round(row.contact_rate * 100)}%</td>
+                  <td className="py-1.5 pr-3 text-soft">{Math.round(row.booking_rate * 100)}%</td>
+                  <td className="py-1.5 pr-3 text-soft">{Math.round(row.show_rate * 100)}%</td>
+                  <td className="py-1.5 text-soft">{Math.round(row.win_rate * 100)}%</td>
+                </tr>
+              ))}
+              {(data?.sources ?? []).length === 0 && (
+                <tr><td colSpan={6} className="py-2 text-muted">No source data in this window.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <p className="mt-4 text-xs text-soft">
-        Figures reconcile with the registered KPI definitions
-        {data?.kpi_registry_version ? ` (registry ${data.kpi_registry_version})` : ''}. Every
+        Figures reconcile with the registered KPI definitions. Every
         dashboard in the product reads the same registry, so two screens cannot quote different
         numbers for the same measure.
       </p>

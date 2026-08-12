@@ -132,9 +132,12 @@ export default function RoutingConfiguration() {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="lf-eyebrow">Version</h2>
           <p className="text-sm text-muted">
+            {/* The endpoint returns the rule set and who owns the decision, not
+                a version or a draft/published status — those live in
+                sdk-assignment, which is unreachable. */}
             {config
-              ? `Version ${config.version ?? '--'} · ${config.status ?? 'unknown status'}`
-              : 'Version not read'}
+              ? `${config.rule_count} rule${config.rule_count === 1 ? '' : 's'} · decided by ${config.decision_owner}`
+              : 'Configuration not read'}
           </p>
         </div>
         <p className="mt-2 text-xs text-soft">
@@ -186,12 +189,14 @@ export default function RoutingConfiguration() {
           </p>
           <ul className="mt-3 space-y-2">
             {SPECIALTY_DIMENSIONS.map((dimension) => {
-              const configured = config?.specialty_matchers?.find((m) => m.dimension === dimension);
+              /* Matchers are sdk-assignment's, and that SDK exposes no
+                 /policies route — so their state is genuinely unknown here
+                 rather than disabled. Saying "Disabled" would be a claim. */
               return (
                 <li key={dimension} className="flex items-baseline justify-between gap-3 text-sm">
                   <span className="text-text">{dimension}</span>
                   <span className="text-xs text-soft">
-                    {configured ? (configured.enabled ? 'Enabled' : 'Disabled') : 'Not read'}
+                    {config?.upstream_available?.assignment ? 'Not reported' : 'Unknown — sdk-assignment unreachable'}
                   </span>
                 </li>
               );

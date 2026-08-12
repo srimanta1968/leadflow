@@ -74,13 +74,6 @@ const STATIONS = [
 ];
 
 /** The five signatures the go-live record requires. */
-const SIGNATURES = [
-  'Executive Sponsor',
-  'VP Sales or Sales Manager',
-  'RevOps',
-  'Legal or Compliance',
-  'Client Success',
-];
 
 interface CorrectiveAction {
   text: string;
@@ -299,39 +292,27 @@ export default function Governance() {
       {/* ---------------------------------------------------- go-live */}
       <h2 className="mt-8 text-lg font-semibold text-text">Go-live governance record</h2>
       <section className="lf-panel mt-4 p-5" aria-label="Go live">
-        <h3 className="lf-eyebrow">Gates</h3>
+        <h3 className="lf-eyebrow">Checks</h3>
+        {/* THE SERVER'S OWN CHECK LIST, not a fixed grid of twelve. The endpoint
+            returns whichever checks it evaluated; rendering exactly twelve slots
+            invented four that were never assessed and hid any thirteenth. */}
         <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 12 }, (_, index) => {
-            const live = goLive?.gates?.[index];
-            return (
-              <li key={index} className="lf-card p-3">
-                <p className="text-sm text-text">{live?.label ?? `Gate ${index + 1}`}</p>
-                <p
-                  className={`mt-0.5 text-xs ${
-                    live?.passed === true ? 'text-green' : live?.passed === false ? 'text-red' : 'text-soft'
-                  }`}
-                >
-                  {live?.passed === true ? 'Passed' : live?.passed === false ? 'Failed' : 'Not assessed'}
-                </p>
-              </li>
-            );
-          })}
+          {(goLive?.checks ?? []).map((check) => (
+            <li key={check.key} className="lf-card p-3">
+              <p className="text-sm text-text">{check.key}</p>
+              <p className={`mt-0.5 text-xs ${check.passed ? 'text-green' : 'text-red'}`}>
+                {check.passed ? 'Passed' : 'Failed'}
+              </p>
+              <p className="mt-0.5 text-[11px] text-soft">{check.detail}</p>
+            </li>
+          ))}
+          {(goLive?.checks ?? []).length === 0 && (
+            <li className="text-sm text-muted">The governance record could not be read.</li>
+          )}
         </ul>
 
-        <h3 className="lf-eyebrow mt-5">Signatures</h3>
-        <ul className="mt-3 space-y-2">
-          {SIGNATURES.map((role) => {
-            const live = goLive?.signatures?.find((s) => s.role === role);
-            return (
-              <li key={role} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-                <span className="text-text">{role}</span>
-                <span className={live?.signed_at ? 'text-green' : 'text-soft'}>
-                  {live?.signed_at ? `${live.name ?? 'signed'} · ${live.signed_at}` : 'Not signed'}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+        {/* Signatures are not part of this response. Claiming "Not signed" for
+            five named roles would assert something the server never said. */}
 
         <p
           className={`mt-4 rounded border px-3 py-2 text-sm ${
@@ -339,9 +320,15 @@ export default function Governance() {
           }`}
         >
           {goLive?.ready
-            ? 'All twelve gates and all five signatures are recorded. Go-live is approved.'
-            : `Not ready for go-live. ${goLive?.blocked_reason ?? 'The governance record could not be read.'}`}
+            ? `Every check passed. Go-live is approved. Basis: ${goLive.basis}`
+            : (goLive?.blocking ?? []).length > 0
+              ? `Not ready for go-live. Blocking: ${goLive?.blocking.join('; ')}`
+              : 'Not ready for go-live. The governance record could not be read.'}
         </p>
+
+        {goLive?.evaluated_at && (
+          <p className="mt-1 text-xs text-soft">Evaluated {goLive.evaluated_at}.</p>
+        )}
 
         <p className="mt-2 text-xs text-soft">
           The record is written to the audit chain and cannot be edited afterwards. A governance

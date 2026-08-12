@@ -187,59 +187,65 @@ export default function WorkflowRuns() {
         <h2 className="lf-eyebrow">Run explorer</h2>
 
         <ul className="mt-3 space-y-2">
-          {(data?.runs ?? []).map((run) => (
-            <li key={run.run_id} className="lf-card p-3">
+          {/* DRY AND LIVE ARE SEPARATE LISTS on the server and stay separate here: a
+     dry run rendered beside a live one is how a rehearsal is mistaken for a
+     result. Dry runs are listed first and labelled. */}
+          {([
+            ...(data?.dry_runs ?? []).map((r) => ({ ...r, __dry: true })),
+            ...(data?.live_runs ?? []).map((r) => ({ ...r, __dry: false })),
+          ] as ({ __dry: boolean } & Record<string, unknown>)[]).map((run) => (
+            <li key={String(String(run.run_id ?? ""))} className="lf-card p-3">
               <button
                 type="button"
-                onClick={() => setExpanded(expanded === run.run_id ? null : run.run_id)}
+                onClick={() => setExpanded(expanded === String(String(run.run_id ?? "")) ? null : String(String(run.run_id ?? "")))}
                 className="w-full text-left"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-sm text-text">
-                    {run.definition ?? 'Unknown definition'} v{run.version ?? '--'}
+                    {String(run.definition ?? "") ?? 'Unknown definition'} v{String(run.version ?? "") ?? '--'}
                   </span>
-                  <span className="text-xs text-muted">{run.outcome ?? 'in flight'}</span>
+                  <span className="text-xs text-muted">{String(run.outcome ?? "") ?? 'in flight'}</span>
                 </div>
                 <p className="mt-0.5 text-[11px] text-soft">
-                  {run.subject ?? 'no subject'} · started {run.started_at ?? '--'} ·{' '}
+                  {String(run.subject ?? "") ?? 'no subject'} · started {String(run.started_at ?? "") ?? '--'} ·{' '}
                   {run.elapsed_ms === null ? 'elapsed unknown' : `${run.elapsed_ms}ms`}
                 </p>
               </button>
 
-              {expanded === run.run_id && (
+              {expanded === String(run.run_id ?? "") && (
                 <div className="mt-3 border-t border-line pt-3">
                   <h3 className="lf-label">Steps</h3>
                   <ol className="mt-1 space-y-1">
-                    {run.steps.map((step, index) => (
-                      <li key={`${step.name}:${index}`} className="text-xs">
+                    {((run.steps ?? []) as Record<string, unknown>[]).map((step: Record<string, unknown>, index: number) => (
+                      <li key={`${String(step.name)}:${index}`} className="text-xs">
                         <span className="text-text">
-                          {step.name} — {step.state}
+                          {String(step.name ?? 'step')} — {String(step.state ?? 'unknown')}
                         </span>
                         <span className="text-soft">
-                          {step.input_summary ? ` · in: ${step.input_summary}` : ''}
-                          {step.output_summary ? ` · out: ${step.output_summary}` : ''}
-                          {step.elapsed_ms !== null ? ` · ${step.elapsed_ms}ms` : ''}
+                          {step.input_summary ? ` · in: ${String(step.input_summary)}` : ''}
+                          {step.output_summary ? ` · out: ${String(step.output_summary)}` : ''}
+                          {step.elapsed_ms != null ? ` · ${String(step.elapsed_ms)}ms` : ''}
                         </span>
-                        {step.error && <span className="text-red"> · {step.error}</span>}
+                        {step.error ? <span className="text-red"> · {String(step.error)}</span> : null}
                       </li>
                     ))}
                   </ol>
 
                   <h3 className="lf-label mt-3">Compensation history</h3>
                   <ul className="mt-1 space-y-1">
-                    {run.compensation_history.map((entry, index) => (
-                      <li key={`${entry.step}:${index}`} className="text-xs text-muted">
-                        {entry.step} compensated {entry.compensated_at} - {entry.reason}
+                    {((run.compensation_history ?? []) as Record<string, unknown>[]).map((entry: Record<string, unknown>, index: number) => (
+                      <li key={`${String(entry.step)}:${index}`} className="text-xs text-muted">
+                        {String(entry.step ?? 'step')} compensated {String(entry.compensated_at ?? '')} - {String(entry.reason ?? '')}
                       </li>
                     ))}
-                    {run.compensation_history.length === 0 && (
+                    {((run.compensation_history ?? []) as Record<string, unknown>[]).length === 0 && (
                       <li className="text-xs text-soft">Nothing was compensated on this run.</li>
                     )}
                   </ul>
 
                   <h3 className="lf-label mt-3">Signals received</h3>
                   <p className="mt-1 text-xs text-muted">
-                    {run.signals_received.join(', ') || 'None'}
+                    {((run.signals_received ?? []) as unknown[]).map(String).join(', ') || 'None'}
                   </p>
 
                   <button type="button" name="replay_run" className="lf-btn-secondary mt-3 px-3 py-1.5">
@@ -250,7 +256,7 @@ export default function WorkflowRuns() {
             </li>
           ))}
 
-          {!loading && (data?.runs ?? []).length === 0 && (
+          {!loading && (data?.dry_runs ?? []).length + (data?.live_runs ?? []).length === 0 && (
             <li className="text-sm text-muted">
               {data
                 ? 'No runs match.'

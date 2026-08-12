@@ -24,12 +24,26 @@ import { api, ApiError, type RoleDashboard } from '../../services/api';
  * access rule in the least trustworthy place available.
  */
 
+/**
+ * THE KEYS ARE THE SERVER'S, not friendly slugs.
+ *
+ * These were `manager`, `rep`, `marketing`, `finance`, `cs` — and the endpoint
+ * accepts `leadership`, `sales_manager`, `sales_rep`, `client_success`,
+ * `revenue_operations`. Not one matched, so every tab 400'd with the server's
+ * own "an unknown role would render an empty dashboard that reads as nothing to
+ * do" message. It was right to refuse; the client was asking for roles that do
+ * not exist.
+ *
+ * Marketing and Finance are gone rather than renamed: there is no dashboard
+ * behind either, and a tab that cannot be answered is worse than an absent one.
+ * Leadership and Revenue Operations replace them because the server has both.
+ */
 const ROLES = [
-  { key: 'manager', label: 'Manager' },
-  { key: 'rep', label: 'Rep' },
-  { key: 'marketing', label: 'Marketing' },
-  { key: 'finance', label: 'Finance' },
-  { key: 'cs', label: 'Customer Success' },
+  { key: 'leadership', label: 'Leadership' },
+  { key: 'sales_manager', label: 'Manager' },
+  { key: 'sales_rep', label: 'Rep' },
+  { key: 'revenue_operations', label: 'Revenue Operations' },
+  { key: 'client_success', label: 'Customer Success' },
 ];
 
 export default function RoleDashboards() {

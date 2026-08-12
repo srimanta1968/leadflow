@@ -1,5 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { NavLink, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError, type ContactSummary } from '../../services/api';
 import { TrustStateRail } from '../../design-system/evidence/TrustStateRail';
 import type { RailState, TrustRailNodeKey } from '../../design-system/evidence/assertions';
@@ -9,6 +9,7 @@ import {
   type ContactRecord,
 } from '../../features/contacts/ContactRecordContext';
 import { CONTACT_TABS, DEFAULT_CONTACT_TAB } from '../../features/contacts/contactTabs';
+import { NextActionModal } from '../../features/contacts/NextActionModal';
 
 /**
  * Contact 360 — the full-screen workspace (#contact360).
@@ -93,6 +94,8 @@ export default function Contact360() {
   const [summary, setSummary] = useState<ContactSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [nextOpen, setNextOpen] = useState(false);
+  const navigate = useNavigate();
 
   const permissions = usePermissions(
     HEADER_ACTIONS.map((a) => ({ action: a.action, resourceType: 'contact', resourceId: contactId })),
@@ -204,6 +207,14 @@ export default function Contact360() {
                         ? undefined
                         : `${action.label} requires ${action.action}`
                     }
+                    onClick={() => {
+                      /* Each goes where the work actually happens. Consent and
+                         Enrich have their own governed surfaces already; only
+                         the NEXT action is written from here. */
+                      if (action.key === 'consent') navigate(`/app/contacts/${contactId}/consent`);
+                      else if (action.key === 'enrich') navigate('/app/enrichment');
+                      else setNextOpen(true);
+                    }}
                     className="lf-btn-secondary px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {action.label}
@@ -278,6 +289,15 @@ export default function Contact360() {
           </Suspense>
         </div>
       </ContactRecordProvider>
+      <NextActionModal
+        open={nextOpen}
+        subjectRef={contactId}
+        onClose={() => setNextOpen(false)}
+        onCreated={() => {
+          setNextOpen(false);
+          void load();
+        }}
+      />
     </div>
   );
 }

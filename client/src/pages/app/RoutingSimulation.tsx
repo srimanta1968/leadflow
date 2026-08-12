@@ -224,31 +224,37 @@ export default function RoutingSimulation() {
 
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div>
-            <h3 className="lf-label">Distribution skew</h3>
+            <h3 className="lf-label">Distribution</h3>
             <ul className="mt-2 space-y-2">
-              {(audit?.skew ?? []).map((entry, index) => (
-                <li key={`${entry.rep}:${index}`} className="text-sm">
-                  <p className="text-text">
-                    {entry.rep} · {entry.band}
-                  </p>
+              {(audit?.distribution ?? []).map((entry, index) => (
+                <li key={`${entry.owner_user_id ?? index}`} className="text-sm">
+                  <p className="text-text">{entry.owner ?? 'Unassigned'}</p>
                   <p className="text-xs text-soft">
-                    {Math.round(entry.share * 100)}% against an expected{' '}
-                    {Math.round(entry.expected_share * 100)}% - {entry.verdict}
+                    {entry.assigned} assigned · {entry.worked} worked ·{' '}
+                    {Math.round(entry.share * 100)}% of the window
                   </p>
                 </li>
               ))}
-              {(audit?.skew ?? []).length === 0 && (
-                <li className="text-sm text-muted">No skew reported.</li>
+              {(audit?.distribution ?? []).length === 0 && (
+                <li className="text-sm text-muted">
+                  No assignments in the window, so no distribution can be reported.
+                </li>
               )}
             </ul>
+            {audit && (
+              <p className="mt-2 text-xs text-soft">
+                Mean {audit.mean_per_rep} per rep · spread {audit.spread} over{' '}
+                {audit.window_days} days.
+              </p>
+            )}
           </div>
 
           <div>
             <h3 className="lf-label">Starved reps</h3>
             <ul className="mt-2 space-y-1">
-              {(audit?.starved ?? []).map((rep) => (
-                <li key={rep} className="text-sm text-gold">
-                  {rep}
+              {(audit?.starved ?? []).map((rep, index) => (
+                <li key={`${rep}:${index}`} className="text-sm text-gold">
+                  {rep ?? 'Unassigned'}
                 </li>
               ))}
               {(audit?.starved ?? []).length === 0 && (
@@ -256,17 +262,22 @@ export default function RoutingSimulation() {
               )}
             </ul>
 
-            <h3 className="lf-label mt-4">Rotation health</h3>
-            <p className="mt-1 text-sm text-text">
-              {audit?.rotation_healthy === null || audit?.rotation_healthy === undefined
-                ? 'Not read'
-                : audit.rotation_healthy
-                  ? 'Healthy'
-                  : 'Unhealthy'}
-            </p>
-            <p className="mt-0.5 text-xs text-soft">{audit?.rotation_note ?? ''}</p>
+            {/* The server's own caveat, quoted rather than paraphrased: a rep
+                with zero assignments has no rows to group by and therefore does
+                not appear here at all. */}
+            {audit?.note && <p className="mt-3 text-xs text-soft">{audit.note}</p>}
           </div>
         </div>
+      </section>
+
+      {/* ------------------------------------------------ fair share audit */}
+      <section className="lf-panel mt-4 p-5" aria-label="Fair share audit">
+        <h2 className="lf-eyebrow">Fair share audit</h2>
+        <p className="mt-1 text-xs text-soft">
+          Skew is noticed because the rep complains. Starvation is not - a rep with no leads has
+          nothing to complain about and looks like a low performer at review time.
+        </p>
+
       </section>
 
       <p className="mt-4 text-xs text-soft">
