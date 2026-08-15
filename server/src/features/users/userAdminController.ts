@@ -372,7 +372,14 @@ export class UserAdminController {
                 ? `An invitation has been sent to ${created.email}. It expires in 7 days.`
                 : delivery.status === 'skipped'
                   ? 'Email is not configured on this deployment, so no invitation was sent. This account cannot be signed in to until one is.'
-                  : 'The invitation could not be sent. This account cannot be signed in to until it is — send another once email is working.',
+                  : /* THE ADDRESS, NOT THE MAIL SYSTEM. An administrator who
+                       mistypes a colleague's domain has created an account
+                       nobody can ever enter, and the only useful thing to tell
+                       them is which half is wrong. */
+                    delivery.status === 'blocked'
+                    ? `No invitation was sent: ${delivery.verification?.reason ?? 'that address did not pass the deliverability check'} Correct the address and invite again — this account cannot be signed in to until an invitation arrives.`
+                    : 'The invitation could not be sent. This account cannot be signed in to until it is — send another once email is working.',
+            address_check: delivery.verification ?? null,
           },
         },
       });

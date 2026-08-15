@@ -47,7 +47,17 @@ export class AuthController {
               ? 'A confirmation link has been sent to that address.'
               : delivery.status === 'skipped'
                 ? 'Email is not configured on this deployment, so no confirmation was sent.'
-                : 'The confirmation email could not be sent. You can request another.',
+                : /* BLOCKED CARRIES ITS REASON THROUGH. This is the one failure
+                     the person reading it can fix themselves — "there is no
+                     domain called gmial.com" tells them to correct the address,
+                     where "could not be sent" tells them to wait for something
+                     that will never happen. */
+                  delivery.status === 'blocked'
+                  ? `That address cannot receive email: ${delivery.verification?.reason ?? 'it did not pass the deliverability check'}`
+                  : 'The confirmation email could not be sent. You can request another.',
+          /* The verdict itself, for a client that wants to offer "did you mean"
+             rather than re-render the sentence. */
+          address_check: delivery.verification ?? null,
         },
       },
     });

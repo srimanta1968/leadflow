@@ -1,0 +1,167 @@
+{
+  "featureId": "019148aa-61a7-4caa-a9ff-83369ddb6681",
+  "epicId": "6691a598-597d-42a8-82fc-ddec2442b572",
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 10,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login"
+  ],
+  "name": "POST /api/leadflow/channels/email/verify - does this address exist, before anything is sent to it?",
+  "description": "The pre-send deliverability check, exposed so a screen can ask it while somebody is still typing. It runs the SAME code as the two send paths - platform/email/transport.ts for account lifecycle and platform/notify.ts for everything point-to-point both call checkBeforeSending() - so a form that shows 'we can reach this person' and a send that goes ahead cannot disagree.\n\nFOUR STAGES, EACH ABLE TO END IT: syntax (a parser, not a regex); policy (reserved, placeholder, disposable, role, likely typo); MX (does the domain publish a mail exchanger, or resolve at all); and optionally an SMTP RCPT probe against that exchanger. The probe is OFF by default because outbound port 25 is blocked on EC2 and probing costs sender reputation to buy a guess that catch-all domains invalidate anyway - so `checks.mailbox` is normally `skipped` and the product relies on the MX stage, which is what catches the mistyped and dead domains that actually produce bounces.\n\nA BAD ADDRESS IS A 200, NOT A 400. The request was well-formed and the answer is the verdict; returning an error status would conflate 'you asked wrongly' with 'that address cannot receive mail'. 400 is reserved for a body with neither `email` nor `emails`, or a list over 100.\n\nFOUR VERDICTS, NOT A BOOLEAN: deliverable, undeliverable, risky, unknown. `unknown` is a real state - our resolver being unreachable says nothing about somebody else's address - and it never blocks a send, because a DNS blip must not stop a password reset. `allowed` reports what the send gate WOULD do under this deployment's policy; `verdict` reports what is true. A caller that wants to warn rather than refuse has both.\n\nRESERVED DOMAINS ARE DETERMINISTIC and are what the positive cases assert on: example.com is reserved by RFC 2606 and answers with no DNS query at all, so the test does not depend on a network the test runner may not have.\n\nQA: depends on register and login.",
+  "endpoint": "/api/leadflow/channels/email/verify",
+  "method": "POST",
+  "expectedStatus": 200,
+  "fieldEnums": {
+    "data.results.verdict": [
+      "deliverable",
+      "undeliverable",
+      "risky",
+      "unknown"
+    ],
+    "data.results.checks.syntax": [
+      "pass",
+      "fail",
+      "unknown",
+      "skipped"
+    ],
+    "data.policy.mode": [
+      "off",
+      "warn",
+      "enforce"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "A reserved documentation domain is reported undeliverable and would be blocked",
+      "payload": {
+        "email": "{{static:test@example.com}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "checked": 1,
+          "undeliverable": 1,
+          "would_block": 1
+        }
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "A malformed address is a verdict, not a request error",
+      "payload": {
+        "email": "{{static:not-an-email}}"
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "checked": 1,
+          "undeliverable": 1
+        }
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "A list is checked in one call and every address gets its own verdict",
+      "payload": {
+        "emails": [
+          "{{static:test@example.com}}",
+          "{{static:someone@example.invalid}}"
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "checked": 2,
+          "undeliverable": 2
+        }
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: a body with neither an address nor a list",
+      "payload": {},
+      "expectedStatus": 400,
+      "expectedResponse": {
+        "success": false,
+        "code": "VALIDATION_ERROR"
+      },
+      "testType": "negative",
+      "coversErrorCase": "400|VALIDATION_ERROR",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      }
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "payload": {
+        "email": "{{static:test@example.com}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "payload": {
+        "email": "{{static:test@example.com}}"
+      },
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "Supply 'email' with one address, or 'emails' with a list of them",
+      "when": "the body carries neither an `email` string nor an `emails` array of strings."
+    },
+    {
+      "status": 400,
+      "code": "VALIDATION_ERROR",
+      "message": "At most 100 addresses can be checked in one call",
+      "when": "more than 100 addresses are supplied. A cap rather than a silent truncation: returning 100 verdicts for a list of 500 would let the caller believe the other 400 passed."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

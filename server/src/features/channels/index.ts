@@ -1,5 +1,6 @@
 // @governance-tracked
 // Definition: tests/api_definitions/channels/email-health-get.json
+// Definition: tests/api_definitions/channels/email-verify-post.json
 // Definition: tests/api_definitions/channels/sms-eligibility-get.json
 // Definition: tests/api_definitions/channels/sms-eligibility-post.json
 // Definition: tests/api_definitions/channels/calls-dial-post.json

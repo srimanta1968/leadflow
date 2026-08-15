@@ -1,5 +1,6 @@
 import { config } from '../../config/env';
 import { dataService } from '../../services/DataService';
+import { checkBeforeSending } from './addressVerification';
 
 /**
  * Outbound email for ACCOUNT LIFECYCLE only.
@@ -30,13 +31,25 @@ import { dataService } from '../../services/DataService';
  * fill the ledger with errors nobody can act on and hide the real ones.
  */
 
-export type EmailStatus = 'sent' | 'failed' | 'skipped';
+export type EmailStatus = 'sent' | 'failed' | 'skipped' | 'blocked';
 
 export interface EmailResult {
   status: EmailStatus;
   provider: string;
   messageId: string | null;
   error: string | null;
+  /**
+   * What the pre-send check concluded about the recipient. Null only when the
+   * check did not run (which today means it threw, and it is written not to).
+   *
+   * CARRIED ON EVERY RESULT, not just refusals, because "we sent it and the
+   * address was already suspect" is the answer to a bounce three days later.
+   */
+  verification?: {
+    verdict: string;
+    code: string;
+    reason: string;
+  } | null;
 }
 
 export interface OutboundEmail {
@@ -67,11 +80,13 @@ async function record(mail: OutboundEmail, result: EmailResult): Promise<void> {
   try {
     await dataService.query(
       `INSERT INTO leadflow_email_delivery
-         (to_email, template_key, subject, provider, provider_message_id, status, error, user_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+         (to_email, template_key, subject, provider, provider_message_id, status, error, user_id,
+          verification_verdict, verification_code)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         mail.to, mail.templateKey, mail.subject, result.provider,
         result.messageId, result.status, result.error, mail.userId ?? null,
+        result.verification?.verdict ?? null, result.verification?.code ?? null,
       ],
     );
   } catch (error) {
@@ -96,12 +111,53 @@ async function record(mail: OutboundEmail, result: EmailResult): Promise<void> {
  *          becomes an outage of the product.
  */
 export async function sendEmail(mail: OutboundEmail): Promise<EmailResult> {
+  /*
+   * THE ADDRESS IS CHECKED BEFORE THE PROVIDER IS CALLED, and this is the
+   * chokepoint that makes "before sending" true for every account-lifecycle
+   * message rather than for whichever call sites remembered to ask.
+   *
+   * BLOCKED IS ITS OWN STATUS, not `failed`. Nothing failed: we decided not to
+   * send, we know exactly why, and an operator reading the ledger needs to see
+   * a refusal — which is fixable by correcting the address — rather than an
+   * error, which reads as a provider problem and is not.
+   *
+   * ONLY FACTS BLOCK. See sendDecision(): an unresolvable domain stops the
+   * send, a resolver that timed out does not, because a DNS blip must never
+   * stop a password reset.
+   */
+  const { verification, decision } = await checkBeforeSending(mail.to);
+  const verdict = {
+    verdict: verification.verdict,
+    code: verification.code,
+    reason: verification.reason,
+  };
+
+  if (!decision.allowed) {
+    const result: EmailResult = {
+      status: 'blocked',
+      provider: 'none',
+      messageId: null,
+      error: decision.reason,
+      verification: verdict,
+    };
+    console.warn(`[email] ${mail.templateKey} to ${mail.to} BLOCKED — ${verification.code}: ${decision.reason}`);
+    await record(mail, result);
+    return result;
+  }
+
+  if (verification.verdict === 'risky' || verification.verdict === 'unknown') {
+    /* SENT ANYWAY, AND SAID OUT LOUD. The line is what turns a bounce a week
+       later into a five-second diagnosis instead of an investigation. */
+    console.warn(`[email] ${mail.templateKey} to ${mail.to} — ${verification.code}: ${verification.reason} (sending anyway)`);
+  }
+
   if (!isEmailConfigured()) {
     const result: EmailResult = {
       status: 'skipped',
       provider: 'none',
       messageId: null,
       error: 'No email provider is configured (SENDGRID_API_KEY / EMAIL_FROM_ADDRESS)',
+      verification: verdict,
     };
     console.warn(`[email] ${mail.templateKey} to ${mail.to} SKIPPED — no provider configured`);
     await record(mail, result);
@@ -135,6 +191,7 @@ export async function sendEmail(mail: OutboundEmail): Promise<EmailResult> {
         // with no content at all.
         messageId: response.headers.get('x-message-id'),
         error: null,
+        verification: verdict,
       };
       await record(mail, result);
       return result;
@@ -149,6 +206,7 @@ export async function sendEmail(mail: OutboundEmail): Promise<EmailResult> {
       provider: 'sendgrid',
       messageId: null,
       error: `HTTP ${response.status}: ${body.slice(0, 400)}`,
+      verification: verdict,
     };
     console.error(`[email] ${mail.templateKey} to ${mail.to} FAILED — ${result.error}`);
     await record(mail, result);
@@ -157,6 +215,7 @@ export async function sendEmail(mail: OutboundEmail): Promise<EmailResult> {
     const detail = error instanceof Error ? error.message : String(error);
     const result: EmailResult = {
       status: 'failed', provider: 'sendgrid', messageId: null, error: detail,
+      verification: verdict,
     };
     console.error(`[email] ${mail.templateKey} to ${mail.to} FAILED — ${detail}`);
     await record(mail, result);
