@@ -1621,13 +1621,51 @@ export const api = {
   permissionMatrix: (signal?: AbortSignal) =>
     request<PermissionMatrixResponse>('/users/permission-matrix', { signal }),
 
-  /** Add a colleague to the register, pending. */
+  /**
+   * Add a colleague to the register, pending.
+   *
+   * `invitation` REPORTS WHETHER THE EMAIL WENT, and the screen must show it:
+   * an invited account has an unusable password and is inactive, so the link is
+   * the only way in, and an invitation that was blocked or failed leaves a
+   * person who cannot sign in and cannot ask for a reset either.
+   */
   inviteUser: (payload: {
     email: string;
     role: string;
     first_name?: string;
     last_name?: string;
-  }) => request<{ user: RegisterUser }>('/users/invite', { method: 'POST', body: payload }),
+  }) => request<{
+    user: RegisterUser;
+    invitation: {
+      sent: boolean;
+      status: 'sent' | 'failed' | 'skipped' | 'blocked';
+      detail: string;
+      /** Present when the send was gated on the address. Null when it was not. */
+      address_check: { verdict: string; code: string; reason: string } | null;
+    };
+  }>('/users/invite', { method: 'POST', body: payload }),
+
+  /**
+   * Ask whether an address can receive email, BEFORE anything is sent to it.
+   *
+   * The same check the send paths run, so a screen that says "we can reach this
+   * person" and a send that goes ahead cannot disagree. A bad address is a 200
+   * with a verdict, not an error — only a malformed REQUEST is a 400.
+   */
+  verifyEmailAddress: (email: string, options: { recheck?: boolean; signal?: AbortSignal } = {}) =>
+    request<EmailVerificationReport>('/leadflow/channels/email/verify', {
+      method: 'POST',
+      body: { email, recheck: options.recheck === true },
+      signal: options.signal,
+    }),
+
+  /** The same check over a list — for an import preview or a segment. Max 100. */
+  verifyEmailAddresses: (emails: string[], signal?: AbortSignal) =>
+    request<EmailVerificationReport>('/leadflow/channels/email/verify', {
+      method: 'POST',
+      body: { emails },
+      signal,
+    }),
 
   /** Change what a colleague may do. Governed and audited with both roles. */
   assignUserRole: (userId: string, role: string) =>
@@ -1662,6 +1700,59 @@ export const api = {
       persona_note: string;
     }>(`/users/${encodeURIComponent(userId)}/deactivate`, { method: 'POST', body: { reason } }),
 };
+
+/* ------------------------------------------------ address deliverability */
+
+/**
+ * FOUR VERDICTS, NOT A BOOLEAN, and a screen should treat them differently:
+ * `undeliverable` is a refusal to show beside the field, `risky` is a warning
+ * that must not stop anybody, and `unknown` means the check could not be run —
+ * which is not the user's problem and should not be presented as one.
+ */
+export type AddressVerdict = 'deliverable' | 'undeliverable' | 'risky' | 'unknown';
+
+export interface AddressVerification {
+  input: string;
+  address: string;
+  domain: string;
+  verdict: AddressVerdict;
+  code: string;
+  /** One sentence, already written for the person who typed the address. */
+  reason: string;
+  checks: {
+    syntax: 'pass' | 'fail' | 'unknown' | 'skipped';
+    domain: 'pass' | 'fail' | 'unknown' | 'skipped';
+    mx: 'pass' | 'fail' | 'unknown' | 'skipped';
+    mailbox: 'pass' | 'fail' | 'unknown' | 'skipped';
+  };
+  mail_exchangers: string[];
+  is_role_address: boolean;
+  is_disposable: boolean;
+  is_placeholder: boolean;
+  /** OFFER IT, never apply it — the correction may be wrong. */
+  did_you_mean: string | null;
+  checked_at: string;
+  cached: boolean;
+  /** What the send gate would do under this deployment's policy. */
+  allowed: boolean;
+  blocked_because: string | null;
+}
+
+export interface EmailVerificationReport {
+  results: AddressVerification[];
+  checked: number;
+  deliverable: number;
+  undeliverable: number;
+  risky: number;
+  unknown: number;
+  would_block: number;
+  policy: {
+    mode: 'off' | 'warn' | 'enforce';
+    stages: Record<string, boolean>;
+    blocks: Record<string, boolean>;
+    mailbox_probe_note: string;
+  };
+}
 
 /* ------------------------------------------------------- the user register */
 

@@ -44,6 +44,21 @@ Feature: User administration and the permission matrix
   @ui_test
   @portal:leadflow
   @login:default
+  @scenario_id:257ac0f7-90a3-469e-9254-3c446f888765
+  Scenario: The invite form states that the address is checked before anything is sent
+    # The verdict itself is not asserted here: it arrives from
+    # POST /api/leadflow/channels/email/verify after a real DNS lookup, and a
+    # scenario that depended on a live resolver would fail for reasons that have
+    # nothing to do with the screen. tests/api_definitions/channels/email-verify-post.json
+    # covers the verdicts end to end against deterministic reserved domains.
+    When I navigate to "/app/admin/users"
+    Then I should see "The address is checked before anything is sent"
+    And I should see "refused here rather than bounced later"
+
+  @scenario_type:UI
+  @ui_test
+  @portal:leadflow
+  @login:default
   @scenario_id:6c4d98db-17e1-43e1-b339-5172929028bf
   Scenario: The screen states that a role change is written to the audit chain
     # AC5: every role change is audited with actor, subject, previous and new.

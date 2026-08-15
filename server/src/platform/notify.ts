@@ -1,5 +1,6 @@
 import { SdkGatewayClient } from './sdkGateway';
 import { config } from '../config/env';
+import { checkBeforeSending } from './email/addressVerification';
 
 /**
  * The one place LeadFlow talks to sdk-notification.
@@ -73,6 +74,28 @@ export async function notify(input: {
   let sent = 0;
   const failures: string[] = [];
   for (const [index, r] of input.recipients.entries()) {
+    /*
+     * THE SECOND CHOKEPOINT. platform/email/transport.ts gates the
+     * account-lifecycle sends; this gates everything point-to-point, which is
+     * every alert, digest, sequence step and meeting notice in the product.
+     * Between the two there is no path from LeadFlow to an email address that
+     * has not been checked first.
+     *
+     * ONLY EMAIL. A phone number is not an address and this says nothing about
+     * one — an SMS recipient goes straight through.
+     */
+    if (r.channel === 'email') {
+      // eslint-disable-next-line no-await-in-loop -- the loop is already serial.
+      const { verification, decision } = await checkBeforeSending(r.destination);
+      if (!decision.allowed) {
+        /* NOT ATTEMPTED, AND COUNTED AS A FAILURE. sdk-notification would take
+           this and try to deliver it: an undeliverable address becomes a bounce
+           against our sending domain, and the reputation cost lands on every
+           other message. Refusing here is the point of the check. */
+        failures.push(`${r.channel} to ${r.personId} was not sent: ${verification.reason}`);
+        continue;
+      }
+    }
     try {
       const result = await SdkGatewayClient.call({
         sdk: 'sdk-notification',

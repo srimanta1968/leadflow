@@ -7,6 +7,19 @@ export { isEmailConfigured, consume };
 export type { EmailResult, ConsumedToken };
 
 /**
+ * Address verification. Exported from here so no caller has to reach past the
+ * platform module into a file, and so the two send paths and the endpoint that
+ * reports to a screen are demonstrably asking the same question of the same
+ * code.
+ */
+export {
+  verifyAddress, verifyAddresses, sendDecision, checkBeforeSending, describeConfiguration,
+} from './addressVerification';
+export type {
+  AddressVerification, SendDecision, Verdict, VerificationCode, StageResult,
+} from './addressVerification';
+
+/**
  * The two account-lifecycle sends, as one call each.
  *
  * NEITHER THROWS. A provider outage must not fail the registration or the
@@ -75,6 +88,16 @@ export async function sendInvitationEmail(input: {
  * finds it is at start-up.
  */
 export function reportEmailReadiness(): void {
+  /* Said at boot because the checking policy is invisible otherwise: an
+     operator who has set EMAIL_ADDRESS_CHECK_MODE=off and forgotten will
+     otherwise discover it from a bounce report. */
+  const check = config.email.addressCheck;
+  console.log(
+    `[email] address checking is ${check.mode}` +
+      `; mailbox probing ${check.probe ? 'ON (needs outbound port 25)' : 'off — domains are checked, individual mailboxes are not'}` +
+      `${check.mode === 'enforce' ? `; refusing undeliverable${check.blockPlaceholder ? ', placeholder' : ''}${check.blockDisposable ? ', disposable' : ''}${check.blockRole ? ', role' : ''} addresses` : ''}`,
+  );
+
   if (isEmailConfigured()) {
     console.log(
       `[email] sendgrid configured, sending as ${config.email.fromName} <${config.email.fromAddress}>` +

@@ -26,6 +26,43 @@ export interface AppConfig {
     timeoutMs: number;
     /** When false, registration issues no token and does not gate on the address. */
     verificationRequired: boolean;
+    /**
+     * Pre-send address verification — platform/email/addressVerification.ts.
+     *
+     * Every knob here exists because the right answer differs by deployment,
+     * not because the default is uncertain: a demo box wants placeholders let
+     * through, production does not, and the SMTP probe is unusable on any
+     * network that blocks outbound port 25 (which is most of them, including
+     * the EC2 host this runs on).
+     */
+    addressCheck: {
+      /**
+       * 'enforce' refuses undeliverable addresses; 'warn' checks and records
+       * but sends anyway; 'off' does syntax only and no DNS at all.
+       */
+      mode: 'off' | 'warn' | 'enforce';
+      dnsTimeoutMs: number;
+      /** SMTP RCPT probing. Off unless a deployment has port 25 and wants it. */
+      probe: boolean;
+      probeTimeoutMs: number;
+      /** The sender used in the probe's MAIL FROM. Never receives anything. */
+      probeFrom: string;
+      /** The name given in EHLO. Should be a hostname the domain resolves. */
+      heloName: string;
+      blockPlaceholder: boolean;
+      blockDisposable: boolean;
+      blockRole: boolean;
+      /** Extra throwaway-inbox domains, on top of the built-in list. */
+      disposableDomains: ReadonlySet<string>;
+      cacheTtlMs: {
+        deliverable: number;
+        undeliverable: number;
+        risky: number;
+        unknown: number;
+        /** Per-domain MX answers, which change far less often than verdicts. */
+        mx: number;
+      };
+    };
   };
   db: {
     host: string;
@@ -181,6 +218,24 @@ export interface AppConfig {
   };
 }
 
+/**
+ * Read EMAIL_ADDRESS_CHECK_MODE, defaulting to 'enforce'.
+ *
+ * An unrecognised value falls back to the default and SAYS SO rather than
+ * silently disabling the check: `EMAIL_ADDRESS_CHECK_MODE=true` in a .env file
+ * is a plausible mistake, and quietly reading it as "off" would turn a typo
+ * into an unnoticed loss of protection.
+ */
+function parseCheckMode(raw: string | undefined): 'off' | 'warn' | 'enforce' {
+  const value = (raw || '').trim().toLowerCase();
+  if (value === '') return 'enforce';
+  if (value === 'off' || value === 'warn' || value === 'enforce') return value;
+  console.warn(
+    `[email] EMAIL_ADDRESS_CHECK_MODE="${raw}" is not one of off|warn|enforce — using enforce.`
+  );
+  return 'enforce';
+}
+
 export const config: AppConfig = {
   nodeEnv: process.env.NODE_ENV || 'development',
   // 3010, not 3000: the ProjexCloud dev stack owns 3000 and several neighbours on
@@ -204,6 +259,60 @@ export const config: AppConfig = {
        working — so this stays false until somebody sets it deliberately, and
        the send path warns when it is on with no provider behind it. */
     verificationRequired: process.env.EMAIL_VERIFICATION_REQUIRED === 'true',
+
+    addressCheck: {
+      /* ON BY DEFAULT, unlike verificationRequired above, and the difference is
+         which way each fails. Requiring verification with no provider locks
+         everybody out; checking an address costs one DNS query and, when the
+         resolver is unreachable, returns `unknown` and sends anyway. There is
+         no configuration in which having this on is worse than having it off,
+         so it does not wait to be switched on. */
+      mode: parseCheckMode(process.env.EMAIL_ADDRESS_CHECK_MODE),
+      dnsTimeoutMs: parseInt(process.env.EMAIL_DNS_TIMEOUT_MS || '5000', 10),
+      /* OFF. Outbound port 25 is blocked on EC2 unless AWS grants an exception,
+         and probing without it means every check burns its timeout to learn
+         nothing. See the note at probeMailbox(). */
+      probe: process.env.EMAIL_SMTP_PROBE === 'true',
+      probeTimeoutMs: parseInt(process.env.EMAIL_SMTP_PROBE_TIMEOUT_MS || '8000', 10),
+      /* A real address on our own domain. Some receivers reject the null sender
+         outright, and a probe from an address that does not exist is exactly
+         what a spam filter is built to notice. */
+      probeFrom:
+        process.env.EMAIL_SMTP_PROBE_FROM ||
+        process.env.EMAIL_FROM_ADDRESS ||
+        'postmaster@localhost',
+      heloName:
+        process.env.EMAIL_SMTP_HELO_NAME ||
+        (process.env.EMAIL_FROM_ADDRESS || '').split('@')[1] ||
+        'localhost',
+      /* The two defaults that differ from "report only": a placeholder and a
+         throwaway inbox are reachable, so no fact forces a refusal — but a
+         sequence sent to 400 of them in an import is a deliverability incident,
+         and that is the failure worth defaulting against. */
+      blockPlaceholder: process.env.EMAIL_BLOCK_PLACEHOLDER !== 'false',
+      blockDisposable: process.env.EMAIL_BLOCK_DISPOSABLE !== 'false',
+      /* Off: sales@ and info@ are the correct address for a great many B2B
+         conversations, and refusing them would refuse real business. */
+      blockRole: process.env.EMAIL_BLOCK_ROLE === 'true',
+      disposableDomains: new Set(
+        (process.env.EMAIL_DISPOSABLE_DOMAINS || '')
+          .split(',')
+          .map((d) => d.trim().toLowerCase())
+          .filter((d) => d !== '')
+      ),
+      cacheTtlMs: {
+        deliverable: parseInt(process.env.EMAIL_CACHE_TTL_DELIVERABLE_MS || String(30 * 24 * 60 * 60 * 1000), 10),
+        /* Days, not weeks: a domain acquires an MX record the day somebody
+           finishes setting up their mail, and a month-long cache would keep
+           refusing them long after they were reachable. */
+        undeliverable: parseInt(process.env.EMAIL_CACHE_TTL_UNDELIVERABLE_MS || String(3 * 24 * 60 * 60 * 1000), 10),
+        risky: parseInt(process.env.EMAIL_CACHE_TTL_RISKY_MS || String(24 * 60 * 60 * 1000), 10),
+        /* Minutes. `unknown` describes our network at one moment, and caching
+           that for hours would extend a blip into an outage. */
+        unknown: parseInt(process.env.EMAIL_CACHE_TTL_UNKNOWN_MS || String(5 * 60 * 1000), 10),
+        mx: parseInt(process.env.EMAIL_CACHE_TTL_MX_MS || String(6 * 60 * 60 * 1000), 10),
+      },
+    },
   },
 
   // Database

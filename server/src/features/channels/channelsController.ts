@@ -5,6 +5,7 @@ import { AppError, ErrorCodes } from '../../utils/errors';
 import { dataService } from '../../services/DataService';
 import { config } from '../../config/env';
 import { SdkGatewayClient } from '../../platform/sdkGateway';
+import { verifyAddress, sendDecision, describeConfiguration } from '../../platform/email';
 import { degradingRead } from '../../platform/sdkGateway/degradingRead';
 import {
   DAILY_AUTOMATED_CAP, DEDUP_WINDOW_MINUTES, ELIGIBILITY_BASES,
@@ -79,6 +80,80 @@ channelRoutes.get(
         reputation_available: reputation.available,
         reply_rule: 'An inbound reply pauses the sequence and creates an urgent owner task inside the 15-minute human-response expectation.',
         checks: ['spf', 'dkim', 'dmarc'],
+      },
+    });
+  })
+);
+
+/**
+ * POST /api/leadflow/channels/email/verify — does this address exist?
+ *
+ * ASKED BEFORE ANYTHING IS SENT, which is the entire point, and it is the same
+ * code the send paths run: platform/email/transport.ts and platform/notify.ts
+ * both call checkBeforeSending(), so a screen that shows "we can reach this
+ * person" and a send that goes ahead cannot disagree.
+ *
+ * A POST THAT READS. It takes a body rather than a query string because the
+ * bulk form takes a list, and because an address in a URL ends up in access
+ * logs and browser history — an email address is personal data and does not
+ * belong in either.
+ *
+ * IT DOES NOT REFUSE RISKY ADDRESSES, it reports them. `allowed` says what the
+ * send gate WOULD do with this deployment's policy; `verdict` says what is
+ * true about the address. A screen that wants to warn rather than block has
+ * both, and neither has been decided on its behalf.
+ */
+const MAX_BULK_VERIFY = 100;
+
+channelRoutes.post(
+  '/email/verify',
+  asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const body = (req.body ?? {}) as { email?: unknown; emails?: unknown; recheck?: unknown };
+
+    const single = typeof body.email === 'string' ? [body.email] : [];
+    const many = Array.isArray(body.emails)
+      ? body.emails.filter((e): e is string => typeof e === 'string')
+      : [];
+    const inputs = [...single, ...many];
+
+    if (inputs.length === 0) {
+      throw new AppError(400, ErrorCodes.VALIDATION_ERROR,
+        "Supply 'email' with one address, or 'emails' with a list of them");
+    }
+    if (inputs.length > MAX_BULK_VERIFY) {
+      /* A cap, not a silent truncation: returning 100 verdicts for a list of
+         500 would let a caller believe the other 400 were checked and passed. */
+      throw new AppError(400, ErrorCodes.VALIDATION_ERROR,
+        `At most ${MAX_BULK_VERIFY} addresses can be checked in one call; ${inputs.length} were supplied`);
+    }
+
+    const recheck = body.recheck === true;
+    const results = await Promise.all(
+      inputs.map(async (address) => {
+        const verification = await verifyAddress(address, { skipCache: recheck });
+        const decision = sendDecision(verification);
+        return {
+          ...verification,
+          allowed: decision.allowed,
+          blocked_because: decision.reason,
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        results,
+        checked: results.length,
+        deliverable: results.filter((r) => r.verdict === 'deliverable').length,
+        undeliverable: results.filter((r) => r.verdict === 'undeliverable').length,
+        risky: results.filter((r) => r.verdict === 'risky').length,
+        unknown: results.filter((r) => r.verdict === 'unknown').length,
+        would_block: results.filter((r) => !r.allowed).length,
+        /* What this deployment is actually checking, returned with every answer
+           so an operator reading a surprising verdict does not have to guess
+           whether mailbox probing was even on. */
+        policy: describeConfiguration(),
       },
     });
   })

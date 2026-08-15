@@ -10,6 +10,7 @@ import {
 import { DataTable, type Column } from '../../design-system/data/DataTable';
 import { isAllowed, usePermissions } from '../../platform/permissions';
 import { chipClass } from '../../design-system/tokens';
+import { AddressVerdict, useAddressCheck } from '../../features/email/AddressCheck';
 
 /**
  * The user register — the screen that did not exist.
@@ -127,6 +128,8 @@ export default function UserAdministration() {
   const [inviteFirstName, setInviteFirstName] = useState('');
   const [inviteLastName, setInviteLastName] = useState('');
   const [inviteRole, setInviteRole] = useState('user');
+  // The address is checked before the invitation is sent, not after it bounces.
+  const addressCheck = useAddressCheck();
   const [busy, setBusy] = useState(false);
 
   const permissions = usePermissions([
@@ -198,7 +201,12 @@ export default function UserAdministration() {
       setInviteEmail('');
       setInviteFirstName('');
       setInviteLastName('');
-      return `${result.user.email} is on the register as ${ROLE_LABEL[result.user.role] ?? result.user.role}, pending activation.`;
+      addressCheck.reset();
+      const placed = `${result.user.email} is on the register as ${ROLE_LABEL[result.user.role] ?? result.user.role}, pending activation.`;
+      /* THE DELIVERY OUTCOME IS PART OF THE OUTCOME. The link is the only way
+         into an invited account, so "added to the register" on its own is a
+         half-truth an administrator will read as done. */
+      return `${placed} ${result.invitation.detail}`;
     });
   }
 
@@ -358,8 +366,21 @@ export default function UserAdministration() {
                 required
                 value={inviteEmail}
                 onChange={(event) => setInviteEmail(event.target.value)}
+                /* ON BLUR, NOT ON EVERY KEYSTROKE. "ada@g" is not an address
+                   anybody meant, and checking it would spend a DNS query to
+                   tell somebody mid-word that their half-typed domain does not
+                   exist. */
+                onBlur={(event) => addressCheck.check(event.target.value)}
                 disabled={!mayInvite || busy}
                 className="mt-1 w-full rounded border border-line bg-panel2 px-3 py-2 text-sm text-text disabled:opacity-50"
+              />
+              <AddressVerdict
+                verification={addressCheck.verification}
+                checking={addressCheck.checking}
+                onAcceptSuggestion={(address) => {
+                  setInviteEmail(address);
+                  addressCheck.check(address);
+                }}
               />
             </label>
 
@@ -415,9 +436,10 @@ export default function UserAdministration() {
             </button>
 
             <p className="text-xs text-soft">
-              A new account starts pending, with no usable password. LeadFlow has no mail
-              transport, so activation is a second, deliberate act by an administrator rather
-              than a link the invitee receives.
+              A new account starts pending, with no usable password: the invitation link is the
+              only way into it. The address is checked before anything is sent — an address with
+              no mail server behind it is refused here rather than bounced later, and the reason
+              is reported above.
             </p>
           </form>
 
