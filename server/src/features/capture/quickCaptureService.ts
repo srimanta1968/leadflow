@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { SdkGatewayClient } from '../../platform/sdkGateway';
 import { currentTenantContext, tenantIdFor } from '../../platform/tenancy/tenantHierarchy';
-import { QuickCaptureInput } from './quickCaptureValidator';
+import { QuickCaptureInput, type ParsedProposal } from './quickCaptureValidator';
 import { TrustState } from './inboxQuery';
 
 /** What resolution concluded, when it was asked for at all. */
@@ -183,6 +183,40 @@ async function storeEvidence(
  * points at the merged identity. Leaving it for adjudication costs somebody a
  * minute; getting it wrong costs a data-repair project.
  */
+/**
+ * The extraction, in the vocabulary the resolver matches on.
+ *
+ * MAPPED RATHER THAN FORWARDED. The parser answers with whatever field names it
+ * likes — `full_name` here, `name` there — and the previous code handed the
+ * whole proposal over as `traits` and hoped. Naming the six fields the matcher
+ * actually scores means a parser that renames one produces a weaker match rather
+ * than a silent one, and anything unrecognised stays in the stored evidence
+ * where it belongs instead of being smuggled into an identity decision.
+ */
+function traitsFor(proposal: Record<string, unknown> | ParsedProposal | null): Record<string, string> {
+  const bag = (proposal ?? {}) as Record<string, unknown>;
+  const pick = (...keys: string[]): string | undefined => {
+    for (const key of keys) {
+      const value = bag[key];
+      if (typeof value === 'string' && value.trim() !== '') return value.trim();
+    }
+    return undefined;
+  };
+
+  const traits: Record<string, string> = {};
+  const assign = (key: string, value: string | undefined): void => {
+    if (value) traits[key] = value;
+  };
+
+  assign('name', pick('full_name', 'name', 'contact_name'));
+  assign('email', pick('email', 'email_address'));
+  assign('phone', pick('phone', 'phone_number', 'mobile', 'telephone'));
+  assign('dob', pick('dob', 'date_of_birth'));
+  assign('address', pick('address', 'postal_address', 'street_address'));
+  assign('external_id', pick('external_id', 'crm_id'));
+  return traits;
+}
+
 async function resolveIfRequested(
   input: QuickCaptureInput,
   sourceRecordId: string,
@@ -208,17 +242,44 @@ async function resolveIfRequested(
     };
   }
 
+  const traits = traitsFor(input.parsedProposal);
+  if (Object.keys(traits).length === 0) {
+    // The resolver refuses an empty bundle, and rightly: `no_match` for a
+    // question nobody could ask reads as "we checked and this is new". Reported
+    // as what it is — a capture with nothing identifying in it yet.
+    return {
+      attempted: true,
+      autoLinked: false,
+      personId: null,
+      candidateCaseRef: null,
+      explanation:
+        'Nothing identifying was extracted from this capture, so there was no bundle to resolve. It stays unlinked.',
+    };
+  }
+
   try {
+    /*
+     * `/api/resolver/match`, NOT `/api/resolver/resolve`.
+     *
+     * This called /resolve for the life of the feature, with this body, because
+     * the capability manifest described /resolve as "resolve a signal bundle to
+     * the most-likely persona". It never did: it reads an identity context for a
+     * person_id you already have, and it answered 400 to every capture we ever
+     * sent. The catch below then reported "identity resolution could not be
+     * reached" — an outage message for a contract mismatch — so the failure
+     * looked like weather and every capture stayed at P0 with no subject.
+     * sdk-identity-resolver now serves the operation the manifest described,
+     * under a name that says which one it is.
+     */
     const result = await SdkGatewayClient.call<ResolveResponse>({
       sdk: 'sdk-identity-resolver',
-      path: '/api/resolver/resolve',
+      path: '/api/resolver/match',
       method: 'POST',
       idempotencyKey: `resolve:${sourceRecordId}`,
       correlationId,
       body: {
-        tenant_id: tenantIdFor(currentTenantContext(), 'lead'),
         source_record_id: sourceRecordId,
-        traits: input.parsedProposal ?? {},
+        traits,
       },
     });
 

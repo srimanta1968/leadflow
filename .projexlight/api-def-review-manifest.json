@@ -2090,10 +2090,10 @@
     ]
   },
   "contacts/contacts-get.json": {
-    "hash": "a3c38598e02c3acac565fe20f123eaa2171b2214d440e5fb54a4cac8375a8ff1",
+    "hash": "fbedc5b117939c43791f9d9754915f2a67aee2a2c765b2087321344ca7c9418a",
     "status": "findings",
     "findingsCount": 1,
-    "verifiedAt": "2026-08-12T03:24:46",
+    "verifiedAt": "2026-08-15T18:09:27",
     "route": [
       "GET",
       "/leadflow/contacts"
@@ -2107,87 +2107,80 @@
     ]
   },
   "contacts/contacts-id-campaign-enrollments-get.json": {
-    "hash": "30a3fedbcdc84c16d0bee8e8b4c14c2c2b6fab00846857e201db4c065234a90a",
+    "hash": "4b05ecfd5f0cecbeb980a4da3c3e5cdda3cff9d61c425c6442b2e97286a02ccc",
     "status": "clean",
     "findingsCount": 0,
-    "verifiedAt": "2026-08-12T03:10:54",
+    "verifiedAt": "2026-08-15T18:09:27",
     "route": [
       "GET",
       "/leadflow/contacts/:p/campaign-enrollments"
     ]
   },
   "contacts/contacts-id-conversations-get.json": {
-    "hash": "56d3cd93b722e8ba68f993a116b6c79b1d53c6a9d7d3338d65a1c0b61e00a3db",
+    "hash": "107b47ef71360e7de91800f4c2663d3b1943857384be6ede49330d315510c5ac",
     "status": "clean",
     "findingsCount": 0,
-    "verifiedAt": "2026-08-12T03:10:54",
+    "verifiedAt": "2026-08-15T18:09:27",
     "route": [
       "GET",
       "/leadflow/contacts/:p/conversations"
     ]
   },
   "contacts/contacts-id-overview-get.json": {
-    "hash": "7307409a07cbd131dbe977d2aee772ce95a85fff249d92599c393db5a4937f04",
+    "hash": "2099a3f40fe09efcec76ec47320a92915c14eef495218f98d2d437f0ceb3e756",
     "status": "clean",
     "findingsCount": 0,
-    "verifiedAt": "2026-08-12T03:10:54",
+    "verifiedAt": "2026-08-15T18:09:27",
     "route": [
       "GET",
       "/leadflow/contacts/:p/overview"
     ]
   },
   "contacts/contacts-id-properties-get.json": {
-    "hash": "6e407243c9aa99f813c6491daa0b08401eb9f5e0bbce16ee53b2e9f1fe2d7007",
+    "hash": "e0402eacc066c53d1b3cde5709ad52c822acc37c01c4f94d6aa234d815b564c4",
     "status": "clean",
     "findingsCount": 0,
-    "verifiedAt": "2026-08-12T03:10:54",
+    "verifiedAt": "2026-08-15T18:09:27",
     "route": [
       "GET",
       "/leadflow/contacts/:p/properties"
     ]
   },
   "contacts/contacts-id-properties-link-post.json": {
-    "hash": "af474957ebda7aa87a7bbd31a2abc25c7d367073ec09a8fe1d81d05cf56e33ad",
-    "status": "findings",
-    "findingsCount": 1,
-    "verifiedAt": "2026-08-12T03:24:46",
+    "hash": "e71bc21a1c670e28b0930ede0b39f03e0971e8b75bf8a470bbb0f12aa9c95ad7",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-15T18:09:27",
     "route": [
       "POST",
       "/leadflow/contacts/:p/properties/link"
-    ],
-    "findings": [
-      {
-        "rule": "MUST-14",
-        "severity": "medium",
-        "message": "POST endpoint has no captureResponse \u2014 capture created ids so dependents can {{cache:...}} them."
-      }
     ]
   },
   "contacts/contacts-id-provenance-get.json": {
-    "hash": "81551c7bf1789c35a12fa7ded81a50412ace091a00573743b105267e4df90c1a",
+    "hash": "85a89a5e4c35a12064570e7fcee562159fe969974bb41276fed632cbf6460675",
     "status": "clean",
     "findingsCount": 0,
-    "verifiedAt": "2026-08-12T03:10:54",
+    "verifiedAt": "2026-08-15T18:09:27",
     "route": [
       "GET",
       "/leadflow/contacts/:p/provenance"
     ]
   },
   "contacts/contacts-id-relationships-get.json": {
-    "hash": "4991898dd094f76b218ce09bd300cdcc61c16b2071d9374f7ae1aebdf62b99e3",
+    "hash": "89129895803dd9115afe983cb56d634761e5715faa92e7abdb63a794422f5ef2",
     "status": "clean",
     "findingsCount": 0,
-    "verifiedAt": "2026-08-12T03:10:54",
+    "verifiedAt": "2026-08-15T18:09:27",
     "route": [
       "GET",
       "/leadflow/contacts/:p/relationships"
     ]
   },
   "contacts/contacts-id-summary-get.json": {
-    "hash": "1ecc96d7f64f3233b7d9d98081ab04efdd34c9f54192e06315fb90a03353ceb8",
+    "hash": "8e959d44da45348c1c19225526a17aeae69e15f5418632e46d53480ba9af9747",
     "status": "clean",
     "findingsCount": 0,
-    "verifiedAt": "2026-08-12T03:10:54",
+    "verifiedAt": "2026-08-15T18:09:27",
     "route": [
       "GET",
       "/leadflow/contacts/:p/summary"
@@ -2589,6 +2582,16 @@
     "route": [
       "GET",
       "/leadflow/workflows/runs"
+    ]
+  },
+  "contacts/contacts-id-resolve-post.json": {
+    "hash": "e2537ea7299bdaf64259eae2f97a4ff7e90b2fcdf164283b01feb2bf98a57854",
+    "status": "clean",
+    "findingsCount": 0,
+    "verifiedAt": "2026-08-15T18:09:27",
+    "route": [
+      "POST",
+      "/leadflow/contacts/:p/resolve"
     ]
   }
 }

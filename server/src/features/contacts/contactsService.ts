@@ -35,6 +35,33 @@ export async function probe<T>(
   }
 }
 
+/** What sdk-identity-resolver answers when asked who a trait bundle is. */
+export interface ContactMatch {
+  match_type?: 'exact_crosswalk' | 'possibly_same' | 'no_match';
+  person_id?: string | null;
+  case_id?: string | null;
+  confidence?: number | null;
+  explanation?: string;
+}
+
+/**
+ * Ask upstream which canonical person a contact's traits identify.
+ *
+ * A POST THAT IS ALSO A WRITE, and worth naming as such: a `possibly_same`
+ * answer raises a candidate link for a steward. That is the correct place for
+ * that write — a duplicate the tenant holds should be adjudicated whether or not
+ * anybody was looking for it — but it means this is not a read to call in a
+ * render path.
+ */
+export async function matchContact(
+  traits: Record<string, string>
+): Promise<{ value: ContactMatch | null; available: boolean }> {
+  const probed = await probe<ContactMatch>('sdk-identity-resolver', '/api/resolver/match', 'POST', {
+    traits,
+  });
+  return { value: probed.data, available: probed.available };
+}
+
 const gap = (field: string, sdk: string): Gap => ({
   field,
   reason: `${sdk} could not be reached, so this is unknown rather than absent.`,
@@ -191,14 +218,14 @@ export async function localContact(contactId: string): Promise<{
   stage: string | null; owner_user_id: string | null; created_at: string | null;
   updated_at: string | null; canonical_email: string | null; canonical_phone: string | null;
   source_timestamp: string | null; next_action: string | null; next_due_at: string | null;
-  owner_name: string | null;
+  owner_name: string | null; canonical_person_id: string | null;
 } | null> {
   const rows = await dataService.query<{
     id: string; name: string | null; email: string | null; source: string | null;
     stage: string | null; owner_user_id: string | null; created_at: string | null;
     updated_at: string | null; canonical_email: string | null; canonical_phone: string | null;
     source_timestamp: string | null; next_action: string | null; next_due_at: string | null;
-    owner_name: string | null;
+    owner_name: string | null; canonical_person_id: string | null;
   }>(
     // owner_name is JOINED, not derived at render time. The record header showed
     // the raw owner UUID because the controller had nothing else to put there —
@@ -208,6 +235,7 @@ export async function localContact(contactId: string): Promise<{
     // is not a local user, so the caller can say "Not recorded" honestly.
     `SELECT l.id, l.name, l.email, l.source, l.stage, l.owner_user_id::text AS owner_user_id, l.created_at,
             l.updated_at, l.canonical_email, l.canonical_phone, l.source_timestamp, l.next_action, l.next_due_at,
+            l.canonical_person_id::text AS canonical_person_id,
             COALESCE(
               NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
               u.email

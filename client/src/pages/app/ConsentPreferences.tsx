@@ -131,7 +131,18 @@ export default function ConsentPreferences() {
         </select>
         {data?.register?.truncated && (
           <span className={`rounded-full border px-3 py-1 text-sm ${chipClass('warning')}`}>
-            Showing the first {data.register.limit} receipts of an unknown total
+            Showing {data.receipts?.length ?? 0} of{' '}
+            {data.register.total === null ? 'an unknown total' : `${data.register.total} receipts`}
+          </span>
+        )}
+        {/*
+          A LOUD, UNMISSABLE STATE, because the failure it reports is silent by
+          nature: receipts belonging to another tenant look exactly like ours
+          once rendered. Zero is the only acceptable value here.
+        */}
+        {(data?.register?.foreign_dropped ?? 0) > 0 && (
+          <span className={`rounded-full border px-3 py-1 text-sm ${chipClass('blocked')}`}>
+            {data?.register?.foreign_dropped} receipts from another tenant were refused — report this
           </span>
         )}
       </section>
@@ -152,8 +163,40 @@ export default function ConsentPreferences() {
           <tbody>
             {(data?.receipts ?? []).slice(0, 50).map((row) => (
               <tr key={row.receipt_id ?? `${row.person_id}-${row.purpose_id}`}>
-                <td className="py-2 font-mono text-xs">{row.person_id ?? '-'}</td>
-                <td>{row.purpose_id ?? '-'}</td>
+                {/*
+                  THE NAME FIRST, THE ID UNDERNEATH — and the id stays. A privacy
+                  officer deciding whether to withdraw a consent needs to know
+                  whose it is, and the register showed them a column of uuids;
+                  but the canonical id is what a DSAR, an erasure and every
+                  upstream service quote back, so replacing it outright would
+                  break the one identifier that travels.
+                */}
+                <td className="py-2">
+                  {row.subject_name ? (
+                    <>
+                      <div>{row.subject_name}</div>
+                      <div className="text-soft font-mono text-xs">{row.person_id ?? '-'}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="font-mono text-xs">{row.person_id ?? '-'}</div>
+                      {/* Not "unknown person": we hold no CONTACT for this
+                          subject, which is a fact about our records rather than
+                          about them. */}
+                      <div className="text-soft text-xs">No contact in this workspace</div>
+                    </>
+                  )}
+                </td>
+                <td>
+                  {row.purpose_label ? (
+                    <>
+                      <div>{row.purpose_label}</div>
+                      <div className="text-soft font-mono text-xs">{row.purpose_id ?? '-'}</div>
+                    </>
+                  ) : (
+                    <span className="font-mono text-xs">{row.purpose_id ?? '-'}</span>
+                  )}
+                </td>
                 <td>{row.jurisdiction ?? '-'}</td>
                 <td>{row.expires_at ? row.expires_at.slice(0, 10) : 'No expiry'}</td>
                 <td>
@@ -211,26 +254,30 @@ export default function ConsentPreferences() {
 
       <section>
         <h2 className="mb-2 font-semibold">Purpose Taxonomy</h2>
+        {/*
+          AC4 — the taxonomy is READ, never hard-coded. It shipped as a written
+          gap saying sdk-consent had no GET for purposes; it has one, and had all
+          along. An empty list now means the tenant has registered nothing, and
+          an unreachable service says so separately — the two are different facts
+          and the screen no longer collapses them into a paragraph.
+        */}
         {(data?.purposes ?? []).length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {data?.purposes?.map((p) => (
-              <span key={p} className={`rounded-full border px-3 py-1 text-sm ${chipClass('identity')}`}>
-                {p}
+              <span
+                key={p.purpose_id ?? Math.random()}
+                title={p.legal_basis ? `Legal basis: ${p.legal_basis}` : undefined}
+                className={`rounded-full border px-3 py-1 text-sm ${chipClass('identity')}`}
+              >
+                {p.description ?? p.purpose_id}
               </span>
             ))}
           </div>
         ) : (
-          /*
-           * AC4 — the taxonomy CANNOT be listed, and the screen says so rather
-           * than rendering a constant. sdk-consent exposes only a POST to
-           * register a purpose; there is no way to read the registry back.
-           * Hard-coding the mockup's chips is exactly what this criterion
-           * forbids, and it would drift silently the moment a tenant registered
-           * a purpose nobody anticipated.
-           */
           <p className="text-soft">
-            The registered purpose taxonomy cannot be listed.{' '}
-            {data?.purpose_taxonomy_gap?.reason}
+            {data?.upstream_available?.purposes === false
+              ? 'The purpose registry could not be reached, so the taxonomy is unknown rather than empty.'
+              : 'No purposes are registered for this tenant yet.'}
           </p>
         )}
         <p className="text-soft mt-3 text-sm">

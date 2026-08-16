@@ -11,12 +11,14 @@ import {
   encryptSignature,
   grantReceipt,
   listBounceEvents,
+  listPurposes,
   listReceipts,
   listSuppressions,
   readSmsConsent,
   revokeReceipt,
   type ReceiptRow,
 } from './consentGateway';
+import { namesForPersons } from '../contacts/subjectDirectory';
 import {
   effectiveState,
   recordSignal,
@@ -107,25 +109,50 @@ consentRoutes.get(
         windowDays = parsed;
       }
 
-      const [receipts, sms, bounces, ...suppressionReads] = await Promise.all([
+      const [receipts, purposes, sms, bounces, ...suppressionReads] = await Promise.all([
         listReceipts(REGISTER_LIMIT),
+        listPurposes(),
         readSmsConsent(),
         listBounceEvents(),
         ...SUPPRESSION_CHANNELS.map((channel) => listSuppressions(channel)),
       ]);
 
+      /*
+       * WHO THE SUBJECT IS, WHERE WE CAN SAY. Upstream identifies a subject by
+       * canonical person id and holds no readable name for them, so the register
+       * showed a column of uuids to the one person in the product who has to
+       * decide whose consent to withdraw. The name comes from our own contacts,
+       * in ONE query for the page, and a subject we do not hold locally keeps
+       * showing the uuid rather than being given a plausible label.
+       */
+      const names = await namesForPersons(receipts.value.rows.map((row) => row.person_id));
+      const purposeLabel = new Map(
+        purposes.value
+          .filter((p) => typeof p.purpose_id === 'string')
+          .map((p) => [p.purpose_id as string, p.description ?? null])
+      );
+
       const now = Date.now();
-      const rows = receipts.value.map((row) => ({
-        receipt_id: row.receipt_id ?? null,
-        person_id: row.person_id ?? null,
-        purpose_id: row.purpose_id ?? null,
-        processor: row.processor ?? null,
-        jurisdiction: row.jurisdiction ?? null,
-        granted_at: row.granted_at ?? null,
-        expires_at: row.expires_at ?? null,
-        revoked_at: row.revoked_at ?? null,
-        status: statusOf(row, now, windowDays),
-      }));
+      const rows = receipts.value.rows.map((row) => {
+        const known = row.person_id ? names.get(row.person_id) : undefined;
+        return {
+          receipt_id: row.receipt_id ?? null,
+          person_id: row.person_id ?? null,
+          /* Null, never the uuid repeated: the client decides how to render an
+             unidentified subject, and a name field carrying an id is a name as
+             far as every consumer downstream is concerned. */
+          subject_name: known?.name ?? null,
+          subject_contact_id: known?.contact_id ?? null,
+          purpose_id: row.purpose_id ?? null,
+          purpose_label: row.purpose_id ? purposeLabel.get(row.purpose_id) ?? null : null,
+          processor: row.processor ?? null,
+          jurisdiction: row.jurisdiction ?? null,
+          granted_at: row.granted_at ?? null,
+          expires_at: row.expires_at ?? null,
+          revoked_at: row.revoked_at ?? null,
+          status: statusOf(row, now, windowDays),
+        };
+      });
 
       const counts = {
         active: rows.filter((r) => r.status === 'active').length,
@@ -166,28 +193,49 @@ consentRoutes.get(
           },
           receipts: rows,
           /*
-           * The register is ASSEMBLED from a DSAR export, not read from a
-           * register endpoint that does not exist. Saying it was capped is the
-           * difference between "these are the receipts" and "these are the
-           * first 500 of an unknown number".
+           * READ FROM THE REGISTER, and the total says how much of it this is.
+           *
+           * This used to be assembled from the DSAR export because no register
+           * endpoint existed — and that export was unscoped, so the screen
+           * rendered other tenants' receipts as ours. `foreign_dropped` is the
+           * count our own filter caught; anything other than 0 means the gateway
+           * we are talking to still leaks and the screen should not be trusted
+           * until it is redeployed.
            */
           register: {
-            source: '/api/consents/export',
+            source: '/api/consents/receipts',
             limit: REGISTER_LIMIT,
-            truncated: receipts.value.length >= REGISTER_LIMIT,
-            note: 'sdk-consent exposes no tenant-wide receipt list; this is assembled from the DSAR export and capped.',
+            total: receipts.value.total,
+            truncated:
+              receipts.value.total === null
+                ? rows.length >= REGISTER_LIMIT
+                : receipts.value.total > rows.length,
+            foreign_dropped: receipts.value.foreign_dropped,
+            note:
+              receipts.value.foreign_dropped > 0
+                ? `${receipts.value.foreign_dropped} receipts belonging to another tenant were refused by this client and are not shown. Report this: the consent service is answering outside its scope.`
+                : null,
           },
           suppressions,
-          /* AC4 — the taxonomy cannot be listed, and the screen says so. */
-          purposes: [],
-          purpose_taxonomy_gap: {
-            reason:
-              'sdk-consent exposes only POST /api/consents/purposes, which registers a purpose. There is no GET, so the registered taxonomy cannot be read.',
-            rejected_alternative:
-              'Deriving the list from purposes seen on existing receipts would omit any registered purpose nobody has consented to yet - which is exactly when a taxonomy panel earns its place.',
-          },
+          /*
+           * AC4 — the taxonomy, which turned out to be readable all along.
+           *
+           * This shipped as a written gap: "sdk-consent exposes only POST
+           * /api/consents/purposes; there is no GET". There is one, in the route
+           * table and in the capability manifest. A confidently-worded gap note
+           * is worse than a TODO — it tells the next reader the question has been
+           * asked and answered, so nobody rechecks, and the register goes on
+           * showing raw purpose ids for a year.
+           */
+          purposes: purposes.value.map((purpose) => ({
+            purpose_id: purpose.purpose_id ?? null,
+            description: purpose.description ?? null,
+            legal_basis: purpose.legal_basis ?? null,
+            category: purpose.category ?? null,
+          })),
           upstream_available: {
             receipts: receipts.available,
+            purposes: purposes.available,
             sms_consent: sms.available,
             bounce_events: bounces.available,
             suppressions: suppressionReads.every((r) => r.available),

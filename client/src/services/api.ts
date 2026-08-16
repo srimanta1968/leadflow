@@ -683,6 +683,15 @@ export interface IdentityReviewCase {
   not_auto_linkable: true;
   person_id_a: string | null;
   person_id_b: string | null;
+  /**
+   * The contact this workspace knows each side as, or null.
+   *
+   * NULL IS MEANINGFUL: the other half of a duplicate often arrived through a
+   * different product in the tenant, so there is no local contact to name. The
+   * row falls back to the canonical id rather than to a plausible label.
+   */
+  subject_a: { name: string | null; contact_id: string } | null;
+  subject_b: { name: string | null; contact_id: string } | null;
   status: string | null;
   provenance: Record<string, unknown> | null;
   created_at: string | null;
@@ -730,13 +739,27 @@ export interface IdentityDecisionResult {
 export interface ConsentReceipt {
   receipt_id: string | null;
   person_id: string | null;
+  /** What we call this subject locally. Null when no contact carries the id. */
+  subject_name: string | null;
+  /** The contact behind that name, so the cell can link to the record. */
+  subject_contact_id: string | null;
   purpose_id: string | null;
+  /** The registered purpose's description. Null when the taxonomy lacks it. */
+  purpose_label: string | null;
   processor: string | null;
   jurisdiction: string | null;
   granted_at: string | null;
   expires_at: string | null;
   revoked_at: string | null;
   status: 'active' | 'expiring' | 'revoked';
+}
+
+/** One registered purpose from the platform taxonomy. */
+export interface ConsentPurpose {
+  purpose_id: string | null;
+  description: string | null;
+  legal_basis: string | null;
+  category: string | null;
 }
 
 /** One channel's suppression count, reconciled against the provider. */
@@ -760,10 +783,22 @@ export interface ConsentOverview {
     bounce_events: number | null;
   };
   receipts: ConsentReceipt[];
-  register: { source: string; limit: number; truncated: boolean; note: string };
+  register: {
+    source: string;
+    limit: number;
+    /** Receipts this tenant holds. Null when upstream did not report a total. */
+    total: number | null;
+    truncated: boolean;
+    /**
+     * Rows the client refused because they named another tenant. Anything above
+     * zero means the consent service answered outside its scope and the register
+     * cannot be trusted until the gateway is redeployed.
+     */
+    foreign_dropped: number;
+    note: string | null;
+  };
   suppressions: SuppressionChannel[];
-  purposes: string[];
-  purpose_taxonomy_gap: { reason: string; rejected_alternative: string } | null;
+  purposes: ConsentPurpose[];
   upstream_available: Record<string, boolean>;
 }
 

@@ -6,9 +6,10 @@ import { dataService } from '../../services/DataService';
 import { config } from '../../config/env';
 import { compose } from '../../orchestration/channelDecision';
 import {
-  listContacts, listGaps, localContact, probe, savedViews, trustRail, viewCounts,
+  listContacts, listGaps, localContact, matchContact, probe, savedViews, trustRail, viewCounts,
   type Gap,
 } from './contactsService';
+import { linkContactToPerson } from './subjectDirectory';
 
 export const contactRoutes: Router = Router();
 export const savedViewRoutes: Router = Router();
@@ -101,20 +102,120 @@ contactRoutes.post(
   })
 );
 
+/**
+ * POST /api/leadflow/contacts/:id/resolve — ask upstream which person this is.
+ *
+ * WHY A CONTACT NEEDS THIS AT ALL. Every governed screen that reads ProjexCloud
+ * names its subject by canonical person id — the consent register, both sides of
+ * an Identity Review case — and LeadFlow held no such key, so those screens
+ * rendered uuids at the two roles least able to act on one. This is where the
+ * key comes from.
+ *
+ * ONLY AN EXACT CROSSWALK IS RECORDED. A crosswalk hit is a recorded fact: an
+ * identifier already asserted to belong to that person. A probabilistic match is
+ * a guess, and writing the likely id would put a name on a consent receipt on
+ * the strength of a guess — so `possibly_same` returns the case for Identity
+ * Review and writes NOTHING here. That asymmetry is the whole point of the
+ * endpoint, not an implementation detail of it.
+ */
+contactRoutes.post(
+  '/:id/resolve',
+  asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const contact = await mustExist(String(req.params?.id ?? ''));
+
+    const traits: Record<string, string> = {};
+    if (contact.name) traits.name = contact.name;
+    const email = contact.canonical_email ?? contact.email;
+    if (email) traits.email = email;
+    if (contact.canonical_phone) traits.phone = contact.canonical_phone;
+
+    if (Object.keys(traits).length === 0) {
+      throw new AppError(
+        422,
+        ErrorCodes.VALIDATION_ERROR,
+        'This contact carries no name, email or phone, so there is nothing to resolve it by'
+      );
+    }
+
+    const match = await matchContact(traits);
+    if (!match.available) {
+      /*
+       * 503 rather than a cheerful "no match". An unreachable resolver reported
+       * as "this is a new person" is how a duplicate gets created, and the
+       * caller must be able to tell the two apart to decide whether to retry.
+       */
+      throw new AppError(
+        503,
+        ErrorCodes.UPSTREAM_UNAVAILABLE,
+        'The identity resolver could not be reached, so this contact is unresolved rather than new'
+      );
+    }
+
+    const result = match.value;
+    const linked =
+      result?.match_type === 'exact_crosswalk' && result.person_id
+        ? await linkContactToPerson(contact.id, result.person_id)
+        : [];
+
+    res.status(200).json({
+      success: true,
+      data: {
+        contact_id: contact.id,
+        match_type: result?.match_type ?? 'no_match',
+        /* The id we RECORDED, which is null for everything but a crosswalk —
+           distinct from the person the resolver mentioned. */
+        canonical_person_id: linked.length > 0 && result?.person_id ? result.person_id : null,
+        recorded: linked.length > 0,
+        review_case_id: result?.case_id ?? null,
+        confidence: result?.confidence ?? null,
+        explanation:
+          result?.explanation ??
+          'The resolver returned no account of its decision, so none is shown.',
+      },
+    });
+  })
+);
+
 /** GET /api/leadflow/contacts/:id/summary — the header and trust rail. */
 contactRoutes.get(
   '/:id/summary',
   asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const contact = await mustExist(String(req.params?.id ?? ''));
-    const projection = await probe<{ display_name?: string; source_count?: number }>(
-      'sdk-identity-resolver', `/api/resolver/subjects/${encodeURIComponent(contact.id)}`
-    );
 
+    /*
+     * READ THE PROJECTION BY CANONICAL PERSON, OR SAY WHY NOT.
+     *
+     * This asked `sdk-identity-resolver` for `/api/resolver/subjects/:id`, a
+     * route that appears in neither the router nor the capability manifest — so
+     * every call 404'd and the header has reported "the identity projection
+     * could not be read" since the day it shipped. A permanent outage message is
+     * worse than a blank: it sends somebody looking for an incident that is
+     * really a wrong path.
+     *
+     * The real read is sdk-projection's explained view, and it is keyed by the
+     * CANONICAL PERSON — which a contact only has once it has been resolved. An
+     * unresolved contact is therefore a distinct, honest gap naming the thing to
+     * do about it, rather than a service being blamed for our missing key.
+     */
     const gaps: Gap[] = [];
-    if (!projection.available) {
+    const projection = contact.canonical_person_id
+      ? await probe<{ projection?: { attributes?: { attribute: string; value: string }[] } }>(
+          'sdk-projection',
+          `/api/projection/subject/${encodeURIComponent(contact.canonical_person_id)}/explained` +
+            `?tenant_id=${encodeURIComponent(config.projexCloud.tenantId)}`
+        )
+      : { data: null, available: false };
+
+    if (!contact.canonical_person_id) {
+      gaps.push({
+        field: 'display_name_provenance',
+        reason:
+          'This contact has not been resolved to a canonical person yet, so there is no projection to read. POST /api/leadflow/contacts/:id/resolve asks upstream who it is.',
+      });
+    } else if (!projection.available) {
       gaps.push({ field: 'display_name_provenance', reason: 'The identity projection could not be read, so how this name was chosen is unknown.' });
-      gaps.push({ field: 'relationship_label', reason: 'Contextual role lives in the relationship graph, which could not be read.' });
     }
+    gaps.push({ field: 'relationship_label', reason: 'Contextual role lives in the relationship graph, which could not be read.' });
 
     res.status(200).json({
       success: true,
@@ -127,7 +228,11 @@ contactRoutes.get(
            shown with no provenance reads as undisputed, and the whole point of
            the header is that a survived name is a decision somebody can query. */
         display_name_provenance: projection.available
-          ? { projection: 'identity_resolver', source_count: projection.data?.source_count ?? null }
+          ? {
+              projection: 'sdk-projection',
+              canonical_person_id: contact.canonical_person_id,
+              source_count: projection.data?.projection?.attributes?.length ?? null,
+            }
           : null,
         relationship_label: null,
         organization: null,

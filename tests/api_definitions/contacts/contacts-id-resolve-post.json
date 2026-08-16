@@ -1,0 +1,141 @@
+{
+  "sprintId": "cd0927d4-40eb-46b2-b4e0-33edc043db67",
+  "requiresAuth": true,
+  "testability": "auto",
+  "priority": 9,
+  "dependsOn": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "GET /api/leadflow/contacts"
+  ],
+  "name": "POST /api/leadflow/contacts/:id/resolve - ask upstream which canonical person this contact is",
+  "description": "Sends the contact's name, email and phone to sdk-identity-resolver and answers which canonical person they identify. An ACTION on an existing record, so 200 rather than 201 (MUST-54) - nothing is created here that the caller names.\n\nWHY THE ENDPOINT EXISTS. Every governed screen reading ProjexCloud names its subject by canonical person id: the consent register names the subject of a receipt that way, Identity Review names both sides of a candidate link that way. LeadFlow held no such key, so both screens rendered raw uuids at a Privacy Officer and at a Data Steward - the two roles least able to act on one. This is where leads.canonical_person_id comes from.\n\nONLY AN EXACT CROSSWALK IS RECORDED, and the asymmetry is the point rather than an implementation detail. match_type 'exact_crosswalk' means a recorded identifier - an app_identity or an alias hash held WITHIN this tenant - already names that person, so the id is written to the lead and returned with recorded:true. 'possibly_same' is a guess: a candidate link has been raised upstream for steward review and review_case_id carries it, but NOTHING is written here, because a name shown on a consent receipt on the strength of a guess is the most expensive mistake this product can make. 'no_match' writes nothing either.\n\nIDEMPOTENT BY OUTCOME. Re-running against a contact already carrying the id answers the same match_type with recorded:false - the id was already there, so no row changed. A caller cannot tell that apart from a failure unless the response says so, which is why `recorded` is separate from `canonical_person_id`.\n\nAN UNREACHABLE RESOLVER IS 503, NEVER 'no_match' (the single most important negative here). Reporting an outage as \"this person is new\" is precisely how a duplicate identity gets created, and the caller has to be able to tell the two apart to decide whether to retry.\n\nEdge cases: a contact with no name, email or phone answers 422 - there is no bundle to resolve and answering no_match would report an absence nobody looked for; a contact id that does not exist answers 404 before any upstream call is made. QA: measured live against a real contact from the list.",
+  "endpoint": "/api/leadflow/contacts/:id/resolve",
+  "method": "POST",
+  "expectedStatus": 200,
+  "captureResponse": {
+    "contacts.resolve.response.data.match_type": "data.match_type",
+    "contacts.resolve.response.data.canonical_person_id": "data.canonical_person_id"
+  },
+  "fieldEnums": {
+    "match_type": [
+      "exact_crosswalk",
+      "possibly_same",
+      "no_match"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "Resolving a contact answers with a match type and an account of the decision",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "capturesResponse": true,
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:contacts.list.response.data.contacts.0.contact_id}}"
+      },
+      "payload": {}
+    },
+    {
+      "name": "Re-resolving the same contact is a no-op rather than a second write",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true
+      },
+      "testType": "positive",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{cache:contacts.list.response.data.contacts.0.contact_id}}"
+      },
+      "payload": {}
+    },
+    {
+      "name": "NEGATIVE: no contact with that id",
+      "expectedStatus": 404,
+      "expectedResponse": {
+        "success": false,
+        "code": "NOT_FOUND"
+      },
+      "testType": "negative",
+      "coversErrorCase": "404|NOT_FOUND",
+      "headers": {
+        "Authorization": "Bearer {{cache:auth.login.response.data.token}}"
+      },
+      "params": {
+        "id": "{{var:absent_uuid}}"
+      },
+      "payload": {}
+    },
+    {
+      "name": "NEGATIVE: no Authorization header at all",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "UNAUTHENTICATED"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|UNAUTHENTICATED",
+      "headers": {},
+      "params": {
+        "id": "{{cache:contacts.list.response.data.contacts.0.contact_id}}"
+      },
+      "payload": {}
+    },
+    {
+      "name": "NEGATIVE: a bearer token that does not verify",
+      "expectedStatus": 401,
+      "expectedResponse": {
+        "success": false,
+        "code": "INVALID_TOKEN"
+      },
+      "testType": "negative",
+      "coversErrorCase": "401|INVALID_TOKEN",
+      "headers": {
+        "Authorization": "Bearer {{var:absent_uuid}}"
+      },
+      "params": {
+        "id": "{{cache:contacts.list.response.data.contacts.0.contact_id}}"
+      },
+      "payload": {}
+    }
+  ],
+  "errorCases": [
+    {
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "No contact with that id",
+      "when": "the contact id does not exist. Checked before any upstream call, so an unknown id never raises a candidate link."
+    },
+    {
+      "status": 422,
+      "code": "VALIDATION_ERROR",
+      "message": "This contact carries no name, email or phone, so there is nothing to resolve it by",
+      "when": "every trait the matcher scores on is absent. 422 rather than 400: the request is well-formed and the refusal is about the record's contents."
+    },
+    {
+      "status": 503,
+      "code": "UPSTREAM_UNAVAILABLE",
+      "message": "The identity resolver could not be reached, so this contact is unresolved rather than new",
+      "when": "sdk-identity-resolver is unreachable or the circuit is open. Deliberately NOT reported as no_match - an outage read as 'this person is new' is how a duplicate identity gets created."
+    },
+    {
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "Authorization header with a bearer token is required",
+      "when": "the Authorization header is absent, empty, or uses a scheme other than Bearer."
+    },
+    {
+      "status": 401,
+      "code": "INVALID_TOKEN",
+      "message": "Session token is invalid or expired",
+      "when": "a Bearer token was presented but does not verify."
+    }
+  ]
+}

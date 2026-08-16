@@ -4,13 +4,15 @@ import { SdkGatewayClient } from '../../platform/sdkGateway';
 /**
  * Typed reads of sdk-identity-resolver's EMPI surface.
  *
- * THESE THREE ROUTES ARE ABSENT FROM `sdk-capability.json`. They are real and
- * mounted — `packages/sdk-identity-resolver/src/server/routes.ts` declares
- * `/api/empi/candidate-links`, `/api/empi/candidate-links/:link_id/*` and
- * `/api/empi/metrics` — but the capability manifest lists only
- * `/api/resolver/resolve` and `/api/resolver/explain`. The manifest is the
- * document anyone integrating reads FIRST, so the shapes below were taken from
- * the handler and the service, never from the manifest. Raised as a handoff.
+ * THE MANIFEST GAP THIS COMMENT USED TO DESCRIBE IS CLOSED. These routes were
+ * real and mounted but absent from `sdk-capability.json`, so the shapes below
+ * were taken from the handler and the service rather than from the document an
+ * integrator reads first. That was raised as a handoff and actioned: the EMPI
+ * routes are now listed in the manifest. The shapes stay sourced from the
+ * handler anyway — a manifest is a description, and where the two disagree the
+ * handler is what answers the call. That is not hypothetical here: the same
+ * manifest described `/api/resolver/resolve` as trait matching for a year while
+ * the route read identity contexts, and every capture we sent it 400'd.
  */
 
 /** A possible-same match awaiting adjudication, as `CandidateLink` returns it. */

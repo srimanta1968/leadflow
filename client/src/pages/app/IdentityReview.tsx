@@ -36,6 +36,25 @@ function GapValue({ reason }: { reason: string }) {
   );
 }
 
+/** One side of a candidate pair: the local name if we hold one, the id always. */
+function SubjectCell({
+  personId,
+  subject,
+}: {
+  personId: string | null;
+  subject: { name: string | null; contact_id: string } | null;
+}) {
+  return (
+    <td className="py-2">
+      {subject?.name ? <div>{subject.name}</div> : null}
+      <div className="text-soft font-mono text-xs">{personId ?? '—'}</div>
+      {!subject && (
+        <div className="text-soft text-xs">No contact in this workspace</div>
+      )}
+    </td>
+  );
+}
+
 export default function IdentityReview() {
   const [data, setData] = useState<IdentityReviewQueue | null>(null);
   const [band, setBand] = useState<string>('');
@@ -152,8 +171,16 @@ export default function IdentityReview() {
                     {row.risk_band}
                   </span>
                 </td>
-                <td className="font-mono text-xs">{row.person_id_a ?? '—'}</td>
-                <td className="font-mono text-xs">{row.person_id_b ?? '—'}</td>
+                {/*
+                  A NAME WHERE WE HAVE ONE, THE ID ALWAYS. The steward is being
+                  asked whether two records are the same human, and was shown two
+                  uuids to decide it with. The id stays underneath because it is
+                  what the modal, the decision call and every upstream service
+                  quote back — and because a case whose sides we cannot name is
+                  one they should be able to see is unnamed.
+                */}
+                <SubjectCell personId={row.person_id_a} subject={row.subject_a} />
+                <SubjectCell personId={row.person_id_b} subject={row.subject_b} />
                 <td>
                   {row.model_score.toFixed(2)}{' '}
                   <span className="text-soft">not auto-linkable</span>

@@ -74,14 +74,21 @@ Feature: Consent and Preferences screen
   @portal:leadflow
   @login:privacy_officer
   @scenario_id:0d90c766-c34b-46d4-b138-5ff756c4868c
-  Scenario: The purpose taxonomy says it cannot be listed rather than inventing one
-    # AC4. sdk-consent exposes only a POST to register a purpose, so the
-    # registry cannot be read back. Rendering the mockup's chips from a local
-    # constant is exactly what this criterion forbids, and it would drift
-    # silently the moment a tenant registered a purpose nobody anticipated.
+  Scenario: The purpose taxonomy is read from the registry rather than invented
+    # AC4. This scenario used to assert that the taxonomy COULD NOT be listed,
+    # because the screen said so: sdk-consent was documented in our own code as
+    # having only a POST to register a purpose. It has a GET, and always did -
+    # in the route table and in the capability manifest - so the panel now
+    # renders the registered purposes and labels each receipt's purpose_id with
+    # its description. What is still forbidden is the original point of the
+    # criterion: rendering the mockup's chips from a local constant.
+    #
+    # Asserted on the panel and the caveat rather than on any purpose name: the
+    # registry is tenant data and a scenario that names one row fails the day
+    # somebody retires it.
     When I navigate to "/app/consent"
     Then I should see "Purpose Taxonomy"
-    And I should see "The registered purpose taxonomy cannot be listed."
+    And I should see "Policy makes the final decision."
 
   @scenario_type:UI
   @ui_test
@@ -95,3 +102,21 @@ Feature: Consent and Preferences screen
     When I navigate to "/app/consent"
     Then I should see "Suppression Controls"
     And I should see "Reconciled with provider"
+
+  @scenario_type:UI
+  @ui_test
+  @portal:leadflow
+  @login:privacy_officer
+  @scenario_id:8f3a6d21-4c7e-4b0a-9f1e-2d5c6a7b8e90
+  Scenario: The receipt register names its subject rather than showing a bare id
+    # The register showed a column of canonical person uuids to the one person
+    # in the product who decides whose consent to withdraw. A receipt whose
+    # subject this workspace holds no contact for says so in those words - it is
+    # a fact about our records, not about them - and the canonical id stays on
+    # every row because that is what a DSAR and every upstream service quote
+    # back.
+    When I navigate to "/app/consent"
+    Then I should see "Consent Receipt Register"
+    And I should see "Subject"
+    And I should see "Purpose"
+    And I should see "Jurisdiction"

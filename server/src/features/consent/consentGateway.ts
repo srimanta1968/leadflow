@@ -28,6 +28,22 @@ export interface ReceiptRow {
   expires_at?: string | null;
   revoked_at?: string | null;
   evidence_hash?: string | null;
+  /*
+   * Carried so this side can CHECK the scoping rather than trust it. A receipt
+   * names the tenant that collected it and the tenant it was collected for, and
+   * either one being ours is what makes it ours to display.
+   */
+  source_tenant_id?: string | null;
+  target_tenant_id?: string | null;
+}
+
+/** One registered purpose, as sdk-consent's taxonomy returns it. */
+export interface PurposeRow {
+  purpose_id?: string;
+  app_id?: string;
+  description?: string | null;
+  legal_basis?: string | null;
+  category?: string | null;
 }
 
 /** One suppression, as sdk-deliverability lists them. */
@@ -47,24 +63,77 @@ const asArray = <T>(body: unknown, ...keys: string[]): T[] => {
   return Array.isArray(body) ? (body as T[]) : [];
 };
 
+/** One page of the register, and the total it was drawn from. */
+export interface ReceiptPage {
+  rows: ReceiptRow[];
+  /** Receipts this tenant holds in total. Null when upstream did not say. */
+  total: number | null;
+  /** Rows dropped here because they belonged to another tenant. Should be 0. */
+  foreign_dropped: number;
+}
+
 /**
- * The receipt register.
+ * The receipt register for this tenant.
  *
- * ASSEMBLED FROM A DSAR EXPORT, WHICH IS NOT A REGISTER, and the caller is told
- * so. `/api/consents/export` is built for Article 15 subject-access requests:
- * it answers per person_id and returns everything for that person. There is no
- * tenant-wide receipt list upstream, so a register is approximated by exporting
- * without a person filter and capping the result. The cap is reported rather
- * than applied silently — a screen showing the first N of an unknown total
- * invites the reader to conclude that is all of them, which for a consent
- * register is a conclusion with legal weight.
+ * READS THE REGISTER ENDPOINT, NOT THE DSAR EXPORT. This used to call
+ * `/api/consents/export` with no person filter, because no tenant-wide list
+ * existed — and that export applied no tenant predicate, so the screen rendered
+ * OTHER TENANTS' consent receipts as this tenant's own. Verified in production:
+ * every row on the register belonged to a different tenant, under a different
+ * app. sdk-consent now exposes `/api/consents/receipts`, scoped by the tenant on
+ * the credential and reporting the total behind the page, and the export is back
+ * to being what its name says — one subject, on request.
+ *
+ * THE TENANT FILTER BELOW IS A SECOND LOCK ON A DOOR UPSTREAM NOW CLOSES. It is
+ * not redundant: this deployment can be pointed at an older gateway, and the
+ * failure it guards against is silent, indistinguishable from real data, and
+ * legally significant. Anything dropped is COUNTED and reported, because a guard
+ * that hides what it caught is a guard nobody can audit.
  */
-export async function listReceipts(limit: number): Promise<Reached<ReceiptRow[]>> {
-  return degradingRead<ReceiptRow[]>(
+export async function listReceipts(limit: number): Promise<Reached<ReceiptPage>> {
+  const ours = config.projexCloud.tenantId;
+
+  return degradingRead<ReceiptPage>(
     'sdk-consent',
-    '/api/consents/export',
+    `/api/consents/receipts?limit=${encodeURIComponent(String(limit))}`,
+    { rows: [], total: null, foreign_dropped: 0 },
+    (body) => {
+      const bag = (body ?? {}) as Record<string, unknown>;
+      const all = asArray<ReceiptRow>(body, 'receipts', 'data').slice(0, limit);
+
+      // Only filter when we know who we are. With no configured tenant there is
+      // nothing to compare against, and dropping everything would report an
+      // empty register — the one answer a consent screen must never invent.
+      const rows = ours
+        ? all.filter(
+            (row) =>
+              !row.source_tenant_id ||
+              row.source_tenant_id === ours ||
+              row.target_tenant_id === ours
+          )
+        : all;
+
+      const total = typeof bag.total === 'number' ? bag.total : null;
+      return { rows, total, foreign_dropped: all.length - rows.length };
+    }
+  );
+}
+
+/**
+ * The registered purpose taxonomy.
+ *
+ * The screen carried a written gap saying "sdk-consent exposes only POST
+ * /api/consents/purposes; there is no GET". There is one, and there was — it is
+ * in the capability manifest and in the route table. The gap note was the wrong
+ * kind of honesty: it stated a limitation confidently enough that nobody
+ * rechecked it, and the register went on rendering raw purpose_ids.
+ */
+export async function listPurposes(): Promise<Reached<PurposeRow[]>> {
+  return degradingRead<PurposeRow[]>(
+    'sdk-consent',
+    '/api/consents/purposes',
     [],
-    (body) => asArray<ReceiptRow>(body, 'receipts', 'data').slice(0, limit)
+    (body) => asArray<PurposeRow>(body, 'purposes', 'data')
   );
 }
 

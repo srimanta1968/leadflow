@@ -1,6 +1,6 @@
 {
   "name": "GET /api/leadflow/consent/overview - receipts, suppressions and the purpose taxonomy for #view-consent",
-  "description": "The one call behind the Consent & Preferences screen: the receipt register, the six KPI tiles, the suppression controls and the purpose taxonomy.\n\nTHE TASK NAMED THREE ENDPOINTS THAT DO NOT EXIST, and this composes the ones that do. sdk-consent serves /api/consents/* (PLURAL) and has never served /api/consent/*: there is no GET /api/consent/receipts and no GET /api/consent/purposes. The same singular/plural slip is what made the AI coach's recording gate deny every call for weeks, so every path here was taken from packages/sdk-consent/src/server/routes.ts rather than from a description.\n\nRECEIPTS COME FROM /api/consents/export, which is a DSAR export rather than a register, and that difference is stated instead of hidden. It answers per person_id, so a tenant-wide register is assembled rather than read - which is why the register is capped and reports `truncated` when it hits the cap. A screen that silently shows the first N receipts of an unknown total invites somebody to conclude that is all of them.\n\nTHE EXPIRING WINDOW IS A PARAMETER, defaulting to 30 days (AC1). Out-of-range or unparseable values are REJECTED rather than defaulted, because quietly substituting 30 would let a reader compare a figure they believe covers a quarter against one that covers a month.\n\nSUPPRESSION COUNTS ARE RECONCILED, NOT ASSUMED (AC2). The response reports the provider's own count beside ours and a `reconciled` flag per channel. Where they disagree the screen must say so: a suppression list that has drifted from the provider is the exact condition under which somebody gets messaged after opting out, and a single merged number would conceal it.\n\nTHE PURPOSE TAXONOMY CANNOT BE READ, AND THE SCREEN SAYS SO. AC4 asks for the taxonomy to render from the REGISTERED purposes rather than a hard-coded list. sdk-consent exposes only POST /api/consents/purposes, which registers one - there is no GET, so the registry cannot be listed. The response therefore returns purposes:[] with a purpose_taxonomy_gap naming the missing endpoint, and the screen renders that state rather than a constant. Deriving the list from purposes seen on existing receipts was considered and rejected: it would omit any registered purpose nobody has consented to yet, which is precisely when a taxonomy panel earns its place. Raised in ProjexCloud docs/handoff.\n\nDEGRADES PER PANEL. Each upstream read answers independently, so deliverability being down empties the suppression controls and leaves the register readable. upstream_available reports each separately and an empty result is never conflated with an unreachable one.\n\nrequiresRole:[\"privacy_officer\"] and NO testCase pins an Authorization header (MUST-71). Consent receipts name a person, a purpose and what they were told; the Privacy Officer owns the lawful-basis question. QA: depends on register and login.",
+  "description": "The one call behind the Consent & Preferences screen: the receipt register, the six KPI tiles, the suppression controls and the purpose taxonomy.\n\nTHE TASK NAMED THREE ENDPOINTS THAT DO NOT EXIST, and this composes the ones that do. sdk-consent serves /api/consents/* (PLURAL) and has never served /api/consent/*: there is no GET /api/consent/receipts and no GET /api/consent/purposes. The same singular/plural slip is what made the AI coach's recording gate deny every call for weeks, so every path here was taken from packages/sdk-consent/src/server/routes.ts rather than from a description.\n\nRECEIPTS COME FROM /api/consents/receipts, the tenant-scoped register, and `register.total` reports how many the page was drawn from so `truncated` is a fact rather than an inference. This previously read /api/consents/export - a DSAR export answering per person_id - with no person filter, because no register endpoint existed. That export applied NO TENANT PREDICATE, so the screen rendered other tenants' consent receipts as this tenant's own; verified in production, where every row on the register belonged to a different tenant under a different app. sdk-consent now scopes both endpoints by the tenant on the credential. The client ALSO filters what it receives and reports `register.foreign_dropped`: the guard is not redundant, because this deployment can be pointed at an older gateway and the failure is invisible once rendered. Any value above zero means the consent service is answering outside its scope and the register must not be trusted.\n\nTHE EXPIRING WINDOW IS A PARAMETER, defaulting to 30 days (AC1). Out-of-range or unparseable values are REJECTED rather than defaulted, because quietly substituting 30 would let a reader compare a figure they believe covers a quarter against one that covers a month.\n\nSUPPRESSION COUNTS ARE RECONCILED, NOT ASSUMED (AC2). The response reports the provider's own count beside ours and a `reconciled` flag per channel. Where they disagree the screen must say so: a suppression list that has drifted from the provider is the exact condition under which somebody gets messaged after opting out, and a single merged number would conceal it.\n\nTHE PURPOSE TAXONOMY IS READ, NOT HARD-CODED (AC4). GET /api/consents/purposes returns the registered taxonomy with descriptions and legal bases, and the register uses it to label a receipt's purpose_id. This shipped as a written gap claiming sdk-consent had no GET for purposes - it has one, in both the route table and the capability manifest. A confidently-worded gap is worse than a TODO: it tells the next reader the question was asked and answered, so nobody rechecks, and the register showed raw purpose ids. An empty taxonomy now means nothing is registered; an unreachable registry is reported separately in upstream_available.purposes.\n\nSUBJECTS ARE NAMED WHERE WE CAN NAME THEM. A receipt identifies its subject by canonical person id, and upstream holds no readable name for one: identity aliases are stored hashed by design and projection.attribute_assertion is empty in every environment. Each row therefore carries subject_name / subject_contact_id resolved from leads.canonical_person_id in ONE query for the page, and a subject no local contact carries keeps rendering the uuid alone - inventing a label for the person whose consent somebody is about to withdraw is the most expensive guess this screen could make.\n\nDEGRADES PER PANEL. Each upstream read answers independently, so deliverability being down empties the suppression controls and leaves the register readable. upstream_available reports each separately and an empty result is never conflated with an unreachable one.\n\nrequiresRole:[\"privacy_officer\"] and NO testCase pins an Authorization header (MUST-71). Consent receipts name a person, a purpose and what they were told; the Privacy Officer owns the lawful-basis question. QA: depends on register and login.",
   "endpoint": "/api/leadflow/consent/overview",
   "method": "GET",
   "taskId": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7",
@@ -85,6 +85,35 @@
       },
       "testType": "negative",
       "coversErrorCase": "400|VALIDATION_ERROR|range"
+    },
+    {
+      "name": "The register reports its source, its total and that nothing foreign was refused",
+      "coversCriterion": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC2",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "register": {
+            "source": "/api/consents/receipts",
+            "foreign_dropped": 0
+          }
+        }
+      },
+      "testType": "positive"
+    },
+    {
+      "name": "The purpose taxonomy is listed rather than reported as unreadable",
+      "coversCriterion": "c1032ffa-0d34-45b7-92f6-fe81a7c2d4c7#AC4",
+      "expectedStatus": 200,
+      "expectedResponse": {
+        "success": true,
+        "data": {
+          "upstream_available": {
+            "purposes": true
+          }
+        }
+      },
+      "testType": "positive"
     }
   ],
   "errorCases": [

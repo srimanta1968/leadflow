@@ -4,6 +4,7 @@ import { authenticate } from '../../middleware/auth';
 import { AppError, ErrorCodes } from '../../utils/errors';
 import { governed, type GovernedRequest } from '../../platform/policy/governed';
 import { PERMISSIONS } from '../../config/roles';
+import { namesForPersons } from '../contacts/subjectDirectory';
 import { AUDIT_EVENTS } from '../../platform/audit/vocabulary';
 import { config } from '../../config/env';
 import { DEFAULT_PROFILE, readActiveProfile, writeProfileVersion } from './riskProfile';
@@ -86,6 +87,17 @@ interface ReviewCase {
   not_auto_linkable: true;
   person_id_a: string | null;
   person_id_b: string | null;
+  /**
+   * What this tenant calls each side, when it calls them anything.
+   *
+   * NULL IS A REAL ANSWER HERE. A candidate link can name a person no lead in
+   * this workspace has been resolved to — the other half of a duplicate often
+   * arrived through a different product in the tenant — and a steward deciding
+   * whether two records are the same human must be able to see that we hold no
+   * name for one of them, not a name we inferred to fill the column.
+   */
+  subject_a: { name: string | null; contact_id: string } | null;
+  subject_b: { name: string | null; contact_id: string } | null;
   status: string | null;
   provenance: Record<string, unknown> | null;
   created_at: string | null;
@@ -153,6 +165,8 @@ function toCase(row: CandidateLinkRow, now: number): ReviewCase {
     not_auto_linkable: true,
     person_id_a: row.person_id_a ?? null,
     person_id_b: row.person_id_b ?? null,
+    subject_a: null,
+    subject_b: null,
     status: row.status ?? null,
     provenance: row.provenance ?? null,
     created_at: row.created_at ?? null,
@@ -226,6 +240,23 @@ identityRoutes.get(
 
       const now = Date.now();
       const cases = links.value.map((row) => toCase(row, now)).sort(byRiskThenAge);
+
+      /*
+       * NAMES FOR BOTH SIDES, IN ONE QUERY FOR THE PAGE.
+       *
+       * The queue rendered two uuid columns and asked a steward whether they
+       * were the same person. Upstream cannot supply a name — identity aliases
+       * are hashed by design and the attribute projection is empty — so the only
+       * place one exists is our own contacts, keyed by canonical person id.
+       * Cases we hold no contact for keep showing the uuid alone.
+       */
+      const names = await namesForPersons(cases.flatMap((c) => [c.person_id_a, c.person_id_b]));
+      for (const item of cases) {
+        const a = item.person_id_a ? names.get(item.person_id_a) : undefined;
+        const b = item.person_id_b ? names.get(item.person_id_b) : undefined;
+        item.subject_a = a ? { name: a.name, contact_id: a.contact_id } : null;
+        item.subject_b = b ? { name: b.name, contact_id: b.contact_id } : null;
+      }
       const m: EmpiMetricsRow | null = metrics.value;
 
       const distribution = Array.isArray(m?.confidence_distribution)
